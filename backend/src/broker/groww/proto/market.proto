@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+// Wire format for Groww's price / index / market-depth live feed.
+//
+// IMPORTANT: price, index, and depth ticks all arrive as the SAME message
+// type (a `oneof`), just on different NATS subjects. The subject name is
+// what tells you which one you're getting - this message has to be able to
+// decode all three shapes.
+
+message BookLevel {
+  double price = 1;
+  double volume = 2;
+}
+
+message PriceTick {
+  double timestamp = 1;
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  double volume = 6;
+  double value = 7;
+  double bidQty = 8;
+  double offerQty = 9;
+  double avgPrice = 10;
+  double highPriceRange = 11;
+  double lowPriceRange = 12;
+  double price = 13;
+  double openInterest = 14;
+  double lowTradeRange = 15;
+  double highTradeRange = 16;
+}
+
+message IndexTick {
+  double timestamp = 1;
+  double value = 2;
+}
+
+message MarketDepth {
+  double tsInMillis = 1;
+
+  message BookEntry {
+    int32 offset = 1;
+    BookLevel price = 2;
+  }
+
+  repeated BookEntry buyBook = 2;
+  repeated BookEntry sellBook = 3;
+}
+
+enum Exchange {
+  BSE = 0;
+  NSE = 1;
+  MCX = 2;
+  MCXSX = 3;
+  NCDEX = 4;
+  GLOBAL = 5;
+  US = 6;
+}
+
+enum Segment {
+  CASH = 0;
+  FNO = 1;
+  CURRENCY = 2;
+  COMMODITY = 3;
+}
+
+message MarketTick {
+  string symbol = 1;
+  Segment segment = 2;
+  Exchange exchange = 3;
+
+  oneof payload {
+    PriceTick priceData = 4;
+    MarketDepth marketDepth = 5;
+    IndexTick indexData = 6;
+  }
+}
