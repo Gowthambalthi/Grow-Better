@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Grow Better — Algo Trading Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand" data-nav="dashboard">
+        <div class="brand-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+            <polyline points="16 7 22 7 22 13"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text-wrap">
+          <span class="brand-title" style="font-size:16px;font-weight:800;color:#FFFFFF;">Grow Better</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item" data-nav="portfolio">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2v10l7.07 7.07A10 10 0 1 1 12 2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 2A10 10 0 0 1 22 12h-10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <span>Portfolio</span>
+        </button>
+        <button class="nav-item" data-nav="orders">
+          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Orders</span>
+        </button>
+        <button class="nav-item" data-nav="positions">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m6 7V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Positions</span>
+        </button>
+        <button class="nav-item" data-nav="scanner">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Scanner</span>
+        </button>
+        <button class="nav-item" data-nav="terminal">
+          <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 9 3 3-3 3M13 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Terminal</span>
+        </button>
+        <button class="nav-item" data-nav="alerts">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 21a2.5 2.5 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>Alerts</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-nav="settings">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span>Settings</span>
+        </button>
+        <button class="collapse-toggle" id="collapseToggle" title="Collapse sidebar">«</button>
+      </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main-col">
+
+      <!-- ============ TOPBAR ============ -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW</div>
+        </div>
+
+        <div class="topbar-right">
+
+          <!-- Interactive Primary Index Ticker Pill + Chevron Button Dropdown (Screenshot 2) -->
+          <div class="popover-wrapper" id="indexPopoverWrapper">
+            <div class="topbar-index-pill" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices">
+              <div class="index-ticker-item" id="mainHeaderTickerItem">
+                <div class="index-head-row">
+                  <span class="index-name" id="mainHeaderIndexName">NIFTY</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px;">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+                <div class="index-val-row negative" id="mainHeaderValRow">
+                  <span class="index-price" id="niftyCardValue">24,395.85</span>
+                  <span class="index-arrow" id="mainHeaderArrow">▼</span>
+                  <span class="index-change" id="niftyCardSub">-40.10 (-0.16%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dropdown Popover (BANK NIFTY, SENSEX EXPIRY, GIFT NIFTY, GOLD, SILVER) -->
+            <div class="dropdown-popover watchlist-dropdown-popover" id="watchlistPopover">
+              <div class="popover-header">
+                <span class="popover-title" id="popoverMarketTitle">Market Watchlist</span>
+                <span class="live-tag" id="popoverMarketTag">● LIVE</span>
+              </div>
+              <div class="popover-body" style="padding:0;">
+                <div class="watch-row" data-symbol="NIFTY" id="popoverRowNifty">
+                  <span class="w-name">NIFTY 50</span>
+                  <b class="w-price" id="popNiftyPrice">--</b>
+                  <small class="w-change" id="popNiftyChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="BANKNIFTY" id="popoverRowBanknifty">
+                  <span class="w-name">BANK NIFTY</span>
+                  <b class="w-price" id="popBankPrice">--</b>
+                  <small class="w-change" id="popBankChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="SENSEX" id="popoverRowSensex">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="w-name">SENSEX</span>
+                    <span class="expiry-badge">EXPIRY</span>
+                  </div>
+                  <b class="w-price" id="popSensexPrice">--</b>
+                  <small class="w-change" id="popSensexChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="FINNIFTY" id="popoverRowFinnifty">
+                  <span class="w-name">FIN NIFTY</span>
+                  <b class="w-price" id="popFinPrice">--</b>
+                  <small class="w-change" id="popFinChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="MIDCPNIFTY" id="popoverRowMidcpnifty">
+                  <span class="w-name">MIDCAP NIFTY</span>
+                  <b class="w-price" id="popMidPrice">--</b>
+                  <small class="w-change" id="popMidChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="GIFTNIFTY" id="popoverRowGiftnifty">
+                  <span class="w-name">GIFT NIFTY</span>
+                  <b class="w-price" id="popGiftPrice">--</b>
+                  <small class="w-change" id="popGiftChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="GOLD" id="popoverRowGold">
+                  <span class="w-name">MCX GOLD</span>
+                  <b class="w-price" id="popGoldPrice">--</b>
+                  <small class="w-change" id="popGoldChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="SILVER" id="popoverRowSilver">
+                  <span class="w-name">MCX SILVER</span>
+                  <b class="w-price" id="popSilverPrice">--</b>
+                  <small class="w-change" id="popSilverChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="CRUDEOIL" id="popoverRowCrude">
+                  <span class="w-name">MCX CRUDE</span>
+                  <b class="w-price" id="popCrudePrice">--</b>
+                  <small class="w-change" id="popCrudeChange">--</small>
+                </div>
+                <div class="watch-row" data-symbol="NATURALGAS" id="popoverRowNatgas">
+                  <span class="w-name">MCX NATGAS</span>
+                  <b class="w-price" id="popNatgasPrice">--</b>
+                  <small class="w-change" id="popNatgasChange">--</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CASH BALANCE Interactive Popover Pill -->
+          <div class="popover-wrapper">
+            <div class="topbar-stacked-pill interactive-pill" id="cashCardPill" tabindex="0" title="Click to view broker cash breakdown">
+              <span class="pill-title">CASH BALANCE</span>
+              <span class="pill-main-val" id="topbarCashValue" style="color:var(--loss);font-weight:700;">₹-50.88</span>
+            </div>
+
+            <!-- Cash Breakdown Popover Dropdown -->
+            <div class="dropdown-popover cash-breakdown-popover" id="cashPopover">
+              <div class="popover-header">
+                <span class="popover-title">Available Cash Funds</span>
+              </div>
+              <div class="popover-body">
+                <div class="fund-row">
+                  <div class="broker-label">
+                    <span class="dot-indicator dot-angel"></span>
+                    <span>Angel One</span>
+                  </div>
+                  <span class="fund-val" id="angelCashFundVal" style="color:var(--loss);font-weight:700;">₹-185.08</span>
+                </div>
+                <div class="fund-row">
+                  <div class="broker-label">
+                    <span class="dot-indicator dot-groww"></span>
+                    <span>Groww</span>
+                  </div>
+                  <span class="fund-val" id="growwCashFundVal" style="color:var(--gain);font-weight:700;">₹134.21</span>
+                </div>
+                <div class="popover-divider"></div>
+                <div class="fund-row total-fund-row">
+                  <span>Total Cash</span>
+                  <span class="fund-val-total" id="totalCashFundVal" style="color:var(--loss);font-weight:700;">₹-50.88</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Live Signal & Mobile Alerts Toggle Button -->
+          <div class="popover-wrapper" style="position:relative;">
+            <div class="signal-toggle-pill" id="signalToggleBtn" title="Click to toggle Live Mobile Signals & Configure Telegram Phone Alerts">
+              <span class="signal-dot-status on" id="signalDotStatus"></span>
+              <span class="signal-text-lbl" id="signalTextLbl">SIGNALS: ON</span>
+            </div>
+
+            <!-- Telegram & Phone Alerts Dropdown Popover -->
+            <div class="dropdown-popover settings-popover telegram-popover" id="telegramPopover">
+              <div class="popover-header">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;">
+                  📱 MOBILE ALERTS (+91 9390219001)
+                </span>
+                <button class="popover-close-x" id="closeTelegramPopoverBtn">×</button>
+              </div>
+
+              <div class="popover-body" style="padding:14px;">
+                <div style="background:rgba(16,185,129,0.12);color:#10B981;border:1px solid rgba(16,185,129,0.3);padding:6px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+                  <span>Connected Phone:</span>
+                  <b style="font-family:var(--font-mono);">+91 9390219001</b>
+                </div>
+
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.4;">
+                  Receive instant trade execution, order rejection, and target/stop-loss push alerts directly on phone number <b>+91 9390219001</b> via Telegram / WhatsApp.
+                </div>
+
+                <form id="telegramConfigForm">
+                  <div style="margin-bottom:10px;">
+                    <label class="form-lbl">CALLMEBOT WHATSAPP API KEY (FOR +91 9390219001)</label>
+                    <input id="waApiKeyInput" type="password" autocomplete="new-password" placeholder="e.g. 123456" class="form-input" style="font-family:var(--font-mono);font-size:11px;" />
+                  </div>
+
+                  <div style="margin-bottom:10px;">
+                    <label class="form-lbl">TELEGRAM BOT TOKEN (OPTIONAL)</label>
+                    <input id="tgBotTokenInput" type="password" autocomplete="new-password" placeholder="7123456789:AAFg..." class="form-input" style="font-family:var(--font-mono);font-size:11px;" />
+                  </div>
+
+                  <div style="margin-bottom:12px;">
+                    <label class="form-lbl">TELEGRAM CHAT ID (OPTIONAL)</label>
+                    <input id="tgChatIdInput" type="text" autocomplete="off" placeholder="123456789" class="form-input" style="font-family:var(--font-mono);font-size:11px;" />
+                  </div>
+
+                  <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button type="submit" class="submit-btn" style="flex:1;padding:7px;font-size:11px;">SAVE CREDENTIALS</button>
+                    <button type="button" id="testTgPhoneBtn" class="submit-btn submit-btn--secondary" style="padding:7px 10px;font-size:11px;">TEST WHATSAPP / PHONE 💬</button>
+                  </div>
+                </form>
+
+                <div id="tgStatusAlert" style="display:none;font-size:10.5px;padding:8px;border-radius:6px;font-family:var(--font-mono);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Light / Dark Theme Toggle Button (Far Right End) -->
+          <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+            <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+
+        </div>
+      </header>
+
+      <!-- ============ VIEWS ============ -->
+      <main class="content">
+
+        <!-- ---- Dashboard ---- -->
+        <section class="view active" id="view-dashboard">
+          <!-- Row 1: Stock Real-Time Performance Bar Cards -->
+          <div class="summary-bar" id="summaryGrid">
+            
+            <!-- Card 1: Total Invested -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Invested Amount</span>
+                <span class="stat-value" id="sumInvested">—</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Current Value -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"></path>
+                  <path d="m19 9-5 5-4-4-3 3"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Current Value</span>
+                <span class="stat-value" id="sumCurrent">—</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Overall Gain -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Overall Gain</span>
+                <span class="stat-value" id="sumOverall">—</span>
+              </div>
+            </div>
+
+            <!-- Card 4: Today's P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-red">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                  <polyline points="17 18 23 18 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Today's P&amp;L</span>
+                <span class="stat-value" id="sumToday">—</span>
+              </div>
+            </div>
+
+            <!-- Card 5: Gross Net P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <path d="M12 8v8M8 12h8"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Gross Net P&amp;L</span>
+                <span class="stat-value" id="sumGross">—</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Row 2: Account Level Returns & Financial Position Bar -->
+          <div class="summary-bar account-summary-bar" id="accountSummaryGrid">
+
+            <!-- Card 6: XIRR -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="5" x2="5" y2="19"></line>
+                  <circle cx="6.5" cy="6.5" r="2.5"></circle>
+                  <circle cx="17.5" cy="17.5" r="2.5"></circle>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">XIRR</span>
+                <span class="stat-value" id="sumXirr">+0.00%</span>
+                <span class="stat-sublabel">Annualized Return</span>
+              </div>
+            </div>
+
+            <!-- Card 7: Account Return % -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 16v5M16 14v7M20 10v11M4 18v3M8 14v7"></path>
+                  <path d="m3 3 6 6 4-4 7 7"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Account Return %</span>
+                <span class="stat-value" id="sumCagr">+0.00%</span>
+                <span class="stat-sublabel">Absolute Return</span>
+              </div>
+            </div>
+
+            <!-- Card 8: Account P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-teal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3v4a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V7"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Account P&amp;L</span>
+                <span class="stat-value" id="sumAccountPl">₹0.00</span>
+                <span class="stat-sublabel">Unadjusted</span>
+              </div>
+            </div>
+
+            <!-- Card 9: Charges -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-amber">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path>
+                  <path d="M8 7h8M8 11h8M8 11h5a2.5 2.5 0 0 0 0-5M8 15l5 4"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Charges</span>
+                <span class="stat-value" id="sumAdjAccountPl">₹0.00</span>
+                <span class="stat-sublabel">Total Charges &amp; Fees</span>
+              </div>
+            </div>
+
+            <!-- Card 10: Cash Invested -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-indigo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M6 12h.01M18 12h.01"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Cash Invested</span>
+                <span class="stat-value" id="sumCashInvested">₹0.00</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Dashboard Holdings & Live Quotes -->
+          <div class="broker-panels" id="dashboardPanels">
+            <div class="broker-panel" id="panelDashAngelone">
+              <div class="panel-head">
+                <div class="panel-title-group">
+                  <span class="broker-dot angel"></span>
+                  <h2>Angel One Holdings</h2>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="panel-count" id="countAngelone">0 holdings</span>
+                  <button class="refresh-btn refresh-btn-dash" title="Refresh Data">⟳</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Qty</th>
+                      <th>Avg</th>
+                      <th>LTP</th>
+                      <th>Invested</th>
+                      <th>Current</th>
+                      <th>Overall G/L</th>
+                      <th>Day's G/L</th>
+                      <th style="text-align:center;">Days Hold</th>
+                      <th>Net Gross P&amp;L</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyAngelone"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="broker-panel" id="panelDashGroww">
+              <div class="panel-head">
+                <div class="panel-title-group">
+                  <span class="broker-dot groww"></span>
+                  <h2>Groww Holdings</h2>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="panel-count" id="countGroww">0 holdings</span>
+                  <button class="refresh-btn refresh-btn-dash" title="Refresh Data">⟳</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Qty</th>
+                      <th>Avg</th>
+                      <th>LTP</th>
+                      <th>Invested</th>
+                      <th>Current</th>
+                      <th>Overall G/L</th>
+                      <th>Day's G/L</th>
+                      <th style="text-align:center;">Days Hold</th>
+                      <th>Net Gross P&amp;L</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyGroww"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---- Portfolio ---- -->
+        <section class="view" id="view-portfolio">
+          <!-- Row 1: Stock Real-Time Performance Bar Cards -->
+          <div class="summary-bar" id="portfolioSummaryGrid">
+            
+            <!-- Card 1: Total Invested -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Invested Amount</span>
+                <span class="stat-value" id="portSumInvested">—</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Current Value -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"></path>
+                  <path d="m19 9-5 5-4-4-3 3"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Current Value</span>
+                <span class="stat-value" id="portSumCurrent">—</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Overall Gain -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Overall Gain</span>
+                <span class="stat-value" id="portSumOverall">—</span>
+              </div>
+            </div>
+
+            <!-- Card 4: Today's P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-red">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                  <polyline points="17 18 23 18 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Today's P&amp;L</span>
+                <span class="stat-value" id="portSumToday">—</span>
+              </div>
+            </div>
+
+            <!-- Card 5: Gross Net P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <path d="M12 8v8M8 12h8"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Gross Net P&amp;L</span>
+                <span class="stat-value" id="portSumGross">—</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Row 2: Account Level Returns & Financial Position Bar -->
+          <div class="summary-bar account-summary-bar" id="portAccountSummaryGrid">
+
+            <!-- Card 6: XIRR -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="19" y1="5" x2="5" y2="19"></line>
+                  <circle cx="6.5" cy="6.5" r="2.5"></circle>
+                  <circle cx="17.5" cy="17.5" r="2.5"></circle>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">XIRR</span>
+                <span class="stat-value" id="portSumXirr">+0.00%</span>
+                <span class="stat-sublabel">Annualized Return</span>
+              </div>
+            </div>
+
+            <!-- Card 7: Account Return % -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 16v5M16 14v7M20 10v11M4 18v3M8 14v7"></path>
+                  <path d="m3 3 6 6 4-4 7 7"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Account Return %</span>
+                <span class="stat-value" id="portSumCagr">+0.00%</span>
+                <span class="stat-sublabel">Absolute Return</span>
+              </div>
+            </div>
+
+            <!-- Card 8: Account P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-teal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3v4a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V7"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Account P&amp;L</span>
+                <span class="stat-value" id="portSumAccountPl">₹0.00</span>
+                <span class="stat-sublabel">Unadjusted</span>
+              </div>
+            </div>
+
+            <!-- Card 9: Charges -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-amber">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path>
+                  <path d="M8 7h8M8 11h8M8 11h5a2.5 2.5 0 0 0 0-5M8 15l5 4"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Charges</span>
+                <span class="stat-value" id="portSumAdjAccountPl">₹0.00</span>
+                <span class="stat-sublabel">Total Charges &amp; Fees</span>
+              </div>
+            </div>
+
+            <!-- Card 10: Cash Invested -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-green">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M6 12h.01M18 12h.01"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Cash Invested</span>
+                <span class="stat-value" id="portSumCashInvested">₹0.00</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Clean Action Bar (Full Width Top Row above Holdings Cards) -->
+          <div class="view-head-actions" style="width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:16px;margin-bottom:12px;">
+            <div class="view-toggle-btns">
+              <button class="toggle-btn active" data-view-mode="all">All Brokers</button>
+              <button class="toggle-btn" data-view-mode="angelone">Angel One</button>
+              <button class="toggle-btn" data-view-mode="groww">Groww</button>
+            </div>
+
+            <div class="portfolio-actions" style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+              <button class="refresh-btn" id="refreshBtn" title="Refresh Portfolio">⟳</button>
+              
+              <!-- CONNECTED DROPDOWN POPOVER FOR PORTFOLIO SETTINGS -->
+              <div class="popover-wrapper" style="position:relative;">
+                <div class="gear-settings-btn-wrap">
+                  <button class="portfolio-settings-btn" id="openUnifiedLedgerBtn" title="Portfolio Settings">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </button>
+                  <span class="red-dot-badge" id="settingsRedDotBadge" style="display:none;" title="Buy dates missing for some holdings"></span>
+                </div>
+
+                <div class="dropdown-popover settings-popover" id="portfolioSettingsPopover">
+                  <div class="popover-header">
+                    <span style="display:flex;align-items:center;gap:6px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                      </svg>
+                      Portfolio Settings
+                    </span>
+                    <button class="popover-close-x" id="closeSettingsPopoverBtn">×</button>
+                  </div>
+
+                  <!-- Broker Selection Switcher -->
+                  <div class="broker-settings-tabs">
+                    <button class="b-tab active" data-broker-tab="angelone">
+                      <span class="broker-dot angel"></span> Angel One
+                    </button>
+                    <button class="b-tab" data-broker-tab="groww">
+                      <span class="broker-dot groww"></span> Groww
+                    </button>
+                  </div>
+
+                  <!-- Notification Alert Banner if Data Missing -->
+                  <div class="ul-alert-banner" id="ulAlertBanner" style="display:none;">
+                    <span class="a-icon">🔴</span>
+                    <span>Purchase dates missing for some stocks. Select stock below to configure.</span>
+                  </div>
+
+                  <div class="popover-body" style="max-height:520px;overflow-y:auto;padding:12px;">
+                    <!-- Stock Holdings Configuration Form -->
+                    <form id="ulMtfForm">
+                      <div style="margin-bottom:10px;">
+                        <label class="form-lbl">STOCK HOLDING</label>
+                        <select id="ulSelectHolding" class="form-input" required>
+                          <option value="">-- Choose Stock Holding --</option>
+                        </select>
+                      </div>
+
+                      <div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <div>
+                          <label class="form-lbl">QUANTITY</label>
+                          <input id="ulQtyInput" type="number" min="1" class="form-input" placeholder="Qty" required />
+                        </div>
+                        <div>
+                          <label class="form-lbl">PURCHASE DATE</label>
+                          <input id="ulBuyDate" type="date" class="form-input" required />
+                        </div>
+                        <div>
+                          <label class="form-lbl">PRODUCT TYPE</label>
+                          <select id="ulIsMtf" class="form-input">
+                            <option value="0">Delivery (Normal)</option>
+                            <option value="1">MTF (Margin Trading)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <!-- MTF Leverage Selector -->
+                      <div id="ulMtfRatioGroup" style="margin-bottom:10px;display:none;">
+                        <label class="form-lbl">MTF LEVERAGE MULTIPLIER RATIO</label>
+                        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;">
+                          <select id="ulMtfRatio" class="form-input">
+                            <option value="2.9">2.9× (EMMVEE — 34.5% Cash)</option>
+                            <option value="4.4">4.4× (HDFC Bank — 22.7% Cash)</option>
+                            <option value="4.2">4.2× (ONGC — 23.8% Cash)</option>
+                            <option value="3.6">3.6× (Shriram Fin — 27.8% Cash)</option>
+                            <option value="3.5">3.5× (MCX — 28.6% Cash)</option>
+                            <option value="4.0">4.0× (Default 4.0x)</option>
+                            <option value="3.0">3.0× (Default 3.0x)</option>
+                            <option value="2.0">2.0× (50% Cash)</option>
+                            <option value="custom">Custom Ratio →</option>
+                          </select>
+                          <input type="number" step="0.1" id="ulMtfCustomInput" placeholder="Custom x" class="form-input" value="2.9" />
+                        </div>
+                      </div>
+
+                      <!-- TARGET & STOP LOSS SETTINGS FOR PORTFOLIO HOLDING -->
+                      <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px;margin-bottom:10px;">
+                        <div style="font-size:10.5px;font-weight:800;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;">TARGET &amp; STOP LOSS PARAMETERS</div>
+                        
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                          <div>
+                            <label class="form-lbl" style="color:var(--gain);">TARGET PROFIT (₹ | %)</label>
+                            <div class="unified-price-pct-box">
+                              <input type="number" step="0.05" id="ulTargetPrice" class="val-input" placeholder="Price ₹" />
+                              <div class="unified-price-pct-divider"></div>
+                              <input type="number" step="0.1" id="ulTargetPct" class="pct-input" placeholder="%" />
+                            </div>
+                          </div>
+                          <div>
+                            <label class="form-lbl" style="color:var(--loss);">STOP LOSS (₹ | %)</label>
+                            <div class="unified-price-pct-box">
+                              <input type="number" step="0.05" id="ulSlPrice" class="val-input" placeholder="Price ₹" />
+                              <div class="unified-price-pct-divider"></div>
+                              <input type="number" step="0.1" id="ulSlPct" class="pct-input" placeholder="%" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button type="submit" class="submit-btn" style="margin-bottom:14px;">SAVE HOLDING SETTINGS</button>
+                    </form>
+
+                    <!-- Funds Added & Withdrawn Section -->
+                    <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:14px;">
+                      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">FUNDS ADDED &amp; WITHDRAWN</div>
+                      <form id="ulCapitalForm">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+                          <div>
+                            <label class="form-lbl">TYPE</label>
+                            <select id="ulCapType" class="form-input"><option value="ADD">+ Add</option><option value="WITHDRAW">- Withdraw</option></select>
+                          </div>
+                          <div>
+                            <label class="form-lbl">AMOUNT (₹)</label>
+                            <input id="ulCapAmount" type="number" step="0.01" placeholder="₹50,000" class="form-input" required />
+                          </div>
+                          <div>
+                            <label class="form-lbl">DATE</label>
+                            <input id="ulCapDate" type="date" class="form-input" required />
+                          </div>
+                        </div>
+                        <button type="submit" class="submit-btn submit-btn--secondary" style="padding:7px;font-size:11px;">RECORD CAPITAL TRANSACTION</button>
+                      </form>
+
+                      <div class="calc-preview-box" style="margin-top:8px;font-size:11px;">
+                        <div class="c-row"><span>Total Funds Added:</span><b id="sumCapAdded" style="color:var(--text-primary);">₹0.00</b></div>
+                        <div class="c-row"><span>Total Funds Withdrawn:</span><b id="sumCapWithdrawn" style="color:var(--text-primary);">₹0.00</b></div>
+                        <div class="c-row total-row"><span>Net Capital Invested:</span><b id="sumNetCapital" style="color:var(--accent);">₹0.00</b></div>
+                      </div>
+
+                      <div id="ulCapitalHistoryList" style="font-family:var(--font-mono);font-size:10.5px;max-height:90px;overflow-y:auto;margin-top:6px;">Loading logs...</div>
+                    </div>
+
+                    <!-- Side-by-Side Net Charges & MTF Section -->
+                    <div style="border-top:1px solid var(--line);padding-top:10px;">
+                      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">NET CHARGES &amp; MTF</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        
+                        <!-- Column 1: Net Charges -->
+                        <div class="calc-preview-box" style="font-size:11px;padding:8px 10px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                            <span style="font-size:10px;font-weight:700;color:var(--text-muted);">NET CHARGES</span>
+                            <button type="button" class="edit-icon-btn" id="editChargesBtn" title="Modify Net Charges">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                              </svg>
+                            </button>
+                          </div>
+                          <div id="sumTotalCharges" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--loss);">-₹0.00</div>
+                          <div id="chargesEditWrap" style="display:none;margin-top:6px;">
+                            <input id="customChargesInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
+                            <div style="display:flex;gap:4px;">
+                              <button type="button" id="saveChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;flex:1;">SAVE</button>
+                              <button type="button" id="resetChargesBtn" class="submit-btn submit-btn--secondary" style="padding:4px 8px;font-size:10px;">AUTO</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Column 2: MTF -->
+                        <div class="calc-preview-box" style="font-size:11px;padding:8px 10px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                            <span style="font-size:10px;font-weight:700;color:var(--text-muted);">MTF</span>
+                            <button type="button" class="edit-icon-btn" id="editMtfIntBtn" title="Modify MTF Interest">
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                              </svg>
+                            </button>
+                          </div>
+                          <div id="sumTotalMtfInt" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--loss);">-₹0.00</div>
+                          <div id="mtfIntEditWrap" style="display:none;margin-top:6px;">
+                            <input id="customMtfIntInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
+                            <div style="display:flex;gap:4px;">
+                              <button type="button" id="saveMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;flex:1;">SAVE</button>
+                              <button type="button" id="resetMtfIntBtn" class="submit-btn submit-btn--secondary" style="padding:4px 8px;font-size:10px;">AUTO</button>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Portfolio Holdings Cards Stack -->
+          <div class="broker-panels" id="portfolioPanels" style="display:flex;flex-direction:column;width:100%;gap:20px;">
+            
+            <!-- Angel One Holdings Card -->
+            <div class="broker-panel angel-panel" id="panelAngelone" style="width:100%;display:flex;flex-direction:column;">
+              <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
+                <div class="panel-title-group" style="display:flex;align-items:center;gap:8px;">
+                  <span class="broker-dot angel"></span>
+                  <h2>Angel One Holdings</h2>
+                </div>
+                <span class="panel-count" id="countPortfolioAngelone">0 holdings</span>
+              </div>
+              <div class="table-wrap">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Qty</th>
+                      <th>Avg</th>
+                      <th>LTP</th>
+                      <th>Invested</th>
+                      <th>Current</th>
+                      <th>Overall G/L</th>
+                      <th>Day's G/L</th>
+                      <th style="text-align:center;">Days Hold</th>
+                      <th>Net Gross P&amp;L</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyPortfolioAngelone"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Groww Holdings Card -->
+            <div class="broker-panel groww-panel" id="panelGroww" style="width:100%;display:flex;flex-direction:column;">
+              <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
+                <div class="panel-title-group" style="display:flex;align-items:center;gap:8px;">
+                  <span class="broker-dot groww"></span>
+                  <h2>Groww Holdings</h2>
+                </div>
+                <span class="panel-count" id="countPortfolioGroww">0 holdings</span>
+              </div>
+              <div class="table-wrap">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th>Symbol</th>
+                      <th>Qty</th>
+                      <th>Avg</th>
+                      <th>LTP</th>
+                      <th>Invested</th>
+                      <th>Current</th>
+                      <th>Overall G/L</th>
+                      <th>Day's G/L</th>
+                      <th style="text-align:center;">Days Hold</th>
+                      <th>Net Gross P&amp;L</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyPortfolioGroww"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
+                </table>
+          </div>
+        </section>
+
+        <!-- ---- Orders ---- -->
+        <section class="view" id="view-orders">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div>
+              <h1 class="view-title" style="font-size:18px;font-weight:800;letter-spacing:-0.01em;color:var(--text-primary);">ORDERS</h1>
+              <div class="view-subtitle" style="font-size:12px;color:var(--text-muted);">Real-Time Today's Orders, Limit Condition Triggers &amp; Historical Trades</div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:18px;width:100%;">
+            
+            <!-- 1. TODAY'S ORDERS TABLE -->
+            <div class="card" style="padding:18px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;width:100%;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;display:flex;align-items:center;gap:8px;">
+                  <span>TODAY'S ORDERS</span>
+                  <span style="background:rgba(249,115,22,0.18);color:#F97316;border:1px solid rgba(249,115,22,0.35);font-size:10px;padding:2px 7px;border-radius:12px;font-weight:800;" id="todaysOrdersCount">0</span>
+                </h3>
+                <span style="font-size:11px;color:var(--text-muted);">Real-Time Execution Filter</span>
+              </div>
+
+              <div id="todaysOrdersContainer">
+                <!-- Rendered dynamically by orders.js -->
+              </div>
+            </div>
+
+            <!-- 2. TRADE HISTORY TABLE -->
+            <div class="card" style="padding:18px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;width:100%;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;">TRADE HISTORY</h3>
+                <span style="font-size:11px;color:var(--text-muted);">Historical Executed Trades &amp; Sell P&amp;L</span>
+              </div>
+              
+              <div id="tradeHistoryContainer">
+                <!-- Rendered dynamically by orders.js -->
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ---- Positions & Orders (2 Sub-Tabs) ---- -->
+        <section class="view" id="view-positions">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <h1 class="view-title" style="margin:0;">Positions &amp; Orders <span class="view-subtitle">— Open Margin Trading &amp; Order History</span></h1>
+
+            <!-- 2 Sub-Tabs Navigation -->
+            <div class="broker-toggle" style="margin:0;" id="posSubtabsNav">
+              <button class="toggle-btn active" id="tabPosOpen" data-tab="open">📊 Open Positions</button>
+              <button class="toggle-btn" id="tabPosOrders" data-tab="orders">📜 Order History</button>
+            </div>
+          </div>
+
+          <!-- TAB 1: OPEN POSITIONS -->
+          <div id="subviewPosOpen" class="positions-subtab-view">
+            <div class="broker-panels">
+              <div class="broker-panel">
+                <div class="panel-head"><h2>Angel One Open MTF Positions</h2></div>
+                <div class="table-wrap">
+                  <table class="holdings-table">
+                    <thead><tr><th>Symbol</th><th>Qty</th><th>Price</th><th>Borrowed</th><th>Interest Accrued</th><th>Days Held</th></tr></thead>
+                    <tbody id="tbodyMtfAngelone"><tr class="empty-row"><td colspan="6">No open MTF positions</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="broker-panel">
+                <div class="panel-head"><h2>Groww Open MTF Positions</h2></div>
+                <div class="table-wrap">
+                  <table class="holdings-table">
+                    <thead><tr><th>Symbol</th><th>Qty</th><th>Price</th><th>Borrowed</th><th>Interest Accrued</th><th>Days Held</th></tr></thead>
+                    <tbody id="tbodyMtfGroww"><tr class="empty-row"><td colspan="6">No open MTF positions</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: ORDER HISTORY -->
+          <div id="subviewPosOrders" class="positions-subtab-view" style="display:none;">
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <h3 style="margin:0;font-size:14px;color:var(--accent);">Order Execution Log</h3>
+                <button id="refreshPosOrdersBtn" class="edit-icon-btn" style="color:var(--accent);font-size:11px;font-weight:700;">⟳ Refresh Orders</button>
+              </div>
+              <div class="table-wrap">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Broker</th>
+                      <th>Symbol</th>
+                      <th>Type</th>
+                      <th>Side</th>
+                      <th>Qty</th>
+                      <th>Price</th>
+                      <th>Status</th>
+                      <th>Order ID</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyPosOrders">
+                    <tr class="empty-row"><td colspan="9">Loading order history...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---- Scanner (AMFI Stock Accumulation & Ranked Institute Holdings Engine) ---- -->
+        <section class="view" id="view-scanner">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+            <div>
+              <h1 class="view-title" style="margin:0;">AMFI Monthly Stock Accumulation &amp; Institutional Scanner</h1>
+              <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Official AMFI Monthly Database — Track Stock Growth, Total Institute Holdings (e.g. 22 Funds), &amp; Net Funds Increased</p>
+            </div>
+            
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <!-- Timeframe Period Filter Dropdown -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <label class="form-lbl" style="margin:0;font-size:11px;color:var(--text-muted);">TIMEFRAME:</label>
+                <select id="instPeriodSelect" class="form-input" style="width:150px;font-family:var(--font-mono);font-weight:700;font-size:12px;padding:4px 8px;">
+                  <option value="1m">1 Month Period</option>
+                  <option value="3m" selected>3 Months Period</option>
+                  <option value="6m">6 Months Period</option>
+                  <option value="1y">1 Year Period</option>
+                </select>
+              </div>
+
+              <!-- Sort Order Toggle -->
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:11px;color:var(--text-muted);">Order:</span>
+                <button id="toggleSortDirectionBtn" class="edit-icon-btn" style="color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;gap:4px;background:var(--bg-raised);padding:4px 10px;border-radius:4px;border:1px solid var(--line);">
+                  <span id="sortDirectionLabel">DESC (High to Low)</span> <span style="font-size:12px;">▼</span>
+                </button>
+              </div>
+
+              <!-- Shortlist Filter Button -->
+              <button id="toggleStarredOnlyBtn" class="submit-btn submit-btn--secondary" style="padding:4px 12px;font-size:11px;display:flex;align-items:center;gap:6px;" title="Filter by Starred Candidates">
+                ⭐ <span id="starredBtnLabel">Starred Watchlist (0)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- LIVE FILTER CONTROLS BAR -->
+          <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label class="form-lbl" style="margin:0;font-size:10.5px;color:var(--text-muted);">INSTITUTIONAL TREND:</label>
+              <select id="instTrendFilter" class="form-input" style="width:140px;font-size:11px;padding:4px 8px;">
+                <option value="ALL">All Stocks</option>
+                <option value="BUYING" selected>📈 Buying / Increased Only</option>
+                <option value="SELLING">📉 Selling / Reduced Only</option>
+              </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label class="form-lbl" style="margin:0;font-size:10.5px;color:var(--text-muted);">MIN FUNDS COUNT:</label>
+              <select id="instMinFundsFilter" class="form-input" style="width:130px;font-size:11px;padding:4px 8px;">
+                <option value="0">Any Funds</option>
+                <option value="300">300+ Funds</option>
+                <option value="600" selected>600+ Funds</option>
+                <option value="900">900+ Funds</option>
+              </select>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:6px;">
+              <label class="form-lbl" style="margin:0;font-size:10.5px;color:var(--text-muted);">MIN INVESTED (₹ CR):</label>
+              <select id="instMinValueFilter" class="form-input" style="width:140px;font-size:11px;padding:4px 8px;">
+                <option value="0">Any Amount</option>
+                <option value="5000">₹5,000 Cr+</option>
+                <option value="15000" selected>₹15,000 Cr+</option>
+                <option value="30000">₹30,000 Cr+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card" style="padding:16px;">
+            <div class="table-wrap">
+              <table class="holdings-table inst-table">
+                <thead>
+                  <tr>
+                    <th style="width:45px;text-align:center;padding:12px 6px;">▼</th>
+                    <th style="white-space:nowrap;padding:12px 14px;min-width:210px;">Stock Company Name <button class="sort-triangle-btn" data-sort="symbol" title="Sort by Stock Name">⯅⯆</button></th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Current Price (LTP) <button class="sort-triangle-btn" data-sort="ltp" title="Sort by Stock Price">⯅⯆</button></th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:160px;">MF Growth / Reduction <button class="sort-triangle-btn active" data-sort="growth" title="Sort by Stock Growth">⯅⯆</button></th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Holdings (Click to View) <button class="sort-triangle-btn" data-sort="total_institutes_count" title="Sort by Institute Count">⯅⯆</button></th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:210px;">Institutional Trend (Bought / Sold) <button class="sort-triangle-btn" data-sort="institutes_increased" title="Sort by Institutional Trend">⯅⯆</button></th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:110px;">Weightage % <button class="sort-triangle-btn" data-sort="avg_weightage_pct" title="Sort by Weightage">⯅⯆</button></th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:160px;">Total MF Invested (₹ Cr) <button class="sort-triangle-btn" data-sort="total_mf_holding_cr" title="Sort by Total MF Value">⯅⯆</button></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyInstitutionalScanner">
+                  <tr class="empty-row"><td colspan="8">Loading AMFI stock accumulation &amp; distribution database...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Ranked Scheme Holdings Modal Window -->
+          <div id="instModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
+            <div class="modal-card card" style="max-width:880px;width:92%;background:var(--bg-panel);border:1px solid var(--accent);border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.8);z-index:100000;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;">
+                <div>
+                  <h3 id="instModalTitle" style="margin:0;color:var(--accent-cyan);font-size:15px;font-weight:800;">Ranked Mutual Fund Schemes Breakdown</h3>
+                  <p style="margin:2px 0 0 0;font-size:11px;color:var(--text-muted);">Ranked by Mutual Fund Performance (#1, #2, #3...) for Selected Timeframe</p>
+                </div>
+                <button id="closeInstModalBtn" class="edit-icon-btn" style="color:var(--text-muted);font-size:18px;font-weight:800;">✕</button>
+              </div>
+              <div class="table-wrap" style="max-height:380px;overflow-y:auto;">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th style="width:60px;text-align:center;">MF Rank</th>
+                      <th>Mutual Fund Scheme Name</th>
+                      <th>Fund House</th>
+                      <th style="text-align:center;">Monthly Action (Bought / Sold)</th>
+                      <th style="text-align:right;" id="modalMfReturnHeader">3M Return %</th>
+                      <th style="text-align:right;">Invested (₹ Cr)</th>
+                      <th style="text-align:right;">Weight %</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodySchemeHoldingsModal">
+                    <tr class="empty-row"><td colspan="6">Loading scheme details...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---- Terminal ---- -->
+        <section class="view" id="view-terminal">
+          <h1 class="view-title">Trading Terminal</h1>
+          <div class="empty-state" style="margin-top:16px;">Advanced trading terminal view.</div>
+        </section>
+
+        <!-- ---- Alerts ---- -->
+        <section class="view" id="view-alerts">
+          <h1 class="view-title">Price Alerts</h1>
+          <div class="empty-state" style="margin-top:16px;">Price &amp; indicator alert triggers view.</div>
+        </section>
+
+        <!-- ---- Settings ---- -->
+        <section class="view" id="view-settings">
+          <h1 class="view-title">System Settings &amp; Funds</h1>
+          <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <!-- Funds Ledger Card -->
+            <div class="card funds-ledger">
+              <h3>Funds Ledger (Deposits &amp; Withdrawals)</h3>
+              <form id="fundsForm">
+                <div class="field-row">
+                  <select id="fundsBroker"><option value="angelone">Angel One</option><option value="groww">Groww</option></select>
+                  <select id="fundsType"><option value="ADD">ADD CAPITAL</option><option value="WITHDRAW">WITHDRAW CAPITAL</option></select>
+                </div>
+                <div class="field-row">
+                  <input id="fundsAmount" type="number" step="0.01" placeholder="Amount (₹)" required />
+                  <input id="fundsDate" type="date" required />
+                </div>
+                <button type="submit" class="submit-btn submit-btn--secondary">RECORD CAPITAL</button>
+              </form>
+              <div class="funds-totals" id="fundsTotals" style="margin-top:12px;">
+                <span>Angel — Net Capital: <b id="fundsNetAngel">—</b></span>
+                <span>Groww — Net Capital: <b id="fundsNetGroww">—</b></span>
+              </div>
+            </div>
+
+            <!-- GLOBAL STOCK MTF RATIO MANAGER CARD -->
+            <div class="card stock-mtf-manager" style="overflow:visible !important;position:relative;z-index:10;">
+              <h3 style="margin-top:0;margin-bottom:6px;font-size:14px;color:var(--accent);">Global Stock MTF Leverage Ratios</h3>
+              <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Set MTF leverage ratios per stock symbol (e.g. EMMVEE = 2.9x, HDFCBANK = 4.4x). Saved ratios are used across Order Tickets &amp; Portfolio calculations!</p>
+
+              <form id="globalMtfRatioForm" style="display:grid;grid-template-columns:1fr 100px 100px;gap:8px;align-items:flex-end;margin-bottom:8px;position:relative;z-index:20;">
+                <div style="position:relative;">
+                  <label class="form-lbl">SEARCH STOCK SYMBOL</label>
+                  <input id="globalMtfSymbolInput" placeholder="Type stock name e.g. VEDL or Emmvee..." class="form-input" style="text-transform:uppercase;" autocomplete="off" required />
+                  <div id="globalMtfSuggestions" class="search-suggestions-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-panel);border:1px solid var(--accent);border-radius:6px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 12px 36px rgba(0,0,0,0.8);margin-top:2px;"></div>
+                </div>
+                <div>
+                  <label class="form-lbl">LEVERAGE (x)</label>
+                  <input type="number" step="0.1" id="globalMtfRatioInput" placeholder="e.g. 2.9" class="form-input" value="2.9" required />
+                </div>
+                <button type="submit" class="submit-btn" style="height:34px;font-size:11px;">SAVE RATIO</button>
+              </form>
+
+              <!-- Auto Recommendation Badge -->
+              <div id="mtfRecInfoBox" style="display:none;margin-bottom:12px;padding:6px 10px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:6px;font-size:11px;color:#38bdf8;cursor:pointer;" title="Click to apply recommended ratio">
+                ⚡ Auto-Recommended MTF Leverage: <b id="mtfRecVal">2.9x</b> (<span id="mtfRecCash">34.5% Cash</span>)
+              </div>
+
+              <!-- Table of Configured MTF Ratios -->
+              <div class="table-wrap" style="max-height:220px;overflow-y:auto;position:relative;z-index:1;">
+                <table class="holdings-table" style="table-layout:fixed;width:100%;">
+                  <thead>
+                    <tr>
+                      <th style="width:35%;">Stock Symbol</th>
+                      <th style="width:25%;text-align:right;">MTF Leverage</th>
+                      <th style="width:30%;text-align:right;">Self-Funded Cash %</th>
+                      <th style="width:10%;text-align:center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyGlobalMtfRatios">
+                    <!-- Populated dynamically by JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- MOBILE & WHATSAPP NOTIFICATION SETTINGS CARD -->
+            <div class="card notification-settings-card" style="grid-column:1 / -1;margin-top:16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <h3 style="margin:0;font-size:14px;color:var(--accent);display:flex;align-items:center;gap:8px;">
+                  📱 Mobile Phone, WhatsApp &amp; Telegram Notification Settings
+                </h3>
+                <span class="signal-badge active" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;">● Connected: +91 9390219001</span>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <!-- Column 1: WhatsApp Configuration -->
+                <div style="background:var(--bg-raised);border:1px solid var(--line);padding:14px;border-radius:8px;">
+                  <h4 style="margin:0 0 8px 0;font-size:12.5px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                    💬 WhatsApp Mobile Alerts (+91 9390219001)
+                  </h4>
+                  <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.4;">
+                    Get instant WhatsApp trade execution, order rejection, and price alert messages sent directly to <b>+91 9390219001</b>!
+                  </p>
+                  
+                  <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);padding:8px 10px;border-radius:6px;font-size:10.5px;margin-bottom:10px;">
+                    <b>30-Sec Free WhatsApp Activation Step:</b><br/>
+                    1. Open WhatsApp on phone <b>9390219001</b><br/>
+                    2. Send <code>I allow callmebot to send me messages</code> to <b>+34 644 51 95 23</b><br/>
+                    3. Paste your CallMeBot WhatsApp API key below:
+                  </div>
+
+                  <form id="settingsWaForm">
+                    <div style="margin-bottom:10px;">
+                      <label class="form-lbl">CALLMEBOT WHATSAPP API KEY</label>
+                      <input id="settingsWaKeyInput" type="password" autocomplete="new-password" placeholder="e.g. 123456" class="form-input" style="font-family:var(--font-mono);font-size:11px;" />
+                    </div>
+                    <button type="submit" class="submit-btn" style="width:100%;padding:8px;font-size:11px;">SAVE WHATSAPP SETTINGS</button>
+                  </form>
+                </div>
+
+                <!-- Column 2: Telegram Bot Configuration -->
+                <div style="background:var(--bg-raised);border:1px solid var(--line);padding:14px;border-radius:8px;">
+                  <h4 style="margin:0 0 8px 0;font-size:12.5px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                    🤖 Telegram Bot Alerts (@GBTerminalAlertsBot)
+                  </h4>
+                  <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.4;">
+                    Active Bot: <b>@GBTerminalAlertsBot</b> | Chat ID: <b>5443969190</b> (Connected to +91 9390219001)
+                  </p>
+
+                  <form id="settingsTgForm">
+                    <div style="margin-bottom:8px;">
+                      <label class="form-lbl">BOT TOKEN</label>
+                      <input id="settingsTgTokenInput" type="password" autocomplete="new-password" value="8886769745:AAFE2sx7vv-peheZJBxxjlyMfG-rVv5c0nA" class="form-input" style="font-family:var(--font-mono);font-size:11px;" />
+                    </div>
+                    <div style="margin-bottom:10px;">
+                      <label class="form-lbl">CHAT ID</label>
+                      <input id="settingsTgChatIdInput" type="text" autocomplete="off" value="5443969190" class="form-input" style="font-family:var(--font-mono);font-size:11px;" />
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                      <button type="submit" class="submit-btn" style="flex:1;padding:8px;font-size:11px;">SAVE TELEGRAM SETTINGS</button>
+                      <button type="button" id="settingsTestAllBtn" class="submit-btn submit-btn--secondary" style="padding:8px 12px;font-size:11px;">SEND TEST ALERT 📲</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <div id="settingsNotificationAlert" style="display:none;margin-top:12px;padding:8px 12px;border-radius:6px;font-size:11px;font-family:var(--font-mono);"></div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- FIXED RIGHT BOTTOM CORNER BROKER STATUS PILL -->
+  <div class="fixed-bottom-right-status" id="connStatus">
+    <div class="status-dot-pill" data-broker="angelone" title="Angel One Session">
+      <span class="s-dot"></span>
+      <span class="s-name">Angel One</span>
+    </div>
+    <div class="status-dot-pill" data-broker="groww" title="Groww Session">
+      <span class="s-dot"></span>
+      <span class="s-name">Groww</span>
+    </div>
+  </div>
+
+  <!-- GROWW / ANGEL ONE STYLE ORDER TICKET MODAL -->
+  <div class="order-modal-backdrop" id="orderTicketModal" style="display:none;">
+    <div class="order-modal-card">
+      <!-- Modal Header -->
+      <div class="order-modal-header">
+        <div class="o-head-left">
+          <h2 id="omSymbolTitle" style="margin:0;font-size:16px;font-weight:800;color:var(--text-primary);">EMMVEE</h2>
+          <div class="o-price-tag" style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+            <span class="o-ex" style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:1px 5px;border-radius:3px;">NSE</span>
+            <span class="o-ltp" id="omLtpVal" style="font-family:var(--font-mono);font-size:13px;font-weight:700;">₹318.40</span>
+            <span class="o-chg down" id="omChgVal" style="font-family:var(--font-mono);font-size:11px;color:var(--loss);">-5.40 (-1.67%)</span>
+          </div>
+        </div>
+
+        <div class="o-head-right" style="display:flex;align-items:center;gap:10px;">
+          <!-- BUY / SELL Toggle Pill -->
+          <div class="bs-toggle-pill" id="omSideToggle">
+            <button type="button" class="bs-btn buy active" data-side="BUY">B</button>
+            <button type="button" class="bs-btn sell" data-side="SELL">S</button>
+          </div>
+          <button type="button" class="om-close-x" id="closeOmBtn">×</button>
+        </div>
+      </div>
+
+      <!-- Broker Selector Bar -->
+      <div class="om-broker-bar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-body);border-bottom:1px solid var(--line);">
+        <span style="font-size:10px;font-weight:800;color:var(--text-muted);letter-spacing:0.05em;">EXECUTION BROKER</span>
+        <div class="om-broker-tabs" id="omBrokerTabs">
+          <button type="button" class="om-broker-tab active" data-broker="angelone">Angel One</button>
+          <button type="button" class="om-broker-tab" data-broker="groww">Groww</button>
+        </div>
+      </div>
+
+      <!-- Order Mode Tabs -->
+      <div class="order-mode-tabs">
+        <button type="button" class="om-tab active" data-om-tab="REGULAR">Regular</button>
+        <button type="button" class="om-tab" data-om-tab="STOPLOSS">Stop Loss</button>
+        <button type="button" class="om-tab" data-om-tab="GTT">GTT</button>
+        <button type="button" class="om-tab" data-om-tab="SIP">SIP</button>
+      </div>
+
+      <!-- Order Form Body -->
+      <form id="omForm" class="om-form-body">
+        <div class="om-form-main-grid" style="display:grid;grid-template-columns:110px 1fr 1fr;gap:12px;align-items:flex-start;">
+          <!-- Product Type Selector (INT / DEL) -->
+          <div>
+            <label class="form-lbl">Product Type</label>
+            <div class="prod-type-btns">
+              <button type="button" class="prod-btn" data-prod="INTRADAY">INT</button>
+              <button type="button" class="prod-btn active" data-prod="DELIVERY">DEL</button>
+            </div>
+          </div>
+
+          <!-- Quantity -->
+          <div>
+            <label class="form-lbl">Quantity</label>
+            <input type="number" id="omQtyInput" min="1" value="1" class="form-input" required />
+            <span style="font-size:10px;color:var(--text-muted);display:block;margin-top:3px;">Total: <b id="omTotalValue" style="color:var(--text-primary);font-family:var(--font-mono);">₹318.40</b></span>
+          </div>
+
+          <!-- Price & Limit/Market Toggle -->
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <label class="form-lbl">Price</label>
+              <div class="limit-market-toggle" style="display:flex;align-items:center;gap:4px;">
+                <span id="omPriceTypeLabel" style="font-size:10px;font-weight:700;color:var(--accent);">Limit</span>
+                <input type="checkbox" id="omMarketSwitch" style="cursor:pointer;" />
+                <span style="font-size:10px;color:var(--text-muted);">Market</span>
+              </div>
+            </div>
+            <input type="number" step="0.05" id="omPriceInput" class="form-input" value="318.40" required />
+          </div>
+        </div>
+
+        <!-- Stop Loss / Target Unified Dual Inputs (Price ₹ + Percentage %) -->
+        <div id="omTriggerPriceWrap" style="display:none;margin-top:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label class="form-lbl" style="color:var(--loss);">STOP LOSS (₹ | %)</label>
+              <div class="unified-price-pct-box">
+                <input type="number" step="0.05" id="omSlInput" class="val-input" placeholder="Price ₹" />
+                <div class="unified-price-pct-divider"></div>
+                <input type="number" step="0.1" id="omSlPctInput" class="pct-input" placeholder="%" />
+              </div>
+            </div>
+            <div>
+              <label class="form-lbl" style="color:var(--gain);">TARGET PROFIT (₹ | %)</label>
+              <div class="unified-price-pct-box">
+                <input type="number" step="0.05" id="omTargetInput" class="val-input" placeholder="Price ₹" />
+                <div class="unified-price-pct-divider"></div>
+                <input type="number" step="0.1" id="omTargetPctInput" class="pct-input" placeholder="%" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Payment Bar (Matching Reference Image) -->
+        <div class="om-bottom-pay-bar" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+          <!-- Available Margin on Left -->
+          <div class="om-avail-box">
+            <span style="font-size:11px;color:var(--accent);display:block;">Available</span>
+            <b id="omAvailVal" style="font-family:var(--font-mono);font-size:14px;color:var(--text-primary);">₹942.97</b>
+          </div>
+
+          <!-- Side-by-Side Payment Mode Cards on Right -->
+          <div class="angel-pay-mode-btns">
+            <button type="button" class="pay-mode-btn mtf active" id="omMtfPayBtn" data-prod="MARGIN">
+              <span class="pay-title" id="omMtfLabel">MTF (2.9x)</span>
+              <span class="pay-amount" id="omMtfVal">₹109.79</span>
+            </button>
+            <button type="button" class="pay-mode-btn full" id="omFullPayBtn" data-prod="DELIVERY">
+              <span class="pay-title">PAY FULL</span>
+              <span class="pay-amount" id="omFullVal">₹318.40</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="om-footer" style="margin-top:12px;">
+          <button type="submit" class="om-submit-btn buy" id="omSubmitBtn">PLACE BUY ORDER</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ORDER ACTION MODAL (CANCEL / EDIT ORDER) -->
+  <div class="order-modal-backdrop" id="orderActionModal" style="display:none;z-index:2100;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+    <div class="order-modal-card" style="width:380px;padding:0;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+      <div style="padding:14px 18px;background:var(--bg-raised);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+        <h3 id="actionModalTitle" style="margin:0;font-size:13.5px;font-weight:800;color:var(--text-primary);letter-spacing:0.04em;">MANAGE ORDER</h3>
+        <button type="button" id="closeActionModalBtn" style="background:transparent;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">×</button>
+      </div>
+
+      <div style="padding:18px;">
+        <div id="actionOrderDetails" style="font-size:12px;color:var(--text-primary);margin-bottom:16px;background:var(--bg-raised);padding:12px;border-radius:8px;border:1px solid var(--line);line-height:1.6;">
+          <!-- Dynamic Order Details -->
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button type="button" id="btnEditOrder" style="background:rgba(37,99,235,0.12);color:#2563EB;border:1px solid rgba(37,99,235,0.35);padding:11px;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            ✏️ EDIT / MODIFY ORDER
+          </button>
+          <button type="button" id="btnCancelOrder" style="background:rgba(220,38,38,0.12);color:#DC2626;border:1px solid rgba(220,38,38,0.35);padding:11px;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            🚫 CANCEL ORDER
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT ORDER MODAL -->
+  <div class="order-modal-backdrop" id="editOrderModal" style="display:none;z-index:2200;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+    <div class="order-modal-card" style="width:440px;padding:0;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.5);">
+      <div style="padding:14px 18px;background:var(--bg-raised);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:13.5px;font-weight:800;color:var(--text-primary);letter-spacing:0.04em;">MODIFY ORDER PARAMETERS</h3>
+        <button type="button" id="closeEditModalBtn" style="background:transparent;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">×</button>
+      </div>
+
+      <form id="editOrderForm" style="padding:18px;">
+        <input type="hidden" id="editOrderId" />
+        
+        <!-- Stock Details & LTP Bar -->
+        <div style="padding:10px 12px;background:var(--bg-raised);border-radius:8px;border:1px solid var(--line);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+          <div>Stock: <b id="editOrderSymbol" style="color:var(--accent);font-family:var(--font-mono);">CUPID</b></div>
+          <div>LTP: <b id="editOrderLtp" style="color:var(--text-primary);font-family:var(--font-mono);">₹294.86</b></div>
+        </div>
+
+        <!-- Quantity -->
+        <div style="margin-bottom:12px;">
+          <label class="form-lbl">QUANTITY</label>
+          <input type="number" min="1" id="editOrderQty" class="form-input" style="padding:8px;border-radius:6px;background:var(--bg-raised);color:var(--text-primary);border:1px solid var(--line);" required />
+        </div>
+
+        <!-- 1. Order / Limit Price Single Unified Box -->
+        <div style="margin-bottom:12px;">
+          <label class="form-lbl">ORDER / LIMIT PRICE (₹ | %)</label>
+          <div class="unified-price-pct-box">
+            <input type="number" step="0.05" id="editOrderPrice" class="val-input" placeholder="Price ₹" required />
+            <div class="unified-price-pct-divider"></div>
+            <input type="number" step="0.01" id="editOrderPct" class="pct-input" placeholder="%" />
+          </div>
+        </div>
+
+        <!-- 2. Target Profit Price Single Unified Box -->
+        <div style="margin-bottom:12px;">
+          <label class="form-lbl" style="color:var(--gain);">TARGET PRICE (₹ | %)</label>
+          <div class="unified-price-pct-box">
+            <input type="number" step="0.05" id="editOrderTargetPrice" class="val-input" placeholder="Price ₹" />
+            <div class="unified-price-pct-divider"></div>
+            <input type="number" step="0.01" id="editOrderTargetPct" class="pct-input" placeholder="%" />
+          </div>
+        </div>
+
+        <!-- 3. Stop Loss Price Single Unified Box -->
+        <div style="margin-bottom:16px;">
+          <label class="form-lbl" style="color:var(--loss);">STOP LOSS PRICE (₹ | %)</label>
+          <div class="unified-price-pct-box">
+            <input type="number" step="0.05" id="editOrderSlPrice" class="val-input" placeholder="Price ₹" />
+            <div class="unified-price-pct-divider"></div>
+            <input type="number" step="0.01" id="editOrderSlPct" class="pct-input" placeholder="%" />
+          </div>
+        </div>
+
+        <button type="submit" style="width:100%;background:rgba(37,99,235,0.15);color:#2563EB;border:1px solid rgba(37,99,235,0.35);padding:11px;border-radius:8px;font-weight:800;font-size:12.5px;cursor:pointer;">
+          SAVE MODIFIED ORDER PARAMETERS
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="/js/app.js?v=2.1.0"></script>
+</body>
+</html>
