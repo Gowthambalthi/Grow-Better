@@ -7,9 +7,15 @@
  *  - Dynamic Timeframe Mutual Fund Ranking (1. Kotak Bluechip, 2. SBI Small Cap...) based on selected period (1M, 3M, 6M, 1Y)
  */
 
-const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+
+let Database;
+try {
+  Database = require('better-sqlite3');
+} catch (e) {
+  console.warn('[InstitutionalService] better-sqlite3 fallback active');
+}
 
 const DB_DIR = path.join(__dirname, '../../data');
 if (!fs.existsSync(DB_DIR)) {

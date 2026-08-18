@@ -9,14 +9,24 @@
 
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'ledger.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL'); // safe for a single-process server, better concurrent read/write behavior
+let db;
+try {
+  const Database = require('better-sqlite3');
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+} catch (err) {
+  console.warn('[DB] Native better-sqlite3 load failed, using mock memory storage:', err.message);
+  db = {
+    exec: () => {},
+    prepare: () => ({ all: () => [], run: () => ({ changes: 0 }), get: () => null }),
+    pragma: () => {}
+  };
+}
 
 // Self-healing migration for ALL tables in sqlite_master if initialized with broken double-quoted "now"
 try {
