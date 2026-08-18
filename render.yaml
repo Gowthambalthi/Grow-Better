@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: gb-terminal-24x7
+    name: grow-better
     env: node
     plan: free
     buildCommand: npm install
