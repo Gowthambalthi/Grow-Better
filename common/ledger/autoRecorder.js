@@ -86,8 +86,8 @@ function tryRecordAngel(update) {
   const status = (update.status || update.orderstatus || '').toString().toLowerCase();
   const producttype = (update.producttype || update.product || '').toUpperCase();
 
-  const looksComplete = status.includes('complet'); // e.g. "complete" — Angel's REST docs use this term
-  const hasRequiredFields = tradingsymbol && transactionType && quantity > 0 && price > 0 && orderId;
+  const isEmptyHeartbeat = !tradingsymbol && !orderId && quantity === 0;
+  if (isEmptyHeartbeat) return null; // Connection handshake/heartbeat ping — silently ignore
 
   if (!looksComplete || !hasRequiredFields) {
     console.warn('[autoRecorder] angelone order update did not match expected shape — skipping auto-record, raw payload:', JSON.stringify(update));
