@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gb-terminal-24x7
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node Server.js
+    envVars:
+      - key: PORT
+        value: 4000
