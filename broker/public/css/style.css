@@ -987,11 +987,21 @@ button { font-family: inherit; }
   clear: both !important;
 }
 
-.portfolio-actions {
+.portfolio-actions, .action-buttons {
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
   margin-left: auto !important;
+}
+
+.portfolio-actions button, .action-button {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .broker-panel {
@@ -1996,14 +2006,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    ============================================================ */
 .portfolio-summary, .summary-card, .groww-hero-card {
   width: 100% !important;
-  height: 132px !important;
-  min-height: 132px !important;
-  max-height: 132px !important;
-  border-radius: 16px !important;
-  padding: 16px 28px !important;
+  height: 178px !important;
+  min-height: 178px !important;
+  max-height: 178px !important;
+  border-radius: 20px !important;
+  padding: 30px 36px !important;
   background: #1B2B4C !important;
   display: flex !important;
-  align-items: flex-end !important;
+  align-items: center !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin: 0 0 20px 0 !important;
@@ -2014,47 +2024,46 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .gh-left {
   display: flex !important;
   flex-direction: column !important;
-  justify-content: flex-end !important;
+  justify-content: center !important;
 }
 
 .current-value-label, .gh-sub-lbl {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 12.5px !important;
+  font-size: 14px !important;
   letter-spacing: 0.4px !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
-  margin: 0 0 4px 0 !important;
+  margin: 0 0 12px 0 !important;
 }
 
 .current-value, .gh-main-price {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 34px !important;
-  font-weight: 700 !important;
+  font-size: 40px !important;
+  font-weight: 600 !important;
   color: #FFFFFF !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
-  margin: 0 0 4px 0 !important;
+  margin: 0 0 12px 0 !important;
 }
 
-.gh-sub-info {
+.invested-text, .gh-sub-info {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
   color: #94A3B8 !important;
   margin: 0 !important;
 }
 
 .gh-sub-info strong, .gh-sub-info span {
   font-family: 'JetBrains Mono', monospace !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
 }
 
 .gh-right {
   display: flex !important;
   align-items: flex-end !important;
-  gap: 36px !important;
-  padding-bottom: 1px !important;
+  gap: 40px !important;
 }
 
 .gh-metric {
@@ -2065,9 +2074,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .gh-lbl {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   letter-spacing: 0.3px !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
   margin-bottom: 6px !important;
@@ -2075,8 +2084,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .gh-val {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 17.5px !important;
-  font-weight: 500 !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
   color: #FFFFFF;
   line-height: 1.1 !important;
 }
@@ -2086,7 +2095,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 16px !important;
-  margin: 0 0 22px 0 !important;
+  margin: 0 0 28px 0 !important;
   padding: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -2096,7 +2105,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   height: 126px !important;
   min-height: 126px !important;
   max-height: 126px !important;
-  padding: 20px 24px !important;
+  padding: 22px 24px !important;
   border-radius: 16px !important;
   background: #FFFFFF !important;
   border: 1px solid #E5E7EB !important;
@@ -2109,43 +2118,26 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   transition: transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-.stat-card:hover, .groww-stat-box:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-}
-
-.gs-lbl {
-  font-size: 13px !important;
+.stat-label, .gs-lbl {
+  font-size: 15px !important;
   font-weight: 500 !important;
   color: var(--text-muted) !important;
+  margin-bottom: 12px !important;
 }
 
-.gs-val {
+.stat-value, .gs-val {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 19px !important;
-  font-weight: 500 !important;
+  font-size: 25px !important;
+  font-weight: 600 !important;
   color: var(--text-primary) !important;
+  line-height: 1.1 !important;
+  margin-bottom: 8px !important;
 }
 
-.gs-sub {
-  font-size: 11px !important;
+.stat-subtitle, .gs-sub {
+  font-size: 15px !important;
   font-weight: 400 !important;
   color: var(--text-dim) !important;
-}
-  color: #64748B !important;
-}
-
-.gs-val {
-  font-size: 22px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  line-height: 1.2 !important;
-}
-
-.gs-sub {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  color: #94A3B8 !important;
 }
 
 /* Table exact match */
