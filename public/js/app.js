@@ -80,10 +80,10 @@ function initMobileNotifications() {
     if (signalDot) {
       if (on) {
         signalDot.classList.add('on');
-        signalLbl.textContent = 'SIGNALS: ON';
+        if (signalLbl) signalLbl.textContent = 'Signals On';
       } else {
         signalDot.classList.remove('on');
-        signalLbl.textContent = 'SIGNALS: OFF';
+        if (signalLbl) signalLbl.textContent = 'Signals Off';
       }
     }
   }

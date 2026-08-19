@@ -534,8 +534,8 @@ button { font-family: inherit; }
   color: #0F172A !important;
 }
 .theme-icon { width: 15px !important; height: 15px !important; display: none; }
-[data-theme="dark"] .moon-icon { display: block; }
-[data-theme="light"] .sun-icon { display: block; }
+[data-theme="dark"] .sun-icon { display: block; }
+[data-theme="light"] .moon-icon { display: block; }
 
 /* Stacked Pills for CASH BALANCE (BORDERLESS - NOT IN BOX!) */
 .topbar-stacked-pill {

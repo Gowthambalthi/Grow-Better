@@ -105,7 +105,7 @@ function renderTickerUI() {
   // Header Title & Market Tag Update
   const nameEl = document.getElementById('mainHeaderIndexName');
   const marketTagEl = document.getElementById('popoverMarketTag');
-  if (nameEl) nameEl.textContent = open ? 'NIFTY 50' : 'GIFT NIFTY';
+  if (nameEl && !nameEl.dataset.customSelected) nameEl.textContent = 'NIFTY 50';
   if (marketTagEl) {
     const timeStr = topData && topData.lastUpdated ? new Date(topData.lastUpdated).toLocaleTimeString('en-IN') : '';
     const statusText = isPreOpen ? '● PRE-OPEN (NSE IST)' : (open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)');
