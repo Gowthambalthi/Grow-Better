@@ -655,6 +655,10 @@ app.get('/api/instruments/resolve', (req, res) => {
 
 // GET /api/instruments/watchlist?symbols=NIFTY,BANKNIFTY,GOLD,SILVER
 app.get('/api/instruments/watchlist', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   try {
     const rawSymbols = (req.query.symbols || 'NIFTY,BANKNIFTY,SENSEX,FINNIFTY,MIDCPNIFTY,GIFTNIFTY,GOLD,SILVER,CRUDEOIL,NATURALGAS').split(',').map(s => s.trim().toUpperCase());
     
@@ -672,9 +676,9 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       NATURALGAS: { symbol: 'NATURALGAS', name: 'MCX NATURAL GAS', quote: { price: 264.20, close: 257.90, change: 6.30, changePct: 2.44 } }
     };
 
-    // 1. Fetch Groww Live GIFT NIFTY Directly from Groww's Live Page
     const angelUpdatedKeys = new Set();
-    const nowIso = new Date().toISOString();
+
+    // 1. Fetch Groww Live GIFT NIFTY Directly from Groww's Live Page
     try {
       const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
       const gRes = await axios.get('https://groww.in/indices/global-indices/sgx-nifty', { headers: uHeaders, timeout: 2500 });
@@ -692,7 +696,7 @@ app.get('/api/instruments/watchlist', async (req, res) => {
 
         fallbackMap.GIFTNIFTY.quote = { price, close, change, changePct };
         fallbackMap.GIFTNIFTY.source = 'Groww Live Feed';
-        fallbackMap.GIFTNIFTY.lastUpdated = nowIso;
+        fallbackMap.GIFTNIFTY.lastUpdated = new Date().toISOString();
         angelUpdatedKeys.add('GIFTNIFTY');
       }
     } catch (gErr) {
@@ -751,11 +755,26 @@ app.get('/api/instruments/watchlist', async (req, res) => {
                 const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
                 fallbackMap[t.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
                 fallbackMap[t.key].source = 'Angel One SmartAPI Live';
-                fallbackMap[t.key].lastUpdated = nowIso;
+                fallbackMap[t.key].lastUpdated = new Date().toISOString();
                 angelUpdatedKeys.add(t.key);
               }
             } catch (e) {
-              // ignore single item fail
+              if (e.response?.status === 401 || /token|session|auth/i.test(e.message)) {
+                console.error(`[watchlist] Token expired for ${t.key}, attempting auto re-auth...`);
+                try {
+                  const angelAuth = require('./angelone/auth');
+                  const newAuth = await angelAuth.login();
+                  if (newAuth?.session) {
+                    brokers.angelone = brokers.angelone || {};
+                    brokers.angelone.session = newAuth.session;
+                    app.set('angelSession', newAuth.session);
+                  }
+                } catch (rErr) {
+                  console.error('[watchlist] Re-auth failed:', rErr.message);
+                }
+              } else {
+                console.error(`[watchlist] Failed to fetch ${t.key}:`, e.message);
+              }
             }
           }
         }));
@@ -764,7 +783,7 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       console.log('[watchlist] Angel One SmartAPI live quote note:', aErr.message);
     }
 
-    // 2. Dual-Mirror Yahoo / Direct Fallback for any symbol not updated by Angel One
+    // 3. Dual-Mirror Yahoo / Direct Fallback for any symbol not updated
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
     const yFetchers = [
       { key: 'NIFTY', ySym: '%5ENSEI' },
@@ -810,7 +829,7 @@ app.get('/api/instruments/watchlist', async (req, res) => {
             const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
             fallbackMap[item.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
             fallbackMap[item.key].source = 'Live Market Feed';
-            fallbackMap[item.key].lastUpdated = nowIso;
+            fallbackMap[item.key].lastUpdated = new Date().toISOString();
           }
         } catch (subErr) {
           // ignore
@@ -820,7 +839,7 @@ app.get('/api/instruments/watchlist', async (req, res) => {
 
     const responseList = rawSymbols.map(sym => {
       const obj = fallbackMap[sym] || { symbol: sym, name: sym, quote: { price: 100, close: 100, change: 0, changePct: 0 } };
-      obj.lastUpdated = obj.lastUpdated || nowIso;
+      obj.lastUpdated = obj.lastUpdated || new Date().toISOString();
       return obj;
     });
     res.json(responseList);
