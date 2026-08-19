@@ -336,7 +336,7 @@ button { font-family: inherit; }
 .index-name, #mainHeaderIndexName {
   font-size: 11px !important;
   font-weight: 700 !important;
-  color: #5F7570 !important; /* Light Black / Muted Slate */
+  color: #718096 !important; /* Softer, lighter slate black */
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
   line-height: 1.1 !important;
@@ -555,7 +555,7 @@ button { font-family: inherit; }
 .pill-title {
   font-size: 11px !important;
   font-weight: 600 !important;
-  color: #5F7570 !important; /* Light Black / Muted Slate */
+  color: #718096 !important; /* Softer, lighter slate black */
   letter-spacing: 0;
   text-transform: none !important;
 }
