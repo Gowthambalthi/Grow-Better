@@ -667,13 +667,13 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       NIFTY: { symbol: 'NIFTY', name: 'NIFTY 50', quote: { price: 24154.90, close: 24287.65, change: -132.75, changePct: -0.55 } },
       BANKNIFTY: { symbol: 'BANKNIFTY', name: 'BANK NIFTY', quote: { price: 57262.40, close: 57497.80, change: -235.40, changePct: -0.41 } },
       SENSEX: { symbol: 'SENSEX', name: 'SENSEX', quote: { price: 77235.46, close: 77728.16, change: -492.70, changePct: -0.63 } },
-      FINNIFTY: { symbol: 'FINNIFTY', name: 'FIN NIFTY', quote: { price: 28428.40, close: 28569.45, change: -141.05, changePct: -0.49 } },
-      MIDCPNIFTY: { symbol: 'MIDCPNIFTY', name: 'MIDCAP NIFTY', quote: { price: 18216.80, close: 18260.70, change: -43.90, changePct: -0.24 } },
-      GIFTNIFTY: { symbol: 'GIFTNIFTY', name: 'GIFT NIFTY', quote: { price: 24205.00, close: 24179.00, change: 26.00, changePct: 0.11 } },
-      GOLD: { symbol: 'GOLD', name: 'MCX GOLD', quote: { price: 154483.00, close: 155940.00, change: -1457.00, changePct: -0.93 } },
-      SILVER: { symbol: 'SILVER', name: 'MCX SILVER', quote: { price: 247050.00, close: 251770.00, change: -4720.00, changePct: -1.87 } },
-      CRUDEOIL: { symbol: 'CRUDEOIL', name: 'MCX CRUDE OIL', quote: { price: 8117.00, close: 8020.00, change: 97.00, changePct: 1.21 } },
-      NATURALGAS: { symbol: 'NATURALGAS', name: 'MCX NATURAL GAS', quote: { price: 264.20, close: 257.90, change: 6.30, changePct: 2.44 } }
+      FINNIFTY: { symbol: 'FINNIFTY', name: 'FIN NIFTY', quote: { price: 26106.65, close: 26108.00, change: -1.35, changePct: -0.01 } },
+      MIDCPNIFTY: { symbol: 'MIDCPNIFTY', name: 'MIDCAP NIFTY', quote: { price: 14849.80, close: 14840.75, change: 9.05, changePct: 0.06 } },
+      GIFTNIFTY: { symbol: 'GIFTNIFTY', name: 'GIFT NIFTY', quote: { price: 24199.50, close: 24187.50, change: 12.00, changePct: 0.05 } },
+      GOLD: { symbol: 'GOLD', name: 'MCX GOLD', quote: { price: 154205.00, close: 155940.00, change: -1735.00, changePct: -1.11 } },
+      SILVER: { symbol: 'SILVER', name: 'MCX SILVER', quote: { price: 245770.00, close: 251770.00, change: -6000.00, changePct: -2.38 } },
+      CRUDEOIL: { symbol: 'CRUDEOIL', name: 'MCX CRUDE OIL', quote: { price: 8130.47, close: 8020.00, change: 110.47, changePct: 1.38 } },
+      NATURALGAS: { symbol: 'NATURALGAS', name: 'MCX NATURAL GAS', quote: { price: 266.82, close: 257.90, change: 8.92, changePct: 3.46 } }
     };
 
     const angelUpdatedKeys = new Set();
@@ -789,8 +789,8 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       { key: 'NIFTY', ySym: '%5ENSEI' },
       { key: 'BANKNIFTY', ySym: '%5ENSEBANK' },
       { key: 'SENSEX', ySym: '%5EBSESN' },
-      { key: 'FINNIFTY', ySym: '%5ECNXFIN' },
-      { key: 'MIDCPNIFTY', ySym: '%5ENSEMDCP50' },
+      { key: 'FINNIFTY', ySym: 'NIFTY_FIN_SERVICE.NS' },
+      { key: 'MIDCPNIFTY', ySym: 'NIFTY_MID_SELECT.NS' },
       { key: 'GIFTNIFTY', ySym: '%5ENSEI', isGiftNifty: true },
       { key: 'GOLD', ySym: 'GC=F', isCommodityGold: true },
       { key: 'SILVER', ySym: 'SI=F', isCommoditySilver: true },
