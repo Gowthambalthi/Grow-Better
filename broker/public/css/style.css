@@ -115,8 +115,10 @@ button { font-family: inherit; }
   padding: 16px 10px;
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, border-color 0.2s;
   z-index: 100;
-  position: sticky;
+  position: fixed !important;
   top: 0;
+  left: 0;
+  bottom: 0;
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -293,7 +295,23 @@ button { font-family: inherit; }
 .status-dot-pill.error .s-dot { background: var(--loss); box-shadow: 0 0 6px var(--loss); }
 
 /* ---- Main Column ---- */
-.main-col { flex: 1; min-width: 0 !important; width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; display: flex; flex-direction: column; }
+.main-col {
+  flex: 1;
+  margin-left: var(--sidebar-w) !important;
+  width: calc(100% - var(--sidebar-w)) !important;
+  max-width: calc(100% - var(--sidebar-w)) !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.2s ease, width 0.2s ease;
+}
+.sidebar.collapsed + .main-col,
+.sidebar.collapsed ~ .main-col {
+  margin-left: var(--sidebar-w-collapsed) !important;
+  width: calc(100% - var(--sidebar-w-collapsed)) !important;
+  max-width: calc(100% - var(--sidebar-w-collapsed)) !important;
+}
 
 /* ---- Topbar Header (Groww Terminal White Header) ---- */
 .topbar {
@@ -1004,15 +1022,7 @@ button { font-family: inherit; }
 .broker-panel.groww-panel {
   border-left: 1px solid var(--line) !important;
 }.panel-head {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  padding: 10px 14px !important;
-  border-bottom: 1px solid var(--line) !important;
-  background: rgba(0, 0, 0, 0.03) !important;
-  flex: 0 0 auto !important;
-  clear: both !important;
+  display: none !important; /* Hide Angel One & Groww sub-panel headers */
 }
 .panel-title-group { display: flex; align-items: center; gap: 8px; }
 .broker-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -1053,32 +1063,35 @@ button { font-family: inherit; }
 }
 .holdings-table {
   width: 100% !important;
-  min-width: 900px !important;
+  min-width: 100% !important;
   border-collapse: collapse;
   font-size: 11.5px;
   table-layout: fixed;
 }
 .holdings-table th {
-  padding: 15px 22px !important; color: var(--text-muted);
+  padding: 14px 10px !important; color: var(--text-muted);
   font-weight: 700; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
   border-bottom: 1px solid var(--line); white-space: nowrap;
   background: #FAFBFC !important;
   text-align: right;
 }
-.holdings-table th:first-child { text-align: left; padding-left: 22px !important; }
-.holdings-table th:last-child { text-align: right; padding-right: 22px !important; }
+.holdings-table th:first-child { text-align: left; padding-left: 16px !important; }
+.holdings-table th:last-child { text-align: right; padding-right: 16px !important; }
 
 .holdings-table tbody tr:nth-child(even) {
   background: rgba(255, 255, 255, 0.015);
 }
 
 .holdings-table td {
-  padding: 15px 22px !important; text-align: right;
+  padding: 14px 10px !important; text-align: right;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   border-bottom: 1px solid var(--line); white-space: nowrap;
   color: var(--text-primary);
   font-size: 12px;
 }
+.holdings-table td:first-child { text-align: left; padding-left: 16px !important; }
+.holdings-table td:last-child { text-align: right; padding-right: 16px !important; }
+
 .clickable-holding-row { cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
 .clickable-holding-row:hover { background: rgba(99, 102, 241, 0.08) !important; }
 
@@ -1104,15 +1117,15 @@ button { font-family: inherit; }
 }
 
 .holdings-table th:nth-child(1), .holdings-table td:nth-child(1) { width: 22% !important; text-align: left !important; }
-.holdings-table th:nth-child(2), .holdings-table td:nth-child(2) { width: 6% !important; text-align: right !important; }
+.holdings-table th:nth-child(2), .holdings-table td:nth-child(2) { width: 5.5% !important; text-align: right !important; }
 .holdings-table th:nth-child(3), .holdings-table td:nth-child(3) { width: 9% !important; text-align: right !important; }
 .holdings-table th:nth-child(4), .holdings-table td:nth-child(4) { width: 9% !important; text-align: right !important; }
-.holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { width: 10% !important; text-align: right !important; }
-.holdings-table th:nth-child(6), .holdings-table td:nth-child(6) { width: 10% !important; text-align: right !important; }
-.holdings-table th:nth-child(7), .holdings-table td:nth-child(7) { width: 11% !important; text-align: right !important; }
-.holdings-table th:nth-child(8), .holdings-table td:nth-child(8) { width: 10% !important; text-align: right !important; }
+.holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { width: 11% !important; text-align: right !important; }
+.holdings-table th:nth-child(6), .holdings-table td:nth-child(6) { width: 11% !important; text-align: right !important; }
+.holdings-table th:nth-child(7), .holdings-table td:nth-child(7) { width: 11.5% !important; text-align: right !important; }
+.holdings-table th:nth-child(8), .holdings-table td:nth-child(8) { width: 11% !important; text-align: right !important; }
 .holdings-table th:nth-child(9), .holdings-table td:nth-child(9) { width: 5.5% !important; text-align: center !important; }
-.holdings-table th:nth-child(10), .holdings-table td:nth-child(10) { width: 10.5% !important; text-align: right !important; }
+.holdings-table th:nth-child(10), .holdings-table td:nth-child(10) { width: 4.5% !important; text-align: right !important; }
 
 /* ---- Market Scanner Table Styles (Prevent Overlapping) ---- */
 .inst-table {
