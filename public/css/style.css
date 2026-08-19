@@ -83,7 +83,8 @@ button { font-family: inherit; }
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  background: var(--bg-sidebar);
+  background: var(--navy, #1B2A4E);
+  background: linear-gradient(180deg, #1B2A4E, #142040) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
@@ -497,22 +498,26 @@ button { font-family: inherit; }
   background: rgba(255, 255, 255, 0.22);
 }
 
-/* Decreased Glare Theme Mode Toggle Button (Borderless) */
+/* Theme Mode Toggle Button (Fixed 34x34px Square) */
 .theme-toggle-btn {
   background: transparent !important;
-  border: none !important;
+  border: 1px solid #E2E8F0 !important;
   box-shadow: none !important;
   color: #64748B !important;
-  width: 26px !important;
-  height: 26px !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 9px !important;
   padding: 0 !important;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 0.15s ease !important;
 }
 .theme-toggle-btn:hover {
-  color: #FFFFFF !important;
+  background: #F1F5F9 !important;
+  color: #0F172A !important;
 }
 .theme-icon { width: 15px !important; height: 15px !important; display: none; }
 [data-theme="dark"] .moon-icon { display: block; }
@@ -1049,16 +1054,16 @@ button { font-family: inherit; }
   border: 1px solid rgba(255, 77, 109, 0.25);
 }
 
-.holdings-table th:nth-child(1), .holdings-table td:nth-child(1) { width: 18%; text-align: left; }
-.holdings-table th:nth-child(2), .holdings-table td:nth-child(2) { width: 5%; text-align: right; }
-.holdings-table th:nth-child(3), .holdings-table td:nth-child(3) { width: 9%; text-align: right; }
-.holdings-table th:nth-child(4), .holdings-table td:nth-child(4) { width: 9%; text-align: right; }
-.holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { width: 11%; text-align: right; }
-.holdings-table th:nth-child(6), .holdings-table td:nth-child(6) { width: 11%; text-align: right; }
-.holdings-table th:nth-child(7), .holdings-table td:nth-child(7) { width: 11%; text-align: right; }
-.holdings-table th:nth-child(8), .holdings-table td:nth-child(8) { width: 10%; text-align: right; }
-.holdings-table th:nth-child(9), .holdings-table td:nth-child(9) { width: 5.5%; text-align: center; }
-.holdings-table th:nth-child(10), .holdings-table td:nth-child(10) { width: 10.5%; text-align: right; }
+.holdings-table th:nth-child(1), .holdings-table td:nth-child(1) { width: 22% !important; text-align: left !important; }
+.holdings-table th:nth-child(2), .holdings-table td:nth-child(2) { width: 6% !important; text-align: right !important; }
+.holdings-table th:nth-child(3), .holdings-table td:nth-child(3) { width: 9% !important; text-align: right !important; }
+.holdings-table th:nth-child(4), .holdings-table td:nth-child(4) { width: 9% !important; text-align: right !important; }
+.holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { width: 10% !important; text-align: right !important; }
+.holdings-table th:nth-child(6), .holdings-table td:nth-child(6) { width: 10% !important; text-align: right !important; }
+.holdings-table th:nth-child(7), .holdings-table td:nth-child(7) { width: 11% !important; text-align: right !important; }
+.holdings-table th:nth-child(8), .holdings-table td:nth-child(8) { width: 10% !important; text-align: right !important; }
+.holdings-table th:nth-child(9), .holdings-table td:nth-child(9) { width: 5.5% !important; text-align: center !important; }
+.holdings-table th:nth-child(10), .holdings-table td:nth-child(10) { width: 10.5% !important; text-align: right !important; }
 
 /* ---- Market Scanner Table Styles (Prevent Overlapping) ---- */
 .inst-table {
