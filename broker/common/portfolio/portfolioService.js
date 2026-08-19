@@ -544,8 +544,8 @@ function summarize(rows, broker = 'combined', liveCash = null) {
   const accountEquity = currentAmount + cashBalance - totalMtfBorrowed;
 
   const ownCapitalInvested = investedAmount - totalMtfBorrowed;
-  const investedAccountValue = cashBalance + ownCapitalInvested;
-  const accountPL = investedAccountValue + totalWithdrawn - totalAdded;
+  const cashInvested = investedAmount;
+  const accountPL = totalAdded - totalWithdrawn - cashBalance - cashInvested;
 
   let effectiveNetCharges = 0;
   let effectiveMtfInterest = 0;
@@ -619,7 +619,7 @@ function summarize(rows, broker = 'combined', liveCash = null) {
     cashBalance,
     currentHoldingsEquity: currentPortfolioEquity,
     accountEquity,
-    accountPL: rawUnadjustedGain,
+    accountPL,
     adjustedAccountPL,
     unreflectedCosts: totalAccruedCharges,
     xirr,
