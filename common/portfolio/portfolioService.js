@@ -350,6 +350,7 @@ async function getAngelPortfolio(session) {
   }
 
   const holdingsList = Array.from(mergedMap.values());
+  holdingsList.sort((a, b) => (a.tradingsymbol || '').localeCompare(b.tradingsymbol || ''));
   if (holdingsList.length === 0) return [];
 
   const liveQuotes = await fetchAngelLiveQuotes(holdingsList, session);
@@ -425,6 +426,7 @@ async function getGrowwPortfolio(growwSession, angelSession) {
   }
 
   const holdingsList = Array.from(mergedMap.values()).filter(h => Number(h.quantity) > 0);
+  holdingsList.sort((a, b) => (a.trading_symbol || '').localeCompare(b.trading_symbol || ''));
   if (holdingsList.length === 0) return [];
 
   let angelQuotes = {};
