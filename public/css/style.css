@@ -2012,10 +2012,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   min-height: 148px !important;
   max-height: 148px !important;
   border-radius: 18px !important;
-  padding: 20px 32px !important;
+  padding: 22px 32px 20px !important;
   background: #1B2B4C !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-end !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin: 0 0 20px 0 !important;
@@ -2030,9 +2030,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .current-value-label, .gh-sub-lbl {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   letter-spacing: 0.4px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
   margin: 0 !important;
@@ -2040,30 +2040,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .current-value, .gh-main-price {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 40px !important;
-  font-weight: 600 !important;
+  font-size: 38px !important;
+  font-weight: 700 !important;
   color: #FFFFFF !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
-  margin: 8px 0 6px !important;
+  margin: 6px 0 4px !important;
 }
 
 .gh-sub-info {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
+  font-size: 12.5px !important;
+  font-weight: 400 !important;
   color: #94A3B8 !important;
   margin-top: 2px !important;
 }
 
 .gh-sub-info strong, .gh-sub-info span {
   font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 500 !important;
 }
 
 .gh-right {
   display: flex !important;
   align-items: flex-end !important;
-  gap: 34px !important;
+  gap: 40px !important;
+  padding-bottom: 2px !important;
 }
 
 .gh-metric {
@@ -2076,7 +2078,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-size: 11px !important;
   letter-spacing: 0.3px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
   margin-bottom: 6px !important;
@@ -2084,8 +2086,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .gh-val {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
+  font-size: 17.5px !important;
+  font-weight: 500 !important;
   color: #FFFFFF;
   line-height: 1.1 !important;
 }
@@ -2125,19 +2127,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .gs-lbl {
   font-size: 13px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: var(--text-muted) !important;
 }
 
 .gs-val {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 20px !important;
-  font-weight: 700 !important;
+  font-size: 19px !important;
+  font-weight: 500 !important;
   color: var(--text-primary) !important;
 }
 
 .gs-sub {
   font-size: 11px !important;
+  font-weight: 400 !important;
   color: var(--text-dim) !important;
 }
   color: #64748B !important;
