@@ -729,7 +729,7 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       { key: 'SENSEX', ySym: '%5EBSESN' },
       { key: 'FINNIFTY', ySym: '%5ECNXFIN' },
       { key: 'MIDCPNIFTY', ySym: '%5ENSEMDCP50' },
-      { key: 'GIFTNIFTY', overridePrice: 24205.00, overrideClose: 24179.00 },
+      { key: 'GIFTNIFTY', ySym: '%5ENSEI', isGiftNifty: true },
       { key: 'GOLD', ySym: 'GC=F', isCommodityGold: true },
       { key: 'SILVER', ySym: 'SI=F', isCommoditySilver: true },
       { key: 'CRUDEOIL', ySym: 'CL=F', isCommodityCrude: true },
@@ -739,13 +739,6 @@ app.get('/api/instruments/watchlist', async (req, res) => {
     await Promise.all(yFetchers.map(async (item) => {
       if (!angelUpdatedKeys.has(item.key)) {
         try {
-          if (item.overridePrice) {
-            const chg = Number((item.overridePrice - item.overrideClose).toFixed(2));
-            const chgPct = Number((((item.overridePrice - item.overrideClose) / item.overrideClose) * 100).toFixed(2));
-            fallbackMap[item.key].quote = { price: item.overridePrice, close: item.overrideClose, change: chg, changePct: chgPct };
-            return;
-          }
-
           const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ySym}?interval=1m&range=1d`;
           const res2 = await axios.get(url2, { headers: uHeaders, timeout: 2500 });
           const meta = res2.data?.chart?.result?.[0]?.meta;
@@ -753,12 +746,15 @@ app.get('/api/instruments/watchlist', async (req, res) => {
             let ltp = Number(meta.regularMarketPrice);
             let close = Number(meta.chartPreviousClose || meta.previousClose || ltp);
 
-            if (item.isCommodityGold) {
+            if (item.isGiftNifty) {
+              ltp = Number((ltp * 1.002).toFixed(2));
+              close = Number((close * 1.002).toFixed(2));
+            } else if (item.isCommodityGold) {
               ltp = Math.round(ltp * 34.96);
               close = Math.round(close * 34.96);
             } else if (item.isCommoditySilver) {
-              ltp = Math.round(ltp * 3634.5);
-              close = Math.round(close * 3634.5);
+              ltp = Math.round(ltp * 3890);
+              close = Math.round(close * 3890);
             } else if (item.isCommodityCrude) {
               ltp = Number((ltp * 95.98).toFixed(2));
               close = Number((close * 95.98).toFixed(2));
