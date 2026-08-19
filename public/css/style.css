@@ -1824,23 +1824,26 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 4px 10px;
+  background: #E6F4EA !important;
+  border: 1px solid #CEEAD6 !important;
+  border-radius: 999px !important;
+  padding: 4px 12px !important;
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
+  color: #137333 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
 }
 .signal-toggle-pill:hover {
-  border-color: var(--accent);
+  background: #D2E3FC !important;
 }
 .signal-dot-status {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--loss);
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+  background: #137333;
+  box-shadow: 0 0 6px rgba(19, 115, 51, 0.4);
   transition: all 0.2s ease;
 }
 .signal-dot-status.on {
@@ -1869,16 +1872,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    GROWW TERMINAL HERO BANNER & STAT GRID (SAFE & ISOLATED)
    ============================================================ */
 .groww-hero-card {
-  background: #1E293B !important;
-  border-radius: 18px !important;
-  padding: 28px 32px !important;
+  background: #1B243B !important;
+  border-radius: 16px !important;
+  padding: 24px 28px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin-top: 10px !important;
   margin-bottom: 20px !important;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
@@ -1890,15 +1893,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-sub-lbl {
-  font-size: 12px !important;
-  letter-spacing: 0.4px !important;
-  font-weight: 600 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 700 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
 }
 
 .gh-main-price {
-  font-size: 38px !important;
+  font-size: 36px !important;
   font-weight: 800 !important;
   color: #FFFFFF !important;
   letter-spacing: -0.02em !important;
@@ -1926,16 +1929,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-lbl {
-  font-size: 11px !important;
-  letter-spacing: 0.3px !important;
-  font-weight: 600 !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.05em !important;
+  font-weight: 700 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
 }
 
 .gh-val {
   font-size: 20px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
   color: #FFFFFF !important;
   line-height: 1.1 !important;
 }
@@ -1944,7 +1947,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: grid !important;
   grid-template-columns: repeat(4, 1fr) !important;
   gap: 16px !important;
-  margin-bottom: 24px !important;
+  margin-bottom: 20px !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
@@ -1952,29 +1955,29 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .groww-stat-box {
   background: #FFFFFF !important;
   border: 1px solid #E2E8F0 !important;
-  border-radius: 14px !important;
-  padding: 20px 22px !important;
+  border-radius: 12px !important;
+  padding: 18px 20px !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 4px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
-  transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02) !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
 .groww-stat-box:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
 
 .gs-lbl {
-  font-size: 13.5px !important;
+  font-size: 13px !important;
   font-weight: 600 !important;
   color: #64748B !important;
 }
 
 .gs-val {
-  font-size: 24px !important;
-  font-weight: 700 !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
   color: #0F172A !important;
   line-height: 1.2 !important;
 }
@@ -1985,18 +1988,34 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   color: #94A3B8 !important;
 }
 
-/* Table exact spec */
+/* Table exact match */
 .holdings-table th {
   font-size: 10.5px !important;
-  letter-spacing: 0.6px !important;
+  letter-spacing: 0.05em !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
-  padding: 14px 20px !important;
+  padding: 12px 16px !important;
+  color: #94A3B8 !important;
+  background: #FAFAFA !important;
 }
 
 .holdings-table td {
-  font-size: 13.5px !important;
-  padding: 14px 20px !important;
+  font-size: 13px !important;
+  padding: 14px 16px !important;
+}
+
+/* Avatar squares (R, E, C) exact match to target screenshot */
+.sym-avatar-sq {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
 }
 
 /* Symbol Avatar Icon Circles */

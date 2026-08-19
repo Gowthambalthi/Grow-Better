@@ -42,20 +42,23 @@ export function renderHoldingsRow(row) {
   }
 
   const firstLetter = (rawSymbol || '').charAt(0).toUpperCase();
-  let logoBg = '#3B82F6';
+  let logoBg = '#2563EB';
   if (firstLetter === 'C') logoBg = '#EC4899';
   else if (firstLetter === 'E') logoBg = '#8B5CF6';
-  else if (firstLetter === 'R') logoBg = '#3B82F6';
+  else if (firstLetter === 'R') logoBg = '#2563EB';
   else if (firstLetter === 'S') logoBg = '#F59E0B';
+
+  const isLoss = (row.overallPL || 0) < 0;
+  const barColor = isLoss ? '#EB5B56' : '#00B386';
 
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
       <td>
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:32px;height:32px;border-radius:50%;background:${logoBg};color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;box-shadow:0 2px 5px rgba(0,0,0,0.15);">${firstLetter}</div>
+          <div class="sym-avatar-sq" style="background:${logoBg};">${firstLetter}</div>
           <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-weight:800;font-size:13.5px;color:var(--text-primary);">${rawSymbol}</span>${mtfBadge}
+              <span style="font-weight:800;font-size:13px;color:#0F172A;">${rawSymbol}</span>${mtfBadge}
             </div>
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
               ${brokerBadge}
@@ -71,7 +74,12 @@ export function renderHoldingsRow(row) {
       <td>${money(row.currentAmount)}</td>
       <td class="${plClass(row.overallPL)}">${money(row.overallPL)}<br><small>${pct(row.overallPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
-      <td style="text-align:center;"><span class="days-pill">${daysText}</span></td>
+      <td style="text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span style="font-size:12px;font-weight:600;color:#64748B;">${daysText}</span>
+          <div style="width:24px;height:4px;border-radius:2px;background:${barColor};"></div>
+        </div>
+      </td>
       <td class="${plClass(row.grossPL)}" style="font-weight:700;">${money(row.grossPL)}<br><small style="font-size:10px;">${pct(row.grossPLPercent)}</small></td>
     </tr>`;
 }
