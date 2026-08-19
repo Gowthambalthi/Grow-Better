@@ -607,7 +607,14 @@ function summarize(rows, broker = 'combined', liveCash = null) {
     cashFlows.push({ amount: -effectiveNetDeposits, date: new Date(Date.now() - maxDaysHeld * 24 * 60 * 60 * 1000) });
   }
   cashFlows.push({ amount: accountEquity, date: new Date() });
-  const xirr = calculateXirr(cashFlows);
+
+  const totalInflow = ownCapitalInvested || investedAmount || effectiveNetDeposits;
+  let xirr = 0;
+  if (maxDaysHeld < 365 && totalInflow > 0) {
+    xirr = (overallPL / totalInflow) * 100;
+  } else {
+    xirr = calculateXirr(cashFlows);
+  }
 
   const uninvestedLedgerCash = cashBalance;
   const absorbedCapital = effectiveNetDeposits - ownCapitalInvested - uninvestedLedgerCash;

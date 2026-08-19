@@ -175,9 +175,10 @@ function updateSummaryCards(mode = 'all') {
   const heroOverallEl = document.getElementById('heroOverallValue');
   if (heroOverallEl) {
     const ovNum = Number(c.overallPL || 0);
-    const ovPct = Number(c.overallPLPercent || 0);
+    const invAmt = Number(c.investedAmount || 0);
+    const ovPct = invAmt > 0 ? (ovNum / invAmt) * 100 : Number(c.overallPLPercent || 0);
     const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
-    heroOverallEl.textContent = `${plSign(ovNum)}${money(ovNum)} (${signPct})`;
+    heroOverallEl.textContent = `${plSign(ovNum)}${money(Math.abs(ovNum))} (${signPct})`;
     heroOverallEl.style.color = ovNum >= 0 ? '#00B386' : '#EB5B56';
   }
 

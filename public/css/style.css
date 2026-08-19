@@ -859,11 +859,15 @@ button { font-family: inherit; }
   transition: background 0.15s, color 0.15s;
 }
 .toggle-btn:hover { color: var(--text-primary); }
-.toggle-btn.active {
+.toggle-btn.active,
+.tab.active,
+.view-toggle-btns .toggle-btn.active {
   background: #00B386 !important;
   color: #FFFFFF !important;
-  font-weight: 700;
-  box-shadow: 0 1px 4px rgba(0, 179, 134, 0.3);
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(0, 179, 134, 0.4) !important;
+  border-radius: 6px !important;
+  border: none !important;
 }
 
 .refresh-btn {
