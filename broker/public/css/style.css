@@ -2042,14 +2042,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    ============================================================ */
 .portfolio-summary, .summary-card, .groww-hero-card {
   width: 100% !important;
-  height: 178px !important;
-  min-height: 178px !important;
-  max-height: 178px !important;
+  height: 180px !important;
+  min-height: 180px !important;
+  max-height: 180px !important;
   border-radius: 20px !important;
-  padding: 30px 36px !important;
+  padding: 26px 36px !important;
   background: #1B2B4C !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: stretch !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin: 0 0 20px 0 !important;
@@ -2057,10 +2057,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   box-sizing: border-box !important;
 }
 
-.gh-left {
+.gh-left, .summary-left {
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
+  align-self: center !important;
 }
 
 .current-value-label, .gh-sub-lbl {
@@ -2070,7 +2071,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-weight: 600 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
-  margin: 0 0 12px 0 !important;
+  margin: 0 0 10px 0 !important;
 }
 
 .current-value, .gh-main-price {
@@ -2080,12 +2081,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   color: #FFFFFF !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
-  margin: 0 0 12px 0 !important;
+  margin: 0 0 10px 0 !important;
 }
 
 .invested-text, .gh-sub-info {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 16px !important;
+  font-size: 15px !important;
   font-weight: 500 !important;
   color: #94A3B8 !important;
   margin: 0 !important;
@@ -2096,10 +2097,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-weight: 600 !important;
 }
 
-.gh-right {
+.gh-right, .summary-right {
   display: flex !important;
   align-items: flex-end !important;
+  align-self: flex-end !important;
   gap: 40px !important;
+  padding-bottom: 2px !important;
 }
 
 .gh-metric {
