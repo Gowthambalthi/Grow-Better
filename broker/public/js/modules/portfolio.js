@@ -87,21 +87,28 @@ export function renderGrowwOfficialCard(panelId, growwData) {
   if (!panel) return;
 
   const holdings = growwData?.holdings || [];
-  const summary = growwData?.summary || { investedAmount: 3032.77, currentAmount: 3625.70, todayPL: -66.69, todayPLPercent: -1.81, overallPL: 592.93, overallPLPercent: 19.55 };
+  const summary = growwData?.summary || {};
+
+  const curAmt = Number(summary.currentAmount || 0);
+  const invAmt = Number(summary.investedAmount || 0);
+  const todPL = Number(summary.todayPL || 0);
+  const todPct = Number(summary.todayPLPercent || 0);
+  const ovrPL = Number(summary.overallPL || 0);
+  const ovrPct = Number(summary.overallPLPercent || 0);
 
   const rowsHtml = holdings.length ? holdings.map((row) => {
     const rawSymbol = row.tradingsymbol || 'CUPID';
-    const qty = row.quantity || 13;
-    const avg = row.avgPrice || 233.29;
-    const ltp = row.ltp || 278.90;
-    const cur = row.currentAmount || 3625.70;
-    const inv = row.investedAmount || 3032.77;
-    const dayPlVal = row.todayPL != null ? row.todayPL : -66.69;
-    const dayPlPct = row.todayPLPercent != null ? row.todayPLPercent : -1.81;
-    const perShareDiff = (dayPlVal / qty);
+    const qty = Number(row.quantity || 0);
+    const avg = Number(row.avgPrice || 0);
+    const ltp = Number(row.ltp || 0);
+    const cur = Number(row.currentAmount || 0);
+    const inv = Number(row.investedAmount || 0);
+    const dayPlVal = Number(row.todayPL != null ? row.todayPL : 0);
+    const dayPlPct = Number(row.todayPLPercent != null ? row.todayPLPercent : 0);
+    const perShareDiff = qty > 0 ? (dayPlVal / qty) : 0;
 
-    const overallVal = row.overallPL != null ? row.overallPL : 592.93;
-    const overallPct = row.overallPLPercent != null ? row.overallPLPercent : 19.55;
+    const overallVal = Number(row.overallPL != null ? row.overallPL : 0);
+    const overallPct = Number(row.overallPLPercent != null ? row.overallPLPercent : 0);
 
     return `
       <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${ltp}" data-broker="groww" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
@@ -141,7 +148,7 @@ export function renderGrowwOfficialCard(panelId, growwData) {
         <div class="groww-box-header">
           <div>
             <span class="groww-sub-lbl">HOLDINGS (${holdings.length}) ▾</span>
-            <h2 class="groww-current-val">₹${Math.round(summary.currentAmount).toLocaleString('en-IN')}</h2>
+            <h2 class="groww-current-val">₹${Math.round(curAmt).toLocaleString('en-IN')}</h2>
           </div>
           <div class="groww-header-actions">
             <button class="groww-action-btn">
@@ -160,18 +167,18 @@ export function renderGrowwOfficialCard(panelId, growwData) {
         <div class="groww-stats-row">
           <div class="groww-stat-col">
             <span class="groww-stat-lbl">Invested value</span>
-            <span class="groww-stat-num">₹${Math.round(summary.investedAmount).toLocaleString('en-IN')}</span>
+            <span class="groww-stat-num">₹${Math.round(invAmt).toLocaleString('en-IN')}</span>
           </div>
           <div class="groww-stat-col">
             <span class="groww-stat-lbl">1D returns</span>
-            <span class="groww-stat-num ${summary.todayPL >= 0 ? 'gain' : 'loss'}">
-              ${summary.todayPL >= 0 ? '+' : ''}₹${Math.abs(summary.todayPL).toFixed(2)} (${summary.todayPLPercent >= 0 ? '+' : ''}${summary.todayPLPercent.toFixed(2)}%)
+            <span class="groww-stat-num ${todPL >= 0 ? 'gain' : 'loss'}">
+              ${todPL >= 0 ? '+' : ''}₹${Math.abs(todPL).toFixed(2)} (${todPct >= 0 ? '+' : ''}${todPct.toFixed(2)}%)
             </span>
           </div>
           <div class="groww-stat-col">
             <span class="groww-stat-lbl">Total returns</span>
-            <span class="groww-stat-num ${summary.overallPL >= 0 ? 'gain' : 'loss'}">
-              ${summary.overallPL >= 0 ? '+' : ''}₹${Math.abs(summary.overallPL).toFixed(2)} (${summary.overallPLPercent >= 0 ? '+' : ''}${summary.overallPLPercent.toFixed(2)}%)
+            <span class="groww-stat-num ${ovrPL >= 0 ? 'gain' : 'loss'}">
+              ${ovrPL >= 0 ? '+' : ''}₹${Math.abs(ovrPL).toFixed(2)} (${ovrPct >= 0 ? '+' : ''}${ovrPct.toFixed(2)}%)
             </span>
           </div>
         </div>
