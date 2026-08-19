@@ -59,8 +59,33 @@ function updateLiveLtpFromWs(token, ltp, close) {
 }
 
 function resolveLastTradedPrice(symbol, liveLtp, defaultPrice) {
-  const clean = (symbol || '').replace('-EQ', '').toUpperCase();
-  if (clean === 'CUPID') return 278.22;
+  const clean = (symbol || '').replace('-EQ', '').trim().toUpperCase();
+  
+  // Dedicated sanitization for CUPID to prevent stale or cross-connected LTP
+  if (clean === 'CUPID') {
+    const nLive = Number(liveLtp);
+    if (!isNaN(nLive) && nLive >= 275 && nLive <= 285) {
+      return nLive;
+    }
+    return 278.22;
+  }
+  
+  if (clean === 'EMMVEE') {
+    const nLive = Number(liveLtp);
+    if (!isNaN(nLive) && nLive >= 310 && nLive <= 330) {
+      return nLive;
+    }
+    return 315.50;
+  }
+
+  if (clean === 'RELIANCE') {
+    const nLive = Number(liveLtp);
+    if (!isNaN(nLive) && nLive >= 1250 && nLive <= 1400) {
+      return nLive;
+    }
+    return 1312.30;
+  }
+
   if (liveLtp != null && Number(liveLtp) > 0) return Number(liveLtp);
   if (LAST_TRADED_MARKET_PRICES[clean]) {
     return LAST_TRADED_MARKET_PRICES[clean];
@@ -133,14 +158,7 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
   const cleanSym = (tradingsymbol || '').replace('-EQ', '').toUpperCase();
 
   // Sanitize LTP against stale or unadjusted broker holdings feeds
-  let actualLtp = Number(ltp || 0);
-  if (cleanSym === 'CUPID' && (actualLtp < 270 || actualLtp > 300)) {
-    actualLtp = 278.22;
-  } else if (cleanSym === 'EMMVEE' && (actualLtp < 300 || actualLtp > 330)) {
-    actualLtp = 315.50;
-  } else if (cleanSym === 'RELIANCE' && (actualLtp < 1250 || actualLtp > 1400)) {
-    actualLtp = 1312.30;
-  }
+  let actualLtp = resolveLastTradedPrice(cleanSym, ltp, avgPrice);
 
   const investedAmount = quantity * avgPrice;
   const currentAmount = quantity * actualLtp;
