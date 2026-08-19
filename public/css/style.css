@@ -336,7 +336,7 @@ button { font-family: inherit; }
 .index-name, #mainHeaderIndexName {
   font-size: 11px !important;
   font-weight: 700 !important;
-  color: #718096 !important; /* Softer, lighter slate black */
+  color: #94A3B8 !important; /* Much lighter soft steel gray */
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
   line-height: 1.1 !important;
@@ -555,7 +555,7 @@ button { font-family: inherit; }
 .pill-title {
   font-size: 11px !important;
   font-weight: 600 !important;
-  color: #718096 !important; /* Softer, lighter slate black */
+  color: #94A3B8 !important; /* Much lighter soft steel gray */
   letter-spacing: 0;
   text-transform: none !important;
 }
@@ -563,7 +563,7 @@ button { font-family: inherit; }
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 14.5px !important;
   font-weight: 600 !important;
-  color: #1C2B2A !important;
+  color: #475569 !important; /* Lighter slate charcoal, not dark black */
 }
 .pill-sub-val {
   font-family: var(--font-mono);
