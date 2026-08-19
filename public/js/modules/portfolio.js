@@ -113,9 +113,9 @@ export async function loadPortfolio() {
     currentHoldingsCache = [...angelHoldings, ...growwHoldings];
 
     renderTable('tbodyAngelone', 'countAngelone', angelHoldings);
-    renderTable('tbodyPortfolioAngelone', 'countPortfolioAngelone', angelHoldings);
     renderTable('tbodyGroww', 'countGroww', growwHoldings);
-    renderTable('tbodyPortfolioGroww', 'countPortfolioGroww', growwHoldings);
+    latestPortfolioData = data;
+    renderPortfolioUnifiedTable(currentViewMode);
 
     const missingCount = currentHoldingsCache.filter((h) => !h.error && h.daysHeld == null).length;
     const redDot = document.getElementById('settingsRedDotBadge');
@@ -132,7 +132,6 @@ export async function loadPortfolio() {
       alertBanner.style.display = missingCount > 0 ? 'flex' : 'none';
     }
 
-    latestPortfolioData = data;
     updateSummaryCards(currentViewMode);
 
     updateBrokerFunds({
@@ -148,9 +147,8 @@ export async function loadPortfolio() {
   } catch (err) {
     console.error('portfolio load failed', err);
     renderTableError('tbodyAngelone', 'countAngelone', err.message);
-    renderTableError('tbodyPortfolioAngelone', 'countPortfolioAngelone', err.message);
     renderTableError('tbodyGroww', 'countGroww', err.message);
-    renderTableError('tbodyPortfolioGroww', 'countPortfolioGroww', err.message);
+    renderTableError('tbodyPortfolioUnified', 'countPortfolioUnified', err.message);
   }
 }
 
@@ -325,6 +323,32 @@ function setGrowwPlCard(valId, labelId, iconId, plVal, plPct, defaultLabel = 'Ov
   }
 }
 
+export function renderPortfolioUnifiedTable(mode = 'all') {
+  if (!latestPortfolioData) return;
+  const angelHoldings = latestPortfolioData.angelone?.holdings || [];
+  const growwHoldings = latestPortfolioData.groww?.holdings || [];
+  let rows = [];
+
+  const titleEl = document.getElementById('holdingsHeaderTitle');
+  const dotEl = document.getElementById('holdingsDot');
+
+  if (mode === 'angelone') {
+    rows = angelHoldings;
+    if (titleEl) titleEl.textContent = 'Angel One Holdings';
+    if (dotEl) { dotEl.style.background = '#3B82F6'; dotEl.className = 'broker-dot angel'; }
+  } else if (mode === 'groww') {
+    rows = growwHoldings;
+    if (titleEl) titleEl.textContent = 'Groww Holdings';
+    if (dotEl) { dotEl.style.background = '#00D09C'; dotEl.className = 'broker-dot groww'; }
+  } else {
+    rows = [...angelHoldings, ...growwHoldings];
+    if (titleEl) titleEl.textContent = 'Holdings';
+    if (dotEl) { dotEl.style.background = '#3B82F6'; dotEl.className = 'broker-dot angel'; }
+  }
+
+  renderTable('tbodyPortfolioUnified', 'countPortfolioUnified', rows);
+}
+
 export function initPortfolio() {
   document.querySelectorAll('[data-view-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -339,27 +363,7 @@ export function initPortfolio() {
         }
       });
 
-      ['dashboardPanels', 'portfolioPanels'].forEach((containerId) => {
-        const panelsContainer = document.getElementById(containerId);
-        if (!panelsContainer) return;
-        const panelAngel = panelsContainer.querySelector('[id*="Angelone"]');
-        const panelGroww = panelsContainer.querySelector('[id*="Groww"]');
-
-        if (mode === 'all') {
-          panelsContainer.classList.remove('single-view');
-          if (panelAngel) panelAngel.style.display = 'flex';
-          if (panelGroww) panelGroww.style.display = 'flex';
-        } else if (mode === 'angelone') {
-          panelsContainer.classList.add('single-view');
-          if (panelAngel) panelAngel.style.display = 'flex';
-          if (panelGroww) panelGroww.style.display = 'none';
-        } else if (mode === 'groww') {
-          panelsContainer.classList.add('single-view');
-          if (panelAngel) panelAngel.style.display = 'none';
-          if (panelGroww) panelGroww.style.display = 'flex';
-        }
-      });
-
+      renderPortfolioUnifiedTable(mode);
       updateSummaryCards(mode);
     });
   });

@@ -678,14 +678,14 @@
           <!-- Portfolio Holdings Cards Stack -->
           <div class="broker-panels" id="portfolioPanels" style="display:flex;flex-direction:column;width:100%;gap:20px;">
             
-            <!-- Angel One Holdings Card -->
-            <div class="broker-panel angel-panel" id="panelAngelone" style="width:100%;display:flex;flex-direction:column;">
-              <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
-                <div class="panel-title-group" style="display:flex;align-items:center;gap:8px;">
-                  <span class="broker-dot angel"></span>
-                  <h2>Angel One Holdings</h2>
+            <!-- Single Unified Holdings Card Component (Points 1, 2, 3) -->
+            <div class="holdings-card broker-panel" id="holdingsCardUnified" style="width:100%;display:flex;flex-direction:column;">
+              <div class="holdings-card-header" style="height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid #E5E7EB;background:#FFFFFF;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="broker-dot angel" id="holdingsDot" style="width:8px;height:8px;border-radius:50%;background:#3B82F6;display:inline-block;"></span>
+                  <h2 id="holdingsHeaderTitle" style="font-size:16px;font-weight:600;color:var(--text-primary);margin:0;">Angel One Holdings</h2>
                 </div>
-                <span class="panel-count" id="countPortfolioAngelone">0 holdings</span>
+                <span class="panel-count" id="countPortfolioUnified" style="font-size:14px;color:var(--text-muted);">0 holdings</span>
               </div>
               <div class="table-wrap">
                 <table class="holdings-table">
@@ -700,42 +700,13 @@
                       <th>Overall G/L</th>
                       <th>Day's G/L</th>
                       <th style="text-align:center;">Days Hold</th>
-                      <th style="width:60px;text-align:right;padding-right:22px !important;"></th>
+                      <th style="width:60px;text-align:right;padding-right:20px !important;"></th>
                     </tr>
                   </thead>
-                  <tbody id="tbodyPortfolioAngelone"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
+                  <tbody id="tbodyPortfolioUnified"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
                 </table>
               </div>
             </div>
-
-            <!-- Groww Holdings Card -->
-            <div class="broker-panel groww-panel" id="panelGroww" style="width:100%;display:flex;flex-direction:column;">
-              <div class="panel-head" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
-                <div class="panel-title-group" style="display:flex;align-items:center;gap:8px;">
-                  <span class="broker-dot groww"></span>
-                  <h2>Groww Holdings</h2>
-                </div>
-                <span class="panel-count" id="countPortfolioGroww">0 holdings</span>
-              </div>
-              <div class="table-wrap">
-                <table class="holdings-table">
-                  <thead>
-                    <tr>
-                      <th>Symbol</th>
-                      <th>Qty</th>
-                      <th>Avg</th>
-                      <th>LTP</th>
-                      <th>Invested</th>
-                      <th>Current</th>
-                      <th>Overall G/L</th>
-                      <th>Day's G/L</th>
-                      <th style="text-align:center;">Days Hold</th>
-                      <th style="width:60px;text-align:right;padding-right:22px !important;"></th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyPortfolioGroww"><tr class="empty-row"><td colspan="10">Loading holdings...</td></tr></tbody>
-                </table>
-          </div>
         </section>
 
         <!-- ---- Orders ---- -->

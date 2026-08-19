@@ -983,7 +983,7 @@ button { font-family: inherit; }
 }
 
 .stats-section {
-  margin-bottom: 24px !important;
+  margin-bottom: 28px !important;
 }
 
 .broker-section, .broker-row, .view-head-actions {
@@ -994,7 +994,7 @@ button { font-family: inherit; }
   height: 52px !important;
   min-height: 52px !important;
   max-height: 52px !important;
-  margin: 0 0 16px 0 !important;
+  margin: 0 0 20px 0 !important;
   padding: 0 !important;
   clear: both !important;
 }
@@ -1053,14 +1053,25 @@ button { font-family: inherit; }
 }
 
 .holdings-card, .broker-panel {
-  width: 100% !important;
+  margin-top: 0 !important;
   background: #FFFFFF !important;
-  border: 1px solid #E5E7EB !important;
-  border-radius: 16px !important;
+  border: 1px solid #D9DEE5 !important;
+  border-radius: 18px !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  box-sizing: border-box !important;
+}
+
+.holdings-card-header {
+  height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0 28px !important;
+  border-bottom: 1px solid #E5E7EB !important;
+  background: #FFFFFF !important;
 }
 
 .table-wrap, .table-scroll {
@@ -1089,10 +1100,15 @@ button { font-family: inherit; }
 }
 
 .holdings-table th, .holdings-table td {
-  border-left: none !important;
-  border-right: none !important;
   border-top: none !important;
   border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+.holdings-table td + td,
+.holdings-table th + th {
+  border-left: 1px solid rgba(148, 163, 184, 0.10) !important;
 }
 
 .holdings-table thead th {
@@ -2024,11 +2040,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .current-value, .gh-main-price {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 38px !important;
+  font-size: 40px !important;
   font-weight: 600 !important;
   color: #FFFFFF !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.1 !important;
+  letter-spacing: 0 !important;
+  line-height: 1 !important;
   margin: 8px 0 6px !important;
 }
 
