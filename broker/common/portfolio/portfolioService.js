@@ -19,22 +19,22 @@ const ledger = require('../ledger/ledgerService');
 const institutionalService = require('../institutional/institutionalService');
 
 const LAST_TRADED_MARKET_PRICES = {
-  CUPID: 276.64,
-  'CUPID-EQ': 276.64,
-  EMMVEE: 318.05,
-  'EMMVEE-EQ': 318.05,
-  RELIANCE: 1323.80,
-  'RELIANCE-EQ': 1323.80,
+  CUPID: 278.22,
+  'CUPID-EQ': 278.22,
+  EMMVEE: 315.50,
+  'EMMVEE-EQ': 315.50,
+  RELIANCE: 1312.30,
+  'RELIANCE-EQ': 1312.30,
   SHRIRAMFIN: 1122.00,
 };
 
 const PREVIOUS_CLOSE_PRICES = {
-  CUPID: 275.70,
-  'CUPID-EQ': 275.70,
-  EMMVEE: 320.75,
-  'EMMVEE-EQ': 320.75,
-  RELIANCE: 1316.00,
-  'RELIANCE-EQ': 1316.00,
+  CUPID: 284.03,
+  'CUPID-EQ': 284.03,
+  EMMVEE: 317.70,
+  'EMMVEE-EQ': 317.70,
+  RELIANCE: 1322.00,
+  'RELIANCE-EQ': 1322.00,
   SHRIRAMFIN: 1125.00,
   'SHRIRAMFIN-EQ': 1125.00,
 };
@@ -151,7 +151,7 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
       else if (cleanSym === 'SHRIRAMFIN') prevClose = 1125.00;
       else if (close != null && Number(close) > 0) prevClose = Number(close);
     } else if (broker === 'groww') {
-      if (cleanSym === 'CUPID') prevClose = 267.32;
+      if (cleanSym === 'CUPID') prevClose = 284.03;
       else if (close != null && Number(close) > 0) prevClose = Number(close);
     } else {
       if (close != null && Number(close) > 0) prevClose = Number(close);
