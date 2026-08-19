@@ -82,126 +82,7 @@ export function renderTableError(tbodyId, countId, errorMsg) {
   }
 }
 
-export function renderGrowwOfficialCard(panelId, growwData) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
 
-  const holdings = growwData?.holdings || [];
-  const summary = growwData?.summary || {};
-
-  const curAmt = Number(summary.currentAmount || 0);
-  const invAmt = Number(summary.investedAmount || 0);
-  const todPL = Number(summary.todayPL || 0);
-  const todPct = Number(summary.todayPLPercent || 0);
-  const ovrPL = Number(summary.overallPL || 0);
-  const ovrPct = Number(summary.overallPLPercent || 0);
-
-  const rowsHtml = holdings.length ? holdings.map((row) => {
-    const rawSymbol = row.tradingsymbol || 'CUPID';
-    const qty = Number(row.quantity || 0);
-    const avg = Number(row.avgPrice || 0);
-    const ltp = Number(row.ltp || 0);
-    const cur = Number(row.currentAmount || 0);
-    const inv = Number(row.investedAmount || 0);
-    const dayPlVal = Number(row.todayPL != null ? row.todayPL : 0);
-    const dayPlPct = Number(row.todayPLPercent != null ? row.todayPLPercent : 0);
-    const perShareDiff = qty > 0 ? (dayPlVal / qty) : 0;
-
-    const overallVal = Number(row.overallPL != null ? row.overallPL : 0);
-    const overallPct = Number(row.overallPLPercent != null ? row.overallPLPercent : 0);
-
-    return `
-      <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${ltp}" data-broker="groww" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
-        <td>
-          <div class="groww-comp-name">${rawSymbol}</div>
-          <div class="groww-comp-sub">${qty} shares • Avg. ₹${avg.toFixed(2)}</div>
-        </td>
-        <td style="text-align:right;">
-          <div class="groww-price-main">₹${ltp.toFixed(2)}</div>
-          <div class="groww-price-sub ${perShareDiff >= 0 ? 'gain' : 'loss'}">
-            ${perShareDiff >= 0 ? '+' : ''}${perShareDiff.toFixed(2)} (${dayPlPct >= 0 ? '+' : ''}${dayPlPct.toFixed(2)}%)
-          </div>
-        </td>
-        <td style="text-align:right;">
-          <div class="groww-returns-main ${overallVal >= 0 ? 'gain' : 'loss'}">
-            ${overallVal >= 0 ? '+' : ''}₹${Math.abs(overallVal).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}
-          </div>
-          <div class="groww-returns-sub ${overallPct >= 0 ? 'gain' : 'loss'}">
-            ${overallPct >= 0 ? '+' : ''}${overallPct.toFixed(2)}%
-          </div>
-        </td>
-        <td style="text-align:right;">
-          <div class="groww-current-main">₹${cur.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-          <div class="groww-invested-sub">₹${inv.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-        </td>
-      </tr>`;
-  }).join('') : '<tr><td colspan="4" style="text-align:center;padding:20px;color:#64748B;">No Groww holdings recorded</td></tr>';
-
-  panel.innerHTML = `
-    <div class="groww-official-card">
-      <div class="groww-top-tabs">
-        <button class="groww-tab-btn active">STOCKS</button>
-        <button class="groww-tab-btn">BONDS</button>
-      </div>
-
-      <div class="groww-card-box">
-        <div class="groww-box-header">
-          <div>
-            <span class="groww-sub-lbl">HOLDINGS (${holdings.length}) ▾</span>
-            <h2 class="groww-current-val">₹${Math.round(curAmt).toLocaleString('en-IN')}</h2>
-          </div>
-          <div class="groww-header-actions">
-            <button class="groww-action-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="20" x2="18" y2="10"></line>
-                <line x1="12" y1="20" x2="12" y2="4"></line>
-                <line x1="6" y1="20" x2="6" y2="14"></line>
-              </svg>
-              Analyse
-            </button>
-            <button class="groww-icon-btn" title="Toggle visibility">👁️</button>
-            <button class="groww-icon-btn" title="More options">⋮</button>
-          </div>
-        </div>
-
-        <div class="groww-stats-row">
-          <div class="groww-stat-col">
-            <span class="groww-stat-lbl">Invested value</span>
-            <span class="groww-stat-num">₹${Math.round(invAmt).toLocaleString('en-IN')}</span>
-          </div>
-          <div class="groww-stat-col">
-            <span class="groww-stat-lbl">1D returns</span>
-            <span class="groww-stat-num ${todPL >= 0 ? 'gain' : 'loss'}">
-              ${todPL >= 0 ? '+' : ''}₹${Math.abs(todPL).toFixed(2)} (${todPct >= 0 ? '+' : ''}${todPct.toFixed(2)}%)
-            </span>
-          </div>
-          <div class="groww-stat-col">
-            <span class="groww-stat-lbl">Total returns</span>
-            <span class="groww-stat-num ${ovrPL >= 0 ? 'gain' : 'loss'}">
-              ${ovrPL >= 0 ? '+' : ''}₹${Math.abs(ovrPL).toFixed(2)} (${ovrPct >= 0 ? '+' : ''}${ovrPct.toFixed(2)}%)
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="groww-table-card">
-        <table class="groww-table">
-          <thead>
-            <tr>
-              <th>Company ▾</th>
-              <th style="text-align:right;">Market price (1D%) ▾</th>
-              <th style="text-align:right;">Returns (%) ▾</th>
-              <th style="text-align:right;">Current (Invested) ▾</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
 
 export async function loadPortfolio() {
   try {
@@ -212,10 +93,8 @@ export async function loadPortfolio() {
 
     renderTable('tbodyAngelone', 'countAngelone', angelHoldings);
     renderTable('tbodyPortfolioAngelone', 'countPortfolioAngelone', angelHoldings);
-    
-    // Render Groww Official Light Mode Card on both Dashboard & Portfolio views
-    renderGrowwOfficialCard('panelDashGroww', data.groww);
-    renderGrowwOfficialCard('panelGroww', data.groww);
+    renderTable('tbodyGroww', 'countGroww', growwHoldings);
+    renderTable('tbodyPortfolioGroww', 'countPortfolioGroww', growwHoldings);
 
     const missingCount = currentHoldingsCache.filter((h) => !h.error && h.daysHeld == null).length;
     const redDot = document.getElementById('settingsRedDotBadge');
