@@ -1892,16 +1892,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    ============================================================ */
 .groww-hero-card {
   background: #1B2B4C !important;
-  border-radius: 18px !important;
-  padding: 30px 36px !important;
-  min-height: 145px !important;
+  border-radius: 16px !important;
+  padding: 18px 28px !important;
+  min-height: 105px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin-top: 10px !important;
-  margin-bottom: 22px !important;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18) !important;
+  margin-bottom: 18px !important;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15) !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
