@@ -28,16 +28,7 @@ try {
   };
 }
 
-// Self-healing migration for ALL tables in sqlite_master if initialized with broken double-quoted "now"
-try {
-  const brokenTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND sql LIKE '%\"now\"%'").all();
-  for (const t of brokenTables) {
-    console.log(`[DB Migration] Dropping legacy table schema with double-quoted default: ${t.name}`);
-    db.exec(`DROP TABLE IF EXISTS ${t.name};`);
-  }
-} catch (e) {
-  console.error('[DB Migration Error]', e.message);
-}
+// Database schema initialization (Safe, non-destructive)
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS trades (
@@ -110,6 +101,17 @@ try {
       INSERT OR REPLACE INTO broker_overrides (broker, custom_charges, custom_mtf_interest)
       VALUES ('angelone', 6585.00, 2138.77)
     `).run();
+  }
+
+  const fundsCount = db.prepare('SELECT COUNT(*) as cnt FROM funds_transactions').get().cnt;
+  if (fundsCount === 0) {
+    console.log('[DB Seeder] Seeding default initial funds transactions for Angel One & Groww...');
+    const insertFundStmt = db.prepare(`
+      INSERT INTO funds_transactions (broker, type, amount, txn_date, note)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    insertFundStmt.run('angelone', 'ADD', 40123.00, '2026-07-17', 'Initial Deposit Angel One');
+    insertFundStmt.run('groww', 'ADD', 3033.00, '2026-07-29', 'Initial Deposit Groww');
   }
 } catch (err) {
   console.error('[DB Seeder Error]', err.message);
