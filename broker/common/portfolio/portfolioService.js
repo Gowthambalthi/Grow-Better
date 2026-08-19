@@ -511,13 +511,13 @@ function summarize(rows, broker = 'combined', liveCash = null) {
 
   const investedAmount = valid.reduce((s, r) => s + r.investedAmount, 0);
   const currentAmount = valid.reduce((s, r) => s + r.currentAmount, 0);
-  const overallPL = valid.reduce((s, r) => s + (r.grossPL != null ? r.grossPL : r.overallPL), 0);
+  const overallPL = valid.reduce((s, r) => s + (r.overallPL || 0), 0);
   const overallPLPercent = investedAmount > 0 ? (overallPL / investedAmount) * 100 : 0;
 
   const todayPL = valid.reduce((s, r) => s + (r.todayPL || 0), 0);
   const prevDayPortfolioValue = currentAmount - todayPL;
   const todayPLPercent = prevDayPortfolioValue > 0 ? (todayPL / prevDayPortfolioValue) * 100 : (investedAmount > 0 ? (todayPL / investedAmount) * 100 : 0);
-  let grossPL = valid.reduce((s, r) => s + r.grossPL, 0);
+  const grossPL = valid.reduce((s, r) => s + (r.grossPL != null ? r.grossPL : r.overallPL), 0);
   const mtfInterestAccrued = valid.reduce((s, r) => s + (r.mtfInterestAccrued || 0), 0);
   const totalMtfBorrowed = valid.reduce((s, r) => s + (r.mtfBorrowed || 0), 0);
   const totalBuyCharges = valid.reduce((s, r) => s + (r.buyCharges || 0), 0);
@@ -590,7 +590,6 @@ function summarize(rows, broker = 'combined', liveCash = null) {
   }
 
   const totalAccruedCharges = effectiveNetCharges + effectiveMtfInterest;
-  grossPL = overallPL - totalAccruedCharges;
   const adjustedAccountPL = effectiveNetDeposits - cashBalance - totalAccruedCharges;
 
   const maxDaysHeld = valid.length > 0 ? Math.max(...valid.map((r) => r.daysHeld || 0), 1) : 1;
