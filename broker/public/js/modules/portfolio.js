@@ -143,17 +143,17 @@ function updateSummaryCards(mode = 'all') {
     c = (latestPortfolioData.combined?.summary || latestPortfolioData.combined) || {};
   }
 
-  // Row 1: Stock Real-Time Performance Cards
+  // Row 1: Stock Real-Time Performance Cards (Groww Equity Metric Cards)
   setText('sumInvested', money(c.investedAmount));
   setText('sumCurrent', money(c.currentAmount));
-  setPl('sumOverall', c.overallPL);
-  setPl('sumToday', c.todayPL);
+  setGrowwPlCard('sumOverall', 'lblOverall', 'iconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
+  setGrowwPlCard('sumToday', 'lblToday', 'iconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
   setPl('sumGross', c.grossPL);
 
   setText('portSumInvested', money(c.investedAmount));
   setText('portSumCurrent', money(c.currentAmount));
-  setPl('portSumOverall', c.overallPL);
-  setPl('portSumToday', c.todayPL);
+  setGrowwPlCard('portSumOverall', 'portLblOverall', 'portIconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
+  setGrowwPlCard('portSumToday', 'portLblToday', 'portIconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
   setPl('portSumGross', c.grossPL);
 
   // Row 2: Account Level Returns & Financial Position Cards
@@ -244,6 +244,45 @@ function setPl(id, value) {
   const base = el.className.split(' ').filter((c) => c !== 'pl-positive' && c !== 'pl-negative').join(' ');
   el.className = `${base} ${plClass(value)}`.trim();
   updateCardTrendIcon(id, value);
+}
+
+function setGrowwPlCard(valId, labelId, iconId, plVal, plPct, defaultLabel = 'Overall', invAmt = 0) {
+  const valEl = document.getElementById(valId);
+  const lblEl = document.getElementById(labelId);
+  const iconEl = document.getElementById(iconId);
+
+  const num = Number(plVal || 0);
+  let pctNum = Number(plPct);
+  if (isNaN(pctNum) || plPct == null) {
+    pctNum = invAmt > 0 ? (num / invAmt) * 100 : 0;
+  }
+  const isLoss = num < 0;
+
+  if (lblEl) {
+    lblEl.textContent = isLoss ? `${defaultLabel} Loss` : `${defaultLabel} Profit`;
+  }
+
+  if (valEl) {
+    const absValStr = Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const signPct = pctNum >= 0 ? `+${pctNum.toFixed(2)}%` : `${pctNum.toFixed(2)}%`;
+    valEl.innerHTML = `₹${absValStr} <span style="font-size:12px;font-weight:600;margin-left:4px;">${signPct}</span>`;
+    valEl.style.color = isLoss ? 'var(--loss)' : 'var(--gain)';
+  }
+
+  if (iconEl) {
+    iconEl.className = `stat-badge-icon ${isLoss ? 'badge-red' : 'badge-green'}`;
+    iconEl.innerHTML = isLoss ? `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+        <polyline points="17 18 23 18 23 12"></polyline>
+      </svg>
+    ` : `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+        <polyline points="17 6 23 6 23 12"></polyline>
+      </svg>
+    `;
+  }
 }
 
 export function initPortfolio() {
