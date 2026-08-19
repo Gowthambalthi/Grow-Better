@@ -670,6 +670,23 @@ app.get('/api/instruments/watchlist', async (req, res) => {
   }
 });
 
+const liveStockQuoteService = require('./common/market/liveStockQuoteService');
+
+// GET /api/instruments/quote?symbol=RELIANCE
+app.get('/api/instruments/quote', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
+  try {
+    const symbol = req.query.symbol || 'RELIANCE';
+    const quote = await liveStockQuoteService.fetchLiveStockQuote(symbol);
+    res.json(quote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---- GB Terminal Multi-Channel Notification API ----
 app.get('/api/notifications/settings', (req, res) => {
   res.json(notificationService.loadConfig());

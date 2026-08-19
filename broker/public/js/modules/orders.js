@@ -357,6 +357,21 @@ export function openOrderTicketModal({ symbol, ltp, broker = 'angelone', side = 
   setSide(activeOrderParams.side);
   recalculateOmValues();
 
+  // Fetch 100% live real-time LTP & day change for this exact stock
+  api(`/api/instruments/quote?symbol=${activeOrderParams.symbol}`).then((q) => {
+    if (q && q.ltp) {
+      activeOrderParams.ltp = q.ltp;
+      if (priceInput) priceInput.value = q.ltp;
+      if (ltpEl) {
+        const isPos = q.change >= 0;
+        const sign = isPos ? '+' : '';
+        const color = isPos ? 'var(--gain)' : 'var(--loss)';
+        ltpEl.innerHTML = `<span style="color:var(--text-primary);font-weight:700;">₹${q.ltp.toFixed(2)}</span> <span style="font-size:12px;font-weight:600;color:${color};margin-left:4px;">${sign}${q.change.toFixed(2)} (${sign}${q.changePct.toFixed(2)}%)</span>`;
+      }
+      recalculateOmValues();
+    }
+  }).catch(() => {});
+
   if (modal) modal.style.display = 'flex';
 }
 
