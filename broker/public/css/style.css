@@ -28,8 +28,8 @@
   --loss: #FF4D6D;             /* High contrast red for Dark Mode */
   --loss-dim: rgba(255, 77, 109, 0.14);
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'Roboto', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Roboto', 'IBM Plex Mono', monospace;
 
   --sidebar-w: 220px;
   --sidebar-w-collapsed: 70px;
@@ -1921,14 +1921,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-main-price {
+  font-family: 'Roboto', sans-serif !important;
   font-size: 38px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important; /* Roboto Medium */
   color: #FFFFFF !important;
-  letter-spacing: -0.02em !important;
+  letter-spacing: -0.01em !important;
   line-height: 1.1 !important;
 }
 
 .gh-sub-info {
+  font-family: 'Roboto', sans-serif !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   color: #A9BBD6 !important;
@@ -1957,8 +1959,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-val {
-  font-size: 20px !important;
-  font-weight: 800 !important;
+  font-family: 'Roboto', sans-serif !important;
+  font-size: 21px !important;
+  font-weight: 500 !important; /* Roboto Medium */
   color: #FFFFFF;
   line-height: 1.1 !important;
 }
