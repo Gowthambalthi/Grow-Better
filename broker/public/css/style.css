@@ -900,37 +900,44 @@ button { font-family: inherit; }
   box-shadow: none !important;
 }
 
-.toggle-btn {
-  background: #F1F5F9 !important;
+/* Section 8: Broker Segmented Tabs Component */
+.broker-tabs, .view-mode-tabs {
+  display: inline-flex !important;
   border: 1px solid #E2E8F0 !important;
-  color: #64748B !important;
-  padding: 9px 20px !important;
-  border-radius: 999px !important;
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
-  white-space: nowrap !important;
-  flex-shrink: 0;
-  cursor: pointer !important;
-  height: auto !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  transition: all 0.18s ease !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: #FFFFFF !important;
+  padding: 3px !important;
+  gap: 2px !important;
 }
 
-.toggle-btn:hover {
-  background: #E2E8F0 !important;
+.broker-tab, .toggle-btn {
+  padding: 10px 24px !important;
+  border: 0 !important;
+  background: transparent !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: #64748B !important;
+  cursor: pointer !important;
+  border-radius: 9px !important;
+  transition: all 0.15s ease !important;
+}
+
+.toggle-btn:hover, .broker-tab:hover {
+  background: #F1F5F9 !important;
   color: #0F172A !important;
 }
 
+.broker-tab.active,
 .toggle-btn.active,
 .tab.active,
 .view-toggle-btns .toggle-btn.active {
   background: #00B386 !important;
   color: #FFFFFF !important;
-  border: 1px solid #00B386 !important;
+  border: 0 !important;
   font-weight: 600 !important;
-  box-shadow: 0 2px 8px rgba(0, 179, 134, 0.3) !important;
+  border-radius: 9px !important;
+  box-shadow: 0 2px 6px rgba(0, 179, 134, 0.25) !important;
 }
 
 .refresh-btn {
@@ -1051,6 +1058,17 @@ button { font-family: inherit; }
   font-size: 9.5px;
 }
 
+.holdings-card, .broker-panel {
+  width: 100% !important;
+  background: #FFFFFF !important;
+  border: 1px solid #E5E7EB !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+}
+
 .table-wrap, .table-scroll {
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch;
@@ -1061,36 +1079,43 @@ button { font-family: inherit; }
   clear: both !important;
   box-sizing: border-box !important;
 }
+
 .holdings-table {
   width: 100% !important;
   min-width: 100% !important;
-  border-collapse: collapse;
-  font-size: 11.5px;
-  table-layout: fixed;
+  border-collapse: collapse !important;
+  font-size: 13px !important;
+  table-layout: fixed !important;
 }
+
+.table-row, .holdings-table tbody tr {
+  min-height: 82px !important;
+  height: 82px !important;
+}
+
 .holdings-table th {
-  padding: 14px 10px !important; color: var(--text-muted);
-  font-weight: 700; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
-  border-bottom: 1px solid var(--line); white-space: nowrap;
+  padding: 16px 12px !important; color: #5F7570 !important;
+  font-weight: 500 !important; font-size: 13px !important; letter-spacing: 0.02em; text-transform: uppercase;
+  border-bottom: 1px solid #E5E7EB !important; white-space: nowrap;
   background: #FAFBFC !important;
   text-align: right;
 }
-.holdings-table th:first-child { text-align: left; padding-left: 16px !important; }
-.holdings-table th:last-child { text-align: right; padding-right: 16px !important; }
+.holdings-table th:first-child { text-align: left; padding-left: 20px !important; }
+.holdings-table th:last-child { text-align: right; padding-right: 20px !important; }
 
 .holdings-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.015);
+  background: rgba(248, 250, 252, 0.5);
 }
 
 .holdings-table td {
-  padding: 14px 10px !important; text-align: right;
+  padding: 18px 12px !important; text-align: right;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  border-bottom: 1px solid var(--line); white-space: nowrap;
+  border-bottom: 1px solid #E5E7EB !important; white-space: nowrap;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13.5px !important;
 }
-.holdings-table td:first-child { text-align: left; padding-left: 16px !important; }
-.holdings-table td:last-child { text-align: right; padding-right: 16px !important; }
+.holdings-table td:first-child { text-align: left; padding-left: 20px !important; }
+.holdings-table td:last-child { text-align: right; padding-right: 20px !important; }
 
 .clickable-holding-row { cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
 .clickable-holding-row:hover { background: rgba(99, 102, 241, 0.08) !important; }
@@ -1938,18 +1963,22 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 /* ============================================================
    GROWW TERMINAL HERO BANNER & STAT GRID (EXACT SIZING SPEC)
    ============================================================ */
-.groww-hero-card {
+/* ============================================================
+   GROWW TERMINAL HERO BANNER & STAT GRID (FIRST UI SPEC)
+   ============================================================ */
+.summary-card, .groww-hero-card {
+  width: 100% !important;
+  min-height: 178px !important;
+  border-radius: 20px !important;
+  padding: 32px 36px !important;
   background: #1B2B4C !important;
-  border-radius: 16px !important;
-  padding: 26px 28px !important;
   display: flex !important;
   align-items: flex-end !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
-  margin-top: 10px !important;
+  margin-top: 0 !important;
   margin-bottom: 20px !important;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15) !important;
-  width: 100% !important;
   box-sizing: border-box !important;
 }
 
@@ -2019,28 +2048,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   line-height: 1.1 !important;
 }
 
-.groww-cards-grid {
+/* Equal 4-Card Statistics Grid */
+.stats-grid, .groww-cards-grid {
   display: grid !important;
-  grid-template-columns: repeat(4, 1fr) !important;
-  gap: 16px !important;
-  margin-bottom: 20px !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  margin-top: 20px !important;
+  margin-bottom: 30px !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
-.groww-stat-box {
+.stat-card, .groww-stat-box {
+  height: 126px !important;
+  padding: 22px !important;
+  border-radius: 16px !important;
   background: #FFFFFF !important;
-  border: 1px solid #E2E8F0 !important;
-  border-radius: 12px !important;
-  padding: 18px 20px !important;
+  border: 1px solid #E5E7EB !important;
+  box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 4px !important;
+  justify-content: space-between !important;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02) !important;
   transition: transform 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-.groww-stat-box:hover {
+.stat-card:hover, .groww-stat-box:hover {
   transform: translateY(-2px) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
 }
@@ -2048,6 +2081,20 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .gs-lbl {
   font-size: 13px !important;
   font-weight: 600 !important;
+  color: var(--text-muted) !important;
+}
+
+.gs-val {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+}
+
+.gs-sub {
+  font-size: 11px !important;
+  color: var(--text-dim) !important;
+}
   color: #64748B !important;
 }
 
@@ -2291,6 +2338,24 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .groww-price-main, .groww-returns-main, .groww-current-main {
   font-weight: 700;
   font-size: 13.5px;
+}
+
+/* ============================================================
+   SECTION 14: RESPONSIVE BREAKPOINTS (FIRST UI DASHBOARD SPEC)
+   ============================================================ */
+@media (max-width: 1000px) {
+  .stats-grid, .groww-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-grid, .groww-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .main-content, .content {
+    padding: 20px 16px !important;
+  }
 }
 
 .groww-price-sub, .groww-returns-sub, .groww-invested-sub {
