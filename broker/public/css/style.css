@@ -43,26 +43,42 @@
 
 /* ---- Light Mode ---- */
 [data-theme="light"] {
-  --bg-void: #F5F7FA;          /* Clean very light gray (#F5F7FA) workspace canvas */
-  --bg-sidebar: #002366;       /* Classic Midnight Navy (#002366) for Sidebar & Topbar */
-  --bg-panel: #FFFFFF;         /* Pure Clean White (#FFFFFF) content cards */
+  --bg: #F5F7F8;
+  --surface: #FFFFFF;
+  --line: #E7ECEE;
+  --ink: #1C2B2A;
+  --ink-dim: #5F7570;
+  --ink-faint: #9BAAA7;
+  --primary: #00B386;
+  --primary-dark: #00875F;
+  --primary-tint: #E6F8F2;
+  --up: #16A34A;
+  --down: #E23744;
+  --navy: #1B2A4E;
+
+  --bg-void: #F5F7F8;          /* Clean light gray workspace canvas */
+  --bg-sidebar: #002366;       /* Classic Midnight Navy for Sidebar & Topbar */
+  --bg-panel: #FFFFFF;         /* Pure Clean White content cards */
   --bg-raised: #EDF2F7;
   --bg-raised-hover: #E2E8F0;
-  --line: #E2E8F0;
   --line-bright: #CBD5E1;
   
-  --text-primary: #0F172A;
-  --text-muted: #475569;
-  --text-dim: #64748B;
+  --text-primary: #1C2B2A;
+  --text-muted: #5F7570;
+  --text-dim: #9BAAA7;
 
-  --accent: #003366;           /* Classic Navy Accent */
-  --accent-cyan: #0284C7;
-  --accent-dim: rgba(0, 51, 102, 0.1);
-  --accent-dim-strong: rgba(0, 51, 102, 0.2);
+  --accent: #00B386;
+  --accent-cyan: #38BDF8;
+  --accent-dim: rgba(0, 179, 134, 0.12);
+  --accent-dim-strong: rgba(0, 179, 134, 0.25);
   --accent-ink: #FFFFFF;
 
-  --gain: #059669;             /* Rich emerald green for Light Mode */
-  --gain-dim: rgba(5, 150, 105, 0.12);
+  --gain: #16A34A;             /* Up green */
+  --gain-dim: rgba(22, 163, 74, 0.12);
+
+  --loss: #E23744;             /* Down red */
+  --loss-dim: rgba(226, 55, 68, 0.12);
+}
 
   --loss: #DC2626;             /* Rich crimson red for Light Mode */
   --loss-dim: rgba(220, 38, 38, 0.12);
@@ -1030,21 +1046,21 @@ button { font-family: inherit; }
 }
 .holdings-table { width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
 .holdings-table th {
-  padding: 8px 6px; color: var(--text-muted);
-  font-weight: 700; font-size: 9.5px; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 15px 22px !important; color: var(--text-muted);
+  font-weight: 700; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
   border-bottom: 1px solid var(--line); white-space: nowrap;
-  background: rgba(0, 0, 0, 0.04);
+  background: #FAFBFC !important;
   text-align: right;
 }
-.holdings-table th:first-child { text-align: left; padding-left: 12px; }
-.holdings-table th:last-child { text-align: right; padding-right: 12px; }
+.holdings-table th:first-child { text-align: left; padding-left: 22px !important; }
+.holdings-table th:last-child { text-align: right; padding-right: 22px !important; }
 
 .holdings-table tbody tr:nth-child(even) {
   background: rgba(255, 255, 255, 0.015);
 }
 
 .holdings-table td {
-  padding: 10px 8px; text-align: right;
+  padding: 15px 22px !important; text-align: right;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   border-bottom: 1px solid var(--line); white-space: nowrap;
   color: var(--text-primary);

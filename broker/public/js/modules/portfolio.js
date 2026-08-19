@@ -20,7 +20,7 @@ export function renderHoldingsRow(row) {
   }
   const mtfBadge = row.isMtf ? `<span class="mtf-badge">MTF</span>` : '';
   const brokerBadge = row.broker === 'angelone'
-    ? `<span class="broker-tag-angel">ANGEL</span>`
+    ? `<span class="broker-tag-angel">ANGEL ONE</span>`
     : `<span class="broker-tag-groww">GROWW</span>`;
 
   const daysText = row.daysHeld != null ? String(row.daysHeld) : '—';
@@ -34,8 +34,8 @@ export function renderHoldingsRow(row) {
     const netCount = instData.active_institutes_changed != null ? instData.active_institutes_changed : (instData.funds_changed_3m || 0);
     const isBuying = netCount >= 0;
     const badgeColor = isBuying
-      ? 'background:rgba(0, 230, 153, 0.14);color:var(--gain);border:1px solid rgba(0, 230, 153, 0.3);'
-      : 'background:rgba(255, 77, 109, 0.14);color:var(--loss);border:1px solid rgba(255, 77, 109, 0.3);';
+      ? 'background:rgba(22, 163, 74, 0.14);color:var(--up);border:1px solid rgba(22, 163, 74, 0.3);'
+      : 'background:rgba(226, 55, 68, 0.14);color:var(--down);border:1px solid rgba(226, 55, 68, 0.3);';
     const sign = isBuying ? '+' : '';
     const totalCr = Number(instData.total_mf_holding_cr || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
     instBadge = `<span class="days-pill" style="${badgeColor}font-size:9px;padding:2px 6px;font-weight:800;" title="${instData.total_institutes_count || 0} Total Funds | ₹${totalCr} Cr MF Invested">${isBuying ? '📈' : '📉'} ${sign}${netCount} Funds</span>`;
@@ -49,7 +49,7 @@ export function renderHoldingsRow(row) {
   else if (firstLetter === 'S') logoBg = '#F59E0B';
 
   const isLoss = (row.overallPL || 0) < 0;
-  const barColor = isLoss ? '#EB5B56' : '#00B386';
+  const barColor = isLoss ? 'var(--down)' : 'var(--up)';
 
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
@@ -58,7 +58,7 @@ export function renderHoldingsRow(row) {
           <div class="sym-avatar-sq" style="background:${logoBg};">${firstLetter}</div>
           <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-weight:800;font-size:13px;color:#0F172A;">${rawSymbol}</span>${mtfBadge}
+              <span style="font-weight:800;font-size:13px;color:var(--ink);">${rawSymbol}</span>${mtfBadge}
             </div>
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
               ${brokerBadge}
@@ -74,13 +74,10 @@ export function renderHoldingsRow(row) {
       <td>${money(row.currentAmount)}</td>
       <td class="${plClass(row.overallPL)}">${money(row.overallPL)}<br><small>${pct(row.overallPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
-      <td style="text-align:center;">
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-          <span style="font-size:12px;font-weight:600;color:#64748B;">${daysText}</span>
-          <div style="width:24px;height:4px;border-radius:2px;background:${barColor};"></div>
-        </div>
+      <td style="text-align:center;">${daysText}</td>
+      <td style="width:60px;text-align:right;padding-right:22px !important;">
+        <div style="width:48px;height:4px;border-radius:2px;background:${barColor};display:inline-block;" title="Overall ${isLoss ? 'Loss' : 'Gain'}"></div>
       </td>
-      <td class="${plClass(row.grossPL)}" style="font-weight:700;">${money(row.grossPL)}<br><small style="font-size:10px;">${pct(row.grossPLPercent)}</small></td>
     </tr>`;
 }
 
