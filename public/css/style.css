@@ -974,34 +974,25 @@ button { font-family: inherit; }
 .pl-negative { color: var(--loss) !important; }
 
 /* ---- Broker Panels & Optimized Holdings Tables ---- */
-.broker-panels {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 16px !important;
-  margin-top: 14px !important;
-  width: 100% !important;
-  clear: both !important;
-  flex: 0 0 100% !important;
-}
-.broker-panels.single-view { grid-template-columns: 1fr; }
-#portfolioPanels {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 20px !important;
-  margin-top: 14px !important;
-  width: 100% !important;
-  clear: both !important;
-  flex: 0 0 100% !important;
+.portfolio-content {
+  padding: 32px 28px !important;
 }
 
-/* View Head Actions Bar (Full width across top of holdings) */
-.view-head-actions {
+.summary-section {
+  margin-bottom: 20px !important;
+}
+
+.stats-section {
+  margin-bottom: 24px !important;
+}
+
+.broker-section, .broker-row, .view-head-actions {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
-  margin-top: 14px !important;
-  margin-bottom: 12px !important;
+  margin-top: 0 !important;
+  margin-bottom: 16px !important;
   clear: both !important;
 }
 
@@ -1086,6 +1077,7 @@ button { font-family: inherit; }
   border-collapse: collapse !important;
   font-size: 13px !important;
   table-layout: fixed !important;
+  margin-top: 0 !important;
 }
 
 .table-row, .holdings-table tbody tr {
@@ -1093,10 +1085,17 @@ button { font-family: inherit; }
   height: 82px !important;
 }
 
-.holdings-table th {
+.holdings-table th, .holdings-table td {
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18) !important;
+}
+
+.holdings-table thead th {
   padding: 16px 12px !important; color: #5F7570 !important;
   font-weight: 500 !important; font-size: 13px !important; letter-spacing: 0.02em; text-transform: uppercase;
-  border-bottom: 1px solid #E5E7EB !important; white-space: nowrap;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25) !important; white-space: nowrap;
   background: #FAFBFC !important;
   text-align: right;
 }
@@ -1110,12 +1109,29 @@ button { font-family: inherit; }
 .holdings-table td {
   padding: 18px 12px !important; text-align: right;
   font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  border-bottom: 1px solid #E5E7EB !important; white-space: nowrap;
+  white-space: nowrap;
   color: var(--text-primary);
   font-size: 13.5px !important;
 }
 .holdings-table td:first-child { text-align: left; padding-left: 20px !important; }
 .holdings-table td:last-child { text-align: right; padding-right: 20px !important; }
+
+/* Subtle fixed-width progress bar indicator (Point 6) */
+.bar-container {
+  width: 40px !important;
+  height: 6px !important;
+  background: #E5E7EB !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+.bar {
+  height: 100% !important;
+  border-radius: 10px !important;
+  max-width: 100% !important;
+}
 
 .clickable-holding-row { cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
 .clickable-holding-row:hover { background: rgba(99, 102, 241, 0.08) !important; }

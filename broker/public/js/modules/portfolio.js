@@ -75,8 +75,10 @@ export function renderHoldingsRow(row) {
       <td class="${plClass(row.overallPL)}">${money(row.overallPL)}<br><small>${pct(row.overallPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:center;">${daysText}</td>
-      <td style="width:60px;text-align:right;padding-right:22px !important;">
-        <div style="width:48px;height:4px;border-radius:2px;background:${barColor};display:inline-block;" title="Overall ${isLoss ? 'Loss' : 'Gain'}"></div>
+      <td class="progress-cell" style="width:60px;text-align:right;padding-right:20px !important;">
+        <div class="bar-container" title="Overall ${isLoss ? 'Loss' : 'Gain'}">
+          <div class="bar" style="background:${barColor};width:70%;"></div>
+        </div>
       </td>
     </tr>`;
 }
