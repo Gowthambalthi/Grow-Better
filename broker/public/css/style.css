@@ -534,8 +534,8 @@ button { font-family: inherit; }
   color: #0F172A !important;
 }
 .theme-icon { width: 15px !important; height: 15px !important; display: none; }
-[data-theme="dark"] .sun-icon { display: block; }
-[data-theme="light"] .moon-icon { display: block; }
+[data-theme="dark"] .moon-icon { display: block; }
+[data-theme="light"] .sun-icon { display: block; }
 
 /* Stacked Pills for CASH BALANCE (BORDERLESS - NOT IN BOX!) */
 .topbar-stacked-pill {
@@ -563,7 +563,7 @@ button { font-family: inherit; }
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 14.5px !important;
   font-weight: 800 !important;
-  color: #0F172A !important;
+  color: #1C2B2A !important;
 }
 .pill-sub-val {
   font-family: var(--font-mono);
@@ -1852,17 +1852,22 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .signal-toggle-pill:hover {
   background: #D4F4EA !important;
 }
+@keyframes signalPulse {
+  0% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 179, 134, 0.7); }
+  50% { opacity: 0.35; transform: scale(1.2); box-shadow: 0 0 0 6px rgba(0, 179, 134, 0); }
+  100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 179, 134, 0); }
+}
+
 .signal-dot-status {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #00875F;
-  box-shadow: 0 0 6px rgba(0, 135, 95, 0.4);
   transition: all 0.2s ease;
 }
 .signal-dot-status.on {
   background: #00B386 !important;
-  box-shadow: 0 0 8px rgba(0, 179, 134, 0.8) !important;
+  animation: signalPulse 1.6s infinite ease-in-out !important;
 }
 .signal-text-lbl {
   font-size: 11.5px !important;
