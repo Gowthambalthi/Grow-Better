@@ -184,15 +184,17 @@ function updateSummaryCards(mode = 'all') {
     const invAmt = Number(c.investedAmount || 0);
     const ovPct = invAmt > 0 ? (ovNum / invAmt) * 100 : Number(c.overallPLPercent || 0);
     const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
-    heroOverallEl.textContent = `${plSign(ovNum)}${money(Math.abs(ovNum))} (${signPct})`;
-    heroOverallEl.style.color = ovNum >= 0 ? '#00B386' : '#EB5B56';
+    const signSym = ovNum < 0 ? '-' : (ovNum > 0 ? '+' : '');
+    heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))}(${signPct})`;
+    heroOverallEl.style.color = ovNum >= 0 ? '#20E098' : '#FF6B6B';
   }
 
   const heroTodayEl = document.getElementById('heroTodayPl');
   if (heroTodayEl) {
     const tdNum = Number(c.todayPL || 0);
-    heroTodayEl.textContent = `${plSign(tdNum)}${money(tdNum)}`;
-    heroTodayEl.style.color = tdNum >= 0 ? '#00B386' : '#EB5B56';
+    const signSym = tdNum < 0 ? '-' : (tdNum > 0 ? '+' : '');
+    heroTodayEl.textContent = `${signSym}${money(Math.abs(tdNum))}`;
+    heroTodayEl.style.color = tdNum >= 0 ? '#20E098' : '#FF6B6B';
   }
 
   // Portfolio View 4 Light Cards (#view-portfolio)
@@ -273,7 +275,7 @@ function setPctVal(id, val) {
   const num = Number(val) || 0;
   const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
   el.textContent = `${sign}${Math.abs(num).toFixed(2)}%`;
-  el.style.color = num >= 0 ? 'var(--gain)' : 'var(--loss)';
+  el.style.color = num >= 0 ? '#20E098' : '#FF6B6B';
   updateCardTrendIcon(id, num);
 }
 function setPl(id, value) {
