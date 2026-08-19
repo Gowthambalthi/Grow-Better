@@ -227,6 +227,11 @@ function setColoredCash(id, val) {
   if (!el) return;
   const num = Number(val) || 0;
   el.textContent = money(num);
+  if (id === 'topbarCashValue') {
+    el.style.color = '#1C2B2A';
+    el.style.fontWeight = '700';
+    return;
+  }
   if (num < 0) {
     el.style.color = 'var(--loss)';
     el.style.fontWeight = '700';
