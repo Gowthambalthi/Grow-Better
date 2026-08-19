@@ -333,9 +333,9 @@ button { font-family: inherit; }
   gap: 4px !important;
 }
 
-.index-name {
+.index-name, #mainHeaderIndexName {
   font-size: 11px !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   color: #64748B !important;
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
@@ -368,14 +368,14 @@ button { font-family: inherit; }
 .index-val-row.negative .index-arrow,
 .index-val-row.negative .index-change,
 .index-val-row.negative #niftyCardSub {
-  color: #E23744 !important;
+  color: #EF4444 !important; /* Soft light-mode red */
 }
 
 .index-val-row.positive .index-price,
 .index-val-row.positive .index-arrow,
 .index-val-row.positive .index-change,
 .index-val-row.positive #niftyCardSub {
-  color: #16A34A !important;
+  color: #10B981 !important; /* Soft light-mode green */
 }
 
 .index-arrow {
