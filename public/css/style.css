@@ -953,11 +953,9 @@ button { font-family: inherit; }
   flex: 0 0 100% !important;
   clear: both !important;
 }
-.broker-panel.angel-panel {
-  border-left: 3px solid #3B82F6;
-}
+.broker-panel.angel-panel,
 .broker-panel.groww-panel {
-  border-left: 3px solid #00D09C;
+  border-left: 1px solid var(--line) !important;
 }.panel-head {
   display: flex !important;
   align-items: center !important;
@@ -1865,17 +1863,18 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    ============================================================ */
 .groww-hero-card {
   background: #1E293B !important;
-  border-radius: 16px !important;
-  padding: 28px 32px !important;
+  border-radius: 20px !important;
+  padding: 34px 40px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
-  margin-top: 10px !important;
-  margin-bottom: 20px !important;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+  margin-top: 12px !important;
+  margin-bottom: 24px !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14) !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  min-height: 140px !important;
 }
 
 .gh-left {
@@ -1885,7 +1884,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-sub-lbl {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   color: #94A3B8;
   letter-spacing: 0.08em;
@@ -1893,7 +1892,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-main-price {
-  font-size: 38px;
+  font-size: 44px;
   font-weight: 900;
   color: #FFFFFF;
   letter-spacing: -0.03em;
@@ -1901,15 +1900,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-sub-info {
-  font-size: 13px;
+  font-size: 14px;
   color: #CBD5E1;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .gh-right {
   display: flex;
   align-items: center;
-  gap: 44px;
+  gap: 52px;
 }
 
 .gh-metric {
@@ -1920,7 +1919,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-lbl {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   color: #94A3B8;
   letter-spacing: 0.08em;
@@ -1928,7 +1927,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .gh-val {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   color: #FFFFFF;
   line-height: 1.1;
@@ -1937,8 +1936,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .groww-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: 24px;
+  margin-bottom: 28px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1946,35 +1945,36 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .groww-stat-box {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  border-radius: 16px;
-  padding: 20px 24px;
+  border-radius: 18px;
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  gap: 8px;
+  min-height: 115px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .groww-stat-box:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
 }
 
 .gs-lbl {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #64748B;
 }
 
 .gs-val {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   color: #0F172A;
   line-height: 1.2;
 }
 
 .gs-sub {
-  font-size: 11.5px;
+  font-size: 12px;
   color: #94A3B8;
 }
 
