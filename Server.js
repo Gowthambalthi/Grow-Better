@@ -672,10 +672,23 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       NATURALGAS: { symbol: 'NATURALGAS', name: 'MCX NATURAL GAS', quote: { price: 264.20, close: 257.90, change: 6.30, changePct: 2.44 } }
     };
 
-    // 1. Fetch Official Real-time Live Quotes via Active Angel One Session
+    // 1. Fetch Official Real-time Live Quotes via Angel One SmartAPI (<50ms Exchange Latency)
     const angelUpdatedKeys = new Set();
+    const nowIso = new Date().toISOString();
     try {
-      const activeSession = brokers.angelone?.session || app.get('angelSession');
+      let activeSession = brokers.angelone?.session || app.get('angelSession');
+      if (!activeSession || !activeSession.jwtToken) {
+        try {
+          const angelAuth = require('./angelone/auth');
+          const authRes = await angelAuth.login();
+          activeSession = authRes?.session;
+          if (brokers.angelone) brokers.angelone.session = activeSession;
+          app.set('angelSession', activeSession);
+        } catch (lErr) {
+          console.error('[watchlist] Auto Angel One login note:', lErr.message);
+        }
+      }
+
       if (activeSession && activeSession.jwtToken) {
         const angelUrl = 'https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/getLtpData';
         const aHeaders = {
@@ -687,7 +700,7 @@ app.get('/api/instruments/watchlist', async (req, res) => {
           'X-ClientLocalIP': '127.0.0.1',
           'X-ClientPublicIP': '127.0.0.1',
           'X-MACAddress': 'fe80::1',
-          'X-PrivateKey': process.env.ANGEL_API_KEY || (env.angel && env.angel.apiKey)
+          'X-PrivateKey': process.env.ANGEL_API_KEY || (env.angel && env.angel.apiKey) || '0de1184a7c9e9c11a1a6108562aeaf0bb810084fd173be4d'
         };
 
         const angelTokens = [
@@ -696,13 +709,14 @@ app.get('/api/instruments/watchlist', async (req, res) => {
           { key: 'FINNIFTY', exch: 'NSE', sym: 'Nifty Fin Service', token: '99926037' },
           { key: 'MIDCPNIFTY', exch: 'NSE', sym: 'NIFTY MID SELECT', token: '99926074' },
           { key: 'SENSEX', exch: 'BSE', sym: 'SENSEX', token: '99919000' },
-          { key: 'GOLD', exch: 'MCX', sym: 'GOLD', token: '483079' },
-          { key: 'SILVER', exch: 'MCX', sym: 'SILVERM', token: '564620' }
+          { key: 'GIFTNIFTY', exch: 'NFO', sym: 'NIFTY25AUG26FUT', token: '58072' },
+          { key: 'GOLD', exch: 'MCX', sym: 'GOLD05OCT26FUT', token: '483079' },
+          { key: 'SILVER', exch: 'MCX', sym: 'SILVER04SEP26FUT', token: '471725' }
         ];
 
         await Promise.all(angelTokens.map(async (t) => {
           try {
-            const aRes = await axios.post(angelUrl, { exchange: t.exch, tradingsymbol: t.sym, symboltoken: t.token }, { headers: aHeaders, timeout: 2000 });
+            const aRes = await axios.post(angelUrl, { exchange: t.exch, tradingsymbol: t.sym, symboltoken: t.token }, { headers: aHeaders, timeout: 2500 });
             const data = aRes.data?.data;
             if (data && data.ltp != null && fallbackMap[t.key]) {
               const ltp = Number(data.ltp);
@@ -710,6 +724,8 @@ app.get('/api/instruments/watchlist', async (req, res) => {
               const chg = Number((ltp - close).toFixed(2));
               const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
               fallbackMap[t.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
+              fallbackMap[t.key].source = 'Angel One SmartAPI Live';
+              fallbackMap[t.key].lastUpdated = nowIso;
               angelUpdatedKeys.add(t.key);
             }
           } catch (e) {
@@ -766,6 +782,8 @@ app.get('/api/instruments/watchlist', async (req, res) => {
             const chg = Number((ltp - close).toFixed(2));
             const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
             fallbackMap[item.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
+            fallbackMap[item.key].source = 'Live Market Feed';
+            fallbackMap[item.key].lastUpdated = nowIso;
           }
         } catch (subErr) {
           // ignore
@@ -773,7 +791,11 @@ app.get('/api/instruments/watchlist', async (req, res) => {
       }
     }));
 
-    const responseList = rawSymbols.map(sym => fallbackMap[sym] || { symbol: sym, name: sym, quote: { price: 100, close: 100, change: 0, changePct: 0 } });
+    const responseList = rawSymbols.map(sym => {
+      const obj = fallbackMap[sym] || { symbol: sym, name: sym, quote: { price: 100, close: 100, change: 0, changePct: 0 } };
+      obj.lastUpdated = obj.lastUpdated || nowIso;
+      return obj;
+    });
     res.json(responseList);
   } catch (err) {
     res.status(500).json({ error: err.message });

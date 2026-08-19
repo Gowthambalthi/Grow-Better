@@ -78,6 +78,8 @@ async function updateTickerData() {
             prevPrice: item.quote.close,
             change: item.quote.change,
             changePct: item.quote.changePct,
+            lastUpdated: item.lastUpdated,
+            source: item.source,
           };
         }
       }
@@ -98,7 +100,8 @@ function renderTickerUI() {
   const marketTagEl = document.getElementById('popoverMarketTag');
   if (nameEl) nameEl.textContent = open ? 'NIFTY 50' : 'GIFT NIFTY';
   if (marketTagEl) {
-    marketTagEl.textContent = open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)';
+    const timeStr = topData && topData.lastUpdated ? new Date(topData.lastUpdated).toLocaleTimeString('en-IN') : '';
+    marketTagEl.textContent = (open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)') + (timeStr ? ` • ${timeStr}` : '');
     marketTagEl.style.color = open ? '#00E699' : '#F87171';
   }
 
