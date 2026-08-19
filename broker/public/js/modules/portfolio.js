@@ -145,7 +145,14 @@ function updateSummaryCards(mode = 'all') {
     c = (latestPortfolioData.combined?.summary || latestPortfolioData.combined) || {};
   }
 
-  // Groww Terminal Hero Dark Banner
+  // Dashboard View Cards (#view-dashboard)
+  setText('sumInvested', money(c.investedAmount));
+  setText('sumCurrent', money(c.currentAmount));
+  setGrowwPlCard('sumOverall', 'lblOverall', 'iconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
+  setGrowwPlCard('sumToday', 'lblToday', 'iconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
+  setPl('sumGross', c.grossPL);
+
+  // Portfolio View Groww Hero Dark Banner (#view-portfolio)
   setText('heroCurrentValue', money(c.currentAmount));
   setText('heroInvestedValue', money(c.investedAmount));
   
@@ -165,13 +172,13 @@ function updateSummaryCards(mode = 'all') {
     heroTodayEl.style.color = tdNum >= 0 ? '#00B386' : '#EB5B56';
   }
 
-  // Row 2: 4 Light Stat Cards
-  setPctVal('sumXirr', c.xirr);
-  setPctVal('sumCagr', c.accountReturnPercent || c.cagr);
-  setPl('sumGross', c.grossPL);
-  setPl('sumAccountPl', c.accountPL);
-  setText('sumAdjAccountPl', money(c.totalAccruedCharges));
-  setText('sumCashInvested', money(c.ownCapitalInvested));
+  // Portfolio View 4 Light Cards (#view-portfolio)
+  setPctVal('portSumXirr', c.xirr);
+  setPctVal('portSumCagr', c.accountReturnPercent || c.cagr);
+  setPl('portSumGross', c.grossPL);
+  setPl('portSumAccountPl', c.accountPL);
+  setText('portSumAdjAccountPl', money(c.totalAccruedCharges));
+  setText('portSumCashInvested', money(c.ownCapitalInvested));
 
   // Topbar Cash Balance & Cash Breakdown Popover Dropdown (Colored Red if Negative)
   const angelCash = latestPortfolioData?.angelone?.summary?.cashBalance != null ? latestPortfolioData.angelone.summary.cashBalance : -185.08;

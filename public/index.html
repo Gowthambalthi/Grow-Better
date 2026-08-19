@@ -246,69 +246,85 @@
             <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
             <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
           </button>
-
         </div>
       </header>
 
       <!-- ============ VIEWS ============ -->
       <main class="content">
 
-        <!-- ---- Dashboard ---- -->
+        <!-- ---- Dashboard (Holdings View) ---- -->
         <section class="view active" id="view-dashboard">
-          <!-- Groww Terminal Dark Hero Banner -->
-          <div class="groww-hero-card" id="heroSummaryBanner">
-            <div class="gh-left">
-              <span class="gh-sub-lbl">CURRENT VALUE</span>
-              <span class="gh-main-price" id="heroCurrentValue">₹0.00</span>
-              <span class="gh-sub-info">
-                Invested <strong id="heroInvestedValue" style="color:#FFF;">₹0.00</strong> · 
-                Overall <strong id="heroOverallValue">₹0.00 (+0.00%)</strong>
-              </span>
-            </div>
-            <div class="gh-right">
-              <div class="gh-metric">
-                <span class="gh-lbl">TODAY'S P&amp;L</span>
-                <span class="gh-val" id="heroTodayPl">₹0.00</span>
+          <!-- Row 1: Stock Real-Time Performance Bar Cards -->
+          <div class="summary-bar" id="summaryGrid">
+            <!-- Card 1: Total Invested -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                </svg>
               </div>
-              <div class="gh-metric">
-                <span class="gh-lbl">XIRR</span>
-                <span class="gh-val" id="sumXirr">+0.00%</span>
-              </div>
-              <div class="gh-metric">
-                <span class="gh-lbl">ACCOUNT RETURN</span>
-                <span class="gh-val" id="sumCagr">+0.00%</span>
+              <div class="stat-body">
+                <span class="stat-label">Invested Amount</span>
+                <span class="stat-value" id="sumInvested">—</span>
               </div>
             </div>
-          </div>
 
-          <!-- Row 2: 4 Light Stat Cards -->
-          <div class="groww-cards-grid" id="summaryGrid">
-            <!-- Card 1: Gross Net P&L -->
-            <div class="groww-stat-box">
-              <span class="gs-lbl">Gross Net P&amp;L</span>
-              <span class="gs-val" id="sumGross">₹0.00</span>
-              <span class="gs-sub">Since inception</span>
+            <!-- Card 2: Current Value -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-purple">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3v18h18"></path>
+                  <path d="m19 9-5 5-4-4-3 3"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Current Value</span>
+                <span class="stat-value" id="sumCurrent">—</span>
+              </div>
             </div>
 
-            <!-- Card 2: Account P&L -->
-            <div class="groww-stat-box">
-              <span class="gs-lbl">Account P&amp;L</span>
-              <span class="gs-val" id="sumAccountPl">₹0.00</span>
-              <span class="gs-sub">Unadjusted</span>
+            <!-- Card 3: Overall Gain/Loss -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-green" id="iconOverall">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label" id="lblOverall">Overall Gain</span>
+                <span class="stat-value" id="sumOverall">—</span>
+              </div>
             </div>
 
-            <!-- Card 3: Charges & Fees -->
-            <div class="groww-stat-box">
-              <span class="gs-lbl">Charges &amp; Fees</span>
-              <span class="gs-val" id="sumAdjAccountPl">₹0.00</span>
-              <span class="gs-sub">Total to date</span>
+            <!-- Card 4: Today's Loss/Profit -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-red" id="iconToday">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline>
+                  <polyline points="17 18 23 18 23 12"></polyline>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label" id="lblToday">Today's Loss</span>
+                <span class="stat-value" id="sumToday">—</span>
+              </div>
             </div>
 
-            <!-- Card 4: Cash Invested -->
-            <div class="groww-stat-box">
-              <span class="gs-lbl">Cash Invested</span>
-              <span class="gs-val" id="sumCashInvested">₹0.00</span>
-              <span class="gs-sub">Across brokers</span>
+            <!-- Card 5: Gross Net P&L -->
+            <div class="stat-card">
+              <div class="stat-badge-icon badge-violet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                  <path d="M12 8v8M8 12h8"></path>
+                </svg>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Gross Net P&amp;L</span>
+                <span class="stat-value" id="sumGross">—</span>
+              </div>
             </div>
           </div>
 
@@ -380,13 +396,65 @@
           </div>
         </section>
 
-        <!-- ---- Portfolio ---- -->
+        <!-- ---- Portfolio Page ---- -->
         <section class="view" id="view-portfolio">
-          <!-- Row 1: Stock Real-Time Performance Bar Cards -->
-          <div class="summary-bar" id="portfolioSummaryGrid">
-            
-            <!-- Card 1: Total Invested -->
-            <div class="stat-card">
+          <!-- Groww Terminal Dark Hero Banner -->
+          <div class="groww-hero-card" id="heroSummaryBanner">
+            <div class="gh-left">
+              <span class="gh-sub-lbl">CURRENT VALUE</span>
+              <span class="gh-main-price" id="heroCurrentValue">₹0.00</span>
+              <span class="gh-sub-info">
+                Invested <strong id="heroInvestedValue" style="color:#FFF;">₹0.00</strong> · 
+                Overall <strong id="heroOverallValue">₹0.00 (+0.00%)</strong>
+              </span>
+            </div>
+            <div class="gh-right">
+              <div class="gh-metric">
+                <span class="gh-lbl">TODAY'S P&amp;L</span>
+                <span class="gh-val" id="heroTodayPl">₹0.00</span>
+              </div>
+              <div class="gh-metric">
+                <span class="gh-lbl">XIRR</span>
+                <span class="gh-val" id="portSumXirr">+0.00%</span>
+              </div>
+              <div class="gh-metric">
+                <span class="gh-lbl">ACCOUNT RETURN</span>
+                <span class="gh-val" id="portSumCagr">+0.00%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: 4 Light Stat Cards -->
+          <div class="groww-cards-grid" id="portfolioSummaryGrid">
+            <!-- Card 1: Gross Net P&L -->
+            <div class="groww-stat-box">
+              <span class="gs-lbl">Gross Net P&amp;L</span>
+              <span class="gs-val" id="portSumGross">₹0.00</span>
+              <span class="gs-sub">Since inception</span>
+            </div>
+
+            <!-- Card 2: Account P&L -->
+            <div class="groww-stat-box">
+              <span class="gs-lbl">Account P&amp;L</span>
+              <span class="gs-val" id="portSumAccountPl">₹0.00</span>
+              <span class="gs-sub">Unadjusted</span>
+            </div>
+
+            <!-- Card 3: Charges & Fees -->
+            <div class="groww-stat-box">
+              <span class="gs-lbl">Charges &amp; Fees</span>
+              <span class="gs-val" id="portSumAdjAccountPl">₹0.00</span>
+              <span class="gs-sub">Total to date</span>
+            </div>
+
+            <!-- Card 4: Cash Invested -->
+            <div class="groww-stat-box">
+              <span class="gs-lbl">Cash Invested</span>
+              <span class="gs-val" id="portSumCashInvested">₹0.00</span>
+              <span class="gs-sub">Across brokers</span>
+            </div>
+          </div>
+
               <div class="stat-badge-icon badge-blue">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
