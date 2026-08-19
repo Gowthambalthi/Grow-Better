@@ -308,44 +308,60 @@ button { font-family: inherit; }
 
 /* Global & Indian Market Index Ticker Bar (Exact Match to Screenshot: Borderless, Red/Teal Price) */
 .topbar-index-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 0 !important;
-  cursor: pointer;
+  padding: 2px 6px !important;
+  min-width: 185px !important;
+  cursor: pointer !important;
 }
 
 .index-ticker-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  cursor: pointer;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  cursor: pointer !important;
+  width: 100% !important;
 }
 
 .index-head-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
 }
 
 .index-name {
-  font-size: 11.5px;
-  font-weight: 800;
+  font-size: 11px !important;
+  font-weight: 700 !important;
   color: #64748B !important;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
+  line-height: 1.1 !important;
 }
 
 .index-val-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
+}
+
+.index-price, #niftyCardValue {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+/* Delta Change text: 0.75x of NIFTY price value (11.5px) */
+.index-change, #niftyCardSub, .index-arrow {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  opacity: 0.95 !important;
 }
 
 /* Price & Arrow = Colored (Teal/Red); Change & Pct = Pure White! */
