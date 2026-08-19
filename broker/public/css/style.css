@@ -1891,9 +1891,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    GROWW TERMINAL HERO BANNER & STAT GRID (SAFE & ISOLATED)
    ============================================================ */
 .groww-hero-card {
-  background: #1E3566 !important;
+  background: #1B2B4C !important;
   border-radius: 18px !important;
-  padding: 34px 36px !important;
+  padding: 30px 36px !important;
   min-height: 145px !important;
   display: flex !important;
   align-items: center !important;
@@ -1916,14 +1916,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-size: 11px !important;
   letter-spacing: 0.05em !important;
   font-weight: 700 !important;
-  color: #A9BBD6 !important;
+  color: #94A3B8 !important;
   text-transform: uppercase !important;
 }
 
 .gh-main-price {
   font-family: 'Roboto', sans-serif !important;
   font-size: 38px !important;
-  font-weight: 500 !important; /* Roboto Medium */
+  font-weight: 700 !important; /* Bold match for Photo 1 */
   color: #FFFFFF !important;
   letter-spacing: -0.01em !important;
   line-height: 1.1 !important;
@@ -1932,8 +1932,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .gh-sub-info {
   font-family: 'Roboto', sans-serif !important;
   font-size: 13px !important;
-  font-weight: 500 !important;
-  color: #A9BBD6 !important;
+  font-weight: 400 !important;
+  color: #94A3B8 !important;
   margin-top: 4px !important;
 }
 
@@ -1954,14 +1954,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-size: 10.5px !important;
   letter-spacing: 0.05em !important;
   font-weight: 700 !important;
-  color: #A9BBD6 !important;
+  color: #94A3B8 !important;
   text-transform: uppercase !important;
 }
 
 .gh-val {
   font-family: 'Roboto', sans-serif !important;
   font-size: 21px !important;
-  font-weight: 500 !important; /* Roboto Medium */
+  font-weight: 700 !important; /* Bold match for Photo 1 */
   color: #FFFFFF;
   line-height: 1.1 !important;
 }
