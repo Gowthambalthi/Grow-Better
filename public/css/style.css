@@ -763,9 +763,9 @@ button { font-family: inherit; }
 .popover-body { padding: 8px 14px 12px; }
 
 /* ============================================================ CONTENT / VIEWS */
-.content { padding: 22px 26px 60px; max-width: 1600px; margin: 0 auto; width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; min-width: 0 !important; box-sizing: border-box !important; }
+.portfolio-page, .content { padding: 14px 28px 40px !important; max-width: 1600px; margin: 0 auto; width: 100% !important; max-width: 100% !important; overflow-x: hidden !important; min-width: 0 !important; box-sizing: border-box !important; }
 .view { display: none; width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; }
-.view.active { display: flex; flex-direction: column; width: 100% !important; max-width: 100% !important; min-width: 0 !important; gap: 14px; box-sizing: border-box !important; }
+.view.active { display: flex; flex-direction: column; width: 100% !important; max-width: 100% !important; min-width: 0 !important; gap: 0 !important; box-sizing: border-box !important; }
 .view-title { font-size: 18px; font-weight: 800; margin: 0; letter-spacing: -0.01em; color: var(--text-primary); }
 .view-subtitle { font-size: 12.5px; font-weight: 400; color: var(--text-muted); margin-top: 3px; }
 
@@ -991,8 +991,11 @@ button { font-family: inherit; }
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
-  margin-top: 0 !important;
-  margin-bottom: 16px !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  margin: 0 0 16px 0 !important;
+  padding: 0 !important;
   clear: both !important;
 }
 
@@ -1116,21 +1119,26 @@ button { font-family: inherit; }
 .holdings-table td:first-child { text-align: left; padding-left: 20px !important; }
 .holdings-table td:last-child { text-align: right; padding-right: 20px !important; }
 
-/* Subtle fixed-width progress bar indicator (Point 6) */
-.bar-container {
-  width: 40px !important;
+.progress-cell {
+  width: 60px !important;
+  min-width: 60px !important;
+}
+
+.progress-track, .bar-container {
+  width: 36px !important;
   height: 6px !important;
+  margin-left: auto !important;
   background: #E5E7EB !important;
-  border-radius: 10px !important;
+  border-radius: 999px !important;
   overflow: hidden !important;
   display: inline-block !important;
   vertical-align: middle !important;
 }
 
-.bar {
+.progress-bar, .bar {
   height: 100% !important;
-  border-radius: 10px !important;
-  max-width: 100% !important;
+  max-width: 28px !important;
+  border-radius: 999px !important;
 }
 
 .clickable-holding-row { cursor: pointer; transition: background 0.15s ease, transform 0.15s ease; }
@@ -1982,18 +1990,19 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 /* ============================================================
    GROWW TERMINAL HERO BANNER & STAT GRID (FIRST UI SPEC)
    ============================================================ */
-.summary-card, .groww-hero-card {
+.portfolio-summary, .summary-card, .groww-hero-card {
   width: 100% !important;
+  height: 178px !important;
   min-height: 178px !important;
+  max-height: 178px !important;
   border-radius: 20px !important;
-  padding: 32px 36px !important;
+  padding: 24px 36px !important;
   background: #1B2B4C !important;
   display: flex !important;
   align-items: flex-end !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
-  margin-top: 0 !important;
-  margin-bottom: 20px !important;
+  margin: 0 0 20px 0 !important;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15) !important;
   box-sizing: border-box !important;
 }
@@ -2003,23 +2012,24 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   flex-direction: column !important;
 }
 
-.gh-sub-lbl {
+.current-value-label, .gh-sub-lbl {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   letter-spacing: 0.4px !important;
   font-weight: 600 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
-  margin-bottom: 8px !important;
+  margin: 0 !important;
 }
 
-.gh-main-price {
+.current-value, .gh-main-price {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 34px !important;
-  font-weight: 800 !important;
+  font-size: 38px !important;
+  font-weight: 600 !important;
   color: #FFFFFF !important;
   letter-spacing: -0.02em !important;
   line-height: 1.1 !important;
+  margin: 8px 0 6px !important;
 }
 
 .gh-sub-info {
@@ -2027,7 +2037,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-size: 13px !important;
   font-weight: 500 !important;
   color: #94A3B8 !important;
-  margin-top: 6px !important;
+  margin-top: 2px !important;
 }
 
 .gh-sub-info strong, .gh-sub-info span {
@@ -2065,23 +2075,26 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 /* Equal 4-Card Statistics Grid */
-.stats-grid, .groww-cards-grid {
+.stats-section, .stats-grid, .groww-cards-grid {
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 18px !important;
-  margin-top: 20px !important;
-  margin-bottom: 30px !important;
+  gap: 16px !important;
+  margin: 0 0 22px 0 !important;
+  padding: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .stat-card, .groww-stat-box {
   height: 126px !important;
-  padding: 22px !important;
+  min-height: 126px !important;
+  max-height: 126px !important;
+  padding: 20px 24px !important;
   border-radius: 16px !important;
   background: #FFFFFF !important;
   border: 1px solid #E5E7EB !important;
   box-sizing: border-box !important;
+  margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: space-between !important;
