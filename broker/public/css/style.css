@@ -2008,14 +2008,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    ============================================================ */
 .portfolio-summary, .summary-card, .groww-hero-card {
   width: 100% !important;
-  height: 154px !important;
-  min-height: 154px !important;
-  max-height: 154px !important;
-  border-radius: 18px !important;
-  padding: 26px 32px !important;
+  height: 132px !important;
+  min-height: 132px !important;
+  max-height: 132px !important;
+  border-radius: 16px !important;
+  padding: 16px 28px !important;
   background: #1B2B4C !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-end !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin: 0 0 20px 0 !important;
@@ -2026,32 +2026,32 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .gh-left {
   display: flex !important;
   flex-direction: column !important;
-  justify-content: center !important;
+  justify-content: flex-end !important;
 }
 
 .current-value-label, .gh-sub-lbl {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   letter-spacing: 0.4px !important;
   font-weight: 500 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 4px 0 !important;
 }
 
 .current-value, .gh-main-price {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 38px !important;
+  font-size: 34px !important;
   font-weight: 700 !important;
   color: #FFFFFF !important;
   letter-spacing: 0 !important;
   line-height: 1 !important;
-  margin: 0 0 6px 0 !important;
+  margin: 0 0 4px 0 !important;
 }
 
 .gh-sub-info {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 12.5px !important;
+  font-size: 12px !important;
   font-weight: 400 !important;
   color: #94A3B8 !important;
   margin: 0 !important;
@@ -2065,7 +2065,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .gh-right {
   display: flex !important;
   align-items: flex-end !important;
-  gap: 40px !important;
+  gap: 36px !important;
+  padding-bottom: 1px !important;
 }
 
 .gh-metric {
