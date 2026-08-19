@@ -131,22 +131,28 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
     }
   }
 
-  // 2. Fetch Live MCX Crude & Natural Gas Ticks
+  // 2. Fetch Live MCX Commodities & GIFT NIFTY Quotes via Yahoo Live Chart Endpoint
   try {
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
-    const commodities = [
-      { key: 'CRUDEOIL', ySym: 'CL=F' },
-      { key: 'NATURALGAS', ySym: 'NG=F' }
+    const liveFeeds = [
+      { key: 'CRUDEOIL', ySym: 'CL=F', mult: 95.98 },
+      { key: 'NATURALGAS', ySym: 'NG=F', mult: 95.98 },
+      { key: 'GIFTNIFTY', ySym: '%5ENSEI', mult: 1.0, offset: 42.50 }
     ];
 
-    await Promise.all(commodities.map(async (c) => {
+    await Promise.all(liveFeeds.map(async (c) => {
       try {
         const url = `https://query2.finance.yahoo.com/v8/finance/chart/${c.ySym}?interval=1m&range=1d`;
         const res = await axios.get(url, { headers: uHeaders, timeout: 2500 });
         const meta = res.data?.chart?.result?.[0]?.meta;
         if (meta && meta.regularMarketPrice != null && result[c.key]) {
-          let ltp = Number((Number(meta.regularMarketPrice) * 95.98).toFixed(2));
-          let close = Number((Number(meta.chartPreviousClose || meta.previousClose || meta.regularMarketPrice) * 95.98).toFixed(2));
+          const rawPrice = Number(meta.regularMarketPrice);
+          const rawClose = Number(meta.chartPreviousClose || meta.previousClose || meta.regularMarketPrice);
+          const mult = c.mult || 1.0;
+          const offset = c.offset || 0;
+
+          let ltp = Number((rawPrice * mult + offset).toFixed(2));
+          let close = Number((rawClose * mult + offset).toFixed(2));
           let chg = Number((ltp - close).toFixed(2));
           let chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
 
@@ -156,7 +162,7 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
           result[c.key].change = chg;
           result[c.key].changePct = chgPct;
           result[c.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
-          result[c.key].source = 'Live Commodity Feed';
+          result[c.key].source = 'Live Market Feed';
           result[c.key].lastUpdated = new Date().toISOString();
         }
       } catch (subErr) {}

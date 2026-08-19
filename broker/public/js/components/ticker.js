@@ -40,6 +40,8 @@ export function togglePopover(popoverId, buttonId) {
   }
 }
 
+let selectedSymbolOverride = null;
+
 export function initPopovers() {
   const indexPill = document.getElementById('topbarIndexPill');
   if (indexPill) {
@@ -48,6 +50,18 @@ export function initPopovers() {
       togglePopover('watchlistPopover', 'topbarIndexPill');
     });
   }
+
+  // Click Watchlist Row to switch active topbar index
+  document.querySelectorAll('.watch-row').forEach((row) => {
+    row.addEventListener('click', (e) => {
+      const sym = row.getAttribute('data-symbol');
+      if (sym) {
+        selectedSymbolOverride = sym;
+        renderTickerUI();
+        document.querySelectorAll('.dropdown-popover').forEach((p) => p.classList.remove('show'));
+      }
+    });
+  });
 
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.popover-wrapper')) {
@@ -92,8 +106,9 @@ async function updateTickerData() {
 
 function renderTickerUI() {
   const open = isIndianMarketOpen();
-  const topSymbol = open ? 'NIFTY' : 'GIFTNIFTY';
-  const topData = tickerPrices[topSymbol] || tickerPrices.NIFTY;
+  const defaultSym = open ? 'NIFTY' : 'GIFTNIFTY';
+  const activeSymbol = selectedSymbolOverride || defaultSym;
+  const topData = tickerPrices[activeSymbol] || tickerPrices[defaultSym] || tickerPrices.NIFTY;
 
   // Determine market phase (Pre-Open 9:00-9:15 vs Live 9:15-15:30)
   const now = new Date();
@@ -105,7 +120,21 @@ function renderTickerUI() {
   // Header Title & Market Tag Update
   const nameEl = document.getElementById('mainHeaderIndexName');
   const marketTagEl = document.getElementById('popoverMarketTag');
-  if (nameEl && !nameEl.dataset.customSelected) nameEl.textContent = 'NIFTY 50';
+  if (nameEl) {
+    const titleMap = {
+      'NIFTY': 'NIFTY 50',
+      'GIFTNIFTY': 'GIFT NIFTY',
+      'BANKNIFTY': 'BANK NIFTY',
+      'SENSEX': 'SENSEX',
+      'FINNIFTY': 'FIN NIFTY',
+      'MIDCPNIFTY': 'MIDCAP NIFTY',
+      'GOLD': 'GOLD',
+      'SILVER': 'SILVER',
+      'CRUDEOIL': 'MCX CRUDE',
+      'NATURALGAS': 'MCX NATGAS'
+    };
+    nameEl.textContent = titleMap[activeSymbol] || activeSymbol;
+  }
   if (marketTagEl) {
     const timeStr = topData && topData.lastUpdated ? new Date(topData.lastUpdated).toLocaleTimeString('en-IN') : '';
     const statusText = isPreOpen ? '● PRE-OPEN (NSE IST)' : (open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)');
