@@ -315,7 +315,7 @@ button { font-family: inherit; }
   border: none !important;
   box-shadow: none !important;
   padding: 2px 6px !important;
-  min-width: 185px !important;
+  min-width: 220px !important;
   cursor: pointer !important;
 }
 
@@ -364,20 +364,18 @@ button { font-family: inherit; }
   opacity: 0.95 !important;
 }
 
-/* Price & Arrow = Colored (Teal/Red); Change & Pct = Pure White! */
 .index-val-row.negative .index-price,
-.index-val-row.negative .index-arrow {
-  color: #F87171 !important; /* Red for negative price & arrow */
+.index-val-row.negative .index-arrow,
+.index-val-row.negative .index-change,
+.index-val-row.negative #niftyCardSub {
+  color: #E23744 !important;
 }
 
 .index-val-row.positive .index-price,
-.index-val-row.positive .index-arrow {
-  color: #2DD4BF !important; /* Teal for positive price & arrow */
-}
-
-.index-change {
-  color: #FFFFFF !important; /* User Directive: Make +25 and percentage WHITE! */
-  font-weight: 600;
+.index-val-row.positive .index-arrow,
+.index-val-row.positive .index-change,
+.index-val-row.positive #niftyCardSub {
+  color: #16A34A !important;
 }
 
 .index-arrow {
@@ -565,7 +563,7 @@ button { font-family: inherit; }
   font-family: var(--font-mono);
   font-size: 13.5px;
   font-weight: 700;
-  color: #FFFFFF !important;
+  color: var(--text-primary, #0F172A);
 }
 .pill-sub-val {
   font-family: var(--font-mono);
