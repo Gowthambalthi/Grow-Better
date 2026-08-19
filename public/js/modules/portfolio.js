@@ -41,13 +41,29 @@ export function renderHoldingsRow(row) {
     instBadge = `<span class="days-pill" style="${badgeColor}font-size:9px;padding:2px 6px;font-weight:800;" title="${instData.total_institutes_count || 0} Total Funds | ₹${totalCr} Cr MF Invested">${isBuying ? '📈' : '📉'} ${sign}${netCount} Funds</span>`;
   }
 
+  const firstLetter = (rawSymbol || '').charAt(0).toUpperCase();
+  let avatarClass = 'blue';
+  if (firstLetter === 'C') avatarClass = 'pink';
+  else if (firstLetter === 'E') avatarClass = 'purple';
+  else if (firstLetter === 'R') avatarClass = 'blue';
+  else if (firstLetter === 'S') avatarClass = 'amber';
+
+  const avatarCircle = `<div class="sym-avatar ${avatarClass}">${firstLetter}</div>`;
+
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
       <td>
-        <div style="display:flex;align-items:center;gap:6px;overflow:hidden;flex-wrap:wrap;">
-          ${brokerBadge}
-          <span style="font-weight:700;color:var(--text-primary);">${rawSymbol}</span>${mtfBadge}
-          ${instBadge}
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${avatarCircle}
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-weight:800;font-size:13.5px;color:var(--text-primary);">${rawSymbol}</span>${mtfBadge}
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              ${brokerBadge}
+              ${instBadge}
+            </div>
+          </div>
         </div>
       </td>
       <td>${row.quantity}</td>

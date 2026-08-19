@@ -270,36 +270,30 @@ button { font-family: inherit; }
 /* ---- Main Column ---- */
 .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-/* ---- Topbar Header (No Bottom Border Line!) ---- */
+/* ---- Topbar Header (Groww Terminal White Header) ---- */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: var(--bg-sidebar);
-  border: none !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
-  outline: none !important;
-  height: 64px;
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  height: var(--topbar-h);
   flex-shrink: 0;
-  transition: background 0.2s;
   position: sticky;
   top: 0;
   z-index: 90;
 }
-
-.topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
+.topbar-left { display: flex; align-items: center; gap: 12px; }
 .page-title-display {
   font-size: 16px;
   font-weight: 800;
-  color: #FFFFFF !important;
-  letter-spacing: 0.05em;
+  color: #0F172A !important;
+  letter-spacing: -0.01em;
+}
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+
+.topbar-right .page-title-display {
   text-transform: uppercase !important;
   background: none !important;
   -webkit-text-fill-color: initial !important;
@@ -339,7 +333,7 @@ button { font-family: inherit; }
 .index-name {
   font-size: 11.5px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.75) !important; /* Soft muted white (decreased harsh glare!) */
+  color: #64748B !important;
   letter-spacing: 0.05em;
   text-transform: uppercase !important;
 }
@@ -508,7 +502,7 @@ button { font-family: inherit; }
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: rgba(255, 255, 255, 0.75) !important;
+  color: #64748B !important;
   width: 26px !important;
   height: 26px !important;
   padding: 0 !important;
@@ -542,7 +536,7 @@ button { font-family: inherit; }
 .pill-title {
   font-size: 9.5px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.75) !important; /* Soft muted white (decreased glare!) */
+  color: #64748B !important;
   letter-spacing: 0.06em;
   text-transform: uppercase !important;
 }
@@ -866,9 +860,10 @@ button { font-family: inherit; }
 }
 .toggle-btn:hover { color: var(--text-primary); }
 .toggle-btn.active {
-  background: var(--bg-raised);
-  color: var(--accent);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  background: #00B386 !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 179, 134, 0.3);
 }
 
 .refresh-btn {
