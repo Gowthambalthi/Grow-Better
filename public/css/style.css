@@ -1858,10 +1858,133 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 .modal-body {
-  padding: 16px 18px;
-  overflow-y: auto;
-  flex: 1;
+  padding: 20px;
 }
+
+/* ============================================================
+   GROWW TERMINAL HERO BANNER & STAT GRID (SAFE & ISOLATED)
+   ============================================================ */
+.groww-hero-card {
+  background: #1E293B !important;
+  border-radius: 16px !important;
+  padding: 24px 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  color: #FFFFFF !important;
+  margin-bottom: 16px !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.gh-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gh-sub-lbl {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+}
+
+.gh-main-price {
+  font-size: 34px;
+  font-weight: 900;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+.gh-sub-info {
+  font-size: 12.5px;
+  color: #CBD5E1;
+  margin-top: 2px;
+}
+
+.gh-right {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+}
+
+.gh-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.gh-lbl {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #94A3B8;
+  letter-spacing: 0.05em;
+}
+
+.gh-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.groww-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.groww-stat-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.gs-lbl {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.gs-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.gs-sub {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+/* Symbol Avatar Icon Circles */
+.sym-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+.sym-avatar.blue { background: #3B82F6; }
+.sym-avatar.purple { background: #8B5CF6; }
+.sym-avatar.pink { background: #EC4899; }
+.sym-avatar.green { background: #10B981; }
+.sym-avatar.amber { background: #F59E0B; }
 
 /* ---- Groww Official Light Mode Holdings Card Styling ---- */
 .groww-official-card {

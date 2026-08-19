@@ -145,31 +145,33 @@ function updateSummaryCards(mode = 'all') {
     c = (latestPortfolioData.combined?.summary || latestPortfolioData.combined) || {};
   }
 
-  // Row 1: Stock Real-Time Performance Cards (Groww Equity Metric Cards)
-  setText('sumInvested', money(c.investedAmount));
-  setText('sumCurrent', money(c.currentAmount));
-  setGrowwPlCard('sumOverall', 'lblOverall', 'iconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
-  setGrowwPlCard('sumToday', 'lblToday', 'iconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
-  setPl('sumGross', c.grossPL);
+  // Groww Terminal Hero Dark Banner
+  setText('heroCurrentValue', money(c.currentAmount));
+  setText('heroInvestedValue', money(c.investedAmount));
+  
+  const heroOverallEl = document.getElementById('heroOverallValue');
+  if (heroOverallEl) {
+    const ovNum = Number(c.overallPL || 0);
+    const ovPct = Number(c.overallPLPercent || 0);
+    const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
+    heroOverallEl.textContent = `${plSign(ovNum)}${money(ovNum)} (${signPct})`;
+    heroOverallEl.style.color = ovNum >= 0 ? '#00B386' : '#EB5B56';
+  }
 
-  setText('portSumInvested', money(c.investedAmount));
-  setText('portSumCurrent', money(c.currentAmount));
-  setGrowwPlCard('portSumOverall', 'portLblOverall', 'portIconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
-  setGrowwPlCard('portSumToday', 'portLblToday', 'portIconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
-  setPl('portSumGross', c.grossPL);
+  const heroTodayEl = document.getElementById('heroTodayPl');
+  if (heroTodayEl) {
+    const tdNum = Number(c.todayPL || 0);
+    heroTodayEl.textContent = `${plSign(tdNum)}${money(tdNum)}`;
+    heroTodayEl.style.color = tdNum >= 0 ? '#00B386' : '#EB5B56';
+  }
 
-  // Row 2: Account Level Returns & Financial Position Cards
+  // Row 2: 4 Light Stat Cards
   setPctVal('sumXirr', c.xirr);
-  setPctVal('sumCagr', c.cagr);
+  setPctVal('sumCagr', c.accountReturnPercent || c.cagr);
+  setPl('sumGross', c.grossPL);
   setPl('sumAccountPl', c.accountPL);
   setText('sumAdjAccountPl', money(c.totalAccruedCharges));
   setText('sumCashInvested', money(c.ownCapitalInvested));
-
-  setPctVal('portSumXirr', c.xirr);
-  setPctVal('portSumCagr', c.cagr);
-  setPl('portSumAccountPl', c.accountPL);
-  setText('portSumAdjAccountPl', money(c.totalAccruedCharges));
-  setText('portSumCashInvested', money(c.ownCapitalInvested));
 
   // Topbar Cash Balance & Cash Breakdown Popover Dropdown (Colored Red if Negative)
   const angelCash = latestPortfolioData?.angelone?.summary?.cashBalance != null ? latestPortfolioData.angelone.summary.cashBalance : -185.08;
