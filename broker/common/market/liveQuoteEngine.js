@@ -131,13 +131,42 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
     }
   }
 
-  // 2. Fetch Live MCX Commodities & GIFT NIFTY Quotes via Yahoo Live Chart Endpoint
+  // 2. Fetch Live GIFT NIFTY directly from Groww Live Feed Endpoint
+  try {
+    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' };
+    const gRes = await axios.get('https://groww.in/indices/global-indices/sgx-nifty', { headers: uHeaders, timeout: 3500 });
+    const html = gRes.data;
+
+    const ltpMatch = html.match(/"value":\s*([0-9.]+)/) || html.match(/"lastPrice":\s*([0-9.]+)/);
+    const chgMatch = html.match(/"dayChange":\s*([+-]?[0-9.]+)/) || html.match(/"change":\s*([+-]?[0-9.]+)/);
+    const chgPctMatch = html.match(/"dayChangePerc":\s*([+-]?[0-9.]+)/) || html.match(/"changePercent":\s*([+-]?[0-9.]+)/);
+    const prevCloseMatch = html.match(/"close":\s*([0-9.]+)/) || html.match(/"previousClose":\s*([0-9.]+)/);
+
+    if (ltpMatch && result['GIFTNIFTY']) {
+      const price = Number(ltpMatch[1]);
+      const change = chgMatch ? Number(chgMatch[1]) : 0;
+      const changePct = chgPctMatch ? Number(chgPctMatch[1]) : 0;
+      const close = prevCloseMatch ? Number(prevCloseMatch[1]) : Number((price - change).toFixed(2));
+
+      result['GIFTNIFTY'].ltp = price;
+      result['GIFTNIFTY'].price = price;
+      result['GIFTNIFTY'].close = close;
+      result['GIFTNIFTY'].change = change;
+      result['GIFTNIFTY'].changePct = changePct;
+      result['GIFTNIFTY'].quote = { price, close, change, changePct };
+      result['GIFTNIFTY'].source = 'Groww Live GIFT NIFTY';
+      result['GIFTNIFTY'].lastUpdated = new Date().toISOString();
+    }
+  } catch (gErr) {
+    console.error('[liveQuoteEngine] Groww GIFT NIFTY live fetch note:', gErr.message);
+  }
+
+  // 3. Fetch Live MCX Commodities (CRUDEOIL, NATURALGAS) Quotes via Yahoo Live Chart Endpoint
   try {
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
     const liveFeeds = [
       { key: 'CRUDEOIL', ySym: 'CL=F', mult: 95.98 },
-      { key: 'NATURALGAS', ySym: 'NG=F', mult: 95.98 },
-      { key: 'GIFTNIFTY', ySym: '%5ENSEI', mult: 1.0, offset: 42.50 }
+      { key: 'NATURALGAS', ySym: 'NG=F', mult: 95.98 }
     ];
 
     await Promise.all(liveFeeds.map(async (c) => {
