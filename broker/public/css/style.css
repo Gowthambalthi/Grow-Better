@@ -553,11 +553,11 @@ button { font-family: inherit; }
 }
 
 .pill-title {
-  font-size: 9.5px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 500;
   color: #64748B !important;
-  letter-spacing: 0.06em;
-  text-transform: uppercase !important;
+  letter-spacing: 0;
+  text-transform: none !important;
 }
 .pill-main-val {
   font-family: var(--font-mono);
@@ -1838,31 +1838,31 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #E6F4EA !important;
-  border: 1px solid #CEEAD6 !important;
+  background: #E6F8F2 !important;
+  border: 1px solid #B8EBD9 !important;
   border-radius: 999px !important;
-  padding: 4px 12px !important;
+  padding: 5px 13px !important;
   cursor: pointer;
   user-select: none;
   transition: all 0.2s ease;
-  color: #137333 !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
+  color: #00875F !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
 }
 .signal-toggle-pill:hover {
-  background: #D2E3FC !important;
+  background: #D4F4EA !important;
 }
 .signal-dot-status {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #137333;
-  box-shadow: 0 0 6px rgba(19, 115, 51, 0.4);
+  background: #00875F;
+  box-shadow: 0 0 6px rgba(0, 135, 95, 0.4);
   transition: all 0.2s ease;
 }
 .signal-dot-status.on {
-  background: #10B981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  background: #00B386 !important;
+  box-shadow: 0 0 8px rgba(0, 179, 134, 0.8) !important;
 }
 .signal-text-lbl {
   font-size: 11px;
