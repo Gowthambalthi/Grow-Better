@@ -511,9 +511,12 @@ function summarize(rows, broker = 'combined', liveCash = null) {
 
   const investedAmount = valid.reduce((s, r) => s + r.investedAmount, 0);
   const currentAmount = valid.reduce((s, r) => s + r.currentAmount, 0);
-  const rawUnadjustedGain = currentAmount - investedAmount;
   const overallPL = valid.reduce((s, r) => s + (r.grossPL != null ? r.grossPL : r.overallPL), 0);
+  const overallPLPercent = investedAmount > 0 ? (overallPL / investedAmount) * 100 : 0;
+
   const todayPL = valid.reduce((s, r) => s + (r.todayPL || 0), 0);
+  const prevDayPortfolioValue = currentAmount - todayPL;
+  const todayPLPercent = prevDayPortfolioValue > 0 ? (todayPL / prevDayPortfolioValue) * 100 : (investedAmount > 0 ? (todayPL / investedAmount) * 100 : 0);
   let grossPL = valid.reduce((s, r) => s + r.grossPL, 0);
   const mtfInterestAccrued = valid.reduce((s, r) => s + (r.mtfInterestAccrued || 0), 0);
   const totalMtfBorrowed = valid.reduce((s, r) => s + (r.mtfBorrowed || 0), 0);
