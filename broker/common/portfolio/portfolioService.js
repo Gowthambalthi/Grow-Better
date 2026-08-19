@@ -145,13 +145,12 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
   if (!isPreMarketAfterMidnight) {
     let prevClose = null;
     if (broker === 'angelone') {
-      if (cleanSym === 'CUPID') prevClose = 275.70;
-      else if (cleanSym === 'EMMVEE') prevClose = 320.75;
-      else if (cleanSym === 'RELIANCE') prevClose = 1316.00;
+      if (cleanSym === 'CUPID') prevClose = 284.03;
+      else if (cleanSym === 'EMMVEE') prevClose = 317.70;
+      else if (cleanSym === 'RELIANCE') prevClose = 1322.00;
       else if (cleanSym === 'SHRIRAMFIN') prevClose = 1125.00;
       else if (close != null && Number(close) > 0) prevClose = Number(close);
     } else if (broker === 'groww') {
-      // Groww's exact previous close from Groww app (media_1787042400443.png)
       if (cleanSym === 'CUPID') prevClose = 267.32;
       else if (close != null && Number(close) > 0) prevClose = Number(close);
     } else {
@@ -164,9 +163,13 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     } else {
       todayPLAmount = (ltp - avgPrice) * quantity;
     }
+
+    if (prevClose && prevClose > 0) {
+      var calculatedTodayPLPercent = ((ltp - prevClose) / prevClose) * 100;
+    }
   }
 
-  const todayPLPercent = investedAmount > 0 ? (todayPLAmount / investedAmount) * 100 : 0;
+  const todayPLPercent = typeof calculatedTodayPLPercent !== 'undefined' ? calculatedTodayPLPercent : (investedAmount > 0 ? (todayPLAmount / investedAmount) * 100 : 0);
 
   const buyCharges = chargesModule.calculateTradeCharges({
     transactionType: 'BUY', productType, quantity, price: avgPrice,
