@@ -1862,3 +1862,192 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   overflow-y: auto;
   flex: 1;
 }
+
+/* ---- Groww Official Light Mode Holdings Card Styling ---- */
+.groww-official-card {
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 16px !important;
+  padding: 18px 20px !important;
+  color: #0F172A !important;
+  font-family: Inter, system-ui, -apple-system, sans-serif !important;
+  margin-top: 12px;
+}
+
+.groww-top-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.groww-tab-btn {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748B;
+  cursor: pointer;
+}
+
+.groww-tab-btn.active {
+  background: #EDE9FE;
+  color: #5B21B6;
+  border-color: #DDD6FE;
+}
+
+.groww-card-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.groww-box-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #E2E8F0;
+}
+
+.groww-sub-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.groww-current-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 4px 0 0 0;
+}
+
+.groww-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.groww-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 20px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.groww-icon-btn {
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #475569;
+  font-size: 13px;
+}
+
+.groww-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding-top: 14px;
+}
+
+.groww-stat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.groww-stat-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.groww-stat-num {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.groww-stat-num.gain { color: #00B386 !important; }
+.groww-stat-num.loss { color: #EB5B56 !important; }
+
+.groww-table-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.groww-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.groww-table th {
+  background: #F8FAFC;
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748B;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.groww-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  font-size: 13px;
+  color: #0F172A;
+}
+
+.groww-table tr:last-child td {
+  border-bottom: none;
+}
+
+.groww-comp-name {
+  font-weight: 800;
+  color: #0F172A;
+  font-size: 14px;
+}
+
+.groww-comp-sub {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.groww-price-main, .groww-returns-main, .groww-current-main {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.groww-price-sub, .groww-returns-sub, .groww-invested-sub {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.groww-price-sub.gain, .groww-returns-main.gain, .groww-returns-sub.gain { color: #00B386 !important; }
+.groww-price-sub.loss, .groww-returns-main.loss, .groww-returns-sub.loss { color: #EB5B56 !important; }
+.groww-invested-sub { color: #64748B; }
