@@ -126,7 +126,11 @@ function renderTickerUI() {
 
     const chgVal = Number(change || 0);
     const isPos = chgVal >= 0;
-    if (arrowEl) arrowEl.textContent = isPos ? '▲' : '▼';
+    if (arrowEl) {
+      arrowEl.innerHTML = isPos
+        ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg>`
+        : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>`;
+    }
     if (subEl) subEl.textContent = `${plSign(chgVal)}${Math.abs(chgVal).toFixed(2)} (${pct(changePct)})`;
     if (valRow) {
       valRow.className = `index-val-row ${isPos ? 'positive' : 'negative'}`;

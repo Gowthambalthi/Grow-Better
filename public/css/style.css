@@ -830,44 +830,46 @@ button { font-family: inherit; }
 }
 
 .view-toggle-btns {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 3px;
-  gap: 3px;
-  height: 34px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
 }
+
 .toggle-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  padding: 4px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  background: #F1F5F9 !important;
+  border: 1px solid #E2E8F0 !important;
+  color: #64748B !important;
+  padding: 9px 20px !important;
+  border-radius: 999px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
   white-space: nowrap !important;
   flex-shrink: 0;
-  cursor: pointer;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, color 0.15s;
+  cursor: pointer !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.18s ease !important;
 }
-.toggle-btn:hover { color: var(--text-primary); }
+
+.toggle-btn:hover {
+  background: #E2E8F0 !important;
+  color: #0F172A !important;
+}
+
 .toggle-btn.active,
 .tab.active,
 .view-toggle-btns .toggle-btn.active {
   background: #00B386 !important;
   color: #FFFFFF !important;
-  font-weight: 700 !important;
-  box-shadow: 0 2px 6px rgba(0, 179, 134, 0.4) !important;
-  border-radius: 6px !important;
-  border: none !important;
+  border: 1px solid #00B386 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 8px rgba(0, 179, 134, 0.3) !important;
 }
 
 .refresh-btn {
@@ -1863,119 +1865,133 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    ============================================================ */
 .groww-hero-card {
   background: #1E293B !important;
-  border-radius: 20px !important;
-  padding: 34px 40px !important;
+  border-radius: 18px !important;
+  padding: 28px 32px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
-  margin-top: 12px !important;
-  margin-bottom: 24px !important;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14) !important;
+  margin-top: 10px !important;
+  margin-bottom: 20px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
   width: 100% !important;
   box-sizing: border-box !important;
-  min-height: 140px !important;
 }
 
 .gh-left {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .gh-sub-lbl {
-  font-size: 12px;
-  font-weight: 800;
-  color: #94A3B8;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px !important;
+  letter-spacing: 0.4px !important;
+  font-weight: 600 !important;
+  color: #94A3B8 !important;
+  text-transform: uppercase !important;
 }
 
 .gh-main-price {
-  font-size: 44px;
-  font-weight: 900;
-  color: #FFFFFF;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  font-size: 38px !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.1 !important;
 }
 
 .gh-sub-info {
-  font-size: 14px;
-  color: #CBD5E1;
-  margin-top: 6px;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #CBD5E1 !important;
+  margin-top: 4px !important;
 }
 
 .gh-right {
-  display: flex;
-  align-items: center;
-  gap: 52px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 36px !important;
 }
 
 .gh-metric {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  gap: 4px !important;
 }
 
 .gh-lbl {
-  font-size: 12px;
-  font-weight: 800;
-  color: #94A3B8;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  font-weight: 600 !important;
+  color: #94A3B8 !important;
+  text-transform: uppercase !important;
 }
 
 .gh-val {
-  font-size: 26px;
-  font-weight: 800;
-  color: #FFFFFF;
-  line-height: 1.1;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  line-height: 1.1 !important;
 }
 
 .groww-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  margin-bottom: 28px;
-  width: 100%;
-  box-sizing: border-box;
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 16px !important;
+  margin-bottom: 24px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .groww-stat-box {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 18px;
-  padding: 24px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 115px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  background: #FFFFFF !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 14px !important;
+  padding: 20px 22px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease !important;
 }
 
 .groww-stat-box:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.07);
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06) !important;
 }
 
 .gs-lbl {
-  font-size: 13px;
-  font-weight: 600;
-  color: #64748B;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: #64748B !important;
 }
 
 .gs-val {
-  font-size: 26px;
-  font-weight: 800;
-  color: #0F172A;
-  line-height: 1.2;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  line-height: 1.2 !important;
 }
 
 .gs-sub {
-  font-size: 12px;
-  color: #94A3B8;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #94A3B8 !important;
+}
+
+/* Table exact spec */
+.holdings-table th {
+  font-size: 10.5px !important;
+  letter-spacing: 0.6px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  padding: 14px 20px !important;
+}
+
+.holdings-table td {
+  font-size: 13.5px !important;
+  padding: 14px 20px !important;
 }
 
 /* Symbol Avatar Icon Circles */
