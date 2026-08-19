@@ -545,7 +545,8 @@ function summarize(rows, broker = 'combined', liveCash = null) {
 
   const ownCapitalInvested = investedAmount - totalMtfBorrowed;
   const cashInvested = investedAmount;
-  const accountPL = totalAdded - totalWithdrawn - cashBalance - cashInvested;
+  const effectiveTotalAdded = totalAdded > 0 ? totalAdded : (cashInvested + cashBalance + (totalWithdrawn > 0 ? totalWithdrawn : 0));
+  const accountPL = effectiveTotalAdded - totalWithdrawn - cashBalance - cashInvested;
 
   let effectiveNetCharges = 0;
   let effectiveMtfInterest = 0;
