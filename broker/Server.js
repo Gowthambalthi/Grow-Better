@@ -653,6 +653,8 @@ app.get('/api/instruments/resolve', (req, res) => {
   }
 });
 
+const liveQuoteEngine = require('./common/market/liveQuoteEngine');
+
 // GET /api/instruments/watchlist?symbols=NIFTY,BANKNIFTY,GOLD,SILVER
 app.get('/api/instruments/watchlist', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0');
@@ -661,167 +663,8 @@ app.get('/api/instruments/watchlist', async (req, res) => {
 
   try {
     const rawSymbols = (req.query.symbols || 'NIFTY,BANKNIFTY,SENSEX,FINNIFTY,MIDCPNIFTY,GIFTNIFTY,GOLD,SILVER,CRUDEOIL,NATURALGAS').split(',').map(s => s.trim().toUpperCase());
-    
-    // Default live benchmark quotes matching exact Groww GIFT NIFTY & MCX prices
-    const fallbackMap = {
-      NIFTY: { symbol: 'NIFTY', name: 'NIFTY 50', quote: { price: 24154.90, close: 24287.65, change: -132.75, changePct: -0.55 } },
-      BANKNIFTY: { symbol: 'BANKNIFTY', name: 'BANK NIFTY', quote: { price: 57262.40, close: 57497.80, change: -235.40, changePct: -0.41 } },
-      SENSEX: { symbol: 'SENSEX', name: 'SENSEX', quote: { price: 77235.46, close: 77728.16, change: -492.70, changePct: -0.63 } },
-      FINNIFTY: { symbol: 'FINNIFTY', name: 'FIN NIFTY', quote: { price: 26106.65, close: 26108.00, change: -1.35, changePct: -0.01 } },
-      MIDCPNIFTY: { symbol: 'MIDCPNIFTY', name: 'MIDCAP NIFTY', quote: { price: 14849.80, close: 14840.75, change: 9.05, changePct: 0.06 } },
-      GIFTNIFTY: { symbol: 'GIFTNIFTY', name: 'GIFT NIFTY', quote: { price: 24199.50, close: 24187.50, change: 12.00, changePct: 0.05 } },
-      GOLD: { symbol: 'GOLD', name: 'MCX GOLD', quote: { price: 154205.00, close: 155940.00, change: -1735.00, changePct: -1.11 } },
-      SILVER: { symbol: 'SILVER', name: 'MCX SILVER', quote: { price: 245770.00, close: 251770.00, change: -6000.00, changePct: -2.38 } },
-      CRUDEOIL: { symbol: 'CRUDEOIL', name: 'MCX CRUDE OIL', quote: { price: 8130.47, close: 8020.00, change: 110.47, changePct: 1.38 } },
-      NATURALGAS: { symbol: 'NATURALGAS', name: 'MCX NATURAL GAS', quote: { price: 266.82, close: 257.90, change: 8.92, changePct: 3.46 } }
-    };
-
-    // 1. Fetch Official Real-time Live Quotes via Angel One SmartAPI Batch Market Data Endpoint
-    try {
-      let activeSession = brokers.angelone?.session || app.get('angelSession');
-      if (!activeSession || !activeSession.jwtToken) {
-        try {
-          const angelAuth = require('./angelone/auth');
-          const authRes = await angelAuth.login();
-          activeSession = authRes?.session;
-          if (brokers.angelone) brokers.angelone.session = activeSession;
-          app.set('angelSession', activeSession);
-        } catch (lErr) {
-          console.error('[watchlist] Auto Angel One login note:', lErr.message);
-        }
-      }
-
-      if (activeSession && activeSession.jwtToken) {
-        const batchUrl = 'https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/';
-        const apiKey = (env.angel && typeof env.angel.apiKey === 'function' ? env.angel.apiKey() : env.angel?.apiKey) || process.env.ANGEL_API_KEY || '0de1184a7c9e9c11a1a6108562aeaf0bb810084fd173be4d';
-        const aHeaders = {
-          'Authorization': 'Bearer ' + activeSession.jwtToken,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-UserType': 'USER',
-          'X-SourceID': 'WEB',
-          'X-ClientLocalIP': '127.0.0.1',
-          'X-ClientPublicIP': '127.0.0.1',
-          'X-MACAddress': 'fe80::1',
-          'X-PrivateKey': apiKey
-        };
-
-        const tokenToKey = {
-          '99926000': 'NIFTY',
-          '99926009': 'BANKNIFTY',
-          '99926037': 'FINNIFTY',
-          '99926074': 'MIDCPNIFTY',
-          '99919000': 'SENSEX',
-          '58072': 'GIFTNIFTY',
-          '483079': 'GOLD',
-          '471725': 'SILVER'
-        };
-
-        const batchRes = await axios.post(batchUrl, {
-          mode: 'FULL',
-          exchangeTokens: {
-            NSE: ['99926000', '99926009', '99926037', '99926074'],
-            BSE: ['99919000'],
-            NFO: ['58072'],
-            MCX: ['483079', '471725']
-          }
-        }, { headers: aHeaders, timeout: 3500 });
-
-        const fetched = batchRes.data?.data?.fetched || [];
-        for (const item of fetched) {
-          const key = tokenToKey[item.symbolToken];
-          if (key && fallbackMap[key] && item.ltp != null) {
-            const ltp = Number(item.ltp);
-            const close = Number(item.close || ltp);
-            const chg = item.netChange != null ? Number(item.netChange) : Number((ltp - close).toFixed(2));
-            const chgPct = item.percentChange != null ? Number(item.percentChange) : (close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0);
-
-            fallbackMap[key].quote = { price: ltp, close, change: chg, changePct: chgPct };
-            fallbackMap[key].source = 'Angel One SmartAPI Live';
-            fallbackMap[key].lastUpdated = new Date().toISOString();
-            angelUpdatedKeys.add(key);
-          }
-        }
-      }
-    } catch (aErr) {
-      if (aErr.response?.status === 401 || /token|session|auth/i.test(aErr.message)) {
-        console.error('[watchlist] Angel One Token expired, attempting re-auth...');
-        try {
-          const angelAuth = require('./angelone/auth');
-          const newAuth = await angelAuth.login();
-          if (newAuth?.session) {
-            brokers.angelone = brokers.angelone || {};
-            brokers.angelone.session = newAuth.session;
-            app.set('angelSession', newAuth.session);
-          }
-        } catch (rErr) {
-          console.error('[watchlist] Re-auth failed:', rErr.message);
-        }
-      } else {
-        console.log('[watchlist] Angel One SmartAPI batch quote note:', aErr.message);
-      }
-    }
-
-    // 3. Dual-Mirror Yahoo / Direct Fallback for any symbol not updated
-    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
-    const yFetchers = [
-      { key: 'NIFTY', ySym: '%5ENSEI' },
-      { key: 'BANKNIFTY', ySym: '%5ENSEBANK' },
-      { key: 'SENSEX', ySym: '%5EBSESN' },
-      { key: 'FINNIFTY', ySym: 'NIFTY_FIN_SERVICE.NS' },
-      { key: 'MIDCPNIFTY', ySym: 'NIFTY_MID_SELECT.NS' },
-      { key: 'GIFTNIFTY', ySym: '%5ENSEI', isGiftNifty: true },
-      { key: 'GOLD', ySym: 'GC=F', isCommodityGold: true },
-      { key: 'SILVER', ySym: 'SI=F', isCommoditySilver: true },
-      { key: 'CRUDEOIL', ySym: 'CL=F', isCommodityCrude: true },
-      { key: 'NATURALGAS', ySym: 'NG=F', isCommodityNatGas: true }
-    ];
-
-    await Promise.all(yFetchers.map(async (item) => {
-      if (!angelUpdatedKeys.has(item.key)) {
-        try {
-          const url2 = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ySym}?interval=1m&range=1d`;
-          const res2 = await axios.get(url2, { headers: uHeaders, timeout: 2500 });
-          const meta = res2.data?.chart?.result?.[0]?.meta;
-          if (meta && meta.regularMarketPrice != null && fallbackMap[item.key]) {
-            let ltp = Number(meta.regularMarketPrice);
-            let close = Number(meta.chartPreviousClose || meta.previousClose || ltp);
-
-            if (item.isGiftNifty) {
-              ltp = Number((ltp * 1.002).toFixed(2));
-              close = Number((close * 1.002).toFixed(2));
-            } else if (item.isCommodityGold) {
-              ltp = Math.round(ltp * 34.96);
-              close = Math.round(close * 34.96);
-            } else if (item.isCommoditySilver) {
-              ltp = Math.round(ltp * 3890);
-              close = Math.round(close * 3890);
-            } else if (item.isCommodityCrude) {
-              ltp = Number((ltp * 95.98).toFixed(2));
-              close = Number((close * 95.98).toFixed(2));
-            } else if (item.isCommodityNatGas) {
-              ltp = Number((ltp * 95.98).toFixed(2));
-              close = Number((close * 95.98).toFixed(2));
-            }
-
-            const chg = Number((ltp - close).toFixed(2));
-            const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
-            fallbackMap[item.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
-            fallbackMap[item.key].source = 'Live Market Feed';
-            fallbackMap[item.key].lastUpdated = new Date().toISOString();
-          }
-        } catch (subErr) {
-          // ignore
-        }
-      }
-    }));
-
-    const responseList = rawSymbols.map(sym => {
-      const obj = fallbackMap[sym] || { symbol: sym, name: sym, quote: { price: 100, close: 100, change: 0, changePct: 0 } };
-      obj.lastUpdated = obj.lastUpdated || new Date().toISOString();
-      return obj;
-    });
-    res.json(responseList);
+    const quotes = await liveQuoteEngine.fetchWatchlistQuotes(rawSymbols);
+    res.json(quotes);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
