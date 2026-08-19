@@ -276,10 +276,10 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 28px !important;
   background: #FFFFFF !important;
   border-bottom: 1px solid #E2E8F0 !important;
-  height: var(--topbar-h);
+  height: 64px !important;
   flex-shrink: 0;
   position: sticky;
   top: 0;
