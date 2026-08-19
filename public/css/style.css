@@ -334,9 +334,9 @@ button { font-family: inherit; }
 }
 
 .index-name, #mainHeaderIndexName {
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: #64748B !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #334155 !important; /* Light Black / Charcoal */
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
   line-height: 1.1 !important;
@@ -553,17 +553,17 @@ button { font-family: inherit; }
 }
 
 .pill-title {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px !important;
+  font-weight: 600 !important;
   color: #64748B !important;
   letter-spacing: 0;
   text-transform: none !important;
 }
-.pill-main-val {
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text-primary, #0F172A);
+.pill-main-val, #topbarCashValue {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 14.5px !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
 }
 .pill-sub-val {
   font-family: var(--font-mono);
