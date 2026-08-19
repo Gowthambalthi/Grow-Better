@@ -4,29 +4,29 @@
 
 /* ---- Dark Mode (Default) ---- */
 :root, [data-theme="dark"] {
-  --bg-void: #F8FAFC;          /* Clean workspace canvas */
-  --bg-sidebar: #162032;       /* Groww Terminal Dark Blue Sidebar */
-  --bg-panel: #FFFFFF;         /* White content panels */
-  --bg-raised: #EDF2F7;
-  --bg-raised-hover: #E2E8F0;
-  --line: #E2E8F0;
-  --line-bright: #CBD5E1;
+  --bg-void: #0B1120;          /* Deep slate-navy workspace canvas */
+  --bg-sidebar: #002366;       /* Classic Midnight Navy (#002366) for Sidebar & Topbar */
+  --bg-panel: #111A2E;         /* Elevated navy panels */
+  --bg-raised: #1A2642;        /* Raised interactive elements */
+  --bg-raised-hover: #243459;  /* Hover state */
+  --line: #182645;             /* Structural borders */
+  --line-bright: #273A66;
   
-  --text-primary: #0F172A;
-  --text-muted: #64748B;
-  --text-dim: #94A3B8;
+  --text-primary: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-dim: #64748B;
 
-  --accent: #2563EB;
+  --accent: #0055B8;           /* Classic Royal Blue Accent */
   --accent-cyan: #38BDF8;
-  --accent-dim: rgba(37, 99, 235, 0.1);
-  --accent-dim-strong: rgba(37, 99, 235, 0.2);
+  --accent-dim: rgba(0, 85, 184, 0.18);
+  --accent-dim-strong: rgba(0, 85, 184, 0.32);
   --accent-ink: #FFFFFF;
 
-  --gain: #00B386;             /* Groww Emerald Green */
-  --gain-dim: rgba(0, 179, 134, 0.12);
+  --gain: #00E699;             /* High contrast glowing green for Dark Mode */
+  --gain-dim: rgba(0, 230, 153, 0.14);
 
-  --loss: #EB5B56;             /* Groww Red */
-  --loss-dim: rgba(235, 91, 86, 0.12);
+  --loss: #FF4D6D;             /* High contrast red for Dark Mode */
+  --loss-dim: rgba(255, 77, 109, 0.14);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
@@ -37,29 +37,29 @@
 
 /* ---- Light Mode ---- */
 [data-theme="light"] {
-  --bg-void: #F8FAFC;
-  --bg-sidebar: #162032;       /* Groww Terminal Dark Blue Sidebar */
-  --bg-panel: #FFFFFF;
+  --bg-void: #F5F7FA;          /* Clean very light gray (#F5F7FA) workspace canvas */
+  --bg-sidebar: #002366;       /* Classic Midnight Navy (#002366) for Sidebar & Topbar */
+  --bg-panel: #FFFFFF;         /* Pure Clean White (#FFFFFF) content cards */
   --bg-raised: #EDF2F7;
   --bg-raised-hover: #E2E8F0;
   --line: #E2E8F0;
   --line-bright: #CBD5E1;
   
   --text-primary: #0F172A;
-  --text-muted: #64748B;
-  --text-dim: #94A3B8;
+  --text-muted: #475569;
+  --text-dim: #64748B;
 
-  --accent: #2563EB;
+  --accent: #003366;           /* Classic Navy Accent */
   --accent-cyan: #0284C7;
-  --accent-dim: rgba(37, 99, 235, 0.1);
-  --accent-dim-strong: rgba(37, 99, 235, 0.2);
+  --accent-dim: rgba(0, 51, 102, 0.1);
+  --accent-dim-strong: rgba(0, 51, 102, 0.2);
   --accent-ink: #FFFFFF;
 
-  --gain: #00B386;
-  --gain-dim: rgba(0, 179, 134, 0.12);
+  --gain: #059669;             /* Rich emerald green for Light Mode */
+  --gain-dim: rgba(5, 150, 105, 0.12);
 
-  --loss: #EB5B56;
-  --loss-dim: rgba(235, 91, 86, 0.12);
+  --loss: #DC2626;             /* Rich crimson red for Light Mode */
+  --loss-dim: rgba(220, 38, 38, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -185,18 +185,27 @@ button { font-family: inherit; }
   transform: scale(1.1);
 }
 
-/* Active State: Groww Terminal Translucent Dark Pill #253354 */
+/* Active State: Vibrant Royal Blue Pill (Fully Visible, Fits Perfectly!) */
 .nav-item.active {
-  background: #253354 !important;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
   font-weight: 700;
-  box-shadow: none !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
 }
 
 .nav-item.active .nav-icon {
   color: #FFFFFF !important;
+  transform: scale(1.1);
+}
+
+.sidebar:not(.collapsed) .nav-item.active::before {
+  content: '';
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3.5px; height: 55%;
+  background: #60A5FA;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 10px #60A5FA;
 }
 
 /* Active Click Press Down Pop */
@@ -261,15 +270,15 @@ button { font-family: inherit; }
 /* ---- Main Column ---- */
 .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-/* ---- Topbar Header (Groww Clean White Topbar) ---- */
+/* ---- Topbar Header (No Bottom Border Line!) ---- */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: #FFFFFF !important;
-  border-bottom: 1px solid #E2E8F0 !important;
-  color: #0F172A !important;
+  background: var(--bg-sidebar);
+  border: none !important;
+  border-bottom: none !important;
   box-shadow: none !important;
   outline: none !important;
   height: 64px;
@@ -289,9 +298,9 @@ button { font-family: inherit; }
 .page-title-display {
   font-size: 16px;
   font-weight: 800;
-  color: #0F172A !important;
-  letter-spacing: 0.01em;
-  text-transform: capitalize !important;
+  color: #FFFFFF !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase !important;
   background: none !important;
   -webkit-text-fill-color: initial !important;
 }
@@ -1854,130 +1863,16 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   flex: 1;
 }
 
-/* ---- Groww Terminal Hero Summary Banner & Cards ---- */
-.hero-summary-banner {
-  background: #1E293B !important;
+/* ---- Groww Official Light Mode Holdings Card Styling ---- */
+.groww-official-card {
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
   border-radius: 16px !important;
-  padding: 24px 28px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  color: #FFFFFF !important;
-  margin-bottom: 16px !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+  padding: 18px 20px !important;
+  color: #0F172A !important;
+  font-family: Inter, system-ui, -apple-system, sans-serif !important;
+  margin-top: 12px;
 }
-
-.hero-left-col {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.hero-sub-lbl {
-  font-size: 11px;
-  font-weight: 800;
-  color: #94A3B8;
-  letter-spacing: 0.05em;
-}
-
-.hero-main-price {
-  font-size: 34px;
-  font-weight: 900;
-  color: #FFFFFF;
-  letter-spacing: -0.02em;
-}
-
-.hero-sub-line {
-  font-size: 12.5px;
-  color: #CBD5E1;
-  margin-top: 2px;
-}
-
-.hero-right-metrics {
-  display: flex;
-  align-items: center;
-  gap: 36px;
-}
-
-.hero-metric-item {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.hero-metric-lbl {
-  font-size: 10.5px;
-  font-weight: 800;
-  color: #94A3B8;
-  letter-spacing: 0.05em;
-}
-
-.hero-metric-val {
-  font-size: 20px;
-  font-weight: 800;
-  color: #FFFFFF;
-}
-
-.hero-metric-val.gain { color: #00B386 !important; }
-.hero-metric-val.loss { color: #EB5B56 !important; }
-
-.summary-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.light-stat-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 14px;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-.light-card-lbl {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: #64748B;
-}
-
-.light-card-val {
-  font-size: 20px;
-  font-weight: 800;
-  color: #0F172A;
-}
-
-.light-card-val.gain { color: #00B386 !important; }
-.light-card-val.loss { color: #EB5B56 !important; }
-
-.light-card-sub {
-  font-size: 11px;
-  color: #94A3B8;
-}
-
-/* Symbol Avatar Icon Circles */
-.sym-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 14px;
-  color: #FFFFFF;
-  flex-shrink: 0;
-}
-.sym-avatar.blue { background: #3B82F6; }
-.sym-avatar.purple { background: #8B5CF6; }
-.sym-avatar.pink { background: #EC4899; }
-.sym-avatar.green { background: #10B981; }
-.sym-avatar.amber { background: #F59E0B; }
 
 .groww-top-tabs {
   display: flex;
