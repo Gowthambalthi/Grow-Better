@@ -1888,80 +1888,85 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 
 /* ============================================================
-   GROWW TERMINAL HERO BANNER & STAT GRID (SAFE & ISOLATED)
+   GROWW TERMINAL HERO BANNER & STAT GRID (EXACT SIZING SPEC)
    ============================================================ */
 .groww-hero-card {
   background: #1B2B4C !important;
   border-radius: 16px !important;
-  padding: 18px 28px !important;
-  min-height: 105px !important;
+  padding: 26px 28px !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-end !important;
   justify-content: space-between !important;
   color: #FFFFFF !important;
   margin-top: 10px !important;
-  margin-bottom: 18px !important;
+  margin-bottom: 20px !important;
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15) !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .gh-left {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .gh-sub-lbl {
-  font-size: 11px !important;
-  letter-spacing: 0.05em !important;
-  font-weight: 700 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 12px !important;
+  letter-spacing: 0.4px !important;
+  font-weight: 600 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
+  margin-bottom: 8px !important;
 }
 
 .gh-main-price {
-  font-family: 'Roboto', sans-serif !important;
-  font-size: 38px !important;
-  font-weight: 700 !important; /* Bold match for Photo 1 */
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 34px !important;
+  font-weight: 800 !important;
   color: #FFFFFF !important;
-  letter-spacing: -0.01em !important;
+  letter-spacing: -0.02em !important;
   line-height: 1.1 !important;
 }
 
 .gh-sub-info {
-  font-family: 'Roboto', sans-serif !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-size: 13px !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   color: #94A3B8 !important;
-  margin-top: 4px !important;
+  margin-top: 6px !important;
+}
+
+.gh-sub-info strong, .gh-sub-info span {
+  font-family: 'JetBrains Mono', monospace !important;
 }
 
 .gh-right {
   display: flex !important;
-  align-items: center !important;
-  gap: 36px !important;
+  align-items: flex-end !important;
+  gap: 34px !important;
 }
 
 .gh-metric {
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-end !important;
-  gap: 4px !important;
 }
 
 .gh-lbl {
-  font-size: 10.5px !important;
-  letter-spacing: 0.05em !important;
-  font-weight: 700 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  font-weight: 600 !important;
   color: #94A3B8 !important;
   text-transform: uppercase !important;
+  margin-bottom: 6px !important;
 }
 
 .gh-val {
-  font-family: 'Roboto', sans-serif !important;
-  font-size: 21px !important;
-  font-weight: 700 !important; /* Bold match for Photo 1 */
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
   color: #FFFFFF;
   line-height: 1.1 !important;
 }
