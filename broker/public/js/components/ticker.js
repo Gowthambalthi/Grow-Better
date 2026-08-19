@@ -20,8 +20,8 @@ export function isIndianMarketOpen() {
   const mins = ist.getMinutes();
   const timeNum = hours * 100 + mins;
 
-  // Indian Market hours: 09:15 to 15:30 IST
-  return timeNum >= 915 && timeNum <= 1530;
+  // Indian Market hours (including 09:00 AM pre-open to 15:30 IST)
+  return timeNum >= 900 && timeNum <= 1530;
 }
 
 export function togglePopover(popoverId, buttonId) {
@@ -95,13 +95,21 @@ function renderTickerUI() {
   const topSymbol = open ? 'NIFTY' : 'GIFTNIFTY';
   const topData = tickerPrices[topSymbol] || tickerPrices.NIFTY;
 
+  // Determine market phase (Pre-Open 9:00-9:15 vs Live 9:15-15:30)
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const ist = new Date(utc + (3600000 * 5.5));
+  const timeNum = ist.getHours() * 100 + ist.getMinutes();
+  const isPreOpen = open && timeNum >= 900 && timeNum < 915;
+
   // Header Title & Market Tag Update
   const nameEl = document.getElementById('mainHeaderIndexName');
   const marketTagEl = document.getElementById('popoverMarketTag');
   if (nameEl) nameEl.textContent = open ? 'NIFTY 50' : 'GIFT NIFTY';
   if (marketTagEl) {
     const timeStr = topData && topData.lastUpdated ? new Date(topData.lastUpdated).toLocaleTimeString('en-IN') : '';
-    marketTagEl.textContent = (open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)') + (timeStr ? ` • ${timeStr}` : '');
+    const statusText = isPreOpen ? '● PRE-OPEN (NSE IST)' : (open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)');
+    marketTagEl.textContent = statusText + (timeStr ? ` • ${timeStr}` : '');
     marketTagEl.style.color = open ? '#00E699' : '#F87171';
   }
 
