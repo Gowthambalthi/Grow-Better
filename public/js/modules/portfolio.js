@@ -41,13 +41,27 @@ export function renderHoldingsRow(row) {
     instBadge = `<span class="days-pill" style="${badgeColor}font-size:9px;padding:2px 6px;font-weight:800;" title="${instData.total_institutes_count || 0} Total Funds | ₹${totalCr} Cr MF Invested">${isBuying ? '📈' : '📉'} ${sign}${netCount} Funds</span>`;
   }
 
+  const cleanSym = rawSymbol.replace('-EQ', '').toUpperCase();
+  const firstChar = cleanSym.charAt(0);
+  let avatarClass = 'blue';
+  if (cleanSym.startsWith('R')) avatarClass = 'blue';
+  else if (cleanSym.startsWith('E')) avatarClass = 'purple';
+  else if (cleanSym.startsWith('C')) avatarClass = 'pink';
+  else if (cleanSym.startsWith('S')) avatarClass = 'amber';
+
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
       <td>
-        <div style="display:flex;align-items:center;gap:6px;overflow:hidden;flex-wrap:wrap;">
-          ${brokerBadge}
-          <span style="font-weight:700;color:var(--text-primary);">${rawSymbol}</span>${mtfBadge}
-          ${instBadge}
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="sym-avatar ${avatarClass}">${firstChar}</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-weight:800;font-size:13.5px;color:var(--text-primary);letter-spacing:0.02em;">${cleanSym}</span>
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+              ${brokerBadge}
+              ${mtfBadge}
+              ${instBadge}
+            </div>
+          </div>
         </div>
       </td>
       <td>${row.quantity}</td>
@@ -145,31 +159,33 @@ function updateSummaryCards(mode = 'all') {
     c = (latestPortfolioData.combined?.summary || latestPortfolioData.combined) || {};
   }
 
-  // Row 1: Stock Real-Time Performance Cards (Groww Equity Metric Cards)
-  setText('sumInvested', money(c.investedAmount));
-  setText('sumCurrent', money(c.currentAmount));
-  setGrowwPlCard('sumOverall', 'lblOverall', 'iconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
-  setGrowwPlCard('sumToday', 'lblToday', 'iconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
-  setPl('sumGross', c.grossPL);
+  // Hero Dark Summary Banner
+  setText('heroCurrentValue', money(c.currentAmount));
+  setText('heroInvestedValue', money(c.investedAmount));
+  
+  const heroOverallEl = document.getElementById('heroOverallValue');
+  if (heroOverallEl) {
+    const ovNum = Number(c.overallPL || 0);
+    const ovPct = Number(c.overallPLPercent || 0);
+    const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
+    heroOverallEl.textContent = `${plSign(ovNum)}${money(ovNum)} (${signPct})`;
+    heroOverallEl.style.color = ovNum >= 0 ? '#00B386' : '#EB5B56';
+  }
 
-  setText('portSumInvested', money(c.investedAmount));
-  setText('portSumCurrent', money(c.currentAmount));
-  setGrowwPlCard('portSumOverall', 'portLblOverall', 'portIconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
-  setGrowwPlCard('portSumToday', 'portLblToday', 'portIconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
-  setPl('portSumGross', c.grossPL);
+  const heroTodayEl = document.getElementById('heroTodayPl');
+  if (heroTodayEl) {
+    const tdNum = Number(c.todayPL || 0);
+    heroTodayEl.textContent = `${plSign(tdNum)}${money(tdNum)}`;
+    heroTodayEl.className = `hero-metric-val ${tdNum >= 0 ? 'gain' : 'loss'}`;
+  }
 
-  // Row 2: Account Level Returns & Financial Position Cards
+  // Row 2: 4 Light Stat Cards
   setPctVal('sumXirr', c.xirr);
-  setPctVal('sumCagr', c.cagr);
+  setPctVal('sumCagr', c.accountReturnPercent || c.cagr);
+  setPl('sumGross', c.grossPL);
   setPl('sumAccountPl', c.accountPL);
   setText('sumAdjAccountPl', money(c.totalAccruedCharges));
   setText('sumCashInvested', money(c.ownCapitalInvested));
-
-  setPctVal('portSumXirr', c.xirr);
-  setPctVal('portSumCagr', c.cagr);
-  setPl('portSumAccountPl', c.accountPL);
-  setText('portSumAdjAccountPl', money(c.totalAccruedCharges));
-  setText('portSumCashInvested', money(c.ownCapitalInvested));
 
   // Topbar Cash Balance & Cash Breakdown Popover Dropdown (Colored Red if Negative)
   const angelCash = latestPortfolioData?.angelone?.summary?.cashBalance != null ? latestPortfolioData.angelone.summary.cashBalance : -185.08;
