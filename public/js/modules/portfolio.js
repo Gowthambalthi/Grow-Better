@@ -185,7 +185,7 @@ function updateSummaryCards(mode = 'all') {
     const ovPct = invAmt > 0 ? (ovNum / invAmt) * 100 : Number(c.overallPLPercent || 0);
     const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
     const signSym = ovNum < 0 ? '-' : (ovNum > 0 ? '+' : '');
-    heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))} (${signPct})`;
+    heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))}(${signPct})`;
     heroOverallEl.style.color = ovNum >= 0 ? '#20E098' : '#FF6B6B';
   }
 

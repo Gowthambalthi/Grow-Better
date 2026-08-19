@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
 /* ============================================================
    GROW BETTER — Modern Dual Theme Trading Terminal (Light & Dark)
    ============================================================ */
@@ -28,11 +30,15 @@
   --loss: #FF4D6D;             /* High contrast red for Dark Mode */
   --loss-dim: rgba(255, 77, 109, 0.14);
 
-  --font-sans: 'Roboto', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Roboto', 'IBM Plex Mono', monospace;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 
   --sidebar-w: 220px;
   --sidebar-w-collapsed: 70px;
+}
+
+.mono, .font-mono, [data-mono="true"] {
+  font-family: 'JetBrains Mono', monospace !important;
 }
 
 /* ---- Light Mode ---- */
