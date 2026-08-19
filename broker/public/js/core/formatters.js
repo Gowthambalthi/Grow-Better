@@ -6,21 +6,27 @@
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 
 export function money(n) {
-  return n == null ? '—' : `₹${inr.format(n)}`;
+  if (n == null || isNaN(Number(n))) return '—';
+  return `₹${inr.format(Number(n))}`;
 }
 
 export function rawMoney(n) {
-  return inr.format(n || 0);
+  if (n == null || isNaN(Number(n))) return '0.00';
+  return inr.format(Number(n));
 }
 
 export function plClass(n) {
-  return n == null ? '' : n >= 0 ? 'pl-positive' : 'pl-negative';
+  if (n == null || isNaN(Number(n))) return '';
+  return Number(n) >= 0 ? 'pl-positive' : 'pl-negative';
 }
 
 export function plSign(n) {
-  return n == null ? '' : n >= 0 ? '+' : '';
+  if (n == null || isNaN(Number(n))) return '';
+  return Number(n) >= 0 ? '+' : '';
 }
 
 export function pct(n) {
-  return n == null ? '—' : `${plSign(n)}${n.toFixed(2)}%`;
+  if (n == null || isNaN(Number(n))) return '—';
+  const val = Number(n);
+  return `${plSign(val)}${val.toFixed(2)}%`;
 }

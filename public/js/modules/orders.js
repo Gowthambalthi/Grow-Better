@@ -359,14 +359,18 @@ export function openOrderTicketModal({ symbol, ltp, broker = 'angelone', side = 
 
   // Fetch 100% live real-time LTP & day change for this exact stock
   api(`/api/instruments/quote?symbol=${activeOrderParams.symbol}`).then((q) => {
-    if (q && q.ltp) {
-      activeOrderParams.ltp = q.ltp;
-      if (priceInput) priceInput.value = q.ltp;
+    if (q && q.ltp != null) {
+      const qLtp = Number(q.ltp || 0);
+      const qChg = Number(q.change || 0);
+      const qPct = Number(q.changePct || 0);
+
+      activeOrderParams.ltp = qLtp;
+      if (priceInput) priceInput.value = qLtp;
       if (ltpEl) {
-        const isPos = q.change >= 0;
+        const isPos = qChg >= 0;
         const sign = isPos ? '+' : '';
         const color = isPos ? 'var(--gain)' : 'var(--loss)';
-        ltpEl.innerHTML = `<span style="color:var(--text-primary);font-weight:700;">₹${q.ltp.toFixed(2)}</span> <span style="font-size:12px;font-weight:600;color:${color};margin-left:4px;">${sign}${q.change.toFixed(2)} (${sign}${q.changePct.toFixed(2)}%)</span>`;
+        ltpEl.innerHTML = `<span style="color:var(--text-primary);font-weight:700;">₹${qLtp.toFixed(2)}</span> <span style="font-size:12px;font-weight:600;color:${color};margin-left:4px;">${sign}${qChg.toFixed(2)} (${sign}${qPct.toFixed(2)}%)</span>`;
       }
       recalculateOmValues();
     }

@@ -124,9 +124,10 @@ function renderTickerUI() {
     const change = topData.change != null ? topData.change : (topData.prevPrice != null ? topData.price - topData.prevPrice : 0);
     const changePct = topData.changePct != null ? topData.changePct : (topData.prevPrice != null ? (change / topData.prevPrice) * 100 : 0);
 
-    const isPos = change >= 0;
+    const chgVal = Number(change || 0);
+    const isPos = chgVal >= 0;
     if (arrowEl) arrowEl.textContent = isPos ? '▲' : '▼';
-    if (subEl) subEl.textContent = `${plSign(change)}${Math.abs(change).toFixed(2)} (${pct(changePct)})`;
+    if (subEl) subEl.textContent = `${plSign(chgVal)}${Math.abs(chgVal).toFixed(2)} (${pct(changePct)})`;
     if (valRow) {
       valRow.className = `index-val-row ${isPos ? 'positive' : 'negative'}`;
     }
@@ -143,8 +144,9 @@ function renderTickerUI() {
     const change = t.change != null ? t.change : (t.prevPrice != null ? t.price - t.prevPrice : 0);
     if (changeEl) {
       const changePct = t.changePct != null ? t.changePct : (t.prevPrice != null ? (change / t.prevPrice) * 100 : 0);
-      const isPos = change >= 0;
-      changeEl.textContent = `${isPos ? '▲' : '▼'} ${plSign(change)}${Math.abs(change).toFixed(2)} (${pct(changePct)})`;
+      const chgVal = Number(change || 0);
+      const isPos = chgVal >= 0;
+      changeEl.textContent = `${isPos ? '▲' : '▼'} ${plSign(chgVal)}${Math.abs(chgVal).toFixed(2)} (${pct(changePct)})`;
       changeEl.className = `w-change ${isPos ? 'positive' : 'negative'}`;
     }
   }
