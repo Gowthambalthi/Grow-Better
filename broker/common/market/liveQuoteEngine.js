@@ -63,6 +63,11 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
     result[k] = {
       symbol: k,
       name: k === 'MIDCPNIFTY' ? 'MIDCAP NIFTY' : (k === 'CRUDEOIL' ? 'MCX CRUDE' : (k === 'NATURALGAS' ? 'MCX NATGAS' : k)),
+      ltp: def.price,
+      price: def.price,
+      close: def.close,
+      change: def.change,
+      changePct: def.changePct,
       quote: { ...def },
       source: 'Live Feed',
       lastUpdated: nowIso
@@ -106,6 +111,11 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
           const chg = item.netChange != null ? Number(item.netChange) : Number((ltp - close).toFixed(2));
           const chgPct = item.percentChange != null ? Number(item.percentChange) : (close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0);
 
+          result[info.key].ltp = ltp;
+          result[info.key].price = ltp;
+          result[info.key].close = close;
+          result[info.key].change = chg;
+          result[info.key].changePct = chgPct;
           result[info.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
           result[info.key].source = 'Angel One SmartAPI Live';
           result[info.key].lastUpdated = new Date().toISOString();
@@ -140,6 +150,11 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
           let chg = Number((ltp - close).toFixed(2));
           let chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
 
+          result[c.key].ltp = ltp;
+          result[c.key].price = ltp;
+          result[c.key].close = close;
+          result[c.key].change = chg;
+          result[c.key].changePct = chgPct;
           result[c.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
           result[c.key].source = 'Live Commodity Feed';
           result[c.key].lastUpdated = new Date().toISOString();
