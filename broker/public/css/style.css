@@ -4,29 +4,29 @@
 
 /* ---- Dark Mode (Default) ---- */
 :root, [data-theme="dark"] {
-  --bg-void: #0B1120;          /* Deep slate-navy workspace canvas */
-  --bg-sidebar: #002366;       /* Classic Midnight Navy (#002366) for Sidebar & Topbar */
-  --bg-panel: #111A2E;         /* Elevated navy panels */
-  --bg-raised: #1A2642;        /* Raised interactive elements */
-  --bg-raised-hover: #243459;  /* Hover state */
-  --line: #182645;             /* Structural borders */
-  --line-bright: #273A66;
+  --bg-void: #F8FAFC;          /* Clean workspace canvas */
+  --bg-sidebar: #162032;       /* Groww Terminal Dark Blue Sidebar */
+  --bg-panel: #FFFFFF;         /* White content panels */
+  --bg-raised: #EDF2F7;
+  --bg-raised-hover: #E2E8F0;
+  --line: #E2E8F0;
+  --line-bright: #CBD5E1;
   
-  --text-primary: #F8FAFC;
-  --text-muted: #94A3B8;
-  --text-dim: #64748B;
+  --text-primary: #0F172A;
+  --text-muted: #64748B;
+  --text-dim: #94A3B8;
 
-  --accent: #0055B8;           /* Classic Royal Blue Accent */
+  --accent: #2563EB;
   --accent-cyan: #38BDF8;
-  --accent-dim: rgba(0, 85, 184, 0.18);
-  --accent-dim-strong: rgba(0, 85, 184, 0.32);
+  --accent-dim: rgba(37, 99, 235, 0.1);
+  --accent-dim-strong: rgba(37, 99, 235, 0.2);
   --accent-ink: #FFFFFF;
 
-  --gain: #00E699;             /* High contrast glowing green for Dark Mode */
-  --gain-dim: rgba(0, 230, 153, 0.14);
+  --gain: #00B386;             /* Groww Emerald Green */
+  --gain-dim: rgba(0, 179, 134, 0.12);
 
-  --loss: #FF4D6D;             /* High contrast red for Dark Mode */
-  --loss-dim: rgba(255, 77, 109, 0.14);
+  --loss: #EB5B56;             /* Groww Red */
+  --loss-dim: rgba(235, 91, 86, 0.12);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
@@ -37,29 +37,29 @@
 
 /* ---- Light Mode ---- */
 [data-theme="light"] {
-  --bg-void: #F5F7FA;          /* Clean very light gray (#F5F7FA) workspace canvas */
-  --bg-sidebar: #002366;       /* Classic Midnight Navy (#002366) for Sidebar & Topbar */
-  --bg-panel: #FFFFFF;         /* Pure Clean White (#FFFFFF) content cards */
+  --bg-void: #F8FAFC;
+  --bg-sidebar: #162032;       /* Groww Terminal Dark Blue Sidebar */
+  --bg-panel: #FFFFFF;
   --bg-raised: #EDF2F7;
   --bg-raised-hover: #E2E8F0;
   --line: #E2E8F0;
   --line-bright: #CBD5E1;
   
   --text-primary: #0F172A;
-  --text-muted: #475569;
-  --text-dim: #64748B;
+  --text-muted: #64748B;
+  --text-dim: #94A3B8;
 
-  --accent: #003366;           /* Classic Navy Accent */
+  --accent: #2563EB;
   --accent-cyan: #0284C7;
-  --accent-dim: rgba(0, 51, 102, 0.1);
-  --accent-dim-strong: rgba(0, 51, 102, 0.2);
+  --accent-dim: rgba(37, 99, 235, 0.1);
+  --accent-dim-strong: rgba(37, 99, 235, 0.2);
   --accent-ink: #FFFFFF;
 
-  --gain: #059669;             /* Rich emerald green for Light Mode */
-  --gain-dim: rgba(5, 150, 105, 0.12);
+  --gain: #00B386;
+  --gain-dim: rgba(0, 179, 134, 0.12);
 
-  --loss: #DC2626;             /* Rich crimson red for Light Mode */
-  --loss-dim: rgba(220, 38, 38, 0.12);
+  --loss: #EB5B56;
+  --loss-dim: rgba(235, 91, 86, 0.12);
 }
 
 * { box-sizing: border-box; }
@@ -185,27 +185,18 @@ button { font-family: inherit; }
   transform: scale(1.1);
 }
 
-/* Active State: Vibrant Royal Blue Pill (Fully Visible, Fits Perfectly!) */
+/* Active State: Groww Terminal Translucent Dark Pill #253354 */
 .nav-item.active {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  background: #253354 !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 10px !important;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
+  box-shadow: none !important;
 }
 
 .nav-item.active .nav-icon {
   color: #FFFFFF !important;
-  transform: scale(1.1);
-}
-
-.sidebar:not(.collapsed) .nav-item.active::before {
-  content: '';
-  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  width: 3.5px; height: 55%;
-  background: #60A5FA;
-  border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 10px #60A5FA;
 }
 
 /* Active Click Press Down Pop */
@@ -270,15 +261,15 @@ button { font-family: inherit; }
 /* ---- Main Column ---- */
 .main-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
-/* ---- Topbar Header (No Bottom Border Line!) ---- */
+/* ---- Topbar Header (Groww Clean White Topbar) ---- */
 .topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: var(--bg-sidebar);
-  border: none !important;
-  border-bottom: none !important;
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  color: #0F172A !important;
   box-shadow: none !important;
   outline: none !important;
   height: 64px;
@@ -298,9 +289,9 @@ button { font-family: inherit; }
 .page-title-display {
   font-size: 16px;
   font-weight: 800;
-  color: #FFFFFF !important;
-  letter-spacing: 0.05em;
-  text-transform: uppercase !important;
+  color: #0F172A !important;
+  letter-spacing: 0.01em;
+  text-transform: capitalize !important;
   background: none !important;
   -webkit-text-fill-color: initial !important;
 }
