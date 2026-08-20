@@ -24,9 +24,10 @@ export function renderHoldingsRow(row) {
     : `<span class="broker-tag-groww">GROWW</span>`;
 
   const daysText = row.daysHeld != null ? `${row.daysHeld}d` : '—';
-  const rawSymbol = row.tradingsymbol;
-  const dayPlVal = row.todayPL != null ? row.todayPL : row.overallPL;
-  const dayPlPct = row.todayPLPercent != null ? row.todayPLPercent : row.overallPLPercent;
+  const rawOverallPL = row.rawOverallPL != null ? row.rawOverallPL : (row.grossPL != null ? row.grossPL : row.overallPL);
+  const rawOverallPLPercent = row.rawOverallPLPercent != null ? row.rawOverallPLPercent : (row.grossPLPercent != null ? row.grossPLPercent : row.overallPLPercent);
+  const netPL = row.netPL != null ? row.netPL : (rawOverallPL - (row.buyCharges || 0) - (row.estimatedSellCharges || 0) - (row.mtfInterestAccrued || 0));
+  const netPLPercent = row.netPLPercent != null ? row.netPLPercent : pct(netPL, row.investedAmount);
 
   const instData = row.institutional;
   let instBadge = '';
@@ -47,9 +48,6 @@ export function renderHoldingsRow(row) {
   else if (firstLetter === 'E') logoBg = '#8B5CF6';
   else if (firstLetter === 'R') logoBg = '#2563EB';
   else if (firstLetter === 'S') logoBg = '#F59E0B';
-
-  const isLoss = (row.overallPL || 0) < 0;
-  const barColor = isLoss ? 'var(--down)' : 'var(--up)';
 
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
@@ -72,13 +70,10 @@ export function renderHoldingsRow(row) {
       <td>${money(row.ltp)}</td>
       <td>${money(row.investedAmount)}</td>
       <td>${money(row.currentAmount)}</td>
-      <td class="${plClass(row.overallPL)}"><span style="font-weight:700;">${money(row.overallPL)}</span><br><small>${pct(row.overallPLPercent)}</small></td>
+      <td class="${plClass(rawOverallPL)}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
+      <td class="${plClass(netPL)}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:800;">${money(netPL)}</span><br><small>${pct(netPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:center;">${daysText}</td>
-      <td class="progress-cell" style="width:60px;text-align:right;padding-right:20px !important;" title="Net ${isLoss ? 'Loss' : 'Profit'}: ${money(row.overallPL)} (${pct(row.overallPLPercent)})">
-        <div class="bar-container" style="display:inline-block;width:22px;height:4px;background:${isLoss ? '#EB5B56' : '#00B386'};border-radius:2px;">
-        </div>
-      </td>
     </tr>`;
 }
 
