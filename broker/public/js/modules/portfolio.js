@@ -77,7 +77,7 @@ export function renderHoldingsRow(row) {
       <td class="${plClass(rawOverallPL)}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
       <td class="${plClass(netPL)}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:800;">${money(netPL)}</span><br><small>${pct(netPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
-      <td style="text-align:center;">${daysText}</td>
+      <td style="text-align:right;padding-right:20px !important;">${daysText}</td>
     </tr>`;
 }
 

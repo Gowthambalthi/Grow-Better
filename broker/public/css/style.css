@@ -1366,16 +1366,16 @@ button { font-family: inherit; }
   border: 1px solid rgba(255, 77, 109, 0.25);
 }
 
-.holdings-table th:nth-child(1), .holdings-table td:nth-child(1) { width: 23.5% !important; text-align: left !important; }
-.holdings-table th:nth-child(2), .holdings-table td:nth-child(2) { width: 6.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(3), .holdings-table td:nth-child(3) { width: 8.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(4), .holdings-table td:nth-child(4) { width: 8.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { width: 10.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(6), .holdings-table td:nth-child(6) { width: 10.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(7), .holdings-table td:nth-child(7) { width: 10.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(8), .holdings-table td:nth-child(8) { width: 10.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(9), .holdings-table td:nth-child(9) { width: 6.5% !important; text-align: right !important; }
-.holdings-table th:nth-child(10), .holdings-table td:nth-child(10) { width: 5% !important; text-align: center !important; }
+.holdings-table th:nth-child(1), .holdings-table td:nth-child(1) { width: 28% !important; text-align: left !important; }
+.holdings-table th:nth-child(2), .holdings-table td:nth-child(2) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(3), .holdings-table td:nth-child(3) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(4), .holdings-table td:nth-child(4) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(5), .holdings-table td:nth-child(5) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(6), .holdings-table td:nth-child(6) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(7), .holdings-table td:nth-child(7) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(8), .holdings-table td:nth-child(8) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(9), .holdings-table td:nth-child(9) { width: 8% !important; text-align: right !important; }
+.holdings-table th:nth-child(10), .holdings-table td:nth-child(10) { width: 8% !important; text-align: right !important; padding-right: 20px !important; }
 
 /* ---- Market Scanner Table Styles (Prevent Overlapping) ---- */
 .inst-table {
