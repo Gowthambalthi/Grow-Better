@@ -23,6 +23,10 @@ export function renderHoldingsRow(row) {
     ? `<span class="broker-tag-angel">ANGEL ONE</span>`
     : `<span class="broker-tag-groww">GROWW</span>`;
 
+  const rawSymbol = row.tradingsymbol || row.symbol || '';
+  const dayPlVal = row.todayPL != null ? row.todayPL : row.overallPL;
+  const dayPlPct = row.todayPLPercent != null ? row.todayPLPercent : row.overallPLPercent;
+
   const daysText = row.daysHeld != null ? `${row.daysHeld}d` : '—';
   const rawOverallPL = row.rawOverallPL != null ? row.rawOverallPL : (row.grossPL != null ? row.grossPL : row.overallPL);
   const rawOverallPLPercent = row.rawOverallPLPercent != null ? row.rawOverallPLPercent : (row.grossPLPercent != null ? row.grossPLPercent : row.overallPLPercent);
