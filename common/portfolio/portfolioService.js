@@ -60,37 +60,22 @@ function updateLiveLtpFromWs(token, ltp, close) {
 
 function resolveLastTradedPrice(symbol, liveLtp, defaultPrice) {
   const clean = (symbol || '').replace('-EQ', '').trim().toUpperCase();
+  const nLive = Number(liveLtp);
   
-  // Dedicated sanitization for CUPID to prevent stale or cross-connected LTP
-  if (clean === 'CUPID') {
-    const nLive = Number(liveLtp);
-    if (!isNaN(nLive) && nLive >= 275 && nLive <= 285) {
-      return nLive;
-    }
-    return 278.22;
+  if (liveLtp != null && !isNaN(nLive) && nLive > 0) {
+    return nLive;
   }
   
-  if (clean === 'EMMVEE') {
-    const nLive = Number(liveLtp);
-    if (!isNaN(nLive) && nLive >= 310 && nLive <= 330) {
-      return nLive;
-    }
-    return 315.50;
-  }
-
-  if (clean === 'RELIANCE') {
-    const nLive = Number(liveLtp);
-    if (!isNaN(nLive) && nLive >= 1250 && nLive <= 1400) {
-      return nLive;
-    }
-    return 1312.30;
-  }
-
-  if (liveLtp != null && Number(liveLtp) > 0) return Number(liveLtp);
-  if (LAST_TRADED_MARKET_PRICES[clean]) {
+  if (LAST_TRADED_MARKET_PRICES[clean] && LAST_TRADED_MARKET_PRICES[clean] > 0) {
     return LAST_TRADED_MARKET_PRICES[clean];
   }
-  return Number(defaultPrice || 0);
+
+  const nDefault = Number(defaultPrice);
+  if (!isNaN(nDefault) && nDefault > 0) {
+    return nDefault;
+  }
+
+  return 0;
 }
 
 function pct(numerator, denominator) {
@@ -174,28 +159,20 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
 
   if (!isPreMarketAfterMidnight) {
     let prevClose = null;
-    if (broker === 'angelone') {
-      if (cleanSym === 'CUPID') prevClose = 284.03;
-      else if (cleanSym === 'EMMVEE') prevClose = 317.70;
-      else if (cleanSym === 'RELIANCE') prevClose = 1322.00;
-      else if (cleanSym === 'SHRIRAMFIN') prevClose = 1125.00;
-      else if (close != null && Number(close) > 0) prevClose = Number(close);
-    } else if (broker === 'groww') {
-      if (cleanSym === 'CUPID') prevClose = 284.03;
-      else if (close != null && Number(close) > 0) prevClose = Number(close);
-    } else {
-      if (close != null && Number(close) > 0) prevClose = Number(close);
+    if (close != null && Number(close) > 0) {
+      prevClose = Number(close);
+    } else if (open != null && Number(open) > 0) {
+      prevClose = Number(open);
+    } else if (PREVIOUS_CLOSE_PRICES[cleanSym] && PREVIOUS_CLOSE_PRICES[cleanSym] > 0) {
+      prevClose = PREVIOUS_CLOSE_PRICES[cleanSym];
     }
 
     if (prevClose != null && prevClose > 0) {
       // Standard broker Day's P&L: (LTP - PrevClose) * Quantity
       todayPLAmount = (actualLtp - prevClose) * quantity;
+      var calculatedTodayPLPercent = ((actualLtp - prevClose) / prevClose) * 100;
     } else {
       todayPLAmount = (actualLtp - avgPrice) * quantity;
-    }
-
-    if (prevClose && prevClose > 0) {
-      var calculatedTodayPLPercent = ((actualLtp - prevClose) / prevClose) * 100;
     }
   }
 
