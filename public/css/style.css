@@ -710,16 +710,19 @@ button { font-family: inherit; }
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(30, 41, 59, 0.7) !important;
-  backdrop-filter: blur(3px) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   z-index: 999998 !important;
-  display: none;
+  display: none !important;
 }
 
 .settings-modal-backdrop.show {
   display: block !important;
 }
 
+#portfolioSettingsPopover,
+.portfolio-settings-modal,
 .dropdown-popover.settings-popover {
   position: fixed !important;
   top: 50% !important;
@@ -736,11 +739,14 @@ button { font-family: inherit; }
   overflow: hidden !important;
   z-index: 999999 !important;
   margin: 0 !important;
-  display: none;
+  display: none !important;
 }
 
+#portfolioSettingsPopover.show,
+.portfolio-settings-modal.show,
 .dropdown-popover.settings-popover.show {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .interactive-pill {
