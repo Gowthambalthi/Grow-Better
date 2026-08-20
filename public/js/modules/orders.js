@@ -409,9 +409,10 @@ function updateOmBrokerDisplay() {
   }
   const submitBtn = document.getElementById('omSubmitBtn');
   if (submitBtn) {
-    const brokerName = broker === 'angelone' ? 'ANGEL ONE' : 'GROWW';
-    submitBtn.textContent = `PLACE ${side} ORDER (${brokerName})`;
-    submitBtn.className = `om-submit-btn ${side.toLowerCase()} ${broker}`;
+    const brokerName = broker === 'angelone' ? 'Angel One' : 'Groww';
+    const isBuy = side === 'BUY';
+    submitBtn.textContent = `Place ${isBuy ? 'Buy' : 'Sell'} Order (${brokerName})`;
+    submitBtn.style.background = isBuy ? '#00B386' : '#EB5B56';
   }
 }
 

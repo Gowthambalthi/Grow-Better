@@ -1478,152 +1478,105 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .order-modal-card {
-  width: 440px;
-  background: var(--bg-panel);
-  border: 1px solid var(--line-bright);
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-  overflow: hidden;
+  width: 480px !important;
+  background: #FFFFFF !important;
+  border-radius: 20px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden !important;
+  border: 1px solid #E2E8F0 !important;
 }
-/* ---- Order Ticket Modal (BUY = Full Soft Light Green, SELL = Full Soft Light Red) ---- */
+/* ---- Order Ticket Modal (BUY = Soft Light Mint, SELL = Soft Light Rose) ---- */
 .order-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 16px 20px !important;
+  background: #E8F8F2 !important; /* Soft Light Mint Header */
+  border-bottom: 1px solid #D1FAE5 !important;
   transition: background 0.25s ease, border-color 0.25s ease;
 }
 
-/* Light Mode BUY Header (Full Soft Light Mint Green) */
-[data-theme="light"] .order-modal-header,
-[data-theme="light"] .order-modal-header[data-side="buy"] {
-  background: #ECFDF5 !important; /* Full Soft Light Mint Green */
-  border-bottom: 1px solid #A7F3D0 !important;
-}
-[data-theme="light"] .order-modal-header[data-side="buy"] .om-symbol-title,
-[data-theme="light"] .order-modal-header[data-side="buy"] .om-sym-name,
-[data-theme="light"] .order-modal-header[data-side="buy"] .om-price-val {
-  color: #064E3B !important;
+.order-modal-header[data-side="sell"] {
+  background: #FEF2F2 !important; /* Soft Light Crimson Rose Header */
+  border-bottom: 1px solid #FEE2E2 !important;
 }
 
-/* Light Mode SELL Header (Full Soft Light Crimson Red) */
-[data-theme="light"] .order-modal-header[data-side="sell"] {
-  background: #FEF2F2 !important; /* Full Soft Light Crimson Rose */
-  border-bottom: 1px solid #FECACA !important;
-}
-[data-theme="light"] .order-modal-header[data-side="sell"] .om-symbol-title,
-[data-theme="light"] .order-modal-header[data-side="sell"] .om-sym-name,
-[data-theme="light"] .order-modal-header[data-side="sell"] .om-price-val {
-  color: #7F1D1D !important;
-}
-
-[data-theme="light"] .order-modal-header .om-close-x {
-  color: #64748B !important;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-}
-[data-theme="light"] .order-modal-header .om-close-x:hover { color: #0F172A !important; }
-
-/* Dark Mode BUY Header (Rich Deep Emerald Mint) */
-[data-theme="dark"] .order-modal-header,
-[data-theme="dark"] .order-modal-header[data-side="buy"] {
-  background: linear-gradient(135deg, #065F46 0%, #064E3B 100%) !important;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.3) !important;
-}
-
-/* Dark Mode SELL Header (Rich Deep Crimson Red) */
-[data-theme="dark"] .order-modal-header[data-side="sell"] {
-  background: linear-gradient(135deg, #991B1B 0%, #7F1D1D 100%) !important;
-  border-bottom: 1px solid rgba(239, 68, 68, 0.3) !important;
-}
-
-[data-theme="dark"] .order-modal-header .om-symbol-title,
-[data-theme="dark"] .order-modal-header .om-sym-name,
-[data-theme="dark"] .order-modal-header .om-price-val {
-  color: #FFFFFF !important;
-}
-
-[data-theme="dark"] .order-modal-header .om-close-x {
-  color: rgba(255, 255, 255, 0.7) !important;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-}
-
-/* Broker Selection Tabs Styling */
-.om-broker-tab[data-broker="angelone"].active {
-  background: #2563EB !important;
-  color: #FFFFFF !important;
-  border-color: #2563EB !important;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-}
-
-.om-broker-tab[data-broker="groww"].active {
-  background: #00D09C !important;
-  color: #FFFFFF !important;
-  border-color: #00D09C !important;
-  box-shadow: 0 2px 8px rgba(0, 208, 156, 0.35);
-}
-
-/* Submit Buttons (BUY = Vibrant Emerald Green, SELL = Vibrant Crimson Red) */
-.om-submit-btn.buy {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
-}
-
-.om-submit-btn.sell {
-  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
-}
 .bs-toggle-pill {
-  display: flex;
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 2px;
+  display: flex !important;
+  background: #F1F5F9 !important;
+  border-radius: 20px !important;
+  padding: 3px !important;
+  gap: 2px !important;
 }
 .bs-btn {
-  background: transparent;
-  border: none;
-  width: 28px;
-  height: 24px;
-  border-radius: 14px;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--text-muted);
-  cursor: pointer;
+  background: transparent !important;
+  border: none !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #64748B !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
-.bs-btn.buy.active { background: var(--gain); color: #fff; }
-.bs-btn.sell.active { background: var(--loss); color: #fff; }
+.bs-btn.buy.active { background: #00B386 !important; color: #FFFFFF !important; }
+.bs-btn.sell.active { background: #EB5B56 !important; color: #FFFFFF !important; }
 .om-close-x {
-  background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0 4px;
+  background: transparent !important; border: none !important; color: #94A3B8 !important; font-size: 20px !important; cursor: pointer !important; padding: 0 4px !important;
 }
-.om-close-x:hover { color: var(--loss); }
+.om-close-x:hover { color: #0F172A !important; }
 
 .order-mode-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--line);
-  background: var(--bg-panel);
+  display: flex !important;
+  gap: 24px !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  background: #FFFFFF !important;
+  padding: 0 20px !important;
 }
 .om-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  padding: 10px 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  cursor: pointer;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 2.5px solid transparent !important;
+  padding: 12px 0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #64748B !important;
+  cursor: pointer !important;
 }
 .om-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: #00B386 !important;
+  font-weight: 700 !important;
+  border-bottom-color: #00B386 !important;
+}
+
+.prod-btn {
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  border: 1px solid #E2E8F0 !important;
+  background: #FFFFFF !important;
+  color: #64748B !important;
+  cursor: pointer !important;
+}
+
+.prod-btn.active {
+  border-color: #00B386 !important;
+  background: #E8F8F2 !important;
+  color: #00B386 !important;
+}
+
+.pay-mode-btn.mtf.active {
+  background: #EEF2FF !important;
+  border: 1.5px solid #3B82F6 !important;
+}
+
+.pay-mode-btn.full.active {
+  background: #E8F8F2 !important;
+  border: 1.5px solid #00B386 !important;
 }
 
 /* ---- UNIFIED DUAL PRICE & PERCENTAGE BOX CONTROL ---- */

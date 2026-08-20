@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v103" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v104" />
 </head>
 <body>
 
@@ -960,37 +960,39 @@
   <div class="order-modal-backdrop" id="orderTicketModal" style="display:none;">
     <div class="order-modal-card">
       <!-- Modal Header -->
-      <div class="order-modal-header">
+      <div class="order-modal-header" data-side="buy">
         <div class="o-head-left">
-          <h2 id="omSymbolTitle" style="margin:0;font-size:16px;font-weight:800;color:var(--text-primary);">EMMVEE</h2>
-          <div class="o-price-tag" style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-            <span class="o-ex" style="font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-dim);padding:1px 5px;border-radius:3px;">NSE</span>
-            <span class="o-ltp" id="omLtpVal" style="font-family:var(--font-mono);font-size:13px;font-weight:700;">₹318.40</span>
-            <span class="o-chg down" id="omChgVal" style="font-family:var(--font-mono);font-size:11px;color:var(--loss);">-5.40 (-1.67%)</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <h2 id="omSymbolTitle" class="om-symbol-title" style="margin:0;font-size:19px;font-weight:800;color:#0F172A;">CUPID</h2>
+            <span class="o-ex" style="font-size:11px;font-weight:700;color:#00B386;background:rgba(0,179,134,0.12);padding:2px 6px;border-radius:4px;">NSE</span>
+          </div>
+          <div class="o-price-tag" id="omLtpVal" style="display:flex;align-items:center;gap:6px;margin-top:6px;font-family:'Plus Jakarta Sans', sans-serif;">
+            <span class="om-price-val" style="font-size:18px;font-weight:800;color:#0F172A;">₹282.43</span>
+            <span class="o-chg down" id="omChgVal" style="font-size:12.5px;font-weight:700;color:#EB5B56;">-2.13 (-0.75%) -5.40 (-1.67%)</span>
           </div>
         </div>
 
-        <div class="o-head-right" style="display:flex;align-items:center;gap:10px;">
+        <div class="o-head-right" style="display:flex;align-items:center;gap:12px;">
           <!-- BUY / SELL Toggle Pill -->
           <div class="bs-toggle-pill" id="omSideToggle">
             <button type="button" class="bs-btn buy active" data-side="BUY">B</button>
             <button type="button" class="bs-btn sell" data-side="SELL">S</button>
           </div>
-          <button type="button" class="om-close-x" id="closeOmBtn">×</button>
+          <button type="button" class="om-close-x" id="closeOmBtn" title="Close">✕</button>
         </div>
       </div>
 
       <!-- Broker Selector Bar -->
-      <div class="om-broker-bar" style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg-body);border-bottom:1px solid var(--line);">
-        <span style="font-size:10px;font-weight:800;color:var(--text-muted);letter-spacing:0.05em;">EXECUTION BROKER</span>
-        <div class="om-broker-tabs" id="omBrokerTabs">
-          <button type="button" class="om-broker-tab active" data-broker="angelone">Angel One</button>
-          <button type="button" class="om-broker-tab" data-broker="groww">Groww</button>
+      <div class="om-broker-bar" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#FFFFFF;border-bottom:1px solid #F1F5F9;">
+        <span style="font-size:11px;font-weight:800;color:#94A3B8;letter-spacing:0.05em;">EXECUTION BROKER</span>
+        <div class="om-broker-tabs" id="omBrokerTabs" style="display:flex;background:#F8FAFC;padding:3px;border-radius:10px;border:1px solid #E2E8F0;">
+          <button type="button" class="om-broker-tab active" data-broker="angelone" style="padding:6px 14px;font-size:12.5px;font-weight:700;border-radius:8px;">Angel One</button>
+          <button type="button" class="om-broker-tab" data-broker="groww" style="padding:6px 14px;font-size:12.5px;font-weight:600;border-radius:8px;color:#64748B;">Groww</button>
         </div>
       </div>
 
       <!-- Order Mode Tabs -->
-      <div class="order-mode-tabs">
+      <div class="order-mode-tabs" style="display:flex;gap:24px;padding:0 20px;border-bottom:1px solid #E2E8F0;background:#FFFFFF;">
         <button type="button" class="om-tab active" data-om-tab="REGULAR">Regular</button>
         <button type="button" class="om-tab" data-om-tab="STOPLOSS">Stop Loss</button>
         <button type="button" class="om-tab" data-om-tab="GTT">GTT</button>
@@ -998,12 +1000,12 @@
       </div>
 
       <!-- Order Form Body -->
-      <form id="omForm" class="om-form-body">
-        <div class="om-form-main-grid" style="display:grid;grid-template-columns:110px 1fr 1fr;gap:12px;align-items:flex-start;">
+      <form id="omForm" class="om-form-body" style="padding:18px 20px;background:#FFFFFF;">
+        <div class="om-form-main-grid" style="display:grid;grid-template-columns:110px 1fr 1.1fr;gap:14px;align-items:flex-start;">
           <!-- Product Type Selector (INT / DEL) -->
           <div>
-            <label class="form-lbl">Product Type</label>
-            <div class="prod-type-btns">
+            <label class="form-lbl" style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:6px;display:block;">PRODUCT</label>
+            <div class="prod-type-btns" style="display:flex;gap:6px;">
               <button type="button" class="prod-btn" data-prod="INTRADAY">INT</button>
               <button type="button" class="prod-btn active" data-prod="DELIVERY">DEL</button>
             </div>
@@ -1011,71 +1013,75 @@
 
           <!-- Quantity -->
           <div>
-            <label class="form-lbl">Quantity</label>
-            <input type="number" id="omQtyInput" min="1" value="1" class="form-input" required />
-            <span style="font-size:10px;color:var(--text-muted);display:block;margin-top:3px;">Total: <b id="omTotalValue" style="color:var(--text-primary);font-family:var(--font-mono);">₹318.40</b></span>
+            <label class="form-lbl" style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:6px;display:block;">QUANTITY</label>
+            <input type="number" id="omQtyInput" min="1" value="1" class="form-input" style="height:38px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;font-weight:700;color:#0F172A;padding:0 10px;" required />
           </div>
 
           <!-- Price & Limit/Market Toggle -->
           <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <label class="form-lbl">Price</label>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <label class="form-lbl" style="font-size:11px;font-weight:700;color:#94A3B8;text-transform:uppercase;">PRICE</label>
               <div class="limit-market-toggle" style="display:flex;align-items:center;gap:4px;">
-                <span id="omPriceTypeLabel" style="font-size:10px;font-weight:700;color:var(--accent);">Limit</span>
+                <span id="omPriceTypeLabel" style="font-size:11px;font-weight:700;color:#00B386;">Limit</span>
                 <input type="checkbox" id="omMarketSwitch" style="cursor:pointer;" />
-                <span style="font-size:10px;color:var(--text-muted);">Market</span>
+                <span style="font-size:11px;color:#94A3B8;">Market</span>
               </div>
             </div>
-            <input type="number" step="0.05" id="omPriceInput" class="form-input" value="318.40" required />
+            <input type="number" step="0.05" id="omPriceInput" class="form-input" value="282.43" style="height:38px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;font-size:14px;font-weight:700;color:#0F172A;padding:0 10px;" required />
           </div>
         </div>
 
+        <div style="margin-top:6px;margin-bottom:14px;">
+          <span style="font-size:12px;color:#94A3B8;">Total: <b id="omTotalValue" style="color:#94A3B8;font-family:'Plus Jakarta Sans', sans-serif;font-weight:600;">₹282.43</b></span>
+        </div>
+
         <!-- Stop Loss / Target Unified Dual Inputs (Price ₹ + Percentage %) -->
-        <div id="omTriggerPriceWrap" style="display:none;margin-top:12px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div>
-              <label class="form-lbl" style="color:var(--loss);">STOP LOSS (₹ | %)</label>
-              <div class="unified-price-pct-box">
-                <input type="number" step="0.05" id="omSlInput" class="val-input" placeholder="Price ₹" />
-                <div class="unified-price-pct-divider"></div>
-                <input type="number" step="0.1" id="omSlPctInput" class="pct-input" placeholder="%" />
+        <div id="omTriggerPriceWrap" style="display:none;margin-top:12px;margin-bottom:14px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <!-- Stop Loss Box -->
+            <div style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;padding:10px 12px;">
+              <label class="form-lbl" style="font-size:11px;font-weight:700;color:#EB5B56;display:block;margin-bottom:6px;">Stop Loss (₹ | %)</label>
+              <div class="unified-price-pct-box" style="display:flex;gap:6px;">
+                <input type="number" step="0.05" id="omSlInput" class="val-input" placeholder="Price ₹" style="width:50%;height:34px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;font-size:12.5px;padding:0 8px;" />
+                <input type="number" step="0.1" id="omSlPctInput" class="pct-input" placeholder="%" style="width:50%;height:34px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;font-size:12.5px;padding:0 8px;" />
               </div>
             </div>
-            <div>
-              <label class="form-lbl" style="color:var(--gain);">TARGET PROFIT (₹ | %)</label>
-              <div class="unified-price-pct-box">
-                <input type="number" step="0.05" id="omTargetInput" class="val-input" placeholder="Price ₹" />
-                <div class="unified-price-pct-divider"></div>
-                <input type="number" step="0.1" id="omTargetPctInput" class="pct-input" placeholder="%" />
+
+            <!-- Target Profit Box -->
+            <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;padding:10px 12px;">
+              <label class="form-lbl" style="font-size:11px;font-weight:700;color:#00B386;display:block;margin-bottom:6px;">Target Profit (₹ | %)</label>
+              <div class="unified-price-pct-box" style="display:flex;gap:6px;">
+                <input type="number" step="0.05" id="omTargetInput" class="val-input" placeholder="Price ₹" style="width:50%;height:34px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;font-size:12.5px;padding:0 8px;" />
+                <input type="number" step="0.1" id="omTargetPctInput" class="pct-input" placeholder="%" style="width:50%;height:34px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;font-size:12.5px;padding:0 8px;" />
               </div>
             </div>
           </div>
         </div>
 
         <!-- Bottom Payment Bar (Matching Reference Image) -->
-        <div class="om-bottom-pay-bar" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div class="om-bottom-pay-bar" style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
           <!-- Available Margin on Left -->
-          <div class="om-avail-box">
-            <span style="font-size:11px;color:var(--accent);display:block;">Available</span>
-            <b id="omAvailVal" style="font-family:var(--font-mono);font-size:14px;color:var(--text-primary);">₹942.97</b>
+          <div class="om-avail-box" style="display:flex;flex-direction:column;gap:2px;">
+            <span style="font-size:12px;font-weight:700;color:#00B386;">Available</span>
+            <b id="omAvailVal" style="font-family:'Plus Jakarta Sans', sans-serif;font-size:16px;font-weight:800;color:#EB5B56;">₹-38.36</b>
           </div>
 
           <!-- Side-by-Side Payment Mode Cards on Right -->
-          <div class="angel-pay-mode-btns">
-            <button type="button" class="pay-mode-btn mtf active" id="omMtfPayBtn" data-prod="MARGIN">
-              <span class="pay-title" id="omMtfLabel">MTF (2.9x)</span>
-              <span class="pay-amount" id="omMtfVal">₹109.79</span>
+          <div class="angel-pay-mode-btns" style="display:flex;gap:10px;">
+            <button type="button" class="pay-mode-btn mtf active" id="omMtfPayBtn" data-prod="MARGIN" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px;background:#EEF2FF;border:1.5px solid #3B82F6;border-radius:10px;cursor:pointer;">
+              <span class="pay-title" id="omMtfLabel" style="font-size:11.5px;font-weight:700;color:#2563EB;">MTF (3x)</span>
+              <span class="pay-amount" id="omMtfVal" style="font-size:14.5px;font-weight:800;color:#0F172A;">₹94.14</span>
             </button>
-            <button type="button" class="pay-mode-btn full" id="omFullPayBtn" data-prod="DELIVERY">
-              <span class="pay-title">PAY FULL</span>
-              <span class="pay-amount" id="omFullVal">₹318.40</span>
+            <button type="button" class="pay-mode-btn full" id="omFullPayBtn" data-prod="DELIVERY" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;cursor:pointer;">
+              <span class="pay-title" style="font-size:11.5px;font-weight:600;color:#64748B;">Pay Full</span>
+              <span class="pay-amount" id="omFullVal" style="font-size:14.5px;font-weight:800;color:#0F172A;">₹282.43</span>
             </button>
           </div>
         </div>
 
         <!-- Submit Button -->
-        <div class="om-footer" style="margin-top:12px;">
-          <button type="submit" class="om-submit-btn buy" id="omSubmitBtn">PLACE BUY ORDER</button>
+        <div class="om-footer" style="margin-top:16px;">
+          <button type="submit" class="om-submit-btn buy" id="omSubmitBtn" style="width:100%;height:48px;border-radius:12px;background:#00B386;color:#FFFFFF;font-size:15px;font-weight:700;border:none;cursor:pointer;">Place Buy Order (Angel One)</button>
         </div>
       </form>
     </div>
@@ -1330,6 +1336,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v103"></script>
+  <script type="module" src="/js/app.js?v=20260821_v104"></script>
 </body>
 </html>
