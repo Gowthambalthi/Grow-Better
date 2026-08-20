@@ -1285,7 +1285,7 @@ button { font-family: inherit; }
 
 .holdings-table td + td,
 .holdings-table th + th {
-  border-left: 1px solid rgba(148, 163, 184, 0.10) !important;
+  border-left: none !important;
 }
 
 .table-header, .holdings-table thead tr, .holdings-table thead th {
@@ -1301,8 +1301,13 @@ button { font-family: inherit; }
 .holdings-table th:first-child { text-align: left; padding-left: 20px !important; }
 .holdings-table th:last-child { text-align: right; padding-right: 20px !important; }
 
-.holdings-table tbody tr:nth-child(even) {
-  background: rgba(248, 250, 252, 0.5);
+.holdings-table tbody tr {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+}
+
+.holdings-table tbody tr:hover {
+  background: #F8FAFC !important;
 }
 
 .holdings-table td {
@@ -1389,16 +1394,10 @@ button { font-family: inherit; }
 .inst-table th:nth-child(7), .inst-table td:nth-child(7) { width: auto !important; text-align: right !important; }
 .inst-table th:nth-child(8), .inst-table td:nth-child(8) { width: auto !important; text-align: right !important; }
 
-/* Vertical Column Grouping Dividers (After Qty, LTP, Current Val, Day's G/L) */
-.holdings-table th:nth-child(2),
-.holdings-table td:nth-child(2),
-.holdings-table th:nth-child(4),
-.holdings-table td:nth-child(4),
-.holdings-table th:nth-child(6),
-.holdings-table td:nth-child(6),
-.holdings-table th:nth-child(8),
-.holdings-table td:nth-child(8) {
-  border-right: 1px solid var(--line) !important;
+/* No Vertical Column Grouping Dividers */
+.holdings-table th,
+.holdings-table td {
+  border-right: none !important;
 }
 
 .row-action-btn {

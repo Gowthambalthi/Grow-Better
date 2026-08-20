@@ -23,7 +23,7 @@ export function renderHoldingsRow(row) {
     ? `<span class="broker-tag-angel">ANGEL ONE</span>`
     : `<span class="broker-tag-groww">GROWW</span>`;
 
-  const daysText = row.daysHeld != null ? String(row.daysHeld) : '—';
+  const daysText = row.daysHeld != null ? `${row.daysHeld}d` : '—';
   const rawSymbol = row.tradingsymbol;
   const dayPlVal = row.todayPL != null ? row.todayPL : row.overallPL;
   const dayPlPct = row.todayPLPercent != null ? row.todayPLPercent : row.overallPLPercent;
