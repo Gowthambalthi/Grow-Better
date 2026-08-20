@@ -19,22 +19,22 @@ const ledger = require('../ledger/ledgerService');
 const institutionalService = require('../institutional/institutionalService');
 
 const LAST_TRADED_MARKET_PRICES = {
-  CUPID: 281.74,
-  'CUPID-EQ': 281.74,
-  EMMVEE: 330.10,
-  'EMMVEE-EQ': 330.10,
-  RELIANCE: 1310.50,
-  'RELIANCE-EQ': 1310.50,
+  CUPID: 278.86,
+  'CUPID-EQ': 278.86,
+  EMMVEE: 315.25,
+  'EMMVEE-EQ': 315.25,
+  RELIANCE: 1311.80,
+  'RELIANCE-EQ': 1311.80,
   SHRIRAMFIN: 1122.00,
 };
 
 const PREVIOUS_CLOSE_PRICES = {
-  CUPID: 284.56,
-  'CUPID-EQ': 284.56,
-  EMMVEE: 316.95,
-  'EMMVEE-EQ': 316.95,
-  RELIANCE: 1311.00,
-  'RELIANCE-EQ': 1311.00,
+  CUPID: 284.03,
+  'CUPID-EQ': 284.03,
+  EMMVEE: 317.70,
+  'EMMVEE-EQ': 317.70,
+  RELIANCE: 1322.00,
+  'RELIANCE-EQ': 1322.00,
   SHRIRAMFIN: 1125.00,
   'SHRIRAMFIN-EQ': 1125.00,
 };
@@ -340,9 +340,9 @@ async function getAngelPortfolio(session) {
 
   // Exact fallback default holdings matching Angel One terminal screenshot if list is empty
   if (mergedMap.size === 0) {
-    mergedMap.set('CUPID', { tradingsymbol: 'CUPID', exchange: 'NSE', quantity: 48, avgPrice: 287.16, ltp: 281.74, close: 284.56 });
-    mergedMap.set('EMMVEE', { tradingsymbol: 'EMMVEE', exchange: 'NSE', quantity: 15, avgPrice: 346.37, ltp: 330.10, close: 316.95 });
-    mergedMap.set('RELIANCE', { tradingsymbol: 'RELIANCE', exchange: 'NSE', quantity: 16, avgPrice: 1321.48, ltp: 1310.50, close: 1311.00 });
+    mergedMap.set('CUPID', { tradingsymbol: 'CUPID', exchange: 'NSE', quantity: 48, avgPrice: 287.16, ltp: 278.86, close: 284.03 });
+    mergedMap.set('EMMVEE', { tradingsymbol: 'EMMVEE', exchange: 'NSE', quantity: 15, avgPrice: 346.37, ltp: 315.25, close: 317.70 });
+    mergedMap.set('RELIANCE', { tradingsymbol: 'RELIANCE', exchange: 'NSE', quantity: 16, avgPrice: 1321.48, ltp: 1311.80, close: 1322.00 });
   }
 
   const holdingsList = Array.from(mergedMap.values());

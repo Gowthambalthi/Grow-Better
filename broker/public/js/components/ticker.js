@@ -7,7 +7,14 @@ import { api } from '../core/api.js';
 import { rawMoney, pct, plSign } from '../core/formatters.js';
 
 const WATCHLIST = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY', 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
-const tickerPrices = {};
+const tickerPrices = {
+  NIFTY: { price: 24053.15, prevPrice: 24154.90, change: -101.75, changePct: -0.42 },
+  BANKNIFTY: { price: 57055.05, prevPrice: 57262.40, change: -207.35, changePct: -0.36 },
+  SENSEX: { price: 76903.32, prevPrice: 77235.46, change: -332.14, changePct: -0.43 },
+  FINNIFTY: { price: 25981.40, prevPrice: 26108.00, change: -126.60, changePct: -0.48 },
+  MIDCPNIFTY: { price: 14861.05, prevPrice: 14840.75, change: 20.30, changePct: 0.14 },
+  GIFTNIFTY: { price: 24114.00, prevPrice: 24230.10, change: -116.10, changePct: -0.48 },
+};
 
 export function isIndianMarketOpen() {
   const now = new Date();
@@ -75,6 +82,7 @@ export function initPopovers() {
 let tickerTimer = null;
 
 export async function startTicker() {
+  renderTickerUI();
   await updateTickerData();
   if (!tickerTimer) {
     tickerTimer = setInterval(updateTickerData, 1000);
