@@ -329,16 +329,24 @@ function setGrowwPlCard(valId, labelId, iconId, plVal, plPct, defaultLabel = 'Ov
 export function updatePortfolioPanelsVisibility(mode = 'all') {
   const panelAngel = document.getElementById('panelPortfolioAngelone');
   const panelGroww = document.getElementById('panelPortfolioGroww');
+  const panelDashAngel = document.getElementById('panelDashAngelone');
+  const panelDashGroww = document.getElementById('panelDashGroww');
 
   if (mode === 'all') {
     if (panelAngel) panelAngel.style.display = 'flex';
     if (panelGroww) panelGroww.style.display = 'flex';
+    if (panelDashAngel) panelDashAngel.style.display = 'flex';
+    if (panelDashGroww) panelDashGroww.style.display = 'flex';
   } else if (mode === 'angelone') {
     if (panelAngel) panelAngel.style.display = 'flex';
     if (panelGroww) panelGroww.style.display = 'none';
+    if (panelDashAngel) panelDashAngel.style.display = 'flex';
+    if (panelDashGroww) panelDashGroww.style.display = 'none';
   } else if (mode === 'groww') {
     if (panelAngel) panelAngel.style.display = 'none';
     if (panelGroww) panelGroww.style.display = 'flex';
+    if (panelDashAngel) panelDashAngel.style.display = 'none';
+    if (panelDashGroww) panelDashGroww.style.display = 'flex';
   }
 }
 
