@@ -80,9 +80,7 @@
   --loss-dim: rgba(226, 55, 68, 0.12);
 }
 
-  --loss: #DC2626;             /* Rich crimson red for Light Mode */
-  --loss-dim: rgba(220, 38, 38, 0.12);
-}
+
 
 * { box-sizing: border-box; }
 html, body {
@@ -507,13 +505,7 @@ button { font-family: inherit; }
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-  font-size: 9.5px;
-  font-weight: 800;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
+
 
 .index-val-row {
   display: flex;
@@ -972,6 +964,8 @@ button { font-family: inherit; }
 
 .stats-section {
   margin-bottom: 28px !important;
+}
+
 .portfolio-page,
 .portfolio-content,
 .dashboard,
