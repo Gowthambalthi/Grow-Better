@@ -72,11 +72,11 @@ export function renderHoldingsRow(row) {
       <td>${money(row.ltp)}</td>
       <td>${money(row.investedAmount)}</td>
       <td>${money(row.currentAmount)}</td>
-      <td class="${plClass(row.overallPL)}">${money(row.overallPL)}<br><small>${pct(row.overallPLPercent)}</small></td>
+      <td class="${plClass(row.overallPL)}"><span style="font-weight:700;">${money(row.overallPL)}</span><br><small>${pct(row.overallPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:center;">${daysText}</td>
-      <td class="progress-cell" style="width:60px;text-align:right;padding-right:20px !important;">
-        <div class="bar-container" title="Net ${isLoss ? 'Loss' : 'Profit'}: ${money(row.overallPL)}" style="display:inline-block;width:22px;height:4px;background:${isLoss ? '#EB5B56' : '#00B386'};border-radius:2px;">
+      <td class="progress-cell" style="width:60px;text-align:right;padding-right:20px !important;" title="Net ${isLoss ? 'Loss' : 'Profit'}: ${money(row.overallPL)} (${pct(row.overallPLPercent)})">
+        <div class="bar-container" style="display:inline-block;width:22px;height:4px;background:${isLoss ? '#EB5B56' : '#00B386'};border-radius:2px;">
         </div>
       </td>
     </tr>`;
