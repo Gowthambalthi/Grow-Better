@@ -75,10 +75,9 @@ export function initPopovers() {
   });
 
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.popover-wrapper')) {
-      document.querySelectorAll('.dropdown-popover').forEach((p) => p.classList.remove('show'));
+    if (!e.target.closest('.popover-wrapper') && !e.target.closest('#portfolioSettingsPopover') && !e.target.closest('#settingsModalBackdrop')) {
+      document.querySelectorAll('.dropdown-popover:not(#portfolioSettingsPopover)').forEach((p) => p.classList.remove('show'));
       document.querySelectorAll('.topbar-index-pill').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.portfolio-settings-btn').forEach((b) => b.classList.remove('active'));
     }
   });
 }

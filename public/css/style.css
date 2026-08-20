@@ -736,6 +736,11 @@ button { font-family: inherit; }
   overflow: hidden !important;
   z-index: 999999 !important;
   margin: 0 !important;
+  display: none;
+}
+
+.dropdown-popover.settings-popover.show {
+  display: block !important;
 }
 
 .interactive-pill {
