@@ -135,11 +135,10 @@ function renderTickerUI() {
     };
     nameEl.textContent = titleMap[activeSymbol] || activeSymbol;
   }
-  if (marketTagEl) {
-    const timeStr = topData && topData.lastUpdated ? new Date(topData.lastUpdated).toLocaleTimeString('en-IN') : '';
-    const statusText = isPreOpen ? '● PRE-OPEN (NSE IST)' : (open ? '● LIVE (NSE IST)' : '● MARKET CLOSED (GIFT ACTIVE)');
-    marketTagEl.textContent = statusText + (timeStr ? ` • ${timeStr}` : '');
-    marketTagEl.style.color = open ? '#00E699' : '#F87171';
+  const liveClockEl = document.getElementById('popoverLiveClock');
+  if (liveClockEl) {
+    const timeStr = ist.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
+    liveClockEl.textContent = timeStr;
   }
 
   // Update Topbar Ticker Value
@@ -163,10 +162,19 @@ function renderTickerUI() {
       valRow.className = `index-val-row ${isPos ? 'positive' : 'negative'}`;
     }
   }
-  // Update Watchlist Popover Rows (NIFTY, BANKNIFTY, SENSEX, GIFTNIFTY, GOLD, SILVER)
+
+  // Update Watchlist Popover Rows (NIFTY, BANKNIFTY, SENSEX, FINNIFTY, MIDCPNIFTY, GIFTNIFTY)
   for (const sym of WATCHLIST) {
     const row = document.querySelector(`.watch-row[data-symbol="${sym}"]`);
     if (!row) continue;
+
+    // Highlight active selected row
+    if (sym === activeSymbol) {
+      row.classList.add('active');
+    } else {
+      row.classList.remove('active');
+    }
+
     const t = tickerPrices[sym];
     if (!t || t.price == null) continue;
     const priceEl = row.querySelector('.w-price');
@@ -177,7 +185,8 @@ function renderTickerUI() {
       const changePct = t.changePct != null ? t.changePct : (t.prevPrice != null ? (change / t.prevPrice) * 100 : 0);
       const chgVal = Number(change || 0);
       const isPos = chgVal >= 0;
-      changeEl.textContent = `${isPos ? '▲' : '▼'} ${plSign(chgVal)}${Math.abs(chgVal).toFixed(2)} (${pct(changePct)})`;
+      const signPctStr = isPos ? `+${changePct.toFixed(2)}%` : `${changePct.toFixed(2)}%`;
+      changeEl.textContent = `${isPos ? '▲' : '▼'} ${Math.abs(chgVal).toFixed(2)} (${signPctStr})`;
       changeEl.className = `w-change ${isPos ? 'positive' : 'negative'}`;
     }
   }

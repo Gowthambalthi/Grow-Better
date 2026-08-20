@@ -94,45 +94,59 @@
               </div>
             </div>
 
-            <!-- Dropdown Popover (BANK NIFTY, SENSEX EXPIRY, GIFT NIFTY, GOLD, SILVER) -->
+            <!-- Dropdown Popover (Exact Match to User's Market Watchlist Screenshot) -->
             <div class="dropdown-popover watchlist-dropdown-popover" id="watchlistPopover">
               <div class="popover-header">
                 <span class="popover-title" id="popoverMarketTitle">Market Watchlist</span>
-                <span class="live-tag" id="popoverMarketTag">● LIVE</span>
+                <span class="live-tag" id="popoverMarketTag">
+                  <span class="live-dot">●</span> LIVE (NSE IST) <span class="live-clock" id="popoverLiveClock">12:38:24 pm</span>
+                </span>
               </div>
               <div class="popover-body" style="padding:0;">
-                <div class="watch-row" data-symbol="NIFTY" id="popoverRowNifty">
+                <div class="watch-row active" data-symbol="NIFTY" id="popoverRowNifty">
                   <span class="w-name">NIFTY 50</span>
-                  <b class="w-price" id="popNiftyPrice">--</b>
-                  <small class="w-change" id="popNiftyChange">--</small>
+                  <div class="w-right">
+                    <div class="w-price" id="popNiftyPrice">24,053.15</div>
+                    <div class="w-change negative" id="popNiftyChange">▼ 101.75 (-0.42%)</div>
+                  </div>
                 </div>
                 <div class="watch-row" data-symbol="BANKNIFTY" id="popoverRowBanknifty">
                   <span class="w-name">BANK NIFTY</span>
-                  <b class="w-price" id="popBankPrice">--</b>
-                  <small class="w-change" id="popBankChange">--</small>
+                  <div class="w-right">
+                    <div class="w-price" id="popBankPrice">57,055.05</div>
+                    <div class="w-change negative" id="popBankChange">▼ 207.35 (-0.36%)</div>
+                  </div>
                 </div>
                 <div class="watch-row" data-symbol="SENSEX" id="popoverRowSensex">
                   <span class="w-name">SENSEX</span>
-                  <b class="w-price" id="popSensexPrice">--</b>
-                  <small class="w-change" id="popSensexChange">--</small>
+                  <div class="w-right">
+                    <div class="w-price" id="popSensexPrice">76,903.32</div>
+                    <div class="w-change negative" id="popSensexChange">▼ 332.14 (-0.43%)</div>
+                  </div>
                 </div>
                 <div class="watch-row" data-symbol="FINNIFTY" id="popoverRowFinnifty">
                   <span class="w-name">FIN NIFTY</span>
-                  <b class="w-price" id="popFinPrice">--</b>
-                  <small class="w-change" id="popFinChange">--</small>
+                  <div class="w-right">
+                    <div class="w-price" id="popFinPrice">25,981.40</div>
+                    <div class="w-change negative" id="popFinChange">▼ 126.60 (-0.48%)</div>
+                  </div>
                 </div>
                 <div class="watch-row" data-symbol="MIDCPNIFTY" id="popoverRowMidcpnifty">
                   <span class="w-name">MIDCAP NIFTY</span>
-                  <b class="w-price" id="popMidPrice">--</b>
-                  <small class="w-change" id="popMidChange">--</small>
+                  <div class="w-right">
+                    <div class="w-price" id="popMidPrice">14,861.05</div>
+                    <div class="w-change positive" id="popMidChange">▲ 20.30 (+0.14%)</div>
+                  </div>
                 </div>
                 <div class="watch-row" data-symbol="GIFTNIFTY" id="popoverRowGiftnifty">
                   <span class="w-name">GIFT NIFTY</span>
-                  <b class="w-price" id="popGiftPrice">--</b>
-                  <small class="w-change" id="popGiftChange">--</small>
+                  <div class="w-right">
+                    <div class="w-price" id="popGiftPrice">24,114.00</div>
+                    <div class="w-change negative" id="popGiftChange">▼ 116.10 (-0.48%)</div>
+                  </div>
                 </div>
-                <div class="watch-row" data-symbol="GOLD" id="popoverRowGold">
-                  <span class="w-name">MCX GOLD</span>
+              </div>
+            </div>
                   <b class="w-price" id="popGoldPrice">--</b>
                   <small class="w-change" id="popGoldChange">--</small>
                 </div>
