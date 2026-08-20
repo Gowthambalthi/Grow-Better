@@ -164,9 +164,9 @@ function updateSummaryCards(mode = 'all') {
   // Dashboard View Cards (#view-dashboard)
   setText('sumInvested', money(c.investedAmount));
   setText('sumCurrent', money(c.currentAmount));
-  setGrowwPlCard('sumOverall', 'lblOverall', 'iconOverall', c.overallPL, c.overallPLPercent, 'Overall', c.investedAmount);
+  setGrowwPlCard('sumOverall', 'lblOverall', 'iconOverall', c.overallPL, c.overallPLPercent, 'Net Overall', c.investedAmount);
   setGrowwPlCard('sumToday', 'lblToday', 'iconToday', c.todayPL, c.todayPLPercent, 'Today\'s', c.investedAmount);
-  setPl('sumGross', c.grossPL);
+  setPl('sumGross', c.overallPL);
 
   // Portfolio View Groww Hero Dark Banner (#view-portfolio)
   setText('heroCurrentValue', money(c.currentAmount));
@@ -194,8 +194,8 @@ function updateSummaryCards(mode = 'all') {
   // Portfolio View 4 Light Cards (#view-portfolio)
   setPctVal('portSumXirr', c.xirr);
   setPctVal('portSumCagr', c.accountReturnPercent || c.cagr);
-  setPl('portSumGross', c.grossPL);
-  setPl('portSumAccountPl', c.accountPL);
+  setPl('portSumNetPl', c.overallPL);
+  setPl('portSumGross', c.rawOverallPL || c.grossPL);
   setText('portSumAdjAccountPl', money(c.totalAccruedCharges));
   setText('portSumCashInvested', money(c.ownCapitalInvested));
 
