@@ -186,7 +186,7 @@ function updateSummaryCards(mode = 'all') {
     const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
     const signSym = ovNum < 0 ? '-' : (ovNum > 0 ? '+' : '');
     heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))} (${signPct})`;
-    heroOverallEl.style.color = ovNum >= 0 ? '#00B386' : '#EB5B56';
+    heroOverallEl.style.setProperty('color', ovNum >= 0 ? '#00B386' : '#EB5B56', 'important');
   }
 
   const heroTodayEl = document.getElementById('heroTodayPl');
@@ -194,7 +194,7 @@ function updateSummaryCards(mode = 'all') {
     const tdNum = Number(c.todayPL || 0);
     const signSym = tdNum < 0 ? '-' : (tdNum > 0 ? '+' : '');
     heroTodayEl.textContent = `${signSym}${money(Math.abs(tdNum))}`;
-    heroTodayEl.style.color = tdNum >= 0 ? '#00B386' : '#EB5B56';
+    heroTodayEl.style.setProperty('color', tdNum >= 0 ? '#00B386' : '#EB5B56', 'important');
   }
 
   // Portfolio View 4 Light Cards (#view-portfolio)
@@ -275,13 +275,17 @@ function setPctVal(id, val) {
   const num = Number(val) || 0;
   const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
   el.textContent = `${sign}${Math.abs(num).toFixed(2)}%`;
-  el.style.color = num >= 0 ? '#20E098' : '#FF6B6B';
+  el.style.setProperty('color', num >= 0 ? '#00B386' : '#EB5B56', 'important');
   updateCardTrendIcon(id, num);
 }
 function setPl(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.textContent = money(value);
+  const num = Number(value || 0);
+  const isLoss = num < 0;
+  const sign = isLoss ? '-' : (num > 0 ? '+' : '');
+  el.textContent = `${sign}₹${Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  el.style.setProperty('color', isLoss ? '#EB5B56' : '#00B386', 'important');
   const base = el.className.split(' ').filter((c) => c !== 'pl-positive' && c !== 'pl-negative').join(' ');
   el.className = `${base} ${plClass(value)}`.trim();
   updateCardTrendIcon(id, value);
@@ -332,21 +336,32 @@ export function updatePortfolioPanelsVisibility(mode = 'all') {
   const panelDashAngel = document.getElementById('panelDashAngelone');
   const panelDashGroww = document.getElementById('panelDashGroww');
 
+  const setVisibility = (el, show) => {
+    if (!el) return;
+    if (show) {
+      el.classList.remove('hide-panel');
+      el.style.setProperty('display', 'flex', 'important');
+    } else {
+      el.classList.add('hide-panel');
+      el.style.setProperty('display', 'none', 'important');
+    }
+  };
+
   if (mode === 'all') {
-    if (panelAngel) panelAngel.style.display = 'flex';
-    if (panelGroww) panelGroww.style.display = 'flex';
-    if (panelDashAngel) panelDashAngel.style.display = 'flex';
-    if (panelDashGroww) panelDashGroww.style.display = 'flex';
+    setVisibility(panelAngel, true);
+    setVisibility(panelGroww, true);
+    setVisibility(panelDashAngel, true);
+    setVisibility(panelDashGroww, true);
   } else if (mode === 'angelone') {
-    if (panelAngel) panelAngel.style.display = 'flex';
-    if (panelGroww) panelGroww.style.display = 'none';
-    if (panelDashAngel) panelDashAngel.style.display = 'flex';
-    if (panelDashGroww) panelDashGroww.style.display = 'none';
+    setVisibility(panelAngel, true);
+    setVisibility(panelGroww, false);
+    setVisibility(panelDashAngel, true);
+    setVisibility(panelDashGroww, false);
   } else if (mode === 'groww') {
-    if (panelAngel) panelAngel.style.display = 'none';
-    if (panelGroww) panelGroww.style.display = 'flex';
-    if (panelDashAngel) panelDashAngel.style.display = 'none';
-    if (panelDashGroww) panelDashGroww.style.display = 'flex';
+    setVisibility(panelAngel, false);
+    setVisibility(panelGroww, true);
+    setVisibility(panelDashAngel, false);
+    setVisibility(panelDashGroww, true);
   }
 }
 

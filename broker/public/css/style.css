@@ -1230,10 +1230,13 @@ button { font-family: inherit; }
   border: 1px solid #D9DEE5 !important;
   border-radius: 18px !important;
   overflow: hidden !important;
-  display: flex !important;
+  display: flex;
   flex-direction: column !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-  box-sizing: border-box !important;
+}
+
+.holdings-card.hide-panel, .broker-panel.hide-panel {
+  display: none !important;
 }
 
 .holdings-header, .holdings-card-header {
@@ -2265,7 +2268,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .gh-sub-info strong, .gh-sub-info span {
   font-family: 'JetBrains Mono', monospace !important;
   font-weight: 500 !important;
-  color: #CBD5E1 !important;
 }
 
 .gh-right, .summary-right {
@@ -2351,7 +2353,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 22px !important;
   font-weight: 500 !important;
-  color: #334155 !important;
   line-height: 1.1 !important;
   margin-bottom: 6px !important;
 }
