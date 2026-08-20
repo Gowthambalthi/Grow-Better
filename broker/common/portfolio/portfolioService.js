@@ -515,15 +515,17 @@ function calculateXirr(cashFlows) {
 function summarize(rows, broker = 'combined', liveCash = null) {
   const valid = rows.filter((r) => !r.error);
 
-  const investedAmount = valid.reduce((s, r) => s + r.investedAmount, 0);
-  const currentAmount = valid.reduce((s, r) => s + r.currentAmount, 0);
-  const overallPL = valid.reduce((s, r) => s + (r.overallPL || 0), 0);
+  const investedAmount = valid.reduce((s, r) => s + (r.investedAmount || 0), 0);
+  const currentAmount = valid.reduce((s, r) => s + (r.currentAmount || 0), 0);
+  const netPL = valid.reduce((s, r) => s + (r.netPL != null ? r.netPL : (r.overallPL || 0)), 0);
+  const rawOverallPL = valid.reduce((s, r) => s + (r.rawOverallPL != null ? r.rawOverallPL : (r.grossPL != null ? r.grossPL : (r.overallPL || 0))), 0);
+  const overallPL = netPL;
   const overallPLPercent = investedAmount > 0 ? (overallPL / investedAmount) * 100 : 0;
 
   const todayPL = valid.reduce((s, r) => s + (r.todayPL || 0), 0);
   const prevDayPortfolioValue = currentAmount - todayPL;
   const todayPLPercent = prevDayPortfolioValue > 0 ? (todayPL / prevDayPortfolioValue) * 100 : (investedAmount > 0 ? (todayPL / investedAmount) * 100 : 0);
-  const grossPL = valid.reduce((s, r) => s + (r.grossPL != null ? r.grossPL : r.overallPL), 0);
+  const grossPL = rawOverallPL;
   const mtfInterestAccrued = valid.reduce((s, r) => s + (r.mtfInterestAccrued || 0), 0);
   const totalMtfBorrowed = valid.reduce((s, r) => s + (r.mtfBorrowed || 0), 0);
   const totalBuyCharges = valid.reduce((s, r) => s + (r.buyCharges || 0), 0);
@@ -627,6 +629,8 @@ function summarize(rows, broker = 'combined', liveCash = null) {
     investedAmount,
     currentAmount,
     overallPL,
+    netPL: overallPL,
+    rawOverallPL: grossPL,
     todayPL,
     grossPL,
     mtfInterestAccrued,
