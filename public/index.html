@@ -509,193 +509,6 @@
                   </button>
                   <span class="red-dot-badge" id="settingsRedDotBadge" style="display:none;" title="Buy dates missing for some holdings"></span>
                 </div>
-
-                <!-- Dark Translucent Modal Overlay Backdrop -->
-                <div class="settings-modal-backdrop" id="settingsModalBackdrop"></div>
-
-                <div class="dropdown-popover settings-popover" id="portfolioSettingsPopover">
-                  <div class="popover-header">
-                    <span style="display:flex;align-items:center;gap:6px;">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                      </svg>
-                      Portfolio Settings
-                    </span>
-                    <button class="popover-close-x" id="closeSettingsPopoverBtn">×</button>
-                  </div>
-
-                  <!-- Broker Selection Switcher -->
-                  <div class="broker-settings-tabs">
-                    <button class="b-tab active" data-broker-tab="angelone">
-                      <span class="broker-dot angel"></span> Angel One
-                    </button>
-                    <button class="b-tab" data-broker-tab="groww">
-                      <span class="broker-dot groww"></span> Groww
-                    </button>
-                  </div>
-
-                  <!-- Notification Alert Banner if Data Missing -->
-                  <div class="ul-alert-banner" id="ulAlertBanner" style="display:none;">
-                    <span class="a-icon">🔴</span>
-                    <span>Purchase dates missing for some stocks. Select stock below to configure.</span>
-                  </div>
-
-                  <div class="popover-body" style="max-height:520px;overflow-y:auto;padding:12px;">
-                    <!-- Stock Holdings Configuration Form -->
-                    <form id="ulMtfForm">
-                      <div style="margin-bottom:10px;">
-                        <label class="form-lbl">STOCK HOLDING</label>
-                        <select id="ulSelectHolding" class="form-input" required>
-                          <option value="">-- Choose Stock Holding --</option>
-                        </select>
-                      </div>
-
-                      <div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:8px;margin-bottom:10px;">
-                        <div>
-                          <label class="form-lbl">QUANTITY</label>
-                          <input id="ulQtyInput" type="number" min="1" class="form-input" placeholder="Qty" required />
-                        </div>
-                        <div>
-                          <label class="form-lbl">PURCHASE DATE</label>
-                          <input id="ulBuyDate" type="date" class="form-input" required />
-                        </div>
-                        <div>
-                          <label class="form-lbl">PRODUCT TYPE</label>
-                          <select id="ulIsMtf" class="form-input">
-                            <option value="0">Delivery (Normal)</option>
-                            <option value="1">MTF (Margin Trading)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <!-- MTF Leverage Selector -->
-                      <div id="ulMtfRatioGroup" style="margin-bottom:10px;display:none;">
-                        <label class="form-lbl">MTF LEVERAGE MULTIPLIER RATIO</label>
-                        <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;">
-                          <select id="ulMtfRatio" class="form-input">
-                            <option value="2.9">2.9× (EMMVEE — 34.5% Cash)</option>
-                            <option value="4.4">4.4× (HDFC Bank — 22.7% Cash)</option>
-                            <option value="4.2">4.2× (ONGC — 23.8% Cash)</option>
-                            <option value="3.6">3.6× (Shriram Fin — 27.8% Cash)</option>
-                            <option value="3.5">3.5× (MCX — 28.6% Cash)</option>
-                            <option value="4.0">4.0× (Default 4.0x)</option>
-                            <option value="3.0">3.0× (Default 3.0x)</option>
-                            <option value="2.0">2.0× (50% Cash)</option>
-                            <option value="custom">Custom Ratio →</option>
-                          </select>
-                          <input type="number" step="0.1" id="ulMtfCustomInput" placeholder="Custom x" class="form-input" value="2.9" />
-                        </div>
-                      </div>
-
-                      <!-- TARGET & STOP LOSS SETTINGS FOR PORTFOLIO HOLDING -->
-                      <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px;margin-bottom:10px;">
-                        <div style="font-size:10.5px;font-weight:800;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;">TARGET &amp; STOP LOSS PARAMETERS</div>
-                        
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                          <div>
-                            <label class="form-lbl" style="color:var(--gain);">TARGET PROFIT (₹ | %)</label>
-                            <div class="unified-price-pct-box">
-                              <input type="number" step="0.05" id="ulTargetPrice" class="val-input" placeholder="Price ₹" />
-                              <div class="unified-price-pct-divider"></div>
-                              <input type="number" step="0.1" id="ulTargetPct" class="pct-input" placeholder="%" />
-                            </div>
-                          </div>
-                          <div>
-                            <label class="form-lbl" style="color:var(--loss);">STOP LOSS (₹ | %)</label>
-                            <div class="unified-price-pct-box">
-                              <input type="number" step="0.05" id="ulSlPrice" class="val-input" placeholder="Price ₹" />
-                              <div class="unified-price-pct-divider"></div>
-                              <input type="number" step="0.1" id="ulSlPct" class="pct-input" placeholder="%" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button type="submit" class="submit-btn" style="margin-bottom:14px;">SAVE HOLDING SETTINGS</button>
-                    </form>
-
-                    <!-- Funds Added & Withdrawn Section -->
-                    <div style="border-top:1px solid #F1F5F9;padding-top:16px;margin-top:16px;margin-bottom:16px;">
-                      <div class="form-lbl" style="color:#00B386;font-size:12.5px;font-weight:700;margin-bottom:10px;">FUNDS ADDED &amp; WITHDRAWN</div>
-                      <form id="ulCapitalForm">
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-                          <div>
-                            <label class="form-lbl">TYPE</label>
-                            <select id="ulCapType" class="form-input"><option value="ADD">+ Add</option><option value="WITHDRAW">- Withdraw</option></select>
-                          </div>
-                          <div>
-                            <label class="form-lbl">AMOUNT (₹)</label>
-                            <input id="ulCapAmount" type="number" step="0.01" placeholder="₹50,000" class="form-input" required />
-                          </div>
-                        </div>
-                        <div style="margin-bottom:12px;">
-                          <label class="form-lbl">DATE</label>
-                          <input id="ulCapDate" type="date" class="form-input" required />
-                        </div>
-                        <button type="submit" class="submit-btn" style="margin-bottom:14px;">Record Capital Transaction</button>
-                      </form>
-
-                      <div class="calc-preview-box">
-                        <div class="c-row"><span>Total Funds Added</span><b id="sumCapAdded" style="color:#0F172A;font-family:'JetBrains Mono';">₹40,123.00</b></div>
-                        <div class="c-row"><span>Total Funds Withdrawn</span><b id="sumCapWithdrawn" style="color:#0F172A;font-family:'JetBrains Mono';">₹0.00</b></div>
-                        <div class="c-row total-row"><span>Net Capital Invested</span><b id="sumNetCapital" style="color:#00B386;font-family:'JetBrains Mono';">₹40,123.00</b></div>
-                      </div>
-
-                      <div id="ulCapitalHistoryList" style="font-family:'JetBrains Mono', monospace;font-size:12px;max-height:100px;overflow-y:auto;margin-top:10px;">Loading logs...</div>
-                    </div>
-
-                    <!-- Side-by-Side Net Charges & MTF Section -->
-                    <div style="border-top:1px solid #F1F5F9;padding-top:16px;">
-                      <div class="form-lbl" style="color:#00B386;font-size:12.5px;font-weight:700;margin-bottom:10px;">NET CHARGES &amp; MTF</div>
-                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        
-                        <!-- Column 1: Net Charges -->
-                        <div class="calc-preview-box" style="padding:14px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:14px;">
-                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                            <span style="font-size:12.5px;font-weight:600;color:#475569;">Net Charges</span>
-                            <button type="button" class="edit-icon-btn" id="editChargesBtn" title="Modify Net Charges" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:4px;">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
-                            </button>
-                          </div>
-                          <div id="sumTotalCharges" style="font-family:'JetBrains Mono', monospace;font-size:18px;font-weight:700;color:#EB5B56;">-₹6,585.00</div>
-                          <div id="chargesEditWrap" style="display:none;margin-top:6px;">
-                            <input id="customChargesInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
-                            <div style="display:flex;gap:4px;">
-                              <button type="button" id="saveChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;">SAVE</button>
-                              <button type="button" id="resetChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;background:#64748B !important;">AUTO</button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Column 2: MTF -->
-                        <div class="calc-preview-box" style="padding:14px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:14px;">
-                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                            <span style="font-size:12.5px;font-weight:600;color:#475569;">MTF</span>
-                            <button type="button" class="edit-icon-btn" id="editMtfIntBtn" title="Modify MTF Interest" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:4px;">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
-                            </button>
-                          </div>
-                          <div id="sumTotalMtfInt" style="font-family:'JetBrains Mono', monospace;font-size:18px;font-weight:700;color:#EB5B56;">-₹2,138.77</div>
-                          <div id="mtfIntEditWrap" style="display:none;margin-top:6px;">
-                            <input id="customMtfIntInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
-                            <div style="display:flex;gap:4px;">
-                              <button type="button" id="saveMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;">SAVE</button>
-                              <button type="button" id="resetMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;background:#64748B !important;">AUTO</button>
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1350,6 +1163,170 @@
           SAVE MODIFIED ORDER PARAMETERS
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- Dark Translucent Modal Overlay Backdrop -->
+  <div class="settings-modal-backdrop" id="settingsModalBackdrop"></div>
+
+  <!-- Centered Top-Level Portfolio Settings Modal Overlay -->
+  <div class="portfolio-settings-modal" id="portfolioSettingsPopover">
+    <div class="popover-header">
+      <span style="display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700;color:#0F172A;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Portfolio Settings
+      </span>
+      <button class="popover-close-x" id="closeSettingsPopoverBtn">×</button>
+    </div>
+
+    <!-- Broker Selection Switcher -->
+    <div class="broker-settings-tabs">
+      <button class="b-tab active" data-broker-tab="angelone">
+        <span class="broker-dot angel"></span> Angel One
+      </button>
+      <button class="b-tab" data-broker-tab="groww">
+        <span class="broker-dot groww"></span> Groww
+      </button>
+    </div>
+
+    <!-- Notification Alert Banner if Data Missing -->
+    <div class="ul-alert-banner" id="ulAlertBanner" style="display:none;">
+      <span class="a-icon">🔴</span>
+      <span>Purchase dates missing for some stocks. Select stock below to configure.</span>
+    </div>
+
+    <div class="popover-body" style="max-height:540px;overflow-y:auto;padding:16px;">
+      <!-- Stock Holdings Configuration Form -->
+      <form id="ulMtfForm">
+        <div style="margin-bottom:12px;">
+          <label class="form-lbl">STOCK HOLDING</label>
+          <select id="ulSelectHolding" class="form-input" required>
+            <option value="">-- Choose Stock Holding --</option>
+          </select>
+        </div>
+
+        <div style="display:grid;grid-template-columns:100px 1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label class="form-lbl">QUANTITY</label>
+            <input id="ulQtyInput" type="number" min="1" class="form-input" placeholder="Qty" required />
+          </div>
+          <div>
+            <label class="form-lbl">PURCHASE DATE</label>
+            <input id="ulBuyDate" type="date" class="form-input" required />
+          </div>
+          <div>
+            <label class="form-lbl">PRODUCT TYPE</label>
+            <select id="ulIsMtf" class="form-input">
+              <option value="0">Delivery (Normal)</option>
+              <option value="1">MTF (Margin Trading)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- MTF Leverage Selector -->
+        <div id="ulMtfRatioGroup" style="margin-bottom:12px;display:none;">
+          <label class="form-lbl">MTF LEVERAGE MULTIPLIER RATIO</label>
+          <div style="display:grid;grid-template-columns:1fr 100px;gap:8px;">
+            <select id="ulMtfRatio" class="form-input">
+              <option value="2.9">2.9× (EMMVEE — 34.5% Cash)</option>
+              <option value="4.4">4.4× (HDFC Bank — 22.7% Cash)</option>
+              <option value="4.2">4.2× (ONGC — 23.8% Cash)</option>
+              <option value="3.6">3.6× (Shriram Fin — 27.8% Cash)</option>
+              <option value="3.5">3.5× (MCX — 28.6% Cash)</option>
+              <option value="4.0">4.0× (Default 4.0x)</option>
+              <option value="3.0">3.0× (Default 3.0x)</option>
+              <option value="2.0">2.0× (50% Cash)</option>
+              <option value="custom">Custom Ratio →</option>
+            </select>
+            <input type="number" step="0.1" id="ulMtfCustomInput" placeholder="Custom x" class="form-input" value="2.9" />
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" style="margin-bottom:16px;">Save Holding Settings</button>
+      </form>
+
+      <!-- Funds Added & Withdrawn Section -->
+      <div style="border-top:1px solid #F1F5F9;padding-top:16px;margin-top:16px;margin-bottom:16px;">
+        <div class="form-lbl" style="color:#00B386;font-size:12.5px;font-weight:700;margin-bottom:10px;">FUNDS ADDED &amp; WITHDRAWN</div>
+        <form id="ulCapitalForm">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+              <label class="form-lbl">TYPE</label>
+              <select id="ulCapType" class="form-input"><option value="ADD">+ Add</option><option value="WITHDRAW">- Withdraw</option></select>
+            </div>
+            <div>
+              <label class="form-lbl">AMOUNT (₹)</label>
+              <input id="ulCapAmount" type="number" step="0.01" placeholder="₹50,000" class="form-input" required />
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label class="form-lbl">DATE</label>
+            <input id="ulCapDate" type="date" class="form-input" required />
+          </div>
+          <button type="submit" class="submit-btn" style="margin-bottom:14px;">Record Capital Transaction</button>
+        </form>
+
+        <div class="calc-preview-box">
+          <div class="c-row"><span>Total Funds Added</span><b id="sumCapAdded" style="color:#0F172A;font-family:'JetBrains Mono';">₹40,123.00</b></div>
+          <div class="c-row"><span>Total Funds Withdrawn</span><b id="sumCapWithdrawn" style="color:#0F172A;font-family:'JetBrains Mono';">₹0.00</b></div>
+          <div class="c-row total-row"><span>Net Capital Invested</span><b id="sumNetCapital" style="color:#00B386;font-family:'JetBrains Mono';">₹40,123.00</b></div>
+        </div>
+
+        <div id="ulCapitalHistoryList" style="font-family:'JetBrains Mono', monospace;font-size:12px;max-height:100px;overflow-y:auto;margin-top:10px;">Loading logs...</div>
+      </div>
+
+      <!-- Side-by-Side Net Charges & MTF Section -->
+      <div style="border-top:1px solid #F1F5F9;padding-top:16px;">
+        <div class="form-lbl" style="color:#00B386;font-size:12.5px;font-weight:700;margin-bottom:10px;">NET CHARGES &amp; MTF</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          
+          <!-- Column 1: Net Charges -->
+          <div class="calc-preview-box" style="padding:14px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:12.5px;font-weight:600;color:#475569;">Net Charges</span>
+              <button type="button" class="edit-icon-btn" id="editChargesBtn" title="Modify Net Charges" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="sumTotalCharges" style="font-family:'JetBrains Mono', monospace;font-size:18px;font-weight:700;color:#EB5B56;">-₹6,585.00</div>
+            <div id="chargesEditWrap" style="display:none;margin-top:6px;">
+              <input id="customChargesInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
+              <div style="display:flex;gap:4px;">
+                <button type="button" id="saveChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;">SAVE</button>
+                <button type="button" id="resetChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;background:#64748B !important;">AUTO</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: MTF -->
+          <div class="calc-preview-box" style="padding:14px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:12.5px;font-weight:600;color:#475569;">MTF</span>
+              <button type="button" class="edit-icon-btn" id="editMtfIntBtn" title="Modify MTF Interest" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="sumTotalMtfInt" style="font-family:'JetBrains Mono', monospace;font-size:18px;font-weight:700;color:#EB5B56;">-₹2,138.77</div>
+            <div id="mtfIntEditWrap" style="display:none;margin-top:6px;">
+              <input id="customMtfIntInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
+              <div style="display:flex;gap:4px;">
+                <button type="button" id="saveMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;">SAVE</button>
+                <button type="button" id="resetMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;background:#64748B !important;">AUTO</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   </div>
 
