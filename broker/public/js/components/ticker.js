@@ -14,6 +14,10 @@ const tickerPrices = {
   FINNIFTY: { price: 25981.40, prevPrice: 26108.00, change: -126.60, changePct: -0.48 },
   MIDCPNIFTY: { price: 14861.05, prevPrice: 14840.75, change: 20.30, changePct: 0.14 },
   GIFTNIFTY: { price: 24114.00, prevPrice: 24230.10, change: -116.10, changePct: -0.48 },
+  GOLD: { price: 71850.00, prevPrice: 71520.00, change: 330.00, changePct: 0.46 },
+  SILVER: { price: 84620.00, prevPrice: 85150.00, change: -530.00, changePct: -0.62 },
+  CRUDEOIL: { price: 6412.00, prevPrice: 6385.00, change: 27.00, changePct: 0.42 },
+  NATURALGAS: { price: 184.50, prevPrice: 187.20, change: -2.70, changePct: -1.44 },
 };
 
 export function isIndianMarketOpen() {
