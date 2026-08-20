@@ -76,8 +76,7 @@ export function renderHoldingsRow(row) {
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:center;">${daysText}</td>
       <td class="progress-cell" style="width:60px;text-align:right;padding-right:20px !important;">
-        <div class="bar-container" title="Overall ${isLoss ? 'Loss' : 'Gain'}">
-          <div class="bar" style="background:${barColor};width:70%;"></div>
+        <div class="bar-container" title="Net ${isLoss ? 'Loss' : 'Profit'}: ${money(row.overallPL)}" style="display:inline-block;width:22px;height:4px;background:${isLoss ? '#EB5B56' : '#00B386'};border-radius:2px;">
         </div>
       </td>
     </tr>`;
@@ -391,14 +390,7 @@ export function initPortfolio() {
     });
   });
 
-  const cashPill = document.getElementById('cashCardPill');
-  const cashPopover = document.getElementById('cashPopover');
-  if (cashPill && cashPopover) {
-    cashPill.addEventListener('click', (e) => {
-      e.stopPropagation();
-      cashPopover.classList.toggle('show');
-    });
-  }
+
 
   document.addEventListener('click', (e) => {
     const stockBtn = e.target.closest('[data-action="order"]');
