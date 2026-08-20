@@ -62,6 +62,14 @@ export function initPopovers() {
     });
   }
 
+  const cashPill = document.getElementById('cashCardPill');
+  if (cashPill) {
+    cashPill.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePopover('cashPopover', 'cashCardPill');
+    });
+  }
+
   // Click Watchlist Row to switch active topbar index
   document.querySelectorAll('.watch-row').forEach((row) => {
     row.addEventListener('click', (e) => {

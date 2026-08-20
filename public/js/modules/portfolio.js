@@ -185,8 +185,8 @@ function updateSummaryCards(mode = 'all') {
     const ovPct = invAmt > 0 ? (ovNum / invAmt) * 100 : Number(c.overallPLPercent || 0);
     const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
     const signSym = ovNum < 0 ? '-' : (ovNum > 0 ? '+' : '');
-    heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))}(${signPct})`;
-    heroOverallEl.style.color = ovNum >= 0 ? '#20E098' : '#FF6B6B';
+    heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))} (${signPct})`;
+    heroOverallEl.style.color = ovNum >= 0 ? '#00B386' : '#EB5B56';
   }
 
   const heroTodayEl = document.getElementById('heroTodayPl');
@@ -194,7 +194,7 @@ function updateSummaryCards(mode = 'all') {
     const tdNum = Number(c.todayPL || 0);
     const signSym = tdNum < 0 ? '-' : (tdNum > 0 ? '+' : '');
     heroTodayEl.textContent = `${signSym}${money(Math.abs(tdNum))}`;
-    heroTodayEl.style.color = tdNum >= 0 ? '#20E098' : '#FF6B6B';
+    heroTodayEl.style.color = tdNum >= 0 ? '#00B386' : '#EB5B56';
   }
 
   // Portfolio View 4 Light Cards (#view-portfolio)

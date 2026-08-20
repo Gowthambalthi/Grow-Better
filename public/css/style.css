@@ -431,6 +431,9 @@ button { font-family: inherit; }
 }
 
 .watchlist-dropdown-popover {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
   width: 330px !important;
   min-width: 330px !important;
   background: #FFFFFF !important;
@@ -439,6 +442,11 @@ button { font-family: inherit; }
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.04) !important;
   overflow: hidden !important;
   z-index: 99999 !important;
+  display: none;
+}
+
+.watchlist-dropdown-popover.show {
+  display: block !important;
 }
 
 .watchlist-dropdown-popover .popover-header {
@@ -759,9 +767,21 @@ button { font-family: inherit; }
 }
 
 .cash-breakdown-popover {
-  width: 230px;
-  right: 0;
-  top: calc(100% + 8px);
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  width: 250px !important;
+  background: #FFFFFF !important;
+  border-radius: 12px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 4px 6px rgba(0, 0, 0, 0.04) !important;
+  overflow: hidden !important;
+  z-index: 99999 !important;
+  display: none;
+}
+
+.cash-breakdown-popover.show {
+  display: block !important;
 }
 .cash-breakdown-popover .popover-header {
   padding: 10px 14px;
