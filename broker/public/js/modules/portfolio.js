@@ -402,15 +402,32 @@ function initSettingsPopover() {
       document.getElementById('ulCapDate').value = new Date().toISOString().slice(0, 10);
       loadCapitalLogs();
       loadLedgerSummary();
-      togglePopover('portfolioSettingsPopover', 'openUnifiedLedgerBtn');
+
+      const popover = document.getElementById('portfolioSettingsPopover');
+      const backdrop = document.getElementById('settingsModalBackdrop');
+      if (popover) {
+        const willShow = !popover.classList.contains('show');
+        popover.classList.toggle('show', willShow);
+        if (backdrop) backdrop.classList.toggle('show', willShow);
+        if (openSettingsBtn) openSettingsBtn.classList.toggle('active', willShow);
+      }
     });
   }
 
   const closeSettingsBtn = document.getElementById('closeSettingsPopoverBtn');
+  const backdrop = document.getElementById('settingsModalBackdrop');
   if (closeSettingsBtn) {
     closeSettingsBtn.addEventListener('click', () => {
       document.getElementById('portfolioSettingsPopover').classList.remove('show');
-      openSettingsBtn.classList.remove('active');
+      if (backdrop) backdrop.classList.remove('show');
+      if (openSettingsBtn) openSettingsBtn.classList.remove('active');
+    });
+  }
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      document.getElementById('portfolioSettingsPopover').classList.remove('show');
+      backdrop.classList.remove('show');
+      if (openSettingsBtn) openSettingsBtn.classList.remove('active');
     });
   }
 

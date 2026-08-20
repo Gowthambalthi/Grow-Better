@@ -702,8 +702,41 @@ button { font-family: inherit; }
   overflow: hidden;
   animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.dropdown-popover.show { display: block; }
-.dropdown-popover.settings-popover { width: 400px; }
+.settings-modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(30, 41, 59, 0.7) !important;
+  backdrop-filter: blur(3px) !important;
+  z-index: 999998 !important;
+  display: none;
+}
+
+.settings-modal-backdrop.show {
+  display: block !important;
+}
+
+.dropdown-popover.settings-popover {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 500px !important;
+  min-width: 500px !important;
+  max-width: 520px !important;
+  max-height: 88vh !important;
+  background: #FFFFFF !important;
+  border-radius: 16px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+  overflow: hidden !important;
+  z-index: 999999 !important;
+  margin: 0 !important;
+}
 
 .interactive-pill {
   cursor: pointer;
