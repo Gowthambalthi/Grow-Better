@@ -613,10 +613,10 @@
                     </form>
 
                     <!-- Funds Added & Withdrawn Section -->
-                    <div style="border-top:1px solid var(--line);padding-top:10px;margin-bottom:14px;">
-                      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">FUNDS ADDED &amp; WITHDRAWN</div>
+                    <div style="border-top:1px solid #F1F5F9;padding-top:16px;margin-top:16px;margin-bottom:16px;">
+                      <div class="form-lbl" style="color:#00B386;font-size:12.5px;font-weight:700;margin-bottom:10px;">FUNDS ADDED &amp; WITHDRAWN</div>
                       <form id="ulCapitalForm">
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
                           <div>
                             <label class="form-lbl">TYPE</label>
                             <select id="ulCapType" class="form-input"><option value="ADD">+ Add</option><option value="WITHDRAW">- Withdraw</option></select>
@@ -625,66 +625,66 @@
                             <label class="form-lbl">AMOUNT (₹)</label>
                             <input id="ulCapAmount" type="number" step="0.01" placeholder="₹50,000" class="form-input" required />
                           </div>
-                          <div>
-                            <label class="form-lbl">DATE</label>
-                            <input id="ulCapDate" type="date" class="form-input" required />
-                          </div>
                         </div>
-                        <button type="submit" class="submit-btn submit-btn--secondary" style="padding:7px;font-size:11px;">RECORD CAPITAL TRANSACTION</button>
+                        <div style="margin-bottom:12px;">
+                          <label class="form-lbl">DATE</label>
+                          <input id="ulCapDate" type="date" class="form-input" required />
+                        </div>
+                        <button type="submit" class="submit-btn" style="margin-bottom:14px;">Record Capital Transaction</button>
                       </form>
 
-                      <div class="calc-preview-box" style="margin-top:8px;font-size:11px;">
-                        <div class="c-row"><span>Total Funds Added:</span><b id="sumCapAdded" style="color:var(--text-primary);">₹0.00</b></div>
-                        <div class="c-row"><span>Total Funds Withdrawn:</span><b id="sumCapWithdrawn" style="color:var(--text-primary);">₹0.00</b></div>
-                        <div class="c-row total-row"><span>Net Capital Invested:</span><b id="sumNetCapital" style="color:var(--accent);">₹0.00</b></div>
+                      <div class="calc-preview-box">
+                        <div class="c-row"><span>Total Funds Added</span><b id="sumCapAdded" style="color:#0F172A;font-family:'JetBrains Mono';">₹40,123.00</b></div>
+                        <div class="c-row"><span>Total Funds Withdrawn</span><b id="sumCapWithdrawn" style="color:#0F172A;font-family:'JetBrains Mono';">₹0.00</b></div>
+                        <div class="c-row total-row"><span>Net Capital Invested</span><b id="sumNetCapital" style="color:#00B386;font-family:'JetBrains Mono';">₹40,123.00</b></div>
                       </div>
 
-                      <div id="ulCapitalHistoryList" style="font-family:var(--font-mono);font-size:10.5px;max-height:90px;overflow-y:auto;margin-top:6px;">Loading logs...</div>
+                      <div id="ulCapitalHistoryList" style="font-family:'JetBrains Mono', monospace;font-size:12px;max-height:100px;overflow-y:auto;margin-top:10px;">Loading logs...</div>
                     </div>
 
                     <!-- Side-by-Side Net Charges & MTF Section -->
-                    <div style="border-top:1px solid var(--line);padding-top:10px;">
-                      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px;">NET CHARGES &amp; MTF</div>
-                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="border-top:1px solid #F1F5F9;padding-top:16px;">
+                      <div class="form-lbl" style="color:#00B386;font-size:12.5px;font-weight:700;margin-bottom:10px;">NET CHARGES &amp; MTF</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                         
                         <!-- Column 1: Net Charges -->
-                        <div class="calc-preview-box" style="font-size:11px;padding:8px 10px;">
-                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                            <span style="font-size:10px;font-weight:700;color:var(--text-muted);">NET CHARGES</span>
-                            <button type="button" class="edit-icon-btn" id="editChargesBtn" title="Modify Net Charges">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <div class="calc-preview-box" style="padding:14px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:14px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-size:12.5px;font-weight:600;color:#475569;">Net Charges</span>
+                            <button type="button" class="edit-icon-btn" id="editChargesBtn" title="Modify Net Charges" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:4px;">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                               </svg>
                             </button>
                           </div>
-                          <div id="sumTotalCharges" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--loss);">-₹0.00</div>
+                          <div id="sumTotalCharges" style="font-family:'JetBrains Mono', monospace;font-size:18px;font-weight:700;color:#EB5B56;">-₹6,585.00</div>
                           <div id="chargesEditWrap" style="display:none;margin-top:6px;">
                             <input id="customChargesInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
                             <div style="display:flex;gap:4px;">
-                              <button type="button" id="saveChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;flex:1;">SAVE</button>
-                              <button type="button" id="resetChargesBtn" class="submit-btn submit-btn--secondary" style="padding:4px 8px;font-size:10px;">AUTO</button>
+                              <button type="button" id="saveChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;">SAVE</button>
+                              <button type="button" id="resetChargesBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;background:#64748B !important;">AUTO</button>
                             </div>
                           </div>
                         </div>
 
                         <!-- Column 2: MTF -->
-                        <div class="calc-preview-box" style="font-size:11px;padding:8px 10px;">
-                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                            <span style="font-size:10px;font-weight:700;color:var(--text-muted);">MTF</span>
-                            <button type="button" class="edit-icon-btn" id="editMtfIntBtn" title="Modify MTF Interest">
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <div class="calc-preview-box" style="padding:14px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:14px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <span style="font-size:12.5px;font-weight:600;color:#475569;">MTF</span>
+                            <button type="button" class="edit-icon-btn" id="editMtfIntBtn" title="Modify MTF Interest" style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;padding:4px;">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                               </svg>
                             </button>
                           </div>
-                          <div id="sumTotalMtfInt" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--loss);">-₹0.00</div>
+                          <div id="sumTotalMtfInt" style="font-family:'JetBrains Mono', monospace;font-size:18px;font-weight:700;color:#EB5B56;">-₹2,138.77</div>
                           <div id="mtfIntEditWrap" style="display:none;margin-top:6px;">
                             <input id="customMtfIntInput" type="number" step="0.01" placeholder="Override ₹" class="form-input" style="padding:4px 6px;font-size:11px;margin-bottom:4px;" />
                             <div style="display:flex;gap:4px;">
-                              <button type="button" id="saveMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;flex:1;">SAVE</button>
-                              <button type="button" id="resetMtfIntBtn" class="submit-btn submit-btn--secondary" style="padding:4px 8px;font-size:10px;">AUTO</button>
+                              <button type="button" id="saveMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;">SAVE</button>
+                              <button type="button" id="resetMtfIntBtn" class="submit-btn" style="padding:4px 8px;font-size:10px;height:auto;background:#64748B !important;">AUTO</button>
                             </div>
                           </div>
                         </div>
