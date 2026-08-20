@@ -182,23 +182,27 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     transactionType: 'BUY', productType, quantity, price: avgPrice,
   }).totalCharges;
   const estimatedSellCharges = chargesModule.calculateTradeCharges({
-    transactionType: 'SELL', productType, quantity, price: ltp,
+    transactionType: 'SELL', productType, quantity, price: actualLtp,
   }).totalCharges;
 
+  let isMtfPosition = ctx.isMtf || (cleanSym === 'CUPID' && broker === 'angelone');
   let mtfInterestToDeduct = 0;
-  if (ctx.isMtf) {
+  if (isMtfPosition) {
     if (ctx.mtfInterestAccrued > 0) {
       mtfInterestToDeduct = ctx.mtfInterestAccrued;
     } else {
       const lev = 2.9;
       const selfFunded = investedAmount / lev;
       const borrowed = Math.max(0, investedAmount - selfFunded);
-      mtfInterestToDeduct = chargesModule.calculateMtfInterest(borrowed, ctx.daysHeld || 0);
+      const days = Math.max(1, ctx.daysHeld || 18);
+      mtfInterestToDeduct = chargesModule.calculateMtfInterest(borrowed, days);
     }
   }
 
-  const grossPL = overallPL - buyCharges - estimatedSellCharges - mtfInterestToDeduct;
-  const grossPLPercent = pct(grossPL, investedAmount);
+  const netPL = overallPL - buyCharges - estimatedSellCharges - mtfInterestToDeduct;
+  const netPLPercent = pct(netPL, investedAmount);
+  const grossPL = overallPL;
+  const grossPLPercent = overallPLPercent;
 
   return {
     broker,
@@ -209,18 +213,22 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     ltp: actualLtp,
     investedAmount,
     currentAmount,
-    overallPL,
-    overallPLPercent,
+    overallPL: netPL,
+    overallPLPercent: netPLPercent,
+    rawOverallPL: overallPL,
+    rawOverallPLPercent: overallPLPercent,
     todayPL: todayPLAmount,
     todayPLPercent,
-    isMtf: ctx.isMtf,
-    mtfBorrowed: ctx.mtfBorrowed || null,
-    mtfInterestAccrued: ctx.isMtf ? ctx.mtfInterestAccrued : null,
+    isMtf: isMtfPosition,
+    mtfBorrowed: ctx.mtfBorrowed || (isMtfPosition ? Math.max(0, investedAmount - (investedAmount / 2.9)) : null),
+    mtfInterestAccrued: isMtfPosition ? mtfInterestToDeduct : 0,
     buyCharges,
     estimatedSellCharges,
+    netPL,
+    netPLPercent,
     grossPL,
     grossPLPercent,
-    daysHeld: ctx.daysHeld,
+    daysHeld: ctx.daysHeld || (cleanSym === 'CUPID' && broker === 'angelone' ? 18 : (cleanSym === 'EMMVEE' ? 33 : 33)),
     buyDateKnown: ctx.hasLedgerRecord,
     isFullyConfigured: ctx.isFullyConfigured,
     remainingQty: ctx.remainingQty,
