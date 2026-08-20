@@ -41,7 +41,7 @@ export function togglePopover(popoverId, buttonId) {
   if (!popover) return;
   const isShown = popover.classList.contains('show');
 
-  document.querySelectorAll('.dropdown-popover').forEach((p) => p.classList.remove('show'));
+  document.querySelectorAll('.dropdown-popover:not(#portfolioSettingsPopover)').forEach((p) => p.classList.remove('show'));
   document.querySelectorAll('.topbar-index-pill').forEach((b) => b.classList.remove('active'));
   document.querySelectorAll('.portfolio-settings-btn').forEach((b) => b.classList.remove('active'));
 
