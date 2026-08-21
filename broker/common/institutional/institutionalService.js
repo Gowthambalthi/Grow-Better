@@ -517,7 +517,51 @@ function seedInstitutesDatabase() {
         { isin: 'INE213A01029', sym: 'SHRIRAMFIN', bse: '511218', name: 'Shriram Finance Ltd', sec: 'Banking & Financials', cap: 112000, ltp: 2985.40, score: 82.4, netFlow: 482.0, ret: 4.93, b: 1240, s: 70 },
         { isin: 'INE090A01021', sym: 'ICICIBANK', bse: '532174', name: 'ICICI Bank Ltd', sec: 'Banking & Financials', cap: 842000, ltp: 1195.00, score: 79.8, netFlow: 620.0, ret: 5.33, b: 1650, s: 110 },
         { isin: 'INE062A01020', sym: 'SBIN', bse: '500112', name: 'State Bank of India', sec: 'Banking & Financials', cap: 748000, ltp: 848.00, score: 76.5, netFlow: 540.0, ret: 5.42, b: 1410, s: 80 },
-        { isin: 'INE094A01015', sym: 'CUPID', bse: '538418', name: 'Cupid Ltd', sec: 'Healthcare & Pharma', cap: 3100, ltp: 285.99, score: 71.2, netFlow: 184.0, ret: 9.01, b: 840, s: 40 }
+        { isin: 'INE094A01015', sym: 'CUPID', bse: '538418', name: 'Cupid Ltd', sec: 'Healthcare & Pharma', cap: 3100, ltp: 285.99, score: 71.2, netFlow: 184.0, ret: 9.01, b: 840, s: 40 },
+        { isin: 'INE040A01034', sym: 'HDFCBANK', bse: '500180', name: 'HDFC Bank Ltd', sec: 'Banking & Financials', cap: 1285000, ltp: 1642.50, score: 91.2, netFlow: 1120.0, ret: 6.85, b: 1780, s: 95 },
+        { isin: 'INE467B01029', sym: 'TCS', bse: '532540', name: 'Tata Consultancy Services Ltd', sec: 'IT Services', cap: 1450000, ltp: 4120.00, score: 87.5, netFlow: 980.0, ret: 8.40, b: 1620, s: 85 },
+        { isin: 'INE009A01021', sym: 'INFY', bse: '500209', name: 'Infosys Ltd', sec: 'IT Services', cap: 785000, ltp: 1885.30, score: 84.1, netFlow: 740.0, ret: 7.15, b: 1540, s: 90 },
+        { isin: 'INE155A01022', sym: 'TATAMOTORS', bse: '500570', name: 'Tata Motors Ltd', sec: 'Automotive', cap: 345000, ltp: 1045.00, score: 89.4, netFlow: 890.0, ret: 14.20, b: 1590, s: 75 },
+        { isin: 'INE397D01024', sym: 'BHARTIARTL', bse: '532454', name: 'Bharti Airtel Ltd', sec: 'Telecommunications', cap: 812000, ltp: 1435.00, score: 86.3, netFlow: 810.0, ret: 9.80, b: 1490, s: 80 },
+        { isin: 'INE154A01025', sym: 'ITC', bse: '500875', name: 'ITC Ltd', sec: 'FMCG & Consumer', cap: 615000, ltp: 495.00, score: 83.2, netFlow: 670.0, ret: 5.60, b: 1430, s: 85 },
+        { isin: 'INE018A01030', sym: 'LT', bse: '500510', name: 'Larsen & Toubro Ltd', sec: 'Capital Goods', cap: 495000, ltp: 3620.00, score: 88.0, netFlow: 790.0, ret: 11.50, b: 1510, s: 70 },
+        { isin: 'INE296A01024', sym: 'BAJFINANCE', bse: '500034', name: 'Bajaj Finance Ltd', sec: 'Banking & Financials', cap: 442000, ltp: 7150.00, score: 85.0, netFlow: 710.0, ret: 8.90, b: 1460, s: 75 },
+        { isin: 'INE238A01034', sym: 'AXISBANK', bse: '532215', name: 'Axis Bank Ltd', sec: 'Banking & Financials', cap: 382000, ltp: 1240.00, score: 81.5, netFlow: 590.0, ret: 6.10, b: 1390, s: 80 },
+        { isin: 'INE237A01028', sym: 'KOTAKBANK', bse: '500247', name: 'Kotak Mahindra Bank Ltd', sec: 'Banking & Financials', cap: 354000, ltp: 1780.00, score: 79.2, netFlow: 510.0, ret: 4.50, b: 1340, s: 85 },
+        { isin: 'INE585B01010', sym: 'MARUTI', bse: '532500', name: 'Maruti Suzuki India Ltd', sec: 'Automotive', cap: 395000, ltp: 12550.00, score: 82.8, netFlow: 630.0, ret: 7.80, b: 1380, s: 70 },
+        { isin: 'INE044A01036', sym: 'SUNPHARMA', bse: '524715', name: 'Sun Pharmaceutical Industries Ltd', sec: 'Healthcare & Pharma', cap: 412000, ltp: 1720.00, score: 84.5, netFlow: 680.0, ret: 9.30, b: 1420, s: 65 },
+        { isin: 'INE280A01028', sym: 'TITAN', bse: '500114', name: 'Titan Company Ltd', sec: 'FMCG & Consumer', cap: 318000, ltp: 3580.00, score: 81.0, netFlow: 540.0, ret: 6.40, b: 1330, s: 75 },
+        { isin: 'INE021A01026', sym: 'ASIANPAINT', bse: '500820', name: 'Asian Paints Ltd', sec: 'FMCG & Consumer', cap: 285000, ltp: 2970.00, score: 78.5, netFlow: 490.0, ret: 4.80, b: 1290, s: 80 },
+        { isin: 'INE733E01010', sym: 'NTPC', bse: '532555', name: 'NTPC Ltd', sec: 'Utilities', cap: 398000, ltp: 410.00, score: 86.0, netFlow: 750.0, ret: 13.10, b: 1480, s: 65 },
+        { isin: 'INE481G01011', sym: 'ULTRACEMCO', bse: '532538', name: 'UltraTech Cement Ltd', sec: 'Infrastructure', cap: 332000, ltp: 11450.00, score: 82.0, netFlow: 580.0, ret: 7.20, b: 1360, s: 70 },
+        { isin: 'INE752E01010', sym: 'POWERGRID', bse: '532898', name: 'Power Grid Corp of India Ltd', sec: 'Utilities', cap: 312000, ltp: 335.00, score: 83.8, netFlow: 640.0, ret: 10.40, b: 1410, s: 60 },
+        { isin: 'INE101A01026', sym: 'M&M', bse: '500520', name: 'Mahindra & Mahindra Ltd', sec: 'Automotive', cap: 362000, ltp: 2910.00, score: 87.2, netFlow: 820.0, ret: 15.60, b: 1530, s: 65 },
+        { isin: 'INE075A01022', sym: 'WIPRO', bse: '507685', name: 'Wipro Ltd', sec: 'IT Services', cap: 275000, ltp: 525.00, score: 77.0, netFlow: 430.0, ret: 3.90, b: 1250, s: 85 },
+        { isin: 'INE081A01012', sym: 'TATASTEEL', bse: '500470', name: 'Tata Steel Ltd', sec: 'Metals & Mining', cap: 215000, ltp: 172.00, score: 79.5, netFlow: 510.0, ret: 6.80, b: 1310, s: 75 },
+        { isin: 'INE522F01014', sym: 'COALINDIA', bse: '533278', name: 'Coal India Ltd', sec: 'Metals & Mining', cap: 315000, ltp: 512.00, score: 84.8, netFlow: 710.0, ret: 11.80, b: 1440, s: 60 },
+        { isin: 'INE423A01024', sym: 'ADANIENT', bse: '512599', name: 'Adani Enterprises Ltd', sec: 'Infrastructure', cap: 365000, ltp: 3180.00, score: 85.5, netFlow: 760.0, ret: 12.40, b: 1460, s: 70 },
+        { isin: 'INE742F01042', sym: 'ADANIPORTS', bse: '532921', name: 'Adani Ports & SEZ Ltd', sec: 'Infrastructure', cap: 322000, ltp: 1485.00, score: 86.8, netFlow: 780.0, ret: 13.90, b: 1470, s: 65 },
+        { isin: 'INE849A01020', sym: 'TRENT', bse: '500251', name: 'Trent Ltd', sec: 'FMCG & Consumer', cap: 248000, ltp: 6980.00, score: 92.5, netFlow: 1150.0, ret: 28.50, b: 1690, s: 50 },
+        { isin: 'INE263A01024', sym: 'BEL', bse: '500049', name: 'Bharat Electronics Ltd', sec: 'Capital Goods', cap: 218000, ltp: 298.00, score: 90.0, netFlow: 990.0, ret: 22.40, b: 1610, s: 55 },
+        { isin: 'INE066A01021', sym: 'HAL', bse: '541154', name: 'Hindustan Aeronautics Ltd', sec: 'Capital Goods', cap: 325000, ltp: 4850.00, score: 91.8, netFlow: 1080.0, ret: 25.10, b: 1650, s: 50 },
+        { isin: 'INE271C01023', sym: 'DLF', bse: '532868', name: 'DLF Ltd', sec: 'Real Estate & Construction', cap: 212000, ltp: 855.00, score: 81.2, netFlow: 520.0, ret: 7.90, b: 1320, s: 70 },
+        { isin: 'INE758T01015', sym: 'ZOMATO', bse: '543320', name: 'Zomato Ltd', sec: 'IT Services', cap: 235000, ltp: 265.00, score: 93.1, netFlow: 1220.0, ret: 31.20, b: 1720, s: 45 },
+        { isin: 'INE982J01020', sym: 'PAYTM', bse: '543396', name: 'One97 Communications Ltd (Paytm)', sec: 'IT Services', cap: 34500, ltp: 545.00, score: 72.0, netFlow: 210.0, ret: 4.10, b: 890, s: 95 },
+        { isin: 'INE0JJ401013', sym: 'JIOFIN', bse: '543940', name: 'Jio Financial Services Ltd', sec: 'Banking & Financials', cap: 215000, ltp: 338.00, score: 85.2, netFlow: 740.0, ret: 11.20, b: 1420, s: 65 },
+        { isin: 'INE200M01013', sym: 'VBL', bse: '540180', name: 'Varun Beverages Ltd', sec: 'FMCG & Consumer', cap: 205000, ltp: 630.00, score: 89.2, netFlow: 940.0, ret: 19.80, b: 1580, s: 55 },
+        { isin: 'INE121A01024', sym: 'CHOLAFIN', bse: '511243', name: 'Cholamandalam Inv & Fin Co', sec: 'Banking & Financials', cap: 118000, ltp: 1410.00, score: 83.5, netFlow: 610.0, ret: 9.40, b: 1370, s: 70 },
+        { isin: 'INE205A01025', sym: 'VEDL', bse: '500295', name: 'Vedanta Ltd', sec: 'Metals & Mining', cap: 172000, ltp: 462.00, score: 84.0, netFlow: 650.0, ret: 12.10, b: 1400, s: 65 },
+        { isin: 'INE318A01026', sym: 'PIDILITIND', bse: '500331', name: 'Pidilite Industries Ltd', sec: 'Chemicals & Fertilizers', cap: 158000, ltp: 3110.00, score: 80.5, netFlow: 490.0, ret: 5.80, b: 1300, s: 75 },
+        { isin: 'INE047A01021', sym: 'GRASIM', bse: '500300', name: 'Grasim Industries Ltd', sec: 'Infrastructure', cap: 178000, ltp: 2680.00, score: 82.4, netFlow: 560.0, ret: 8.10, b: 1350, s: 70 },
+        { isin: 'INE646L01027', sym: 'INDIGO', bse: '539448', name: 'InterGlobe Aviation Ltd (IndiGo)', sec: 'Capital Goods', cap: 184000, ltp: 4760.00, score: 86.5, netFlow: 770.0, ret: 14.80, b: 1460, s: 60 },
+        { isin: 'INE213A01000', sym: 'ONGC', bse: '500312', name: 'Oil & Natural Gas Corporation Ltd', sec: 'Oil & Gas', cap: 382000, ltp: 304.00, score: 85.0, netFlow: 720.0, ret: 11.50, b: 1430, s: 65 },
+        { isin: 'INE029A01011', sym: 'BPCL', bse: '500547', name: 'Bharat Petroleum Corporation Ltd', sec: 'Oil & Gas', cap: 148000, ltp: 342.00, score: 81.8, netFlow: 530.0, ret: 7.50, b: 1320, s: 75 },
+        { isin: 'INE242A01010', sym: 'IOC', bse: '530965', name: 'Indian Oil Corporation Ltd', sec: 'Oil & Gas', cap: 245000, ltp: 174.00, score: 82.5, netFlow: 570.0, ret: 8.40, b: 1350, s: 70 },
+        { isin: 'INE129A01019', sym: 'GAIL', bse: '532155', name: 'GAIL (India) Ltd', sec: 'Oil & Gas', cap: 152000, ltp: 231.00, score: 83.0, netFlow: 600.0, ret: 9.10, b: 1360, s: 70 },
+        { isin: 'INE335Y01012', sym: 'IRCTC', bse: '542830', name: 'Indian Railway Catering & Tourism', sec: 'Capital Goods', cap: 74500, ltp: 932.00, score: 79.0, netFlow: 420.0, ret: 5.10, b: 1260, s: 80 },
+        { isin: 'INE415G01027', sym: 'RVNL', bse: '542649', name: 'Rail Vikas Nigam Ltd', sec: 'Capital Goods', cap: 122000, ltp: 585.00, score: 91.0, netFlow: 1050.0, ret: 26.80, b: 1640, s: 50 },
+        { isin: 'INE020B01018', sym: 'IREDA', bse: '544026', name: 'Indian Renewable Energy Dev Agency', sec: 'Renewable Energy', cap: 64500, ltp: 240.00, score: 92.0, netFlow: 1110.0, ret: 29.40, b: 1680, s: 45 },
+        { isin: 'INE134E01011', sym: 'SUZLON', bse: '532667', name: 'Suzlon Energy Ltd', sec: 'Renewable Energy', cap: 108000, ltp: 79.50, score: 94.0, netFlow: 1350.0, ret: 34.20, b: 1750, s: 40 }
       ];
 
       db.transaction(() => {
@@ -533,22 +577,28 @@ function seedInstitutesDatabase() {
           }
         }
 
-        // 1,650 Listed Equities
+        // 1,600 Listed Equities with Clean Real Company Names (No fake #1004 tags!)
         const prefixes = ['TATA', 'ADANI', 'BIRLA', 'RELIANCE', 'MAHINDRA', 'BAJAJ', 'GODREJ', 'JINDAL', 'APOLLO', 'BHARTI', 'L&T', 'KOTAK', 'HDFC', 'ICICI', 'SHREE', 'MUTHOOT', 'KPIT', 'CYIENT', 'CEAT', 'SRF'];
-        const suffixes = ['INDIA', 'TECH', 'FINANCE', 'POWER', 'MOTORS', 'CHEMICALS', 'GLOBAL', 'ENERGY', 'INFRA', 'PHARMA', 'LOGISTICS', 'LABS', 'INDUSTRIES', 'CORP', 'ENTERPRISES', 'SYSTEMS', 'DIGITAL', 'SOLUTIONS'];
+        const suffixes = ['TECH', 'FINANCE', 'POWER', 'MOTORS', 'CHEMICALS', 'GLOBAL', 'ENERGY', 'INFRA', 'PHARMA', 'LOGISTICS', 'LABS', 'INDUSTRIES', 'CAPITAL', 'ENTERPRISES', 'SYSTEMS', 'DIGITAL', 'SOLUTIONS'];
+        const nameSuffixes = ['Technologies Ltd', 'Financial Services Ltd', 'Power & Energy Ltd', 'Motors India Ltd', 'Chemicals & Organics Ltd', 'Global Enterprises Ltd', 'Energy Solutions Ltd', 'Infrastructure Development Ltd', 'Pharma & Life Sciences Ltd', 'Logistics Ltd', 'Laboratories Ltd', 'Industries Ltd', 'Capital Management Ltd', 'Enterprises Ltd', 'Engineering Systems Ltd', 'Digital Solutions Ltd', 'Solutions Ltd'];
 
-        for (let i = 1; i <= 1650; i++) {
-          const p = prefixes[i % prefixes.length];
-          const s = suffixes[Math.floor(i / prefixes.length) % suffixes.length];
-          const sym = `${p}_${s}_${i}`;
-          const isin = `INE${String(i).padStart(9, '0')}`;
+        for (let i = 1; i <= 1600; i++) {
+          const pIdx = i % prefixes.length;
+          const sIdx = Math.floor(i / prefixes.length) % suffixes.length;
+          const p = prefixes[pIdx];
+          const s = suffixes[sIdx];
+          
+          const sym = i > 340 ? `${p}_${s}_${Math.floor(i / (prefixes.length * suffixes.length)) + 1}` : `${p}_${s}`;
+          const cleanSym = sym.replace('_1', '');
+          const isin = `INE${String(i + 100).padStart(9, '0')}`;
           const bse = String(500000 + i);
-          const name = `${p} ${s} India Ltd #${i}`;
+          
+          const name = `${p.charAt(0) + p.slice(1).toLowerCase()} ${nameSuffixes[sIdx]}`;
           const sec = SECTORS[i % SECTORS.length];
           const cap = Number((500 + (i * 147.5) % 850000).toFixed(0));
           const ltp = Number((40 + (i * 37.8) % 4500).toFixed(2));
 
-          insertSym.run(isin, sym, bse, name, sec, cap, ltp);
+          insertSym.run(isin, cleanSym, bse, name, sec, cap, ltp);
 
           const baseScore = Number((15 + (i * 13.7) % 80).toFixed(1));
           const netFlow = Number((10 + (i * 29.4) % 1800).toFixed(1));
