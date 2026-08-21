@@ -13,7 +13,12 @@ import { api } from '../core/api.js';
 let currentSubModeInst = 'AMC'; // 'AMC' (24 AMCs) or 'SCHEME' (~2000 Schemes)
 let currentTimeframeInst = '1m';
 let currentTimeframeStk = '1m';
-let currentSortOrderStk = 'DESC';
+
+let instSortCol = 'growth_score';
+let instSortDir = 'DESC';
+
+let stkSortCol = 'weightage_score';
+let stkSortDir = 'DESC';
 
 export function initInstitutionalScanner() {
   bindControls();
@@ -36,6 +41,8 @@ function bindControls() {
   if (btnSubAmc && btnSubScheme) {
     btnSubAmc.addEventListener('click', () => {
       currentSubModeInst = 'AMC';
+      instSortCol = 'growth_score';
+      instSortDir = 'DESC';
       btnSubAmc.classList.add('active');
       btnSubScheme.classList.remove('active');
       loadInstitutesViewData();
@@ -43,6 +50,8 @@ function bindControls() {
 
     btnSubScheme.addEventListener('click', () => {
       currentSubModeInst = 'SCHEME';
+      instSortCol = 'growth_score';
+      instSortDir = 'DESC';
       btnSubScheme.classList.add('active');
       btnSubAmc.classList.remove('active');
       loadInstitutesViewData();
@@ -63,15 +72,22 @@ function bindControls() {
 
   if (sortBtn) {
     sortBtn.addEventListener('click', () => {
-      currentSortOrderStk = currentSortOrderStk === 'DESC' ? 'ASC' : 'DESC';
+      stkSortDir = stkSortDir === 'DESC' ? 'ASC' : 'DESC';
       if (sortLabel) {
-        sortLabel.textContent = currentSortOrderStk === 'DESC' ? 'High to Low' : 'Low to High';
+        sortLabel.textContent = stkSortDir === 'DESC' ? 'High to Low' : 'Low to High';
       }
       const arrow = sortBtn.querySelector('span:last-child');
-      if (arrow) arrow.textContent = currentSortOrderStk === 'DESC' ? '▼' : '▲';
+      if (arrow) arrow.textContent = stkSortDir === 'DESC' ? '▼' : '▲';
       loadStockViewData();
     });
   }
+}
+
+function getSortIcon(colKey, activeCol, activeDir) {
+  if (colKey !== activeCol) {
+    return `<span style="font-size:10px;opacity:0.35;margin-left:4px;display:inline-block;transform:scale(0.85);">▲<br/>▼</span>`;
+  }
+  return `<span style="font-size:11px;color:var(--primary);margin-left:4px;font-weight:900;">${activeDir === 'ASC' ? '▲' : '▼'}</span>`;
 }
 
 /**
@@ -92,15 +108,29 @@ export async function loadInstitutesViewData() {
   if (currentSubModeInst === 'AMC') {
     thead.innerHTML = `
       <tr>
-        <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
-        <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Fund House (AMC Name)</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Total AUM (₹ Cr)</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">AUM Growth % (${tfLabel})</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;">New Positions</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Deployment Ratio</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Growth Score</th>
+        <th data-sort-inst="rank" style="width:45px;text-align:center;padding:12px 6px;cursor:pointer;user-select:none;"># ${getSortIcon('rank', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="name" style="white-space:nowrap;padding:12px 14px;min-width:200px;cursor:pointer;user-select:none;">Fund House (AMC Name) ${getSortIcon('name', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="total_aum_cr" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Total AUM (₹ Cr) ${getSortIcon('total_aum_cr', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="aum_growth_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">AUM Growth % (${tfLabel}) ${getSortIcon('aum_growth_pct', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="new_position_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">New Positions ${getSortIcon('new_position_count', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="deployment_ratio" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Deployment Ratio ${getSortIcon('deployment_ratio', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="growth_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;cursor:pointer;user-select:none;">Institute Growth Score ${getSortIcon('growth_score', instSortCol, instSortDir)}</th>
       </tr>
     `;
+
+    // Bind click events on Institute headers
+    thead.querySelectorAll('[data-sort-inst]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.sortInst;
+        if (instSortCol === col) {
+          instSortDir = instSortDir === 'DESC' ? 'ASC' : 'DESC';
+        } else {
+          instSortCol = col;
+          instSortDir = col === 'name' ? 'ASC' : 'DESC';
+        }
+        loadInstitutesViewData();
+      });
+    });
 
     try {
       const res = await api(`/api/institutional/institutes-ranking?timeframe=${currentTimeframeInst}`);
@@ -109,15 +139,27 @@ export async function loadInstitutesViewData() {
         return;
       }
 
+      const list = res.data.map((row, idx) => ({ ...row, rank: idx + 1 }));
+      list.sort((a, b) => {
+        let valA = a[instSortCol];
+        let valB = b[instSortCol];
+        if (typeof valA === 'string') {
+          return instSortDir === 'ASC' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+        return instSortDir === 'ASC' ? valA - valB : valB - valA;
+      });
+
       let html = '';
-      res.data.forEach((row, idx) => {
+      list.forEach((row) => {
         const score = Number(row.growth_score || 0);
         const aumGrowth = Number(row.aum_growth_pct || 0);
         const isPos = aumGrowth >= 0;
 
         html += `
           <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.name} Stock Portfolio Breakdown">
-            <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+            <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${row.rank}</td>
             <td>
               <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.name}</div>
               <div style="font-size:11px;color:var(--text-muted);">${row.total_schemes} Total Mutual Fund Schemes</div>
@@ -145,15 +187,29 @@ export async function loadInstitutesViewData() {
   } else {
     thead.innerHTML = `
       <tr>
-        <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
-        <th style="white-space:nowrap;padding:12px 14px;min-width:220px;">Scheme Name &amp; AMC</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Scheme AUM (₹ Cr)</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">AUM Growth % (${tfLabel})</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;">New Positions</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Deployment Ratio</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Scheme Growth Score</th>
+        <th data-sort-inst="rank" style="width:45px;text-align:center;padding:12px 6px;cursor:pointer;user-select:none;"># ${getSortIcon('rank', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="scheme_name" style="white-space:nowrap;padding:12px 14px;min-width:220px;cursor:pointer;user-select:none;">Scheme Name &amp; AMC ${getSortIcon('scheme_name', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="scheme_aum_cr" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Scheme AUM (₹ Cr) ${getSortIcon('scheme_aum_cr', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="aum_growth_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">AUM Growth % (${tfLabel}) ${getSortIcon('aum_growth_pct', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="new_position_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">New Positions ${getSortIcon('new_position_count', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="deployment_ratio" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Deployment Ratio ${getSortIcon('deployment_ratio', instSortCol, instSortDir)}</th>
+        <th data-sort-inst="growth_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;cursor:pointer;user-select:none;">Scheme Growth Score ${getSortIcon('growth_score', instSortCol, instSortDir)}</th>
       </tr>
     `;
+
+    // Bind click events on Scheme headers
+    thead.querySelectorAll('[data-sort-inst]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.sortInst;
+        if (instSortCol === col) {
+          instSortDir = instSortDir === 'DESC' ? 'ASC' : 'DESC';
+        } else {
+          instSortCol = col;
+          instSortDir = col === 'scheme_name' ? 'ASC' : 'DESC';
+        }
+        loadInstitutesViewData();
+      });
+    });
 
     try {
       const res = await api(`/api/institutional/schemes-ranking?timeframe=${currentTimeframeInst}`);
@@ -162,15 +218,27 @@ export async function loadInstitutesViewData() {
         return;
       }
 
+      const list = res.data.map((row, idx) => ({ ...row, rank: idx + 1 }));
+      list.sort((a, b) => {
+        let valA = a[instSortCol];
+        let valB = b[instSortCol];
+        if (typeof valA === 'string') {
+          return instSortDir === 'ASC' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+        return instSortDir === 'ASC' ? valA - valB : valB - valA;
+      });
+
       let html = '';
-      res.data.forEach((row, idx) => {
+      list.forEach((row) => {
         const score = Number(row.growth_score || 0);
         const aumGrowth = Number(row.aum_growth_pct || 0);
         const isPos = aumGrowth >= 0;
 
         html += `
           <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.scheme_name} Stock Positions Breakdown">
-            <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+            <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${row.rank}</td>
             <td>
               <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.scheme_name}</div>
               <div style="font-size:11px;color:var(--text-muted);">${row.fund_house} · ${row.category}</div>
@@ -207,15 +275,33 @@ export async function loadStockViewData() {
 
   thead.innerHTML = `
     <tr>
-      <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
-      <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Institutes Symbol</th>
-      <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
-      <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;">Timeframe Return % (${tfLabel})</th>
-      <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
-      <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
-      <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
+      <th data-sort-stk="rank" style="width:45px;text-align:center;padding:12px 6px;cursor:pointer;user-select:none;"># ${getSortIcon('rank', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:200px;cursor:pointer;user-select:none;">Institutes Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="today_pl_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Today's P&amp;L % ${getSortIcon('today_pl_pct', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Timeframe Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="institutes_holding_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Holding ${getSortIcon('institutes_holding_count', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="institutes_added" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;cursor:pointer;user-select:none;">Institutes Added ${getSortIcon('institutes_added', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;cursor:pointer;user-select:none;">Weightage Score ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
     </tr>
   `;
+
+  // Bind click events on Stock headers
+  thead.querySelectorAll('[data-sort-stk]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sortStk;
+      if (stkSortCol === col) {
+        stkSortDir = stkSortDir === 'DESC' ? 'ASC' : 'DESC';
+      } else {
+        stkSortCol = col;
+        stkSortDir = col === 'symbol' ? 'ASC' : 'DESC';
+      }
+      const sortLabel = document.getElementById('sortDirectionLabel');
+      if (sortLabel) {
+        sortLabel.textContent = stkSortDir === 'DESC' ? 'High to Low' : 'Low to High';
+      }
+      loadStockViewData();
+    });
+  });
 
   await loadStockWeightageRanking();
 }
@@ -234,15 +320,20 @@ async function loadStockWeightageRanking() {
       return;
     }
 
-    const list = [...res.data];
-    if (currentSortOrderStk === 'ASC') {
-      list.sort((a, b) => Number(a.weightage_score || 0) - Number(b.weightage_score || 0));
-    } else {
-      list.sort((a, b) => Number(b.weightage_score || 0) - Number(a.weightage_score || 0));
-    }
+    const list = res.data.map((row, idx) => ({ ...row, rank: idx + 1 }));
+    list.sort((a, b) => {
+      let valA = a[stkSortCol];
+      let valB = b[stkSortCol];
+      if (typeof valA === 'string') {
+        return stkSortDir === 'ASC' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      valA = Number(valA || 0);
+      valB = Number(valB || 0);
+      return stkSortDir === 'ASC' ? valA - valB : valB - valA;
+    });
 
     let html = '';
-    list.forEach((row, idx) => {
+    list.forEach((row) => {
       const score = Number(row.weightage_score || 0);
       const todayPl = Number(row.today_pl_pct || 0);
       const isTodayPos = todayPl >= 0;
@@ -252,7 +343,7 @@ async function loadStockWeightageRanking() {
 
       html += `
         <tr class="clickable-row" style="cursor:pointer;" title="Click to view schemes holding ${row.symbol}">
-          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${row.rank}</td>
           <td>
             <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.symbol}</div>
             <div style="font-size:11px;color:var(--text-muted);">${row.company_name}</div>
