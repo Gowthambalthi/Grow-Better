@@ -188,16 +188,25 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     transactionType: 'SELL', productType, quantity, price: actualLtp,
   }).totalCharges;
 
-  let isMtfPosition = ctx.isMtf || (cleanSym === 'CUPID' && broker === 'angelone');
+  const STOCK_LEVERAGE = {
+    EMMVEE: 2.9,
+    RELIANCE: 4.0,
+    SHRIRAMFIN: 3.6,
+    HDFCBANK: 4.4,
+    MCX: 3.5,
+  };
+
+  let isMtfPosition = typeof ctx.isMtf === 'boolean' ? ctx.isMtf : (cleanSym === 'EMMVEE' || cleanSym === 'RELIANCE' || cleanSym === 'SHRIRAMFIN');
   let mtfInterestToDeduct = 0;
+  const lev = STOCK_LEVERAGE[cleanSym] || 3.0;
+
   if (isMtfPosition) {
     if (ctx.mtfInterestAccrued > 0) {
       mtfInterestToDeduct = ctx.mtfInterestAccrued;
     } else {
-      const lev = 2.9;
       const selfFunded = investedAmount / lev;
       const borrowed = Math.max(0, investedAmount - selfFunded);
-      const days = Math.max(1, ctx.daysHeld || 18);
+      const days = Math.max(1, ctx.daysHeld || (cleanSym === 'EMMVEE' ? 33 : (cleanSym === 'RELIANCE' ? 25 : 18)));
       mtfInterestToDeduct = chargesModule.calculateMtfInterest(borrowed, days);
     }
   }
@@ -206,6 +215,8 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
   const netPLPercent = pct(netPL, investedAmount);
   const grossPL = overallPL;
   const grossPLPercent = overallPLPercent;
+
+  const borrowedAmt = isMtfPosition ? (ctx.mtfBorrowed || Math.max(0, investedAmount - (investedAmount / lev))) : 0;
 
   return {
     broker,
@@ -223,7 +234,7 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     todayPL: todayPLAmount,
     todayPLPercent,
     isMtf: isMtfPosition,
-    mtfBorrowed: ctx.mtfBorrowed || (isMtfPosition ? Math.max(0, investedAmount - (investedAmount / 2.9)) : null),
+    mtfBorrowed: borrowedAmt,
     mtfInterestAccrued: isMtfPosition ? mtfInterestToDeduct : 0,
     buyCharges,
     estimatedSellCharges,
@@ -231,7 +242,7 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     netPLPercent,
     grossPL,
     grossPLPercent,
-    daysHeld: ctx.daysHeld || (cleanSym === 'CUPID' && broker === 'angelone' ? 18 : (cleanSym === 'EMMVEE' ? 33 : 33)),
+    daysHeld: ctx.daysHeld || (cleanSym === 'EMMVEE' ? 33 : (cleanSym === 'RELIANCE' ? 25 : 18)),
     buyDateKnown: ctx.hasLedgerRecord,
     isFullyConfigured: ctx.isFullyConfigured,
     remainingQty: ctx.remainingQty,
