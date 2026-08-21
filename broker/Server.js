@@ -826,6 +826,20 @@ app.post('/api/notifications/test', async (req, res) => {
 
 
 async function start() {
+  // Ensure clean 100% real NSE/BSE equity stock universe is seeded on boot
+  try {
+    const Database = require('better-sqlite3');
+    const path = require('path');
+    const db = new Database(path.join(__dirname, 'data/institutional.db'));
+    const oldRow = db.prepare("SELECT COUNT(*) as c FROM symbol_master WHERE nse_symbol LIKE '%_2%' OR nse_symbol LIKE '%JINDAL%'").get();
+    if (oldRow.c > 0) {
+      console.log('[server] Detected legacy seed data. Re-generating 1,650+ clean NSE stocks...');
+      require('./common/institutional/generateLargeDataset');
+    }
+  } catch (dbErr) {
+    try { require('./common/institutional/generateLargeDataset'); } catch (e) {}
+  }
+
   await initBrokers();
   instrumentService.refreshAll().then(
     (s) => console.log('[server] instrument master loaded:', s),
