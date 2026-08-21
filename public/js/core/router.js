@@ -5,19 +5,16 @@ const PAGE_TITLES = {
   portfolio: 'PORTFOLIO',
   orders: 'ORDERS',
   positions: 'OPEN MTF POSITIONS',
-  institutes: 'MUTUAL FUNDS & INSTITUTES',
-  scanner: 'INSTITUTIONAL BUYINGS',
   terminal: 'TRADING TERMINAL',
   alerts: 'PRICE ALERTS',
   settings: 'SYSTEM SETTINGS & FUNDS',
 };
 
 export function goToView(name) {
-  const target = name === 'institutional-buyings' ? 'scanner' : name;
-  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${target}`));
-  document.querySelectorAll('.nav-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.nav === target || btn.dataset.nav === name));
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${name}`));
+  document.querySelectorAll('.nav-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.nav === name));
   const titleEl = document.getElementById('topbarPageTitle');
-  if (titleEl && PAGE_TITLES[target]) titleEl.textContent = PAGE_TITLES[target];
+  if (titleEl && PAGE_TITLES[name]) titleEl.textContent = PAGE_TITLES[name];
 }
 
 export function initRouter() {

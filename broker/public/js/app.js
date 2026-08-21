@@ -3,15 +3,14 @@
  * Main Application Bootstrapper & ES Module Entry Point
  */
 
-import { initTheme } from './core/theme.js?v=20260821_v147';
-import { initRouter } from './core/router.js?v=20260821_v147';
-import { initPopovers, startTicker } from './components/ticker.js?v=20260821_v147';
-import { loadStatus } from './components/statusPill.js?v=20260821_v147';
-import { initPortfolio, loadPortfolio } from './modules/portfolio.js?v=20260821_v147';
-import { initOrders } from './modules/orders.js?v=20260821_v147';
-import { loadMtfPositions, initPositionsSubtabs } from './modules/positions.js?v=20260821_v147';
-import { initInstitutionalScanner } from './modules/scanner.js?v=20260821_v147';
-import { initSettingsView, loadFundsTotals } from './modules/settings.js?v=20260821_v147';
+import { initTheme } from './core/theme.js?v=20260821_v148';
+import { initRouter } from './core/router.js?v=20260821_v148';
+import { initPopovers, startTicker } from './components/ticker.js?v=20260821_v148';
+import { loadStatus } from './components/statusPill.js?v=20260821_v148';
+import { initPortfolio, loadPortfolio } from './modules/portfolio.js?v=20260821_v148';
+import { initOrders } from './modules/orders.js?v=20260821_v148';
+import { loadMtfPositions, initPositionsSubtabs } from './modules/positions.js?v=20260821_v148';
+import { initSettingsView, loadFundsTotals } from './modules/settings.js?v=20260821_v148';
 
 function refreshAll() {
   loadStatus();
@@ -30,7 +29,6 @@ function boot() {
   try { initPortfolio(); } catch (e) { console.error('initPortfolio error:', e); }
   try { initOrders(); } catch (e) { console.error('initOrders error:', e); }
   try { initPositionsSubtabs(); } catch (e) { console.error('initPositionsSubtabs error:', e); }
-  try { initInstitutionalScanner(); } catch (e) { console.error('initInstitutionalScanner error:', e); }
   try { initSettingsView(); } catch (e) { console.error('initSettingsView error:', e); }
   try { initMobileNotifications(); } catch (e) { console.error('initMobileNotifications error:', e); }
 
