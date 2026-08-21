@@ -626,6 +626,51 @@ app.get('/api/institutional/scheme-breakdown/:symbol', (req, res) => {
   }
 });
 
+// ---- Institutional Conviction Scanner Endpoints & Scheduler ----
+const { gridSearchTrainTest } = require('./scripts/backtestInstitutionalConviction');
+const { runDailyConvictionPipeline, initScheduler } = require('./common/scheduler/cronJobs');
+
+try { initScheduler(); } catch (e) { console.warn('Scheduler init warning:', e.message); }
+
+app.get('/api/institutional/conviction-leaderboard', (req, res) => {
+  try {
+    const { date } = req.query;
+    const leaderboard = institutionalService.getConvictionLeaderboard(date);
+    res.json({ success: true, count: leaderboard.length, date: date || new Date().toISOString().slice(0, 10), data: leaderboard });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/institutional/exit-watch', (req, res) => {
+  try {
+    const { date } = req.query;
+    const exitWatch = institutionalService.getExitWatchList(date);
+    res.json({ success: true, count: exitWatch.length, data: exitWatch });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/institutional/backtest-results', (req, res) => {
+  try {
+    const results = gridSearchTrainTest();
+    res.json({ success: true, ...results });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/institutional/run-pipeline', async (req, res) => {
+  try {
+    const { date } = req.body || {};
+    await runDailyConvictionPipeline(date);
+    res.json({ success: true, message: `Pipeline triggered successfully for ${date || 'today'}` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ---- Instruments ----
 app.get('/api/instruments/status', (req, res) => {
   res.json(instrumentService.status());

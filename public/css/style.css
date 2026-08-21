@@ -2581,3 +2581,68 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 [data-theme="dark"] .net-pl-light-loss small {
   color: #F87171 !important;
 }
+
+/* Institutional Conviction Scanner Styling */
+.bucket-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.3px;
+}
+.badge-strong {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16A34A;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+.badge-fresh {
+  background: rgba(0, 179, 134, 0.12);
+  color: #00B386;
+  border: 1px solid rgba(0, 179, 134, 0.3);
+}
+.badge-warning {
+  background: #FEF3E2;
+  color: #B45309;
+  border: 1px solid rgba(180, 83, 9, 0.3);
+}
+.conviction-pill {
+  background: var(--bg-raised);
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.conviction-pill:hover, .conviction-pill.active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+.btn-trade-view {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-trade-view:hover { opacity: 0.9; }
+.btn-watch-warning {
+  background: #FEF3E2;
+  color: #B45309;
+  border: 1px solid rgba(180, 83, 9, 0.3);
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
