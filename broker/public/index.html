@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v128" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v129" />
 </head>
 <body>
 
@@ -39,6 +39,10 @@
         <button class="nav-item" data-nav="positions">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m6 7V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span>Positions</span>
+        </button>
+        <button class="nav-item" data-nav="institutes">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Institutes</span>
         </button>
         <button class="nav-item" data-nav="scanner">
           <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -685,6 +689,57 @@
           </div>
         </section>
 
+        <!-- ---- Institutes & Mutual Funds View (24 AMCs & 2,044 Schemes View) ---- -->
+        <section class="view" id="view-institutes">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:14px;">
+            <div>
+              <h1 class="view-title" style="margin:0;">Mutual Funds &amp; Institutes</h1>
+              <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Growth Rankings &amp; Portfolio Aggressiveness across 24 AMCs and 2,044 Mutual Fund Schemes</p>
+            </div>
+            
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <!-- Mode A Sub-Toggle: 24 AMCs vs ~2,000 Schemes -->
+              <div style="display:flex;background:var(--bg-raised);border-radius:8px;padding:3px;border:1px solid var(--line);">
+                <button id="btnSubAmcInst" class="sub-toggle-btn active" style="font-size:11px;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;">24 AMCs Ranked</button>
+                <button id="btnSubSchemeInst" class="sub-toggle-btn" style="font-size:11px;padding:4px 10px;border-radius:6px;font-weight:700;cursor:pointer;">~2,000 Schemes Ranked</button>
+              </div>
+
+              <!-- Timeframe Period Filter Dropdown -->
+              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+                <label class="form-lbl" style="margin:0;font-size:11px;color:var(--text-muted);">TIMEFRAME:</label>
+                <select id="amcPeriodSelect" class="form-input" style="width:140px;font-family:var(--font-mono);font-weight:700;font-size:12px;padding:4px 8px;">
+                  <option value="1m">1 Month Period</option>
+                  <option value="3m" selected>3 Months Period</option>
+                  <option value="6m">6 Months Period</option>
+                  <option value="1y">1 Year Period</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- DEDICATED INSTITUTES TABLE CARD -->
+          <div class="card" style="padding:16px;margin-bottom:24px;">
+            <div class="table-wrap">
+              <table class="holdings-table inst-table">
+                <thead id="theadInstitutes">
+                  <tr>
+                    <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+                    <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Fund House (AMC Name)</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Total AUM (₹ Cr)</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">AUM Growth %</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;">New Positions</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Deployment Ratio</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Growth Score</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyInstitutes">
+                  <tr class="empty-row"><td colspan="8">Loading mutual fund database...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <!-- ---- Institutes Symbol Tracker (Stock Weightage & Institutional Holdings View) ---- -->
         <section class="view" id="view-scanner">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:14px;">
@@ -1309,6 +1364,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v128"></script>
+  <script type="module" src="/js/app.js?v=20260821_v129"></script>
 </body>
 </html>

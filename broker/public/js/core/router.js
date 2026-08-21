@@ -5,6 +5,7 @@ const PAGE_TITLES = {
   portfolio: 'PORTFOLIO',
   orders: 'ORDERS',
   positions: 'OPEN MTF POSITIONS',
+  institutes: 'MUTUAL FUNDS & INSTITUTES',
   scanner: 'INSTITUTES SYMBOL',
   terminal: 'TRADING TERMINAL',
   alerts: 'PRICE ALERTS',

@@ -10,9 +10,10 @@
 
 import { api } from '../core/api.js';
 
-let currentMode = 'B'; // Dedicated 'B' (By Stock / Institutes Symbol)
-let currentTimeframe = '1m'; // '1m', '3m', '6m', '1y'
-let currentSortOrder = 'DESC'; // 'DESC' or 'ASC'
+let currentSubModeInst = 'AMC'; // 'AMC' (24 AMCs) or 'SCHEME' (~2000 Schemes)
+let currentTimeframeInst = '1m';
+let currentTimeframeStk = '1m';
+let currentSortOrderStk = 'DESC';
 
 export function initInstitutionalScanner() {
   bindControls();
@@ -20,45 +21,75 @@ export function initInstitutionalScanner() {
 }
 
 function bindControls() {
+  // Institutes View Controls
+  const amcTfSelect = document.getElementById('amcPeriodSelect');
+  const btnSubAmc = document.getElementById('btnSubAmcInst');
+  const btnSubScheme = document.getElementById('btnSubSchemeInst');
+
+  if (amcTfSelect) {
+    amcTfSelect.addEventListener('change', (e) => {
+      currentTimeframeInst = e.target.value;
+      loadInstitutesViewData();
+    });
+  }
+
+  if (btnSubAmc && btnSubScheme) {
+    btnSubAmc.addEventListener('click', () => {
+      currentSubModeInst = 'AMC';
+      btnSubAmc.classList.add('active');
+      btnSubScheme.classList.remove('active');
+      loadInstitutesViewData();
+    });
+
+    btnSubScheme.addEventListener('click', () => {
+      currentSubModeInst = 'SCHEME';
+      btnSubScheme.classList.add('active');
+      btnSubAmc.classList.remove('active');
+      loadInstitutesViewData();
+    });
+  }
+
+  // Institutes Symbol View Controls
   const tfSelect = document.getElementById('instPeriodSelect');
   const sortBtn = document.getElementById('toggleSortDirectionBtn');
   const sortLabel = document.getElementById('sortDirectionLabel');
 
   if (tfSelect) {
     tfSelect.addEventListener('change', (e) => {
-      currentTimeframe = e.target.value;
-      loadData();
+      currentTimeframeStk = e.target.value;
+      loadStockViewData();
     });
   }
 
   if (sortBtn) {
     sortBtn.addEventListener('click', () => {
-      currentSortOrder = currentSortOrder === 'DESC' ? 'ASC' : 'DESC';
+      currentSortOrderStk = currentSortOrderStk === 'DESC' ? 'ASC' : 'DESC';
       if (sortLabel) {
-        sortLabel.textContent = currentSortOrder === 'DESC' ? 'High to Low' : 'Low to High';
+        sortLabel.textContent = currentSortOrderStk === 'DESC' ? 'High to Low' : 'Low to High';
       }
       const arrow = sortBtn.querySelector('span:last-child');
-      if (arrow) arrow.textContent = currentSortOrder === 'DESC' ? '▼' : '▲';
-      loadData();
+      if (arrow) arrow.textContent = currentSortOrderStk === 'DESC' ? '▼' : '▲';
+      loadStockViewData();
     });
   }
 }
 
 /**
- * Loads main table data for Institutes Symbol
+ * Loads both views
  */
 export async function loadData() {
-  updateTableHeaders();
-  await loadStockWeightageRanking();
+  await loadInstitutesViewData();
+  await loadStockViewData();
 }
 
-function updateTableHeaders() {
-  const thead = document.getElementById('theadMainScanner');
-  if (!thead) return;
+export async function loadInstitutesViewData() {
+  const thead = document.getElementById('theadInstitutes');
+  const tbody = document.getElementById('tbodyInstitutes');
+  if (!thead || !tbody) return;
 
-  const tfLabel = currentTimeframe.toUpperCase();
+  const tfLabel = currentTimeframeInst.toUpperCase();
 
-  if (currentMode === 'A' && currentSubMode === 'AMC') {
+  if (currentSubModeInst === 'AMC') {
     thead.innerHTML = `
       <tr>
         <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
@@ -70,7 +101,48 @@ function updateTableHeaders() {
         <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Growth Score</th>
       </tr>
     `;
-  } else if (currentMode === 'A' && currentSubMode === 'SCHEME') {
+
+    try {
+      const res = await api(`/api/institutional/institutes-ranking?timeframe=${currentTimeframeInst}`);
+      if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No AMC institute ranking data available</td></tr>';
+        return;
+      }
+
+      let html = '';
+      res.data.forEach((row, idx) => {
+        const score = Number(row.growth_score || 0);
+        const aumGrowth = Number(row.aum_growth_pct || 0);
+        const isPos = aumGrowth >= 0;
+
+        html += `
+          <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.name} Stock Portfolio Breakdown">
+            <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+            <td>
+              <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.name}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${row.total_schemes} Total Mutual Fund Schemes</div>
+            </td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.total_aum_cr).toLocaleString('en-IN')} Cr</td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${aumGrowth.toFixed(1)}%</td>
+            <td style="text-align:center;font-weight:700;color:var(--primary);">${row.new_position_count} Additions</td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${(Number(row.deployment_ratio) * 100).toFixed(1)}%</td>
+            <td style="text-align:center;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#16A34A;">${score.toFixed(1)}</span>
+                <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
+                  <div style="width:${Math.max(10, score)}%;height:100%;background:#16A34A;border-radius:3px;"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    } catch (err) {
+      console.error('loadInstitutesViewData AMC error:', err);
+    }
+  } else {
     thead.innerHTML = `
       <tr>
         <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
@@ -82,119 +154,70 @@ function updateTableHeaders() {
         <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Scheme Growth Score</th>
       </tr>
     `;
-  } else {
-    thead.innerHTML = `
-      <tr>
-        <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
-        <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Institutes Symbol</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
-        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;">Timeframe Return % (${tfLabel})</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
-        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
-      </tr>
-    `;
+
+    try {
+      const res = await api(`/api/institutional/schemes-ranking?timeframe=${currentTimeframeInst}`);
+      if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No mutual fund scheme ranking data available</td></tr>';
+        return;
+      }
+
+      let html = '';
+      res.data.forEach((row, idx) => {
+        const score = Number(row.growth_score || 0);
+        const aumGrowth = Number(row.aum_growth_pct || 0);
+        const isPos = aumGrowth >= 0;
+
+        html += `
+          <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.scheme_name} Stock Positions Breakdown">
+            <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+            <td>
+              <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.scheme_name}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${row.fund_house} · ${row.category}</div>
+            </td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.scheme_aum_cr).toLocaleString('en-IN')} Cr</td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${aumGrowth.toFixed(1)}%</td>
+            <td style="text-align:center;font-weight:700;color:var(--primary);">${row.new_position_count} Additions</td>
+            <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${(Number(row.deployment_ratio) * 100).toFixed(1)}%</td>
+            <td style="text-align:center;">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#16A34A;">${score.toFixed(1)}</span>
+                <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
+                  <div style="width:${Math.max(10, score)}%;height:100%;background:#16A34A;border-radius:3px;"></div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    } catch (err) {
+      console.error('loadInstitutesViewData Scheme error:', err);
+    }
   }
 }
 
-/**
- * Mode A1: Loads and renders 24 AMCs Ranked by InstituteGrowthScore
- */
-async function load24AmcsRanking() {
+export async function loadStockViewData() {
+  const thead = document.getElementById('theadMainScanner');
   const tbody = document.getElementById('tbodyInstitutionalScanner');
-  if (!tbody) return;
+  if (!thead || !tbody) return;
 
-  try {
-    const res = await api(`/api/institutional/institutes-ranking?timeframe=${currentTimeframe}`);
-    if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No AMC institute ranking data available</td></tr>';
-      return;
-    }
+  const tfLabel = currentTimeframeStk.toUpperCase();
 
-    let html = '';
-    res.data.forEach((row, idx) => {
-      const score = Number(row.growth_score || 0);
-      const aumGrowth = Number(row.aum_growth_pct || 0);
-      const isPos = aumGrowth >= 0;
+  thead.innerHTML = `
+    <tr>
+      <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+      <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Institutes Symbol</th>
+      <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
+      <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;">Timeframe Return % (${tfLabel})</th>
+      <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
+      <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
+      <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
+    </tr>
+  `;
 
-      html += `
-        <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.name} Stock Portfolio Breakdown">
-          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
-          <td>
-            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.name}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${row.total_schemes} Total Mutual Fund Schemes</div>
-          </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.total_aum_cr).toLocaleString('en-IN')} Cr</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${aumGrowth.toFixed(1)}%</td>
-          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.new_position_count} Additions</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${(Number(row.deployment_ratio) * 100).toFixed(1)}%</td>
-          <td style="text-align:center;">
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#16A34A;">${score.toFixed(1)}</span>
-              <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
-                <div style="width:${Math.max(10, score)}%;height:100%;background:#16A34A;border-radius:3px;"></div>
-              </div>
-            </div>
-          </td>
-        </tr>
-      `;
-    });
-
-    tbody.innerHTML = html;
-
-  } catch (err) {
-    console.error('load24AmcsRanking error:', err);
-  }
-}
-
-/**
- * Mode A2: Loads and renders ~2,000 Schemes Ranked by SchemeGrowthScore
- */
-async function load2000SchemesRanking() {
-  const tbody = document.getElementById('tbodyInstitutionalScanner');
-  if (!tbody) return;
-
-  try {
-    const res = await api(`/api/institutional/schemes-ranking?timeframe=${currentTimeframe}`);
-    if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No mutual fund scheme ranking data available</td></tr>';
-      return;
-    }
-
-    let html = '';
-    res.data.forEach((row, idx) => {
-      const score = Number(row.growth_score || 0);
-      const aumGrowth = Number(row.aum_growth_pct || 0);
-      const isPos = aumGrowth >= 0;
-
-      html += `
-        <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.scheme_name} Stock Positions Breakdown">
-          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
-          <td>
-            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.scheme_name}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${row.fund_house} · ${row.category}</div>
-          </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.scheme_aum_cr).toLocaleString('en-IN')} Cr</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${aumGrowth.toFixed(1)}%</td>
-          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.new_position_count} Additions</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${(Number(row.deployment_ratio) * 100).toFixed(1)}%</td>
-          <td style="text-align:center;">
-            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#16A34A;">${score.toFixed(1)}</span>
-              <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
-                <div style="width:${Math.max(10, score)}%;height:100%;background:#16A34A;border-radius:3px;"></div>
-              </div>
-            </div>
-          </td>
-        </tr>
-      `;
-    });
-
-    tbody.innerHTML = html;
-
-  } catch (err) {
-    console.error('load2000SchemesRanking error:', err);
-  }
+  await loadStockWeightageRanking();
 }
 
 /**
@@ -205,14 +228,14 @@ async function loadStockWeightageRanking() {
   if (!tbody) return;
 
   try {
-    const res = await api(`/api/institutional/stock-weightage-ranking?timeframe=${currentTimeframe}`);
+    const res = await api(`/api/institutional/stock-weightage-ranking?timeframe=${currentTimeframeStk}`);
     if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
       tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No stock weightage ranking data available</td></tr>';
       return;
     }
 
     const list = [...res.data];
-    if (currentSortOrder === 'ASC') {
+    if (currentSortOrderStk === 'ASC') {
       list.sort((a, b) => Number(a.weightage_score || 0) - Number(b.weightage_score || 0));
     } else {
       list.sort((a, b) => Number(b.weightage_score || 0) - Number(a.weightage_score || 0));
