@@ -1641,22 +1641,6 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 
 .om-form-body { padding: 16px 20px; }
 .prod-type-btns { display: flex; gap: 8px; margin-top: 6px; }
-.prod-btn {
-  flex: 1;
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  color: var(--text-muted);
-  padding: 8px 0;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.prod-btn.active {
-  background: var(--accent-dim-strong);
-  border-color: var(--accent);
-  color: var(--accent);
-}
 
 .om-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
 .om-footer { margin-top: 14px; }

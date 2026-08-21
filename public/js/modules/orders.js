@@ -316,6 +316,7 @@ export function recalculateOmValues() {
 
   const totalValue = qty * price;
   const mtfValue = totalValue / leverage;
+  const intradayValue = totalValue / 5.0;
 
   const totalValEl = document.getElementById('omTotalValue');
   const fullValEl = document.getElementById('omFullVal');
@@ -323,9 +324,65 @@ export function recalculateOmValues() {
   const mtfLabelEl = document.getElementById('omMtfLabel');
 
   if (totalValEl) totalValEl.textContent = money(totalValue);
-  if (fullValEl) fullValEl.textContent = money(totalValue);
+
+  if (fullValEl) {
+    if (activeOrderParams.productType === 'INTRADAY') {
+      fullValEl.textContent = money(intradayValue);
+    } else {
+      fullValEl.textContent = money(totalValue);
+    }
+  }
+
   if (mtfValEl) mtfValEl.textContent = money(mtfValue);
   if (mtfLabelEl) mtfLabelEl.textContent = `MTF (${leverage}x)`;
+}
+
+export function setProductType(prodType) {
+  activeOrderParams.productType = prodType;
+
+  const mtfBtn = document.getElementById('omMtfPayBtn');
+  const fullBtn = document.getElementById('omFullPayBtn');
+
+  document.querySelectorAll('.prod-btn').forEach((b) => {
+    const isIntradayBtn = b.dataset.prod === 'INTRADAY';
+    const isDelivBtn = b.dataset.prod === 'DELIVERY';
+
+    if (prodType === 'INTRADAY') {
+      b.classList.toggle('active', isIntradayBtn);
+    } else {
+      b.classList.toggle('active', isDelivBtn);
+    }
+  });
+
+  if (prodType === 'INTRADAY') {
+    if (mtfBtn) mtfBtn.style.display = 'none';
+    if (fullBtn) {
+      fullBtn.classList.add('active');
+      const titleSpan = fullBtn.querySelector('.pay-title');
+      if (titleSpan) titleSpan.textContent = 'Intraday (5x)';
+    }
+  } else if (prodType === 'MARGIN') {
+    if (mtfBtn) {
+      mtfBtn.style.display = 'flex';
+      mtfBtn.classList.add('active');
+    }
+    if (fullBtn) {
+      fullBtn.classList.remove('active');
+      const titleSpan = fullBtn.querySelector('.pay-title');
+      if (titleSpan) titleSpan.textContent = 'Pay Full';
+    }
+  } else { // DELIVERY
+    if (mtfBtn) {
+      mtfBtn.style.display = 'flex';
+      mtfBtn.classList.remove('active');
+    }
+    if (fullBtn) {
+      fullBtn.classList.add('active');
+      const titleSpan = fullBtn.querySelector('.pay-title');
+      if (titleSpan) titleSpan.textContent = 'Pay Full';
+    }
+  }
+  recalculateOmValues();
 }
 
 export function updateBrokerFunds(funds) {
@@ -355,7 +412,7 @@ export function openOrderTicketModal({ symbol, ltp, broker = 'angelone', side = 
 
   setBroker(activeOrderParams.broker);
   setSide(activeOrderParams.side);
-  recalculateOmValues();
+  setProductType('DELIVERY');
 
   // Fetch 100% live real-time LTP & day change for this exact stock
   api(`/api/instruments/quote?symbol=${activeOrderParams.symbol}`).then((q) => {
@@ -449,24 +506,7 @@ export function initOrders() {
 
   // Product Type Buttons (INT / DEL)
   document.querySelectorAll('.prod-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.prod-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeOrderParams.productType = btn.dataset.prod;
-
-      const mtfBtn = document.getElementById('omMtfPayBtn');
-      const fullBtn = document.getElementById('omFullPayBtn');
-
-      if (btn.dataset.prod === 'INTRADAY') {
-        if (mtfBtn) mtfBtn.classList.remove('active');
-        if (fullBtn) fullBtn.classList.add('active');
-      } else if (btn.dataset.prod === 'DELIVERY') {
-        if (!mtfBtn?.classList.contains('active') && !fullBtn?.classList.contains('active')) {
-          if (fullBtn) fullBtn.classList.add('active');
-        }
-      }
-      recalculateOmValues();
-    });
+    btn.addEventListener('click', () => setProductType(btn.dataset.prod));
   });
 
   // Pay Mode Cards (MTF 3x vs Pay Full)
@@ -474,23 +514,11 @@ export function initOrders() {
   const fullBtn = document.getElementById('omFullPayBtn');
 
   if (mtfBtn) {
-    mtfBtn.addEventListener('click', () => {
-      activeOrderParams.productType = 'MARGIN';
-      mtfBtn.classList.add('active');
-      if (fullBtn) fullBtn.classList.remove('active');
-      document.querySelectorAll('.prod-btn').forEach((b) => b.classList.toggle('active', b.dataset.prod === 'DELIVERY'));
-      recalculateOmValues();
-    });
+    mtfBtn.addEventListener('click', () => setProductType('MARGIN'));
   }
 
   if (fullBtn) {
-    fullBtn.addEventListener('click', () => {
-      activeOrderParams.productType = 'DELIVERY';
-      fullBtn.classList.add('active');
-      if (mtfBtn) mtfBtn.classList.remove('active');
-      document.querySelectorAll('.prod-btn').forEach((b) => b.classList.toggle('active', b.dataset.prod === 'DELIVERY'));
-      recalculateOmValues();
-    });
+    fullBtn.addEventListener('click', () => setProductType(activeOrderParams.productType === 'INTRADAY' ? 'INTRADAY' : 'DELIVERY'));
   }
 
   // Order Mode Tabs (Regular / Stop Loss / GTT / SIP)
