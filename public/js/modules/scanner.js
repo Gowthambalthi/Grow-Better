@@ -491,14 +491,7 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
 
   } catch (err) {
     console.error('openStockBreakdownModal Stock Radar error:', err);
-  }
-}
-
-    tbody.innerHTML = html;
-
-  } catch (err) {
-    console.error('openStockBreakdownModal error:', err);
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Error loading breakdown: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Error loading stock accumulation breakdown: ${err.message}</td></tr>`;
   }
 }
 
