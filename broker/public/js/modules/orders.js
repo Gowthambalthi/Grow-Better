@@ -345,7 +345,11 @@ export function setProductType(prodType) {
 
   document.querySelectorAll('.prod-btn').forEach((b) => {
     const p = b.getAttribute('data-prod') || b.dataset.prod;
-    const isActive = (prodType === 'INTRADAY' && p === 'INTRADAY') || (prodType !== 'INTRADAY' && p === 'DELIVERY');
+    const isIntraday = prodType === 'INTRADAY';
+    const isThisIntraday = p === 'INTRADAY';
+    const isThisDelivery = p === 'DELIVERY';
+
+    const isActive = (isIntraday && isThisIntraday) || (!isIntraday && isThisDelivery);
 
     b.classList.toggle('active', isActive);
     if (isActive) {
@@ -360,44 +364,69 @@ export function setProductType(prodType) {
   });
 
   if (prodType === 'INTRADAY') {
-    if (mtfBtn) mtfBtn.style.display = 'none';
+    if (mtfBtn) {
+      mtfBtn.style.setProperty('display', 'none', 'important');
+      mtfBtn.classList.remove('active');
+    }
     if (fullBtn) {
-      fullBtn.style.display = 'flex';
+      fullBtn.style.setProperty('display', 'flex', 'important');
       fullBtn.classList.add('active');
       fullBtn.style.borderColor = '#00B386';
       fullBtn.style.background = '#E8F8F2';
       const titleSpan = fullBtn.querySelector('.pay-title');
-      if (titleSpan) titleSpan.textContent = 'Intraday (5x)';
+      if (titleSpan) {
+        titleSpan.textContent = 'Intraday Margin (5x)';
+        titleSpan.style.color = '#00B386';
+        titleSpan.style.fontWeight = '700';
+      }
     }
   } else if (prodType === 'MARGIN') {
     if (mtfBtn) {
-      mtfBtn.style.display = 'flex';
+      mtfBtn.style.setProperty('display', 'flex', 'important');
       mtfBtn.classList.add('active');
       mtfBtn.style.borderColor = '#3B82F6';
       mtfBtn.style.background = '#EEF2FF';
+      const mtfTitle = mtfBtn.querySelector('.pay-title');
+      if (mtfTitle) {
+        mtfTitle.style.color = '#2563EB';
+        mtfTitle.style.fontWeight = '700';
+      }
     }
     if (fullBtn) {
-      fullBtn.style.display = 'flex';
+      fullBtn.style.setProperty('display', 'flex', 'important');
       fullBtn.classList.remove('active');
       fullBtn.style.borderColor = '#E2E8F0';
       fullBtn.style.background = '#FFFFFF';
       const titleSpan = fullBtn.querySelector('.pay-title');
-      if (titleSpan) titleSpan.textContent = 'Pay Full';
+      if (titleSpan) {
+        titleSpan.textContent = 'Pay Full';
+        titleSpan.style.color = '#64748B';
+        titleSpan.style.fontWeight = '600';
+      }
     }
-  } else { // DELIVERY
+  } else { // DELIVERY (Full Pay)
     if (mtfBtn) {
-      mtfBtn.style.display = 'flex';
+      mtfBtn.style.setProperty('display', 'flex', 'important');
       mtfBtn.classList.remove('active');
       mtfBtn.style.borderColor = '#E2E8F0';
       mtfBtn.style.background = '#FFFFFF';
+      const mtfTitle = mtfBtn.querySelector('.pay-title');
+      if (mtfTitle) {
+        mtfTitle.style.color = '#64748B';
+        mtfTitle.style.fontWeight = '600';
+      }
     }
     if (fullBtn) {
-      fullBtn.style.display = 'flex';
+      fullBtn.style.setProperty('display', 'flex', 'important');
       fullBtn.classList.add('active');
       fullBtn.style.borderColor = '#00B386';
       fullBtn.style.background = '#E8F8F2';
       const titleSpan = fullBtn.querySelector('.pay-title');
-      if (titleSpan) titleSpan.textContent = 'Pay Full';
+      if (titleSpan) {
+        titleSpan.textContent = 'Pay Full';
+        titleSpan.style.color = '#00B386';
+        titleSpan.style.fontWeight = '700';
+      }
     }
   }
   recalculateOmValues();
