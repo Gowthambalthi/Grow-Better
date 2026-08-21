@@ -395,11 +395,12 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
   const title = document.getElementById('instModalTitle');
   const tbody = document.getElementById('tbodySchemeHoldingsModal');
   const closeBtn = document.getElementById('closeInstModalBtn');
+  const thead = modal ? modal.querySelector('table thead') : null;
 
   if (!modal || !tbody) return;
 
   modal.style.display = 'flex';
-  tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Loading institute holdings breakdown for ${symbol}...</td></tr>`;
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Loading stock accumulation breakdown for ${symbol}...</td></tr>`;
 
   if (closeBtn) {
     closeBtn.onclick = () => { modal.style.display = 'none'; };
@@ -410,18 +411,14 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
 
   try {
     const res = await api(`/api/institutional/stock-breakdown?symbol=${symbol}&mode=${mode}`);
-    if (!res || !res.success || !res.data || !Array.isArray(res.data.schemes)) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No breakdown records found for ${symbol}</td></tr>`;
+    if (!res || !res.success || !res.data) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No accumulation records found for ${symbol}</td></tr>`;
       return;
     }
 
-    const { company_name, schemes, summary } = res.data;
+    const { company_name, sector, market_cap_cr, ltp, summary, timeframes } = res.data;
     if (title) {
-      if (mode === 'holding') {
-        title.innerHTML = `Institutional Holding Breakdown — <span style="color:var(--primary);">${symbol}</span> (${company_name})`;
-      } else {
-        title.innerHTML = `Institutional Net Added Record — <span style="color:#16A34A;">${symbol}</span> (${company_name})`;
-      }
+      title.innerHTML = `Stock Accumulation Breakdown — <span style="color:var(--primary);">${symbol}</span> (${company_name})`;
     }
 
     const summaryContainer = document.getElementById('instModalSummaryContainer');
@@ -429,59 +426,73 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
       summaryContainer.style.display = 'grid';
       summaryContainer.innerHTML = `
         <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
-          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">INSTITUTES HOLDING</div>
-          <div style="font-size:15px;font-weight:800;color:var(--primary);margin-top:2px;">${Number(summary.total_funds).toLocaleString('en-IN')} Funds</div>
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">STOCK MARKET CAP / LTP</div>
+          <div style="font-size:14.5px;font-weight:800;color:var(--text);margin-top:2px;">₹${Number(market_cap_cr).toLocaleString('en-IN')} Cr <span style="font-size:11px;color:var(--text-muted);">(@ ₹${ltp})</span></div>
         </div>
         <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
-          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">NET FUNDS ADDED</div>
-          <div style="font-size:15px;font-weight:800;color:#16A34A;margin-top:2px;">${Number(summary.net_buyers).toLocaleString('en-IN')} Added <span style="font-size:11px;color:var(--text-muted);">(${summary.net_buyers}B / ${summary.net_sellers}S)</span></div>
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">INSTITUTES HOLDING</div>
+          <div style="font-size:14.5px;font-weight:800;color:var(--primary);margin-top:2px;">${Number(summary.total_funds).toLocaleString('en-IN')} Institutes</div>
+        </div>
+        <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">BUYERS VS SELLERS</div>
+          <div style="font-size:14.5px;font-weight:800;color:#16A34A;margin-top:2px;">${summary.net_buyers} Buyers <span style="font-size:11px;color:#F85C56;">/ ${summary.net_sellers} Sellers</span></div>
         </div>
         <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
           <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">TOTAL CAPITAL INVESTED</div>
-          <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px;">₹${Number(summary.total_invested_cr).toLocaleString('en-IN')} Cr</div>
-        </div>
-        <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
-          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">AVG PORTFOLIO WEIGHTAGE</div>
-          <div style="font-size:15px;font-weight:800;color:var(--accent-cyan);margin-top:2px;">${summary.avg_weightage_pct.toFixed(2)}%</div>
+          <div style="font-size:14.5px;font-weight:800;color:var(--accent-cyan);margin-top:2px;">₹${Number(summary.total_invested_cr).toLocaleString('en-IN')} Cr</div>
         </div>
       `;
     }
 
-    let html = '';
-    schemes.forEach((sch, idx) => {
-      const isNew = sch.status === 'NEW';
-      const isBuy = sch.action === 'BUY';
-      const schReturn = Number(sch.scheme_return_pct || 0);
-      const isReturnPos = schReturn >= 0;
+    if (thead) {
+      thead.innerHTML = `
+        <tr>
+          <th style="width:50px;text-align:center;padding:10px 6px;">#</th>
+          <th style="padding:10px 12px;">Timeframe Period</th>
+          <th style="text-align:right;padding:10px 12px;">Stock Return %</th>
+          <th style="text-align:center;padding:10px 12px;">Institutes Buying</th>
+          <th style="text-align:right;padding:10px 12px;">Net Capital Flow</th>
+          <th style="text-align:center;padding:10px 12px;">Accumulation Score</th>
+        </tr>
+      `;
+    }
 
-      const statusBadge = isNew
-        ? (isBuy 
-            ? `<span style="background:rgba(22, 163, 74, 0.18);color:#16A34A;border:1px solid rgba(22, 163, 74, 0.35);padding:3px 8px;border-radius:4px;font-weight:800;font-size:11px;">NEW (${sch.action_detail.replace('NEW ', '')})</span>`
-            : `<span style="background:rgba(248, 92, 86, 0.18);color:#F85C56;border:1px solid rgba(248, 92, 86, 0.35);padding:3px 8px;border-radius:4px;font-weight:800;font-size:11px;">NEW (${sch.action_detail.replace('NEW ', '')})</span>`)
-        : `<span style="background:rgba(100, 116, 139, 0.18);color:#64748B;border:1px solid rgba(100, 116, 139, 0.35);padding:3px 8px;border-radius:4px;font-weight:800;font-size:11px;">OLD (Holding)</span>`;
+    let html = '';
+    (timeframes || []).forEach((tf, idx) => {
+      const isRetPos = tf.return_pct >= 0;
+      const isFlowPos = tf.net_flow_cr >= 0;
 
       html += `
         <tr>
           <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
           <td>
-            <div style="font-weight:800;color:var(--text);font-size:13px;">${sch.scheme_name}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${sch.fund_house} · ${sch.category}</div>
+            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${tf.period}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${sector}</div>
           </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isReturnPos ? '#16A34A' : '#F85C56'};">
-            ${isReturnPos ? '+' : ''}${schReturn.toFixed(2)}%
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isRetPos ? '#16A34A' : '#F85C56'}; font-size:13.5px;">
+            ${isRetPos ? '+' : ''}${Number(tf.return_pct).toFixed(2)}%
           </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:800;color:var(--accent-cyan);">
-            ${Number(sch.weightage_pct).toFixed(2)}%
+          <td style="text-align:center;font-weight:800;color:#16A34A;">
+            ${tf.buyers} Institutes Buying
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:800;color:${isFlowPos ? '#16A34A' : '#F85C56'}; font-size:13.5px;">
+            ${isFlowPos ? '+' : ''}₹${Number(tf.net_flow_cr).toLocaleString('en-IN')} Cr
           </td>
           <td style="text-align:center;">
-            ${statusBadge}
-          </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--text);">
-            ₹${Number(sch.invested_cr).toLocaleString('en-IN')} Cr
+            <span style="font-family:var(--font-mono);font-weight:900;font-size:13.5px;color:var(--primary);background:rgba(37,99,235,0.12);padding:3px 10px;border-radius:12px;">
+              ${Number(tf.score).toFixed(1)} / 100
+            </span>
           </td>
         </tr>
       `;
     });
+
+    tbody.innerHTML = html;
+
+  } catch (err) {
+    console.error('openStockBreakdownModal Stock Radar error:', err);
+  }
+}
 
     tbody.innerHTML = html;
 
