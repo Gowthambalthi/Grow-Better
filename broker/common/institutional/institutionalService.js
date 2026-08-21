@@ -554,24 +554,14 @@ function getStockWeightageRanking(timeframe = '1m') {
       COALESCE(w.net_sellers, 2) as net_sellers,
       COALESCE(w.net_buyers + w.net_sellers, 10) as institutes_holding_count,
       COALESCE(w.net_buyers, 8) as institutes_added,
-      CASE 
-        WHEN m.nse_symbol = 'EMMVEE' THEN 2.45
-        WHEN m.nse_symbol = 'RELIANCE' THEN 1.15
-        WHEN m.nse_symbol = 'SHRIRAMFIN' THEN -0.65
-        WHEN m.nse_symbol = 'HDFCBANK' THEN 0.85
-        WHEN m.nse_symbol = 'ICICIBANK' THEN 1.40
-        WHEN m.nse_symbol = 'INFY' THEN -1.10
-        WHEN m.nse_symbol = 'SBIN' THEN 0.95
-        WHEN m.nse_symbol = 'CUPID' THEN 3.12
-        ELSE (CAST(substr(m.isin, 7, 6) AS INT) * 17 + 31) % 950 / 100.0 - 4.25
-      END as today_pl_pct
+      COALESCE(w.today_pl_pct, 1.25) as today_pl_pct
     FROM symbol_master m
     LEFT JOIN stock_weightage_score w ON m.isin = w.isin AND UPPER(w.timeframe) = ?
     ORDER BY weightage_score DESC
   `).all(tf);
   return rows.map(r => ({
     ...r,
-    today_pl_pct: Number(r.today_pl_pct.toFixed(2))
+    today_pl_pct: Number((r.today_pl_pct || 0).toFixed(2))
   }));
 }
 
