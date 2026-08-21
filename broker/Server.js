@@ -632,6 +632,36 @@ const { runDailyConvictionPipeline, initScheduler } = require('./common/schedule
 
 try { initScheduler(); } catch (e) { console.warn('Scheduler init warning:', e.message); }
 
+app.get('/api/institutional/institutes-ranking', (req, res) => {
+  try {
+    const { timeframe } = req.query;
+    const ranking = institutionalService.getInstitutesRanking(timeframe || '1m');
+    res.json({ success: true, count: ranking.length, timeframe: timeframe || '1m', data: ranking });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/institutional/schemes-ranking', (req, res) => {
+  try {
+    const { timeframe } = req.query;
+    const ranking = institutionalService.getSchemesRanking(timeframe || '1m');
+    res.json({ success: true, count: ranking.length, timeframe: timeframe || '1m', data: ranking });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/institutional/stock-weightage-ranking', (req, res) => {
+  try {
+    const { timeframe } = req.query;
+    const ranking = institutionalService.getStockWeightageRanking(timeframe || '1m');
+    res.json({ success: true, count: ranking.length, timeframe: timeframe || '1m', data: ranking });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/institutional/conviction-leaderboard', (req, res) => {
   try {
     const { date } = req.query;

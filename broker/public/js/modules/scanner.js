@@ -1,33 +1,77 @@
 /**
  * public/js/modules/scanner.js
- * Frontend controller for AMFI Monthly Accumulation & Institutional Conviction Scanner
+ * Frontend controller for Institutes & Institutes Symbol Tracker Subsystem
+ * Supports:
+ * - Corner Mode Switcher (Mode A: By Institute/Scheme vs Mode B: By Stock)
+ * - Mode A Sub-toggles (24 AMCs Ranked vs ~2,000 Schemes Ranked)
+ * - Timeframe Selection (1M | 3M)
+ * - Click-to-Drill-Down Modals with Specified Sort Orders
  */
 
 import { api } from '../core/api.js';
 
-let currentPeriod = '3m';
-let currentSortBy = 'growth_3m';
-let currentSortOrder = 'DESC';
+let currentMode = 'A'; // 'A' (By Institute/Scheme) or 'B' (By Stock)
+let currentSubMode = 'AMC'; // 'AMC' (24 AMCs) or 'SCHEME' (~2000 Schemes)
+let currentTimeframe = '1m'; // '1m' or '3m'
 let currentBucketFilter = 'ALL';
 
 export function initInstitutionalScanner() {
   bindControls();
-  loadInstitutionalScannerData();
+  loadData();
   loadConvictionLeaderboard();
 }
 
 function bindControls() {
-  const periodSelect = document.getElementById('instPeriodSelect');
-  if (periodSelect) {
-    periodSelect.addEventListener('change', (e) => {
-      currentPeriod = e.target.value;
-      loadInstitutionalScannerData();
+  const btnModeInst = document.getElementById('btnModeInstitutes');
+  const btnModeStk = document.getElementById('btnModeStock');
+  const btnSubAmc = document.getElementById('btnSubAmc');
+  const btnSubSch = document.getElementById('btnSubScheme');
+  const subWrap = document.getElementById('subToggleWrap');
+  const tfSelect = document.getElementById('instPeriodSelect');
+
+  if (btnModeInst && btnModeStk) {
+    btnModeInst.addEventListener('click', () => {
+      currentMode = 'A';
+      btnModeInst.classList.add('active');
+      btnModeStk.classList.remove('active');
+      if (subWrap) subWrap.style.display = 'flex';
+      loadData();
+    });
+
+    btnModeStk.addEventListener('click', () => {
+      currentMode = 'B';
+      btnModeStk.classList.add('active');
+      btnModeInst.classList.remove('active');
+      if (subWrap) subWrap.style.display = 'none';
+      loadData();
+    });
+  }
+
+  if (btnSubAmc && btnSubSch) {
+    btnSubAmc.addEventListener('click', () => {
+      currentSubMode = 'AMC';
+      btnSubAmc.classList.add('active');
+      btnSubSch.classList.remove('active');
+      loadData();
+    });
+
+    btnSubSch.addEventListener('click', () => {
+      currentSubMode = 'SCHEME';
+      btnSubSch.classList.add('active');
+      btnSubAmc.classList.remove('active');
+      loadData();
+    });
+  }
+
+  if (tfSelect) {
+    tfSelect.addEventListener('change', (e) => {
+      currentTimeframe = e.target.value;
+      loadData();
       loadConvictionLeaderboard();
     });
   }
 
-  // Filter Pill buttons
-  const pillBtns = document.querySelectorAll('.conviction-pill');
+  const pillBtns = document.querySelectorAll('.conviction-pill[data-bucket]');
   pillBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       pillBtns.forEach(b => b.classList.remove('active'));
@@ -39,7 +83,174 @@ function bindControls() {
 }
 
 /**
- * Loads and renders the Conviction Scanner Ranked Leaderboard
+ * Loads main table data based on currentMode, currentSubMode, and currentTimeframe
+ */
+export async function loadData() {
+  if (currentMode === 'A') {
+    if (currentSubMode === 'AMC') {
+      await load24AmcsRanking();
+    } else {
+      await load2000SchemesRanking();
+    }
+  } else {
+    await loadStockWeightageRanking();
+  }
+}
+
+/**
+ * Mode A1: Loads and renders 24 AMCs Ranked by InstituteGrowthScore
+ */
+async function load24AmcsRanking() {
+  const tbody = document.getElementById('tbodyInstitutionalScanner');
+  if (!tbody) return;
+
+  try {
+    const res = await api(`/api/institutional/institutes-ranking?timeframe=${currentTimeframe}`);
+    if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No AMC institute ranking data available</td></tr>';
+      return;
+    }
+
+    let html = '';
+    res.data.forEach((row, idx) => {
+      const score = Number(row.growth_score || 0);
+      const aumGrowth = Number(row.aum_growth_pct || 0);
+      const isPos = aumGrowth >= 0;
+
+      html += `
+        <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.name} Stock Portfolio Breakdown">
+          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+          <td>
+            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${row.total_schemes} Total Mutual Fund Schemes</div>
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.total_aum_cr).toLocaleString('en-IN')} Cr</td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${aumGrowth.toFixed(1)}%</td>
+          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.new_position_count} Additions</td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${(Number(row.deployment_ratio) * 100).toFixed(1)}%</td>
+          <td style="text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#16A34A;">${score.toFixed(1)}</span>
+              <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
+                <div style="width:${Math.max(10, score)}%;height:100%;background:#16A34A;border-radius:3px;"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+
+  } catch (err) {
+    console.error('load24AmcsRanking error:', err);
+  }
+}
+
+/**
+ * Mode A2: Loads and renders ~2,000 Schemes Ranked by SchemeGrowthScore
+ */
+async function load2000SchemesRanking() {
+  const tbody = document.getElementById('tbodyInstitutionalScanner');
+  if (!tbody) return;
+
+  try {
+    const res = await api(`/api/institutional/schemes-ranking?timeframe=${currentTimeframe}`);
+    if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No mutual fund scheme ranking data available</td></tr>';
+      return;
+    }
+
+    let html = '';
+    res.data.forEach((row, idx) => {
+      const score = Number(row.growth_score || 0);
+      const aumGrowth = Number(row.aum_growth_pct || 0);
+      const isPos = aumGrowth >= 0;
+
+      html += `
+        <tr class="clickable-row" style="cursor:pointer;" title="Click to view ${row.scheme_name} Stock Positions Breakdown">
+          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+          <td>
+            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.scheme_name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${row.fund_house} · ${row.category}</div>
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.scheme_aum_cr).toLocaleString('en-IN')} Cr</td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${aumGrowth.toFixed(1)}%</td>
+          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.new_position_count} Additions</td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${(Number(row.deployment_ratio) * 100).toFixed(1)}%</td>
+          <td style="text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#16A34A;">${score.toFixed(1)}</span>
+              <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
+                <div style="width:${Math.max(10, score)}%;height:100%;background:#16A34A;border-radius:3px;"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+
+  } catch (err) {
+    console.error('load2000SchemesRanking error:', err);
+  }
+}
+
+/**
+ * Mode B: Loads and renders Stocks Ranked by WeightageScore (Institutes Symbol)
+ */
+async function loadStockWeightageRanking() {
+  const tbody = document.getElementById('tbodyInstitutionalScanner');
+  if (!tbody) return;
+
+  try {
+    const res = await api(`/api/institutional/stock-weightage-ranking?timeframe=${currentTimeframe}`);
+    if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No stock weightage ranking data available</td></tr>';
+      return;
+    }
+
+    let html = '';
+    res.data.forEach((row, idx) => {
+      const score = Number(row.weightage_score || 0);
+      const pctInc = Number(row.pct_increase_holding || 0);
+      const isPos = pctInc >= 0;
+
+      html += `
+        <tr class="clickable-row" style="cursor:pointer;" title="Click to view schemes holding ${row.symbol}">
+          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+          <td>
+            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.symbol}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${row.company_name}</div>
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.ltp).toFixed(2)}</td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${pctInc.toFixed(1)}%</td>
+          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.net_buyers + row.net_sellers} Institutes</td>
+          <td style="text-align:center;font-family:var(--font-mono);font-weight:700;">
+            <span style="color:#16A34A;">${row.net_buyers}B</span> / <span style="color:#F85C56;">${row.net_sellers}S</span>
+          </td>
+          <td style="text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#2563EB;">${score.toFixed(1)}</span>
+              <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
+                <div style="width:${Math.max(10, score)}%;height:100%;background:#2563EB;border-radius:3px;"></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+
+  } catch (err) {
+    console.error('loadStockWeightageRanking error:', err);
+  }
+}
+
+/**
+ * Loads Conviction Leaderboard Summary & Exit Watch
  */
 export async function loadConvictionLeaderboard() {
   const tbody = document.getElementById('tbodyConvictionLeaderboard');
@@ -55,7 +266,6 @@ export async function loadConvictionLeaderboard() {
       return;
     }
 
-    // Update Summary Strip Counters
     const totalCount = res.data.length;
     const strongCount = res.data.filter(r => r.amfi_bucket === 'strong').length;
     const freshCount = res.data.filter(r => r.amfi_bucket === 'fresh').length;
@@ -74,7 +284,6 @@ export async function loadConvictionLeaderboard() {
     let html = '';
     res.data.forEach((row, idx) => {
       const score = Number(row.composite_score || 0);
-      const scorePct = Math.round(score * 100);
       const isStrong = row.amfi_bucket === 'strong';
       
       const badgeClass = isStrong ? 'badge-strong' : 'badge-fresh';
@@ -95,7 +304,7 @@ export async function loadConvictionLeaderboard() {
             <div style="display:flex;align-items:center;gap:10px;">
               <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;width:42px;">${score.toFixed(3)}</span>
               <div class="score-bar-bg" style="flex:1;height:7px;background:var(--bg-raised);border-radius:4px;overflow:hidden;">
-                <div class="score-bar-fill" style="width:${Math.max(10, scorePct)}%;height:100%;background:${barColor};border-radius:4px;"></div>
+                <div class="score-bar-fill" style="width:${Math.max(10, Math.round(score * 100))}%;height:100%;background:${barColor};border-radius:4px;"></div>
               </div>
             </div>
           </td>
@@ -116,7 +325,6 @@ export async function loadConvictionLeaderboard() {
 
     tbody.innerHTML = html;
 
-    // Render Exit Watch List
     if (tbodyExit && exitRes && exitRes.success && Array.isArray(exitRes.data)) {
       if (exitRes.data.length === 0) {
         tbodyExit.innerHTML = `<tr class="empty-row"><td colspan="5">No exit watch flags for current holdings.</td></tr>`;
@@ -150,7 +358,6 @@ export async function loadConvictionLeaderboard() {
 
   } catch (err) {
     console.error('loadConvictionLeaderboard error:', err);
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Failed to load conviction leaderboard.</td></tr>`;
   }
 }
 
@@ -163,51 +370,4 @@ function filterLeaderboardRows() {
       r.style.display = 'none';
     }
   });
-}
-
-export async function loadInstitutionalScannerData() {
-  const tbody = document.getElementById('tbodyInstitutionalScanner');
-  if (!tbody) return;
-
-  try {
-    const res = await api(`/api/institutional/stock-summary?period=${currentPeriod}&sortBy=${currentSortBy}&sortOrder=${currentSortOrder}`);
-
-    if (!res || !res.success || !res.data || res.data.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No matching institutional accumulation data found</td></tr>';
-      return;
-    }
-
-    let html = '';
-    res.data.forEach((row, index) => {
-      const growth = Number(row.growth_3m || 0);
-      const isPositive = growth >= 0;
-      const growthColor = isPositive ? '#16A34A' : '#F85C56';
-      const sign = isPositive ? '+' : '';
-
-      html += `
-        <tr>
-          <td style="text-align:center;font-weight:700;color:var(--text-muted);">${index + 1}</td>
-          <td>
-            <div style="font-weight:700;color:var(--text);font-size:13px;">${row.symbol}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${row.company_name}</div>
-          </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.ltp).toFixed(2)}</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${growthColor};">${sign}${growth.toFixed(1)}%</td>
-          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.total_institutes_count} Schemes</td>
-          <td style="text-align:center;">
-            <span class="bucket-badge ${growth >= 0 ? 'badge-strong' : 'badge-warning'}">
-              ${growth >= 0 ? '📈 ACCUMULATING' : '📉 TRIMMING'}
-            </span>
-          </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">${Number(row.avg_weightage_pct).toFixed(2)}%</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.total_mf_holding_cr).toLocaleString('en-IN')} Cr</td>
-        </tr>
-      `;
-    });
-
-    tbody.innerHTML = html;
-
-  } catch (err) {
-    console.error('loadInstitutionalScannerData error:', err);
-  }
 }
