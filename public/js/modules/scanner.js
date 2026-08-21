@@ -289,6 +289,7 @@ export async function loadStockViewData() {
       <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Timeframe Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="institutes_holding_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Holding ${getSortIcon('institutes_holding_count', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="institutes_added" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;cursor:pointer;user-select:none;">Institutes Added ${getSortIcon('institutes_added', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Conviction Rating ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;cursor:pointer;user-select:none;">Weightage Score ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
     </tr>
   `;
@@ -324,7 +325,7 @@ async function loadStockWeightageRanking() {
   try {
     const res = await api(`/api/institutional/stock-weightage-ranking?timeframe=${currentTimeframeStk}`);
     if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No stock weightage ranking data available</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No stock weightage ranking data available</td></tr>';
       return;
     }
 
@@ -338,7 +339,7 @@ async function loadStockWeightageRanking() {
     }
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">No stocks matching "${stockSearchQuery}"</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">No stocks matching "${stockSearchQuery}"</td></tr>`;
       return;
     }
 
@@ -362,6 +363,20 @@ async function loadStockWeightageRanking() {
       const tfReturn = Number(row.timeframe_return_pct || 0);
       const isTfPos = tfReturn >= 0;
 
+      // Conviction Rating & Percentile Color Mapping:
+      // Score >= 70: BUY (Green #10B981)
+      // Score 40-69: HOLD (Orange #F59E0B)
+      // Score < 40: SELL (Red #EF4444)
+      let ratingLabel = 'BUY';
+      let ratingBg = '#10B981';
+      if (score < 40) {
+        ratingLabel = 'SELL';
+        ratingBg = '#EF4444';
+      } else if (score < 70) {
+        ratingLabel = 'HOLD';
+        ratingBg = '#F59E0B';
+      }
+
       html += `
         <tr class="clickable-row">
           <td>
@@ -382,10 +397,15 @@ async function loadStockWeightageRanking() {
             <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers}B / ${row.net_sellers}S)</span>
           </td>
           <td style="text-align:center;">
+            <span class="badge" style="background:${ratingBg};color:#ffffff;font-weight:800;padding:4px 10px;border-radius:12px;font-size:11px;letter-spacing:0.04em;">
+              ${ratingLabel === 'BUY' ? '🟢 BUY' : (ratingLabel === 'HOLD' ? '🟠 HOLD' : '🔴 SELL')}
+            </span>
+          </td>
+          <td style="text-align:center;">
             <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:#2563EB;">${score.toFixed(1)}</span>
+              <span style="font-family:var(--font-mono);font-weight:800;font-size:13px;color:${ratingBg};">${score.toFixed(1)}</span>
               <div style="width:50px;height:6px;background:var(--bg-raised);border-radius:3px;overflow:hidden;">
-                <div style="width:${Math.max(10, score)}%;height:100%;background:#2563EB;border-radius:3px;"></div>
+                <div style="width:${Math.max(10, score)}%;height:100%;background:${ratingBg};border-radius:3px;"></div>
               </div>
             </div>
           </td>
