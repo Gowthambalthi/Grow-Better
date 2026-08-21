@@ -86,6 +86,7 @@ function bindControls() {
  * Loads main table data based on currentMode, currentSubMode, and currentTimeframe
  */
 export async function loadData() {
+  updateTableHeaders();
   if (currentMode === 'A') {
     if (currentSubMode === 'AMC') {
       await load24AmcsRanking();
@@ -94,6 +95,51 @@ export async function loadData() {
     }
   } else {
     await loadStockWeightageRanking();
+  }
+}
+
+function updateTableHeaders() {
+  const thead = document.getElementById('theadMainScanner');
+  if (!thead) return;
+
+  const tfLabel = currentTimeframe.toUpperCase();
+
+  if (currentMode === 'A' && currentSubMode === 'AMC') {
+    thead.innerHTML = `
+      <tr>
+        <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+        <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Fund House (AMC Name)</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Total AUM (₹ Cr)</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">AUM Growth % (${tfLabel})</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;">New Positions</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Deployment Ratio</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Growth Score</th>
+      </tr>
+    `;
+  } else if (currentMode === 'A' && currentSubMode === 'SCHEME') {
+    thead.innerHTML = `
+      <tr>
+        <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+        <th style="white-space:nowrap;padding:12px 14px;min-width:220px;">Scheme Name &amp; AMC</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Scheme AUM (₹ Cr)</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">AUM Growth % (${tfLabel})</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;">New Positions</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Deployment Ratio</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Scheme Growth Score</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+        <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Institutes Symbol</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
+        <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;">Timeframe Return % (${tfLabel})</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
+        <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
+      </tr>
+    `;
   }
 }
 

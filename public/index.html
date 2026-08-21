@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v122" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v123" />
 </head>
 <body>
 
@@ -687,29 +687,29 @@
 
         <!-- ---- Scanner (AMFI Stock Accumulation & Ranked Institute Holdings Engine) ---- -->
         <section class="view" id="view-scanner">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:14px;">
             <div>
               <h1 class="view-title" style="margin:0;">Institutes &amp; Institutional Symbol Tracker</h1>
               <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Official AMFI Monthly Database — Track Stock Growth, Total Institute Holdings (e.g. 22 Funds), &amp; Net Funds Increased</p>
             </div>
             
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <!-- Dual-Mode Corner Switcher Toggle (Mode A: By Institute/Scheme vs Mode B: By Stock) -->
               <div style="display:flex;align-items:center;background:var(--bg-raised);padding:3px;border-radius:8px;border:1px solid var(--line);">
-                <button id="btnModeInstitutes" class="conviction-pill active" style="padding:4px 12px;font-size:11.5px;font-weight:800;margin:0;border:none;">Mode A: By Institute / Scheme</button>
-                <button id="btnModeStock" class="conviction-pill" style="padding:4px 12px;font-size:11.5px;font-weight:800;margin:0;border:none;">Mode B: By Stock (Institutes Symbol)</button>
+                <button id="btnModeInstitutes" class="conviction-pill active" style="padding:5px 14px;font-size:11.5px;font-weight:800;margin:0;border:none;white-space:nowrap;">Mode A: By Institute / Scheme</button>
+                <button id="btnModeStock" class="conviction-pill" style="padding:5px 14px;font-size:11.5px;font-weight:800;margin:0;border:none;white-space:nowrap;">Mode B: By Stock (Institutes Symbol)</button>
               </div>
 
               <!-- Mode A Sub-toggle: 24 AMCs vs 2,000 Schemes -->
               <div id="subToggleWrap" style="display:flex;align-items:center;background:var(--bg-raised);padding:3px;border-radius:8px;border:1px solid var(--line);">
-                <button id="btnSubAmc" class="conviction-pill active" style="padding:3px 10px;font-size:11px;font-weight:700;margin:0;border:none;">24 AMCs Ranked</button>
-                <button id="btnSubScheme" class="conviction-pill" style="padding:3px 10px;font-size:11px;font-weight:700;margin:0;border:none;">~2,000 Schemes Ranked</button>
+                <button id="btnSubAmc" class="conviction-pill active" style="padding:4px 12px;font-size:11px;font-weight:700;margin:0;border:none;white-space:nowrap;">24 AMCs Ranked</button>
+                <button id="btnSubScheme" class="conviction-pill" style="padding:4px 12px;font-size:11px;font-weight:700;margin:0;border:none;white-space:nowrap;">~2,000 Schemes Ranked</button>
               </div>
 
               <!-- Timeframe Period Filter Dropdown -->
-              <div style="display:flex;align-items:center;gap:6px;">
+              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
                 <label class="form-lbl" style="margin:0;font-size:11px;color:var(--text-muted);">TIMEFRAME:</label>
-                <select id="instPeriodSelect" class="form-input" style="width:140px;font-family:var(--font-mono);font-weight:700;font-size:12px;padding:4px 8px;">
+                <select id="instPeriodSelect" class="form-input" style="width:130px;font-family:var(--font-mono);font-weight:700;font-size:12px;padding:4px 8px;">
                   <option value="1m">1 Month Period</option>
                   <option value="3m" selected>3 Months Period</option>
                   <option value="6m">6 Months Period</option>
@@ -718,16 +718,38 @@
               </div>
 
               <!-- Sort Order Toggle -->
-              <div style="display:flex;align-items:center;gap:6px;">
+              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
                 <span style="font-size:11px;color:var(--text-muted);">Order:</span>
-                <button id="toggleSortDirectionBtn" class="edit-icon-btn" style="color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;gap:4px;background:var(--bg-raised);padding:4px 10px;border-radius:4px;border:1px solid var(--line);">
-                  <span id="sortDirectionLabel">DESC (High to Low)</span> <span style="font-size:12px;">▼</span>
+                <button id="toggleSortDirectionBtn" class="edit-icon-btn" style="color:var(--accent);font-weight:800;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:var(--bg-raised);padding:5px 12px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;height:30px;">
+                  <span id="sortDirectionLabel">High to Low</span> <span style="font-size:10px;">▼</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- SUMMARY STRIP CARDS (16px 18px padding, 14px gap) -->
+          <!-- PRIMARY MAIN TABLE CARD (FIRST) -->
+          <div class="card" style="padding:16px;margin-bottom:24px;">
+            <div class="table-wrap">
+              <table class="holdings-table inst-table">
+                <thead id="theadMainScanner">
+                  <tr>
+                    <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+                    <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Fund House (AMC Name)</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Total AUM (₹ Cr)</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">AUM Growth % (3M)</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;">New Positions</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Deployment Ratio</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Growth Score</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyInstitutionalScanner">
+                  <tr class="empty-row"><td colspan="8">Loading AMFI institutional database...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SECONDARY WIDGET: CONVICTION SUMMARY & ALERTS -->
           <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;margin-bottom:18px;">
             <div class="card" style="padding:16px 18px;">
               <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);letter-spacing:0.4px;">TOTAL CONVICTION SIGNALS</div>
@@ -806,27 +828,6 @@
                 </thead>
                 <tbody id="tbodyExitWatchList">
                   <tr class="empty-row"><td colspan="5">Loading exit-watch list...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card" style="padding:16px;">
-            <div class="table-wrap">
-              <table class="holdings-table inst-table">
-                <thead>
-                  <tr>
-                    <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
-                    <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Institutes Symbol</th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;" id="thTimeframeReturn">Timeframe Return %</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyInstitutionalScanner">
-                  <tr class="empty-row"><td colspan="8">Loading AMFI stock accumulation &amp; distribution database...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1404,6 +1405,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v122"></script>
+  <script type="module" src="/js/app.js?v=20260821_v123"></script>
 </body>
 </html>
