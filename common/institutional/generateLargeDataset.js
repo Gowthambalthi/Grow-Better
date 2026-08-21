@@ -137,12 +137,12 @@ function generate1600StocksAnd2000Schemes() {
       const netFlow = Number((10 + (i * 29.4) % 1800).toFixed(1));
       const bBuyers = 250 + ((i * 37) % 1500); // 250 to 1,750 buying mutual fund schemes
       const bSellers = 10 + ((i * 11) % 110);   // 10 to 120 selling mutual fund schemes
-      const ret = Number((-5 + (i * 7.3) % 45).toFixed(2));
+      const ret1M = Number((-8.5 + ((i * 13.7) % 36.5)).toFixed(2)); // -8.50% to +28.00% for 1M
 
       for (const tf of timeframes) {
-        const tfMult = tf === '1M' ? 1.0 : (tf === '3M' ? 1.6 : (tf === '6M' ? 2.4 : 4.0));
-        const adjRet = Number((ret * (tf === '1M' ? 1.0 : (tf === '3M' ? 2.0 : (tf === '6M' ? 3.5 : 5.8)))).toFixed(2));
-        const adjFlow = Number((netFlow * tfMult).toFixed(1));
+        const tfMult = tf === '1M' ? 1.0 : (tf === '3M' ? 1.85 : (tf === '6M' ? 3.1 : 5.4));
+        const adjRet = Number((ret1M * tfMult).toFixed(2));
+        const adjFlow = Number((netFlow * (tf === '1M' ? 1.0 : 1.6)).toFixed(1));
         const adjScore = Math.min(99.9, Number((baseScore * (tf === '1M' ? 1.0 : 1.01)).toFixed(1)));
         insertStockScore.run(isin, monthStr, tf, adjScore, adjFlow, 50, adjRet, 1.0, bBuyers, bSellers);
       }
