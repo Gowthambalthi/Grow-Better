@@ -19,6 +19,7 @@ let instSortDir = 'DESC';
 
 let stkSortCol = 'weightage_score';
 let stkSortDir = 'DESC';
+let stockSearchQuery = '';
 
 export function initInstitutionalScanner() {
   bindControls();
@@ -62,6 +63,14 @@ function bindControls() {
   const tfSelect = document.getElementById('instPeriodSelect');
   const sortBtn = document.getElementById('toggleSortDirectionBtn');
   const sortLabel = document.getElementById('sortDirectionLabel');
+  const searchInput = document.getElementById('stockSearchInput');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      stockSearchQuery = (e.target.value || '').trim().toLowerCase();
+      loadStockWeightageRanking();
+    });
+  }
 
   if (tfSelect) {
     tfSelect.addEventListener('change', (e) => {
@@ -319,7 +328,20 @@ async function loadStockWeightageRanking() {
       return;
     }
 
-    const list = res.data.map((row, idx) => ({ ...row, rank: idx + 1 }));
+    let list = res.data.map((row, idx) => ({ ...row, rank: idx + 1 }));
+
+    if (stockSearchQuery) {
+      list = list.filter(r => 
+        (r.symbol || '').toLowerCase().includes(stockSearchQuery) ||
+        (r.company_name || '').toLowerCase().includes(stockSearchQuery)
+      );
+    }
+
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">No stocks matching "${stockSearchQuery}"</td></tr>`;
+      return;
+    }
+
     list.sort((a, b) => {
       let valA = a[stkSortCol];
       let valB = b[stkSortCol];
