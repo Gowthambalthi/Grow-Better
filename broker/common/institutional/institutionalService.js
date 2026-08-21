@@ -443,12 +443,22 @@ function getSchemeBreakdownForStock(symbol, mode = 'holding') {
   const breakdownList = [];
   const count = isAddedOnly ? 50 : 75;
 
+  let totalWeightageSum = 0;
+  let totalInvestedCr = 0;
+  let buyCount = 0;
+  let sellCount = 0;
+
   for (let idx = 0; idx < Math.min(count, allSchemes.length); idx++) {
     const sch = allSchemes[idx];
     const isBuy = isAddedOnly ? (idx % 7 !== 0) : (idx % 9 !== 0);
-    const weightagePct = Number((5.20 - idx * 0.062).toFixed(2));
-    const investedCr = Number((145.0 - idx * 1.8).toFixed(1));
+    if (isBuy) buyCount++; else sellCount++;
+
+    const weightagePct = Number(Math.max(0.15, 5.20 - idx * 0.062).toFixed(2));
+    const investedCr = Number(Math.max(3.2, 145.0 - idx * 1.8).toFixed(1));
     const sharesChangeLakhs = Number((18.5 - idx * 0.22).toFixed(1));
+
+    totalWeightageSum += weightagePct;
+    totalInvestedCr += investedCr;
     
     breakdownList.push({
       rank: idx + 1,
@@ -457,16 +467,25 @@ function getSchemeBreakdownForStock(symbol, mode = 'holding') {
       category: sch.category,
       action: isBuy ? 'BUY' : 'SELL',
       action_detail: isBuy ? `BUY (+${sharesChangeLakhs}L Shares)` : `SELL (-${(sharesChangeLakhs * 0.35).toFixed(1)}L Shares)`,
-      weightage_pct: Math.max(0.15, weightagePct),
-      invested_cr: Math.max(3.2, investedCr)
+      weightage_pct: weightagePct,
+      invested_cr: investedCr
     });
   }
+
+  const avgWeightage = breakdownList.length > 0 ? (totalWeightageSum / breakdownList.length).toFixed(2) : '3.85';
 
   return {
     symbol: cleanSym,
     company_name: stock.company_name,
     ltp: stock.ltp,
     mode: mode,
+    summary: {
+      total_funds: isAddedOnly ? buyCount : (buyCount + sellCount + 1400),
+      net_buyers: isAddedOnly ? buyCount : Math.round((buyCount + sellCount + 1400) * 0.9),
+      net_sellers: isAddedOnly ? sellCount : Math.round((buyCount + sellCount + 1400) * 0.1),
+      total_invested_cr: Number((totalInvestedCr * 125).toFixed(1)),
+      avg_weightage_pct: Number(avgWeightage)
+    },
     schemes: breakdownList
   };
 }

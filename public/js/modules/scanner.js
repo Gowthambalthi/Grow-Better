@@ -415,13 +415,36 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
       return;
     }
 
-    const { company_name, schemes } = res.data;
+    const { company_name, schemes, summary } = res.data;
     if (title) {
       if (mode === 'holding') {
-        title.innerHTML = `All Institutes Holding Record — <span style="color:var(--primary);">${symbol}</span> (${company_name})`;
+        title.innerHTML = `Institutional Holding Breakdown — <span style="color:var(--primary);">${symbol}</span> (${company_name})`;
       } else {
-        title.innerHTML = `Institutes Added / Bought Record — <span style="color:#16A34A;">${symbol}</span> (${company_name})`;
+        title.innerHTML = `Institutional Net Added Record — <span style="color:#16A34A;">${symbol}</span> (${company_name})`;
       }
+    }
+
+    const summaryContainer = document.getElementById('instModalSummaryContainer');
+    if (summaryContainer && summary) {
+      summaryContainer.style.display = 'grid';
+      summaryContainer.innerHTML = `
+        <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">INSTITUTES HOLDING</div>
+          <div style="font-size:15px;font-weight:800;color:var(--primary);margin-top:2px;">${Number(summary.total_funds).toLocaleString('en-IN')} Funds</div>
+        </div>
+        <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">NET FUNDS ADDED</div>
+          <div style="font-size:15px;font-weight:800;color:#16A34A;margin-top:2px;">${Number(summary.net_buyers).toLocaleString('en-IN')} Added <span style="font-size:11px;color:var(--text-muted);">(${summary.net_buyers}B / ${summary.net_sellers}S)</span></div>
+        </div>
+        <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">TOTAL CAPITAL INVESTED</div>
+          <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px;">₹${Number(summary.total_invested_cr).toLocaleString('en-IN')} Cr</div>
+        </div>
+        <div style="background:var(--bg-raised);padding:10px 12px;border-radius:8px;border:1px solid var(--line);">
+          <div style="font-size:10.5px;color:var(--text-muted);font-weight:700;letter-spacing:0.04em;">AVG PORTFOLIO WEIGHTAGE</div>
+          <div style="font-size:15px;font-weight:800;color:var(--accent-cyan);margin-top:2px;">${summary.avg_weightage_pct.toFixed(2)}%</div>
+        </div>
+      `;
     }
 
     let html = '';
