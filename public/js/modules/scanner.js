@@ -214,8 +214,11 @@ async function loadStockWeightageRanking() {
     let html = '';
     res.data.forEach((row, idx) => {
       const score = Number(row.weightage_score || 0);
-      const pctInc = Number(row.pct_increase_holding || 0);
-      const isPos = pctInc >= 0;
+      const todayPl = Number(row.today_pl_pct || 0);
+      const isTodayPos = todayPl >= 0;
+
+      const tfReturn = Number(row.timeframe_return_pct || 0);
+      const isTfPos = tfReturn >= 0;
 
       html += `
         <tr class="clickable-row" style="cursor:pointer;" title="Click to view schemes holding ${row.symbol}">
@@ -224,11 +227,18 @@ async function loadStockWeightageRanking() {
             <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.symbol}</div>
             <div style="font-size:11px;color:var(--text-muted);">${row.company_name}</div>
           </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">₹${Number(row.ltp).toFixed(2)}</td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isPos ? '#16A34A' : '#F85C56'};">${isPos ? '+' : ''}${pctInc.toFixed(1)}%</td>
-          <td style="text-align:center;font-weight:700;color:var(--primary);">${row.net_buyers + row.net_sellers} Institutes</td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTodayPos ? '#16A34A' : '#F85C56'};">
+            ${isTodayPos ? '+' : ''}${todayPl.toFixed(2)}%
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTfPos ? '#16A34A' : '#F85C56'};">
+            ${isTfPos ? '+' : ''}${tfReturn.toFixed(1)}%
+          </td>
+          <td style="text-align:center;font-weight:700;color:var(--primary);">
+            ${row.institutes_holding_count || (row.net_buyers + row.net_sellers)} Institutes
+          </td>
           <td style="text-align:center;font-family:var(--font-mono);font-weight:700;">
-            <span style="color:#16A34A;">${row.net_buyers}B</span> / <span style="color:#F85C56;">${row.net_sellers}S</span>
+            <span style="color:#16A34A;">${row.institutes_added || row.net_buyers} Added</span>
+            <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers}B / ${row.net_sellers}S)</span>
           </td>
           <td style="text-align:center;">
             <div style="display:flex;align-items:center;justify-content:center;gap:6px;">

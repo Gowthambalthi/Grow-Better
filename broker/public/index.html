@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v121" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v122" />
 </head>
 <body>
 
@@ -816,14 +816,13 @@
               <table class="holdings-table inst-table">
                 <thead>
                   <tr>
-                    <th style="width:45px;text-align:center;padding:12px 6px;">▼</th>
-                    <th style="white-space:nowrap;padding:12px 14px;min-width:210px;">Institutes Symbol <button class="sort-triangle-btn" data-sort="symbol" title="Sort by Institutes Symbol">⯅⯆</button></th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;">Current Price (LTP) <button class="sort-triangle-btn" data-sort="ltp" title="Sort by Stock Price">⯅⯆</button></th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:160px;">MF Growth / Reduction <button class="sort-triangle-btn active" data-sort="growth" title="Sort by Stock Growth">⯅⯆</button></th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Institute Holdings (Click to View) <button class="sort-triangle-btn" data-sort="total_institutes_count" title="Sort by Institute Count">⯅⯆</button></th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:210px;">Institutional Trend (Bought / Sold) <button class="sort-triangle-btn" data-sort="institutes_increased" title="Sort by Institutional Trend">⯅⯆</button></th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:110px;">Weightage % <button class="sort-triangle-btn" data-sort="avg_weightage_pct" title="Sort by Weightage">⯅⯆</button></th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:160px;">Total MF Invested (₹ Cr) <button class="sort-triangle-btn" data-sort="total_mf_holding_cr" title="Sort by Total MF Value">⯅⯆</button></th>
+                    <th style="width:45px;text-align:center;padding:12px 6px;">#</th>
+                    <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Institutes Symbol</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
+                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;" id="thTimeframeReturn">Timeframe Return %</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
+                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
                   </tr>
                 </thead>
                 <tbody id="tbodyInstitutionalScanner">
@@ -1405,6 +1404,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v121"></script>
+  <script type="module" src="/js/app.js?v=20260821_v122"></script>
 </body>
 </html>
