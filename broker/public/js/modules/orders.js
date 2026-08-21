@@ -344,20 +344,28 @@ export function setProductType(prodType) {
   const fullBtn = document.getElementById('omFullPayBtn');
 
   document.querySelectorAll('.prod-btn').forEach((b) => {
-    const isIntradayBtn = b.dataset.prod === 'INTRADAY';
-    const isDelivBtn = b.dataset.prod === 'DELIVERY';
+    const p = b.getAttribute('data-prod') || b.dataset.prod;
+    const isActive = (prodType === 'INTRADAY' && p === 'INTRADAY') || (prodType !== 'INTRADAY' && p === 'DELIVERY');
 
-    if (prodType === 'INTRADAY') {
-      b.classList.toggle('active', isIntradayBtn);
+    b.classList.toggle('active', isActive);
+    if (isActive) {
+      b.style.borderColor = '#00B386';
+      b.style.background = '#E8F8F2';
+      b.style.color = '#00B386';
     } else {
-      b.classList.toggle('active', isDelivBtn);
+      b.style.borderColor = '#E2E8F0';
+      b.style.background = '#FFFFFF';
+      b.style.color = '#64748B';
     }
   });
 
   if (prodType === 'INTRADAY') {
     if (mtfBtn) mtfBtn.style.display = 'none';
     if (fullBtn) {
+      fullBtn.style.display = 'flex';
       fullBtn.classList.add('active');
+      fullBtn.style.borderColor = '#00B386';
+      fullBtn.style.background = '#E8F8F2';
       const titleSpan = fullBtn.querySelector('.pay-title');
       if (titleSpan) titleSpan.textContent = 'Intraday (5x)';
     }
@@ -365,9 +373,14 @@ export function setProductType(prodType) {
     if (mtfBtn) {
       mtfBtn.style.display = 'flex';
       mtfBtn.classList.add('active');
+      mtfBtn.style.borderColor = '#3B82F6';
+      mtfBtn.style.background = '#EEF2FF';
     }
     if (fullBtn) {
+      fullBtn.style.display = 'flex';
       fullBtn.classList.remove('active');
+      fullBtn.style.borderColor = '#E2E8F0';
+      fullBtn.style.background = '#FFFFFF';
       const titleSpan = fullBtn.querySelector('.pay-title');
       if (titleSpan) titleSpan.textContent = 'Pay Full';
     }
@@ -375,9 +388,14 @@ export function setProductType(prodType) {
     if (mtfBtn) {
       mtfBtn.style.display = 'flex';
       mtfBtn.classList.remove('active');
+      mtfBtn.style.borderColor = '#E2E8F0';
+      mtfBtn.style.background = '#FFFFFF';
     }
     if (fullBtn) {
+      fullBtn.style.display = 'flex';
       fullBtn.classList.add('active');
+      fullBtn.style.borderColor = '#00B386';
+      fullBtn.style.background = '#E8F8F2';
       const titleSpan = fullBtn.querySelector('.pay-title');
       if (titleSpan) titleSpan.textContent = 'Pay Full';
     }
@@ -494,32 +512,52 @@ export function initOrders() {
     });
   }
 
-  // Broker Tab Selector (Angel One vs Groww)
-  document.querySelectorAll('#omBrokerTabs .om-broker-tab').forEach((tab) => {
-    tab.addEventListener('click', () => setBroker(tab.dataset.broker));
+  // Global Event Delegation for Order Ticket Controls
+  document.addEventListener('click', (e) => {
+    const prodBtn = e.target.closest('.prod-btn');
+    if (prodBtn) {
+      const prod = prodBtn.getAttribute('data-prod') || prodBtn.dataset.prod;
+      setProductType(prod);
+      return;
+    }
+
+    const mtfBtn = e.target.closest('#omMtfPayBtn');
+    if (mtfBtn) {
+      setProductType('MARGIN');
+      return;
+    }
+
+    const fullBtn = e.target.closest('#omFullPayBtn');
+    if (fullBtn) {
+      setProductType(activeOrderParams.productType === 'INTRADAY' ? 'INTRADAY' : 'DELIVERY');
+      return;
+    }
+
+    const bsBtn = e.target.closest('#omSideToggle .bs-btn');
+    if (bsBtn) {
+      setSide(bsBtn.dataset.side);
+      return;
+    }
+
+    const brokerTab = e.target.closest('#omBrokerTabs .om-broker-tab');
+    if (brokerTab) {
+      setBroker(brokerTab.dataset.broker);
+      return;
+    }
+
+    const omTab = e.target.closest('.om-tab');
+    if (omTab) {
+      document.querySelectorAll('.om-tab').forEach((t) => t.classList.remove('active'));
+      omTab.classList.add('active');
+      activeOrderParams.orderMode = omTab.dataset.omTab;
+      const triggerWrap = document.getElementById('omTriggerPriceWrap');
+      if (triggerWrap) {
+        const isTrigger = omTab.dataset.omTab === 'STOPLOSS' || omTab.dataset.omTab === 'GTT';
+        triggerWrap.style.display = isTrigger ? 'block' : 'none';
+      }
+      return;
+    }
   });
-
-  // Side Toggle Buttons (B / S)
-  document.querySelectorAll('#omSideToggle .bs-btn').forEach((btn) => {
-    btn.addEventListener('click', () => setSide(btn.dataset.side));
-  });
-
-  // Product Type Buttons (INT / DEL)
-  document.querySelectorAll('.prod-btn').forEach((btn) => {
-    btn.addEventListener('click', () => setProductType(btn.dataset.prod));
-  });
-
-  // Pay Mode Cards (MTF 3x vs Pay Full)
-  const mtfBtn = document.getElementById('omMtfPayBtn');
-  const fullBtn = document.getElementById('omFullPayBtn');
-
-  if (mtfBtn) {
-    mtfBtn.addEventListener('click', () => setProductType('MARGIN'));
-  }
-
-  if (fullBtn) {
-    fullBtn.addEventListener('click', () => setProductType(activeOrderParams.productType === 'INTRADAY' ? 'INTRADAY' : 'DELIVERY'));
-  }
 
   // Order Mode Tabs (Regular / Stop Loss / GTT / SIP)
   document.querySelectorAll('.om-tab').forEach((tab) => {
