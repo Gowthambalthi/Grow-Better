@@ -1,7 +1,4 @@
-/**
- * public/js/core/router.js
- * View Navigation & Sidebar Controller
- */
+import { togglePortfolioSettingsPopover } from '../modules/portfolio.js';
 
 const PAGE_TITLES = {
   dashboard: 'DASHBOARD OVERVIEW',
@@ -23,7 +20,16 @@ export function goToView(name) {
 
 export function initRouter() {
   document.querySelectorAll('[data-nav]').forEach((el) => {
-    el.addEventListener('click', () => goToView(el.dataset.nav));
+    el.addEventListener('click', (e) => {
+      const navTarget = el.dataset.nav;
+      if (navTarget === 'settings') {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePortfolioSettingsPopover(true);
+        return;
+      }
+      goToView(navTarget);
+    });
   });
 
   const collapseBtn = document.getElementById('collapseToggle');

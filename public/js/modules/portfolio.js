@@ -431,27 +431,35 @@ export function initPortfolio() {
   initSettingsPopover();
 }
 
+export function togglePortfolioSettingsPopover(forceShow) {
+  activeSettingsBroker = 'angelone';
+  document.querySelectorAll('[data-broker-tab]').forEach((b) => b.classList.toggle('active', b.dataset.brokerTab === 'angelone'));
+  populateHoldingDropdown();
+  const buyDateEl = document.getElementById('ulBuyDate');
+  const capDateEl = document.getElementById('ulCapDate');
+  if (buyDateEl) buyDateEl.value = new Date().toISOString().slice(0, 10);
+  if (capDateEl) capDateEl.value = new Date().toISOString().slice(0, 10);
+  loadCapitalLogs();
+  loadLedgerSummary();
+
+  const popover = document.getElementById('portfolioSettingsPopover');
+  const backdrop = document.getElementById('settingsModalBackdrop');
+  const openSettingsBtn = document.getElementById('openUnifiedLedgerBtn');
+
+  if (popover) {
+    const showState = typeof forceShow === 'boolean' ? forceShow : !popover.classList.contains('show');
+    popover.classList.toggle('show', showState);
+    if (backdrop) backdrop.classList.toggle('show', showState);
+    if (openSettingsBtn) openSettingsBtn.classList.toggle('active', showState);
+  }
+}
+
 function initSettingsPopover() {
   const openSettingsBtn = document.getElementById('openUnifiedLedgerBtn');
   if (openSettingsBtn) {
     openSettingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      activeSettingsBroker = 'angelone';
-      document.querySelectorAll('[data-broker-tab]').forEach((b) => b.classList.toggle('active', b.dataset.brokerTab === 'angelone'));
-      populateHoldingDropdown();
-      document.getElementById('ulBuyDate').value = new Date().toISOString().slice(0, 10);
-      document.getElementById('ulCapDate').value = new Date().toISOString().slice(0, 10);
-      loadCapitalLogs();
-      loadLedgerSummary();
-
-      const popover = document.getElementById('portfolioSettingsPopover');
-      const backdrop = document.getElementById('settingsModalBackdrop');
-      if (popover) {
-        const willShow = !popover.classList.contains('show');
-        popover.classList.toggle('show', willShow);
-        if (backdrop) backdrop.classList.toggle('show', willShow);
-        if (openSettingsBtn) openSettingsBtn.classList.toggle('active', willShow);
-      }
+      togglePortfolioSettingsPopover();
     });
   }
 
