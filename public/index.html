@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v140" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v141" />
 </head>
 <body>
 
@@ -46,7 +46,7 @@
         </button>
         <button class="nav-item" data-nav="scanner">
           <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <span>Radar</span>
+          <span>Stock Radar</span>
         </button>
         <button class="nav-item" data-nav="terminal">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 9 3 3-3 3M13 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -744,7 +744,7 @@
         <section class="view" id="view-scanner">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:14px;">
             <div>
-              <h1 class="view-title" style="margin:0;">Institutional Radar</h1>
+              <h1 class="view-title" style="margin:0;">Stock Radar</h1>
               <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Official AMFI Monthly Database — Stock Weightage Scores, Total Institute Holdings, &amp; Net Funds Added</p>
             </div>
             
@@ -809,10 +809,11 @@
                 <table class="holdings-table">
                   <thead>
                     <tr>
-                      <th style="width:55px;text-align:center;padding:10px 6px;">S.No</th>
-                      <th style="padding:10px 12px;">Institute Name (Scheme &amp; Fund House)</th>
-                      <th style="text-align:right;padding:10px 12px;">Holding %</th>
-                      <th style="text-align:center;padding:10px 12px;">Action (Buy / Sell)</th>
+                      <th style="width:55px;text-align:center;padding:10px 6px;">Rank</th>
+                      <th style="padding:10px 12px;">Institute Name (Scheme &amp; Parent AMC)</th>
+                      <th style="text-align:right;padding:10px 12px;">Scheme Return %</th>
+                      <th style="text-align:right;padding:10px 12px;">Weightage %</th>
+                      <th style="text-align:center;padding:10px 12px;">Status</th>
                       <th style="text-align:right;padding:10px 12px;">Invested (₹ Cr)</th>
                     </tr>
                   </thead>
@@ -1365,6 +1366,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v140"></script>
+  <script type="module" src="/js/app.js?v=20260821_v141"></script>
 </body>
 </html>

@@ -449,10 +449,16 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
 
     let html = '';
     schemes.forEach((sch, idx) => {
+      const isNew = sch.status === 'NEW';
       const isBuy = sch.action === 'BUY';
-      const actionBadge = isBuy
-        ? `<span style="background:rgba(22, 163, 74, 0.15);color:#16A34A;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px;">${sch.action_detail}</span>`
-        : `<span style="background:rgba(248, 92, 86, 0.15);color:#F85C56;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px;">${sch.action_detail}</span>`;
+      const schReturn = Number(sch.scheme_return_pct || 0);
+      const isReturnPos = schReturn >= 0;
+
+      const statusBadge = isNew
+        ? (isBuy 
+            ? `<span style="background:rgba(22, 163, 74, 0.18);color:#16A34A;border:1px solid rgba(22, 163, 74, 0.35);padding:3px 8px;border-radius:4px;font-weight:800;font-size:11px;">NEW (${sch.action_detail.replace('NEW ', '')})</span>`
+            : `<span style="background:rgba(248, 92, 86, 0.18);color:#F85C56;border:1px solid rgba(248, 92, 86, 0.35);padding:3px 8px;border-radius:4px;font-weight:800;font-size:11px;">NEW (${sch.action_detail.replace('NEW ', '')})</span>`)
+        : `<span style="background:rgba(100, 116, 139, 0.18);color:#64748B;border:1px solid rgba(100, 116, 139, 0.35);padding:3px 8px;border-radius:4px;font-weight:800;font-size:11px;">OLD (Holding)</span>`;
 
       html += `
         <tr>
@@ -461,11 +467,14 @@ export async function openStockBreakdownModal(symbol, mode = 'holding') {
             <div style="font-weight:800;color:var(--text);font-size:13px;">${sch.scheme_name}</div>
             <div style="font-size:11px;color:var(--text-muted);">${sch.fund_house} · ${sch.category}</div>
           </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isReturnPos ? '#16A34A' : '#F85C56'};">
+            ${isReturnPos ? '+' : ''}${schReturn.toFixed(2)}%
+          </td>
           <td style="text-align:right;font-family:var(--font-mono);font-weight:800;color:var(--accent-cyan);">
             ${Number(sch.weightage_pct).toFixed(2)}%
           </td>
           <td style="text-align:center;">
-            ${actionBadge}
+            ${statusBadge}
           </td>
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--text);">
             ₹${Number(sch.invested_cr).toLocaleString('en-IN')} Cr

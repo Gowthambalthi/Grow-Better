@@ -450,9 +450,12 @@ function getSchemeBreakdownForStock(symbol, mode = 'holding') {
 
   for (let idx = 0; idx < Math.min(count, allSchemes.length); idx++) {
     const sch = allSchemes[idx];
+    const isAction = (idx % 4 !== 0); // 75% schemes actively bought/sold (NEW), 25% unchanged (OLD)
     const isBuy = isAddedOnly ? (idx % 7 !== 0) : (idx % 9 !== 0);
+    
     if (isBuy) buyCount++; else sellCount++;
 
+    const schemeReturnPct = Number((24.5 - idx * 0.28).toFixed(2));
     const weightagePct = Number(Math.max(0.15, 5.20 - idx * 0.062).toFixed(2));
     const investedCr = Number(Math.max(3.2, 145.0 - idx * 1.8).toFixed(1));
     const sharesChangeLakhs = Number((18.5 - idx * 0.22).toFixed(1));
@@ -465,8 +468,10 @@ function getSchemeBreakdownForStock(symbol, mode = 'holding') {
       scheme_name: sch.scheme_name,
       fund_house: sch.fund_house,
       category: sch.category,
+      scheme_return_pct: schemeReturnPct,
+      status: isAction ? 'NEW' : 'OLD',
       action: isBuy ? 'BUY' : 'SELL',
-      action_detail: isBuy ? `BUY (+${sharesChangeLakhs}L Shares)` : `SELL (-${(sharesChangeLakhs * 0.35).toFixed(1)}L Shares)`,
+      action_detail: isAction ? (isBuy ? `NEW (BUY +${sharesChangeLakhs}L)` : `NEW (SELL -${(sharesChangeLakhs * 0.35).toFixed(1)}L)`) : `OLD (Holding)`,
       weightage_pct: weightagePct,
       invested_cr: investedCr
     });
