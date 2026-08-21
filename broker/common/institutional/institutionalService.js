@@ -455,110 +455,126 @@ function getSchemeBreakdownForStock(symbol, period = '3m') {
 function seedInstitutesDatabase() {
   try {
     const symbolCount = db.prepare('SELECT COUNT(*) as c FROM symbol_master').get().c;
-    if (symbolCount < 20) {
+    if (symbolCount < 1000) {
+      console.log('[Institutes Seed] Seeding full 1,650+ stock & 2,000+ mutual fund scheme dataset...');
+
       const insertSym = db.prepare('INSERT OR REPLACE INTO symbol_master (isin, nse_symbol, bse_symbol, company_name, sector, market_cap_cr, ltp) VALUES (?, ?, ?, ?, ?, ?, ?)');
-      const stocks = [
-        ['INE213A01011', 'EMMVEE', '543210', 'Emmvee Photovoltaic Power Ltd', 'Renewable Energy', 4200, 326.45],
-        ['INE002A01018', 'RELIANCE', '500325', 'Reliance Industries Ltd', 'Energy & Petrochemicals', 1845000, 1313.20],
-        ['INE213A01029', 'SHRIRAMFIN', '511218', 'Shriram Finance Ltd', 'NBFC & Financials', 112000, 2985.40],
-        ['INE090A01021', 'ICICIBANK', '532174', 'ICICI Bank Ltd', 'Banking & Financials', 842000, 1195.00],
-        ['INE062A01020', 'SBIN', '500112', 'State Bank of India', 'Banking & Financials', 748000, 848.00],
-        ['INE094A01015', 'CUPID', '538418', 'Cupid Ltd', 'Healthcare & Pharma', 3100, 285.99],
-        ['INE040A01034', 'HDFCBANK', '500180', 'HDFC Bank Ltd', 'Banking & Financials', 1245000, 1642.50],
-        ['INE009A01021', 'INFY', '500209', 'Infosys Ltd', 'IT Services', 762000, 1850.00],
-        ['INE081A01012', 'TATASTEEL', '500470', 'Tata Steel Ltd', 'Metals & Mining', 182000, 148.00],
-        ['INE213B01012', 'ONGC', '500312', 'Oil & Natural Gas Corp Ltd', 'Oil & Gas', 312000, 248.60],
-        ['INE467B01029', 'TCS', '532540', 'Tata Consultancy Services Ltd', 'IT Services', 1450000, 3950.00],
-        ['INE397D01024', 'BHARTIARTL', '532454', 'Bharti Airtel Ltd', 'Telecom', 820000, 1420.00],
-        ['INE018A01030', 'LT', '500510', 'Larsen & Toubro Ltd', 'Infrastructure', 490000, 3540.00],
-        ['INE238A01034', 'AXISBANK', '532215', 'Axis Bank Ltd', 'Banking & Financials', 360000, 1175.00],
-        ['INE237A01028', 'KOTAKBANK', '500247', 'Kotak Mahindra Bank Ltd', 'Banking & Financials', 350000, 1760.00],
-        ['INE154A01025', 'ITC', '500875', 'ITC Ltd', 'FMCG & Consumer', 610000, 488.00],
-        ['INE155A01022', 'TATAMOTORS', '500570', 'Tata Motors Ltd', 'Automotive', 380000, 1025.00],
-        ['INE030A01027', 'HINDUNILVR', '500696', 'Hindustan Unilever Ltd', 'FMCG & Consumer', 580000, 2460.00],
-        ['INE585B01010', 'MARUTI', '532500', 'Maruti Suzuki India Ltd', 'Automotive', 390000, 12400.00],
-        ['INE044A01036', 'SUNPHARMA', '524715', 'Sun Pharmaceutical Ind Ltd', 'Healthcare & Pharma', 410000, 1720.00]
-      ];
-      for (const s of stocks) insertSym.run(...s);
-
-      const insertInst = db.prepare('INSERT OR REPLACE INTO institutes (institute_id, name, total_schemes, total_aum_cr) VALUES (?, ?, ?, ?)');
-      const institutes = [
-        ['INST01', 'SBI Mutual Fund', 142, 895000],
-        ['INST02', 'ICICI Prudential Mutual Fund', 135, 782000],
-        ['INST03', 'HDFC Mutual Fund', 128, 742000],
-        ['INST04', 'Nippon India Mutual Fund', 118, 512000],
-        ['INST05', 'Kotak Mahindra Mutual Fund', 110, 485000],
-        ['INST06', 'Axis Mutual Fund', 105, 395000],
-        ['INST07', 'Quant Mutual Fund', 42, 92000],
-        ['INST08', 'PPFAS Mutual Fund', 18, 68000]
-      ];
-      for (const inst of institutes) insertInst.run(...inst);
-
-      const insertScheme = db.prepare('INSERT OR REPLACE INTO schemes (scheme_id, institute_id, scheme_name, scheme_aum_cr, category) VALUES (?, ?, ?, ?, ?)');
-      const schemes = [
-        ['SCH01', 'INST01', 'SBI Bluechip Direct Growth', 42500, 'Large Cap'],
-        ['SCH02', 'INST01', 'SBI Small Cap Direct Growth', 28400, 'Small Cap'],
-        ['SCH03', 'INST02', 'ICICI Prudential Bluechip', 38200, 'Large Cap'],
-        ['SCH04', 'INST03', 'HDFC Top 100 Direct Growth', 31200, 'Large Cap'],
-        ['SCH05', 'INST04', 'Nippon India Small Cap Direct Growth', 48900, 'Small Cap'],
-        ['SCH06', 'INST05', 'Kotak Bluechip Direct Growth', 18500, 'Large Cap'],
-        ['SCH07', 'INST07', 'Quant Flexi Cap Direct Growth', 21400, 'Flexi Cap'],
-        ['SCH08', 'INST08', 'PPFAS Flexi Cap Direct Growth', 54200, 'Flexi Cap']
-      ];
-      for (const sc of schemes) insertScheme.run(...sc);
-
-      // Seed computed weightage & growth scores across ALL 4 timeframes (1M, 3M, 6M, 1Y)
       const insertStockScore = db.prepare('INSERT OR REPLACE INTO stock_weightage_score (isin, month, timeframe, weightage_score, net_flow_cr, breadth_score_norm, pct_increase_holding, velocity_multiplier, net_buyers, net_sellers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-      const monthStr = '2026-08';
-      const timeframes = ['1M', '3M', '6M', '1Y'];
-      
-      const stockSeedMetrics = [
-        { isin: 'INE213A01011', mult: 1.0, baseScore: 94.5, netFlow: 348.5, bScore: 92.0, ret: 11.34, vMult: 1.35, b: 12, s: 1 },
-        { isin: 'INE002A01018', mult: 1.0, baseScore: 88.2, netFlow: 1425.0, bScore: 85.0, ret: 4.12, vMult: 1.20, b: 18, s: 2 },
-        { isin: 'INE213A01029', mult: 1.0, baseScore: 82.4, netFlow: 482.0, bScore: 78.5, ret: 4.93, vMult: 1.15, b: 14, s: 2 },
-        { isin: 'INE090A01021', mult: 1.0, baseScore: 79.8, netFlow: 620.0, bScore: 74.0, ret: 5.33, vMult: 1.10, b: 15, s: 3 },
-        { isin: 'INE062A01020', mult: 1.0, baseScore: 76.5, netFlow: 540.0, bScore: 72.0, ret: 5.42, vMult: 1.05, b: 11, s: 2 },
-        { isin: 'INE094A01015', mult: 1.0, baseScore: 71.2, netFlow: 184.0, bScore: 68.0, ret: 9.01, vMult: 1.00, b: 8, s: 1 },
-        { isin: 'INE040A01034', mult: 1.0, baseScore: 70.1, netFlow: 980.0, bScore: 65.0, ret: 3.20, vMult: 1.02, b: 16, s: 4 },
-        { isin: 'INE009A01021', mult: 1.0, baseScore: 68.5, netFlow: 410.0, bScore: 64.0, ret: -1.10, vMult: 1.00, b: 10, s: 5 },
-        { isin: 'INE081A01012', mult: 1.0, baseScore: 65.0, netFlow: 220.0, bScore: 60.0, ret: 6.15, vMult: 1.01, b: 9, s: 3 },
-        { isin: 'INE213B01012', mult: 1.0, baseScore: 63.4, netFlow: 310.0, bScore: 58.0, ret: 2.80, vMult: 1.00, b: 7, s: 2 },
-        { isin: 'INE467B01029', mult: 1.0, baseScore: 62.0, netFlow: 750.0, bScore: 56.0, ret: 1.95, vMult: 1.01, b: 12, s: 4 },
-        { isin: 'INE397D01024', mult: 1.0, baseScore: 60.5, netFlow: 490.0, bScore: 55.0, ret: 4.80, vMult: 1.02, b: 11, s: 3 },
-        { isin: 'INE018A01030', mult: 1.0, baseScore: 58.0, netFlow: 380.0, bScore: 52.0, ret: 3.10, vMult: 1.00, b: 8, s: 3 },
-        { isin: 'INE238A01034', mult: 1.0, baseScore: 56.4, netFlow: 290.0, bScore: 50.0, ret: 2.40, vMult: 1.00, b: 7, s: 4 },
-        { isin: 'INE237A01028', mult: 1.0, baseScore: 54.0, netFlow: 210.0, bScore: 48.0, ret: -0.80, vMult: 1.00, b: 6, s: 5 },
-        { isin: 'INE154A01025', mult: 1.0, baseScore: 52.5, netFlow: 330.0, bScore: 46.0, ret: 1.20, vMult: 1.00, b: 8, s: 4 },
-        { isin: 'INE155A01022', mult: 1.0, baseScore: 50.0, netFlow: 420.0, bScore: 45.0, ret: 8.40, vMult: 1.05, b: 10, s: 3 },
-        { isin: 'INE030A01027', mult: 1.0, baseScore: 48.2, netFlow: 190.0, bScore: 42.0, ret: -2.10, vMult: 1.00, b: 5, s: 6 },
-        { isin: 'INE585B01010', mult: 1.0, baseScore: 46.0, netFlow: 280.0, bScore: 40.0, ret: 4.50, vMult: 1.01, b: 7, s: 3 },
-        { isin: 'INE044A01036', mult: 1.0, baseScore: 44.5, netFlow: 160.0, bScore: 38.0, ret: 3.80, vMult: 1.00, b: 6, s: 4 }
-      ];
-
-      for (const tf of timeframes) {
-        const tfMult = tf === '1M' ? 1.0 : (tf === '3M' ? 1.4 : (tf === '6M' ? 2.1 : 3.5));
-        for (const st of stockSeedMetrics) {
-          const adjRet = Number((st.ret * (tf === '1M' ? 1.0 : (tf === '3M' ? 2.1 : (tf === '6M' ? 3.8 : 6.2)))).toFixed(2));
-          const adjFlow = Number((st.netFlow * tfMult).toFixed(1));
-          const adjScore = Math.min(99.9, Number((st.baseScore * (tf === '1M' ? 1.0 : (tf === '3M' ? 1.02 : 1.04))).toFixed(1)));
-          insertStockScore.run(st.isin, monthStr, tf, adjScore, adjFlow, st.bScore, adjRet, st.vMult, st.b, st.s);
-        }
-      }
-
+      const insertInst = db.prepare('INSERT OR REPLACE INTO institutes (institute_id, name, total_schemes, total_aum_cr) VALUES (?, ?, ?, ?)');
+      const insertScheme = db.prepare('INSERT OR REPLACE INTO schemes (scheme_id, institute_id, scheme_name, scheme_aum_cr, category) VALUES (?, ?, ?, ?, ?)');
       const insertInstScore = db.prepare('INSERT OR REPLACE INTO institute_growth_score (institute_id, month, timeframe, growth_score, aum_growth_pct, deployment_ratio, new_position_count, exit_ratio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       const insertSchemeScore = db.prepare('INSERT OR REPLACE INTO scheme_growth_score (scheme_id, month, timeframe, growth_score, aum_growth_pct, deployment_ratio, new_position_count, exit_ratio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 
-      for (const tf of timeframes) {
-        insertInstScore.run('INST01', monthStr, tf, 92.4, 8.5, 0.042, 6, 0.008);
-        insertInstScore.run('INST04', monthStr, tf, 89.1, 7.8, 0.038, 8, 0.005);
-        insertInstScore.run('INST07', monthStr, tf, 86.5, 12.4, 0.055, 4, 0.012);
-        insertInstScore.run('INST02', monthStr, tf, 84.0, 6.9, 0.032, 5, 0.007);
+      const monthStr = '2026-08';
+      const timeframes = ['1M', '3M', '6M', '1Y'];
 
-        insertSchemeScore.run('SCH05', monthStr, tf, 95.2, 11.4, 0.058, 4, 0.004);
-        insertSchemeScore.run('SCH07', monthStr, tf, 91.8, 12.8, 0.062, 3, 0.009);
-        insertSchemeScore.run('SCH01', monthStr, tf, 88.4, 7.2, 0.035, 2, 0.006);
-        insertSchemeScore.run('SCH02', monthStr, tf, 86.0, 9.1, 0.044, 3, 0.005);
-      }
+      const SECTORS = [
+        'Banking & Financials', 'IT Services', 'Oil & Gas', 'Automotive', 'Healthcare & Pharma',
+        'FMCG & Consumer', 'Infrastructure', 'Metals & Mining', 'Renewable Energy', 'Telecommunications',
+        'Capital Goods', 'Chemicals & Fertilizers', 'Real Estate & Construction', 'Textiles', 'Utilities'
+      ];
+
+      const AMC_NAMES = [
+        'SBI Mutual Fund', 'ICICI Prudential Mutual Fund', 'HDFC Mutual Fund', 'Nippon India Mutual Fund',
+        'Kotak Mahindra Mutual Fund', 'Axis Mutual Fund', 'Aditya Birla Sun Life Mutual Fund', 'UTI Mutual Fund',
+        'Mirae Asset Mutual Fund', 'DSP Mutual Fund', 'Edelweiss Mutual Fund', 'Tata Mutual Fund',
+        'Sundaram Mutual Fund', 'Invesco Mutual Fund', 'Canara Robeco Mutual Fund', 'Motilal Oswal Mutual Fund',
+        'HSBC Mutual Fund', 'PGIM India Mutual Fund', 'Union Mutual Fund', 'Bandhan Mutual Fund',
+        'Baroda BNP Paribas Mutual Fund', 'Quant Mutual Fund', 'PPFAS Mutual Fund', 'JM Financial Mutual Fund'
+      ];
+
+      const SCHEME_TYPES = [
+        'Bluechip Direct Growth', 'Flexi Cap Direct Growth', 'Small Cap Direct Growth', 'Mid Cap Direct Growth',
+        'Large & Mid Cap Growth', 'Focused Equity Growth', 'ELSS Tax Saver Growth', 'Contra Fund Growth',
+        'Value Discovery Growth', 'Infrastructure Fund Growth', 'Healthcare Fund Growth', 'Technology Fund Growth',
+        'Banking & Financial Services Growth', 'Balanced Advantage Growth', 'Multi Cap Growth', 'Opportunities Fund Growth'
+      ];
+
+      const BASE_STOCKS = [
+        { isin: 'INE213A01011', sym: 'EMMVEE', bse: '543210', name: 'Emmvee Photovoltaic Power Ltd', sec: 'Renewable Energy', cap: 4200, ltp: 326.45, score: 94.5, netFlow: 348.5, ret: 11.34, b: 12, s: 1 },
+        { isin: 'INE002A01018', sym: 'RELIANCE', bse: '500325', name: 'Reliance Industries Ltd', sec: 'Oil & Gas', cap: 1845000, ltp: 1313.20, score: 88.2, netFlow: 1425.0, ret: 4.12, b: 18, s: 2 },
+        { isin: 'INE213A01029', sym: 'SHRIRAMFIN', bse: '511218', name: 'Shriram Finance Ltd', sec: 'Banking & Financials', cap: 112000, ltp: 2985.40, score: 82.4, netFlow: 482.0, ret: 4.93, b: 14, s: 2 },
+        { isin: 'INE090A01021', sym: 'ICICIBANK', bse: '532174', name: 'ICICI Bank Ltd', sec: 'Banking & Financials', cap: 842000, ltp: 1195.00, score: 79.8, netFlow: 620.0, ret: 5.33, b: 15, s: 3 },
+        { isin: 'INE062A01020', sym: 'SBIN', bse: '500112', name: 'State Bank of India', sec: 'Banking & Financials', cap: 748000, ltp: 848.00, score: 76.5, netFlow: 540.0, ret: 5.42, b: 11, s: 2 },
+        { isin: 'INE094A01015', sym: 'CUPID', bse: '538418', name: 'Cupid Ltd', sec: 'Healthcare & Pharma', cap: 3100, ltp: 285.99, score: 71.2, netFlow: 184.0, ret: 9.01, b: 8, s: 1 }
+      ];
+
+      db.transaction(() => {
+        // Base Stocks
+        for (const b of BASE_STOCKS) {
+          insertSym.run(b.isin, b.sym, b.bse, b.name, b.sec, b.cap, b.ltp);
+          for (const tf of timeframes) {
+            const tfMult = tf === '1M' ? 1.0 : (tf === '3M' ? 1.5 : (tf === '6M' ? 2.3 : 3.8));
+            const adjRet = Number((b.ret * (tf === '1M' ? 1.0 : (tf === '3M' ? 2.1 : (tf === '6M' ? 3.8 : 6.2)))).toFixed(2));
+            const adjFlow = Number((b.netFlow * tfMult).toFixed(1));
+            const adjScore = Math.min(99.9, Number((b.score * (tf === '1M' ? 1.0 : 1.02)).toFixed(1)));
+            insertStockScore.run(b.isin, monthStr, tf, adjScore, adjFlow, 85, adjRet, 1.15, b.b, b.s);
+          }
+        }
+
+        // 1,650 Listed Equities
+        const prefixes = ['TATA', 'ADANI', 'BIRLA', 'RELIANCE', 'MAHINDRA', 'BAJAJ', 'GODREJ', 'JINDAL', 'APOLLO', 'BHARTI', 'L&T', 'KOTAK', 'HDFC', 'ICICI', 'SHREE', 'MUTHOOT', 'KPIT', 'CYIENT', 'CEAT', 'SRF'];
+        const suffixes = ['INDIA', 'TECH', 'FINANCE', 'POWER', 'MOTORS', 'CHEMICALS', 'GLOBAL', 'ENERGY', 'INFRA', 'PHARMA', 'LOGISTICS', 'LABS', 'INDUSTRIES', 'CORP', 'ENTERPRISES', 'SYSTEMS', 'DIGITAL', 'SOLUTIONS'];
+
+        for (let i = 1; i <= 1650; i++) {
+          const p = prefixes[i % prefixes.length];
+          const s = suffixes[Math.floor(i / prefixes.length) % suffixes.length];
+          const sym = `${p}_${s}_${i}`;
+          const isin = `INE${String(i).padStart(9, '0')}`;
+          const bse = String(500000 + i);
+          const name = `${p} ${s} India Ltd #${i}`;
+          const sec = SECTORS[i % SECTORS.length];
+          const cap = Number((500 + (i * 147.5) % 850000).toFixed(0));
+          const ltp = Number((40 + (i * 37.8) % 4500).toFixed(2));
+
+          insertSym.run(isin, sym, bse, name, sec, cap, ltp);
+
+          const baseScore = Number((15 + (i * 13.7) % 80).toFixed(1));
+          const netFlow = Number((10 + (i * 29.4) % 1800).toFixed(1));
+          const bBuyers = 1 + (i % 25);
+          const bSellers = (i % 5);
+          const ret = Number((-5 + (i * 7.3) % 45).toFixed(2));
+
+          for (const tf of timeframes) {
+            const tfMult = tf === '1M' ? 1.0 : (tf === '3M' ? 1.6 : (tf === '6M' ? 2.4 : 4.0));
+            const adjRet = Number((ret * (tf === '1M' ? 1.0 : (tf === '3M' ? 2.0 : (tf === '6M' ? 3.5 : 5.8)))).toFixed(2));
+            const adjFlow = Number((netFlow * tfMult).toFixed(1));
+            const adjScore = Math.min(99.9, Number((baseScore * (tf === '1M' ? 1.0 : 1.01)).toFixed(1)));
+            insertStockScore.run(isin, monthStr, tf, adjScore, adjFlow, 50, adjRet, 1.0, bBuyers, bSellers);
+          }
+        }
+
+        // 24 AMCs & 2,040 Schemes
+        for (let instIdx = 0; instIdx < AMC_NAMES.length; instIdx++) {
+          const instId = `INST${String(instIdx + 1).padStart(2, '0')}`;
+          const amcName = AMC_NAMES[instIdx];
+          const totalSchemes = 80 + (instIdx * 5);
+          const totalAum = 45000 + (instIdx * 35000);
+
+          insertInst.run(instId, amcName, totalSchemes, totalAum);
+
+          for (const tf of timeframes) {
+            insertInstScore.run(instId, monthStr, tf, Number((70 + instIdx * 0.9).toFixed(1)), 8.5, 0.045, 6, 0.008);
+          }
+
+          for (let sIdx = 1; sIdx <= 85; sIdx++) {
+            const schemeId = `SCH_${instId}_${sIdx}`;
+            const stType = SCHEME_TYPES[sIdx % SCHEME_TYPES.length];
+            const schemeName = `${amcName.replace(' Mutual Fund', '')} ${stType}`;
+            const schemeAum = Number((1200 + (sIdx * 480)).toFixed(0));
+            const category = stType.split(' ')[0] + ' Cap';
+
+            insertScheme.run(schemeId, instId, schemeName, schemeAum, category);
+
+            for (const tf of timeframes) {
+              const sScore = Number((65 + (sIdx * 0.35) % 32).toFixed(1));
+              insertSchemeScore.run(schemeId, monthStr, tf, sScore, 10.2, 0.052, 4, 0.006);
+            }
+          }
+        }
+      })();
+
+      console.log('[Institutes Seed] Seeding completed: 1,656 equities & 2,040 mutual fund schemes ready.');
     }
   } catch (err) {
     console.error('[Institutes Seed Error]', err.message);
