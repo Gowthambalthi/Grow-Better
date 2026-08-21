@@ -178,9 +178,10 @@ function updateSummaryCards(mode = 'all') {
   
   const heroOverallEl = document.getElementById('heroOverallValue');
   if (heroOverallEl) {
-    const ovNum = Number(c.overallPL || 0);
+    const currVal = Number(c.currentAmount || 0);
     const invAmt = Number(c.investedAmount || 0);
-    const ovPct = invAmt > 0 ? (ovNum / invAmt) * 100 : Number(c.overallPLPercent || 0);
+    const ovNum = currVal - invAmt; // Current Value - Invested
+    const ovPct = invAmt > 0 ? (ovNum / invAmt) * 100 : 0;
     const signPct = ovPct >= 0 ? `+${ovPct.toFixed(2)}%` : `${ovPct.toFixed(2)}%`;
     const signSym = ovNum < 0 ? '-' : (ovNum > 0 ? '+' : '');
     heroOverallEl.textContent = `${signSym}${money(Math.abs(ovNum))} (${signPct})`;
@@ -199,9 +200,9 @@ function updateSummaryCards(mode = 'all') {
   setPctVal('portSumXirr', c.xirr);
   setPctVal('portSumCagr', c.accountReturnPercent || c.cagr);
   setPl('portSumNetPl', c.overallPL);
-  setPl('portSumGross', c.rawOverallPL || c.grossPL);
+  setPl('portSumAccountPl', c.accountPL != null ? c.accountPL : (c.rawOverallPL || 0));
   setText('portSumAdjAccountPl', money(c.totalAccruedCharges));
-  setText('portSumCashInvested', money(c.ownCapitalInvested));
+  setText('portSumCashInvested', money(c.cashInvested || c.investedAmount));
 
   // Topbar Cash Balance & Cash Breakdown Popover Dropdown (Colored Red if Negative)
   const angelCash = latestPortfolioData?.angelone?.summary?.cashBalance != null ? latestPortfolioData.angelone.summary.cashBalance : -185.08;
@@ -838,10 +839,11 @@ async function loadCapitalLogs() {
 
 async function loadLedgerSummary() {
   try {
-    const [brokerFunds, override, port] = await Promise.all([
+    const [brokerFunds, override, port, mtfSummary] = await Promise.all([
       api(`/api/${activeSettingsBroker}/ledger/funds`).catch(() => ({ totals: { totalAdded: 0, totalWithdrawn: 0, net: 0 } })),
       api(`/api/${activeSettingsBroker}/ledger/override`).catch(() => ({ custom_charges: null, custom_mtf_interest: null })),
       api('/api/portfolio').catch(() => ({ combined: {} })),
+      api(`/api/${activeSettingsBroker}/ledger/mtf-summary`).catch(() => []),
     ]);
 
     const c = port.combined || {};
@@ -880,6 +882,34 @@ async function loadLedgerSummary() {
     if (mtfInput) {
       mtfInput.setAttribute('data-auto-val', autoMtfInt.toFixed(2));
       mtfInput.value = (override.custom_mtf_interest != null ? override.custom_mtf_interest : autoMtfInt).toFixed(2);
+    }
+
+    // Populate Daily MTF Interest Accrual Breakdown List
+    const mtfListEl = document.getElementById('ulMtfBreakdownList');
+    if (mtfListEl) {
+      const activeMtf = Array.isArray(mtfSummary) ? mtfSummary.filter(m => m.isOpen || m.is_mtf) : [];
+      if (activeMtf.length === 0) {
+        mtfListEl.innerHTML = `<span style="font-size:11px;color:var(--text-muted);">No active MTF positions found.</span>`;
+      } else {
+        mtfListEl.innerHTML = activeMtf.map(m => {
+          const sym = m.tradingsymbol || m.symbol || '';
+          const days = m.daysHeld != null ? m.daysHeld : 0;
+          const borrowed = m.mtf_amount_borrowed || m.mtfBorrowed || 0;
+          const dailyRate = borrowed * 0.0004109589; // 14.99% per annum = 0.041% / day
+          const accrued = m.interestAccrued || (dailyRate * days);
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed #E2E8F0;">
+              <div>
+                <b style="color:#0F172A;">${sym}</b>
+                <span style="font-size:10px;color:#64748B;margin-left:6px;">${days} days hold (${money(borrowed)} borrowed)</span>
+              </div>
+              <div style="text-align:right;">
+                <b style="color:#EB5B56;">-₹${accrued.toFixed(2)}</b>
+                <span style="font-size:10px;color:#00B386;display:block;">+₹${dailyRate.toFixed(2)}/day @11:59PM</span>
+              </div>
+            </div>`;
+        }).join('');
+      }
     }
 
     const grossNet = (c.overallPL || 0) - finalCharges - finalMtfInt;

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v110" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v111" />
 </head>
 <body>
 
@@ -465,11 +465,11 @@
               <span class="gs-sub">Net after all charges</span>
             </div>
 
-            <!-- Card 2: Gross Overall P&L -->
+            <!-- Card 2: Account Profit & Loss -->
             <div class="groww-stat-box">
-              <span class="gs-lbl">Gross Overall P&amp;L</span>
-              <span class="gs-val" id="portSumGross">₹0.00</span>
-              <span class="gs-sub">Unadjusted</span>
+              <span class="gs-lbl">Account Profit &amp; Loss</span>
+              <span class="gs-val" id="portSumAccountPl">₹0.00</span>
+              <span class="gs-sub">Funds added - withdraw - cash - balance</span>
             </div>
 
             <!-- Card 3: Charges & Fees -->
@@ -1337,12 +1337,22 @@
               </div>
             </div>
           </div>
+        </div>
 
+        <!-- Live Daily MTF Interest Accrual Breakdown Table -->
+        <div style="margin-top:14px;padding:12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;">
+          <div style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+            <span>Daily Accrued MTF Interest Breakdown (0.041%/day)</span>
+            <span style="font-size:10px;color:#00B386;font-weight:600;">Auto-accrues Daily at 11:59 PM IST</span>
+          </div>
+          <div id="ulMtfBreakdownList" style="font-family:'JetBrains Mono', monospace;font-size:11px;max-height:120px;overflow-y:auto;">
+            <div style="color:var(--text-muted);font-size:11px;">Loading MTF daily accrual logs...</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v110"></script>
+  <script type="module" src="/js/app.js?v=20260821_v111"></script>
 </body>
 </html>
