@@ -3,15 +3,15 @@
  * Main Application Bootstrapper & ES Module Entry Point
  */
 
-import { initTheme } from './core/theme.js?v=20260821_v123';
-import { initRouter } from './core/router.js?v=20260821_v123';
-import { initPopovers, startTicker } from './components/ticker.js?v=20260821_v123';
-import { loadStatus } from './components/statusPill.js?v=20260821_v123';
-import { initPortfolio, loadPortfolio } from './modules/portfolio.js?v=20260821_v123';
-import { initOrders } from './modules/orders.js?v=20260821_v123';
-import { loadMtfPositions, initPositionsSubtabs } from './modules/positions.js?v=20260821_v123';
-import { initInstitutionalScanner } from './modules/scanner.js?v=20260821_v123';
-import { initSettingsView, loadFundsTotals } from './modules/settings.js?v=20260821_v123';
+import { initTheme } from './core/theme.js?v=20260821_v124';
+import { initRouter } from './core/router.js?v=20260821_v124';
+import { initPopovers, startTicker } from './components/ticker.js?v=20260821_v124';
+import { loadStatus } from './components/statusPill.js?v=20260821_v124';
+import { initPortfolio, loadPortfolio } from './modules/portfolio.js?v=20260821_v124';
+import { initOrders } from './modules/orders.js?v=20260821_v124';
+import { loadMtfPositions, initPositionsSubtabs } from './modules/positions.js?v=20260821_v124';
+import { initInstitutionalScanner } from './modules/scanner.js?v=20260821_v124';
+import { initSettingsView, loadFundsTotals } from './modules/settings.js?v=20260821_v124';
 
 function refreshAll() {
   loadStatus();

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v123" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v124" />
 </head>
 <body>
 
@@ -727,7 +727,7 @@
             </div>
           </div>
 
-          <!-- PRIMARY MAIN TABLE CARD (FIRST) -->
+          <!-- PRIMARY MAIN TABLE CARD ONLY -->
           <div class="card" style="padding:16px;margin-bottom:24px;">
             <div class="table-wrap">
               <table class="holdings-table inst-table">
@@ -744,90 +744,6 @@
                 </thead>
                 <tbody id="tbodyInstitutionalScanner">
                   <tr class="empty-row"><td colspan="8">Loading AMFI institutional database...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- SECONDARY WIDGET: CONVICTION SUMMARY & ALERTS -->
-          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:14px;margin-bottom:18px;">
-            <div class="card" style="padding:16px 18px;">
-              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);letter-spacing:0.4px;">TOTAL CONVICTION SIGNALS</div>
-              <div id="statTotalConviction" style="font-size:22px;font-weight:800;font-family:var(--font-mono);margin-top:6px;color:var(--text);">4</div>
-            </div>
-
-            <div class="card" style="padding:16px 18px;">
-              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);letter-spacing:0.4px;">STRONG ACCUMULATION</div>
-              <div id="statStrongConviction" style="font-size:22px;font-weight:800;font-family:var(--font-mono);margin-top:6px;color:#16A34A;">3</div>
-            </div>
-
-            <div class="card" style="padding:16px 18px;">
-              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);letter-spacing:0.4px;">FRESH POSITIONS</div>
-              <div id="statFreshConviction" style="font-size:22px;font-weight:800;font-family:var(--font-mono);margin-top:6px;color:#00B386;">1</div>
-            </div>
-
-            <div class="card" style="padding:16px 18px;background:rgba(180,83,9,0.04);border:1px solid rgba(180,83,9,0.2);">
-              <div style="font-size:10.5px;font-weight:700;color:#B45309;letter-spacing:0.4px;">EXIT WATCH LIST</div>
-              <div id="statExitWatch" style="font-size:22px;font-weight:800;font-family:var(--font-mono);margin-top:6px;color:#B45309;">1</div>
-            </div>
-          </div>
-
-          <!-- FILTER PILL ROW (10px gap, 18px margin below) -->
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
-            <button class="conviction-pill active" data-bucket="ALL">All Conviction</button>
-            <button class="conviction-pill" data-bucket="strong">🔥 Strong Accumulation</button>
-            <button class="conviction-pill" data-bucket="fresh">🌱 Fresh Positions</button>
-            
-            <!-- Backtest Edge Chip aligned to right -->
-            <div style="margin-left:auto;background:rgba(37,99,235,0.1);color:#2563EB;border:1px solid rgba(37,99,235,0.25);padding:5px 12px;border-radius:14px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:6px;">
-              ⚡ Backtest Edge: +8.2% avg 1M fwd return · 100% win rate (Out-of-Sample Confirmed)
-            </div>
-          </div>
-
-          <!-- RANKED CONVICTION LEADERBOARD CARD -->
-          <div class="card" style="padding:16px;margin-bottom:20px;">
-            <div style="font-weight:800;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-              🏆 Institutional Conviction Ranked Leaderboard
-            </div>
-            <div class="table-wrap">
-              <table class="holdings-table inst-table">
-                <thead>
-                  <tr>
-                    <th style="width:45px;text-align:center;padding:14px 18px;">#</th>
-                    <th style="padding:14px 18px;min-width:200px;">Institutes Symbol</th>
-                    <th style="text-align:center;padding:14px 18px;min-width:130px;">AMFI Bucket</th>
-                    <th style="padding:14px 18px;min-width:180px;">Conviction Score</th>
-                    <th style="text-align:right;padding:14px 18px;min-width:160px;">Net Institutional Buying</th>
-                    <th style="text-align:right;padding:14px 18px;min-width:130px;">Delivery Z-Score</th>
-                    <th style="padding:14px 18px;min-width:180px;">Top AMC Holder</th>
-                    <th style="text-align:center;padding:14px 18px;min-width:90px;">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyConvictionLeaderboard">
-                  <tr class="empty-row"><td colspan="8">Loading conviction leaderboard...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- EXIT-WATCH LIST SECTION FOR WARNING BUCKET -->
-          <div class="card" style="padding:16px;margin-bottom:24px;border:1px solid rgba(180,83,9,0.25);">
-            <div style="font-weight:800;font-size:14px;color:#B45309;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
-              ⚠️ Exit-Watch List — Risk Management (Institutions Trimming Weightage)
-            </div>
-            <div class="table-wrap">
-              <table class="holdings-table inst-table">
-                <thead>
-                  <tr>
-                    <th style="padding:12px 14px;min-width:200px;">Institutes Symbol</th>
-                    <th style="text-align:center;padding:12px 14px;min-width:130px;">AMFI Status</th>
-                    <th style="text-align:right;padding:12px 14px;min-width:160px;">Net Trimming (₹ Cr)</th>
-                    <th style="text-align:right;padding:12px 14px;min-width:160px;">Total MF Holdings</th>
-                    <th style="text-align:center;padding:12px 14px;min-width:90px;">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyExitWatchList">
-                  <tr class="empty-row"><td colspan="5">Loading exit-watch list...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1405,6 +1321,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v123"></script>
+  <script type="module" src="/js/app.js?v=20260821_v124"></script>
 </body>
 </html>
