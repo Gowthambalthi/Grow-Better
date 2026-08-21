@@ -201,6 +201,95 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
   return symbolKeys.map(k => result[k]);
 }
 
+/**
+ * Dynamic Multi-Source Live Stock Quote Fetcher
+ * Tries Angel One SmartAPI first -> Backup to Yahoo Finance NSE feed.
+ */
+async function fetchStockQuotes(symbolList = []) {
+  const quotesMap = {};
+  if (!Array.isArray(symbolList) || symbolList.length === 0) return quotesMap;
+
+  const cleanSymbols = Array.from(new Set(symbolList.map(s => (s || '').replace('-EQ', '').trim().toUpperCase()))).filter(Boolean);
+  const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+
+  // 1. Try Angel One SmartAPI Live Quote Fetch
+  try {
+    const session = await getAngelSession();
+    if (session && session.jwtToken) {
+      const angelInstruments = require('../instruments/angelInstruments');
+      const tokensByExch = {};
+      const tokenToSymbol = {};
+
+      for (const cleanSym of cleanSymbols) {
+        let rec;
+        try {
+          rec = angelInstruments.findEquity(cleanSym, 'NSE') || angelInstruments.findEquity(cleanSym, 'BSE');
+        } catch (e) {}
+        if (rec) {
+          (tokensByExch[rec.exch_seg] ||= []).push(rec.token);
+          tokenToSymbol[`${rec.exch_seg}:${rec.token}`] = cleanSym;
+        }
+      }
+
+      if (Object.keys(tokensByExch).length > 0) {
+        const batchUrl = 'https://apiconnect.angelone.in/rest/secure/angelbroking/market/v1/quote/';
+        const apiKey = (env.angel && typeof env.angel.apiKey === 'function' ? env.angel.apiKey() : env.angel?.apiKey) || process.env.ANGEL_API_KEY || '0de1184a7c9e9c11a1a6108562aeaf0bb810084fd173be4d';
+        const aHeaders = {
+          'Authorization': 'Bearer ' + session.jwtToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-UserType': 'USER',
+          'X-SourceID': 'WEB',
+          'X-ClientLocalIP': '127.0.0.1',
+          'X-ClientPublicIP': '127.0.0.1',
+          'X-MACAddress': 'fe80::1',
+          'X-PrivateKey': apiKey
+        };
+
+        const batchRes = await axios.post(batchUrl, { mode: 'FULL', exchangeTokens: tokensByExch }, { headers: aHeaders, timeout: 3000 });
+        const fetched = batchRes.data?.data?.fetched || [];
+
+        for (const item of fetched) {
+          const token = item.symbolToken || item.symboltoken;
+          const exch = item.exchange || item.exch_seg || 'NSE';
+          const sym = tokenToSymbol[`${exch}:${token}`];
+          if (sym && item.ltp != null) {
+            const ltp = Number(item.ltp);
+            const close = item.close != null ? Number(item.close) : ltp;
+            const chg = item.netChange != null ? Number(item.netChange) : Number((ltp - close).toFixed(2));
+            const chgPct = item.percentChange != null ? Number(item.percentChange) : (close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0);
+            quotesMap[sym] = { ltp, close, change: chg, changePct: chgPct, source: 'Angel One SmartAPI' };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[liveQuoteEngine] Angel One stock quote fetch note:', err.message);
+  }
+
+  // 2. Backup Fetch via Yahoo Finance NSE Live Feed for any missing symbol
+  const missingSymbols = cleanSymbols.filter(s => !quotesMap[s] || !quotesMap[s].ltp);
+  if (missingSymbols.length > 0) {
+    await Promise.all(missingSymbols.map(async (sym) => {
+      try {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${sym}.NS?interval=1m&range=1d`;
+        const res = await axios.get(url, { headers: uHeaders, timeout: 2500 });
+        const meta = res.data?.chart?.result?.[0]?.meta;
+        if (meta && meta.regularMarketPrice != null) {
+          const ltp = Number(meta.regularMarketPrice);
+          const close = Number(meta.chartPreviousClose || meta.previousClose || ltp);
+          const chg = Number((ltp - close).toFixed(2));
+          const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
+          quotesMap[sym] = { ltp, close, change: chg, changePct: chgPct, source: 'Yahoo NSE Live' };
+        }
+      } catch (yErr) {}
+    }));
+  }
+
+  return quotesMap;
+}
+
 module.exports = {
-  fetchWatchlistQuotes
+  fetchWatchlistQuotes,
+  fetchStockQuotes
 };

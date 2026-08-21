@@ -17,24 +17,25 @@ const env = require('../../config/env');
 const axios = require('axios');
 const ledger = require('../ledger/ledgerService');
 const institutionalService = require('../institutional/institutionalService');
+const liveQuoteEngine = require('../market/liveQuoteEngine');
 
 const LAST_TRADED_MARKET_PRICES = {
-  CUPID: 278.86,
-  'CUPID-EQ': 278.86,
-  EMMVEE: 315.25,
-  'EMMVEE-EQ': 315.25,
-  RELIANCE: 1311.80,
-  'RELIANCE-EQ': 1311.80,
+  CUPID: 282.43,
+  'CUPID-EQ': 282.43,
+  EMMVEE: 318.40,
+  'EMMVEE-EQ': 318.40,
+  RELIANCE: 1313.20,
+  'RELIANCE-EQ': 1313.20,
   SHRIRAMFIN: 1122.00,
 };
 
 const PREVIOUS_CLOSE_PRICES = {
-  CUPID: 284.03,
-  'CUPID-EQ': 284.03,
-  EMMVEE: 317.70,
-  'EMMVEE-EQ': 317.70,
-  RELIANCE: 1322.00,
-  'RELIANCE-EQ': 1322.00,
+  CUPID: 284.56,
+  'CUPID-EQ': 284.56,
+  EMMVEE: 323.80,
+  'EMMVEE-EQ': 323.80,
+  RELIANCE: 1321.48,
+  'RELIANCE-EQ': 1321.48,
   SHRIRAMFIN: 1125.00,
   'SHRIRAMFIN-EQ': 1125.00,
 };
@@ -61,11 +62,13 @@ function updateLiveLtpFromWs(token, ltp, close) {
 function resolveLastTradedPrice(symbol, liveLtp, defaultPrice) {
   const clean = (symbol || '').replace('-EQ', '').trim().toUpperCase();
   const nLive = Number(liveLtp);
-  
+
   if (liveLtp != null && !isNaN(nLive) && nLive > 0) {
+    LAST_TRADED_MARKET_PRICES[clean] = nLive;
+    LAST_TRADED_MARKET_PRICES[`${clean}-EQ`] = nLive;
     return nLive;
   }
-  
+
   if (LAST_TRADED_MARKET_PRICES[clean] && LAST_TRADED_MARKET_PRICES[clean] > 0) {
     return LAST_TRADED_MARKET_PRICES[clean];
   }
@@ -358,13 +361,23 @@ async function getAngelPortfolio(session) {
   if (holdingsList.length === 0) return [];
 
   const liveQuotes = await fetchAngelLiveQuotes(holdingsList, session);
+  const symbolList = holdingsList.map(h => h.tradingsymbol || h.symbol);
+  const multiQuotes = await liveQuoteEngine.fetchStockQuotes(symbolList);
 
   return holdingsList.filter((h) => h.quantity > 0).map((h) => {
     const sym = h.tradingsymbol;
-    const q = liveQuotes[sym] || liveQuotes[`${sym}-EQ`];
-    const rawLtp = q && q.last_price != null ? q.last_price : null;
+    const cleanSym = (sym || '').replace('-EQ', '');
+    const q = liveQuotes[sym] || liveQuotes[cleanSym] || multiQuotes[sym] || multiQuotes[cleanSym];
+
+    const rawLtp = q && (q.last_price != null ? q.last_price : q.ltp);
     const ltp = resolveLastTradedPrice(sym, rawLtp, h.ltp || h.avgPrice);
-    const close = q && q.close != null ? q.close : h.close;
+
+    const rawClose = q && q.close != null ? q.close : multiQuotes[cleanSym]?.close;
+    if (rawClose != null && rawClose > 0) {
+      PREVIOUS_CLOSE_PRICES[cleanSym] = Number(rawClose);
+      PREVIOUS_CLOSE_PRICES[`${cleanSym}-EQ`] = Number(rawClose);
+    }
+    const close = rawClose != null ? Number(rawClose) : (PREVIOUS_CLOSE_PRICES[cleanSym] || ltp);
     const open = q && q.open != null ? q.open : h.open;
 
     return buildRow('angelone', {
@@ -438,37 +451,31 @@ async function getGrowwPortfolio(growwSession, angelSession) {
     angelQuotes = await fetchAngelLiveQuotes(holdingsList, angelSession);
   }
 
-  const quotes = await Promise.all(
-    holdingsList.map(async (h) => {
-      const symbol = h.trading_symbol || h.tradingSymbol;
-      const cleanSym = symbol.replace('-EQ', '');
-      const angelQuote = angelQuotes[symbol] || angelQuotes[cleanSym];
-      if (angelQuote) return angelQuote;
+  const symbolList = holdingsList.map(h => h.trading_symbol || h.symbol);
+  const multiQuotes = await liveQuoteEngine.fetchStockQuotes(symbolList);
 
-      const rawPrice = Number(h.average_price || h.averagePrice || 0);
-      const fallbackPrice = resolveLastTradedPrice(cleanSym, null, rawPrice);
-      return {
-        last_price: fallbackPrice,
-        close: PREVIOUS_CLOSE_PRICES[cleanSym] || fallbackPrice,
-        day_change: 0,
-        __exchange: (h.tradable_exchanges && h.tradable_exchanges[0]) || 'NSE',
-      };
-    })
-  );
-
-  return holdingsList.map((h, i) => {
-    const q = quotes[i];
+  return holdingsList.map((h) => {
     const symbol = h.trading_symbol || h.tradingSymbol;
-    const rawLtp = q && q.last_price != null ? q.last_price : null;
-    const ltp = resolveLastTradedPrice(symbol, rawLtp, Number(h.average_price || 0));
+    const cleanSym = symbol.replace('-EQ', '');
+    const q = angelQuotes[symbol] || angelQuotes[cleanSym] || multiQuotes[symbol] || multiQuotes[cleanSym];
+
+    const rawLtp = q && (q.last_price != null ? q.last_price : q.ltp);
+    const ltp = resolveLastTradedPrice(cleanSym, rawLtp, Number(h.average_price || 0));
+
+    const rawClose = q && q.close != null ? q.close : multiQuotes[cleanSym]?.close;
+    if (rawClose != null && rawClose > 0) {
+      PREVIOUS_CLOSE_PRICES[cleanSym] = Number(rawClose);
+      PREVIOUS_CLOSE_PRICES[`${cleanSym}-EQ`] = Number(rawClose);
+    }
+    const close = rawClose != null ? Number(rawClose) : (PREVIOUS_CLOSE_PRICES[cleanSym] || ltp);
+
     return buildRow('groww', {
       tradingsymbol: symbol,
-      exchange: q.__exchange || 'NSE',
+      exchange: (h.tradable_exchanges && h.tradable_exchanges[0]) || 'NSE',
       quantity: Number(h.quantity),
       avgPrice: Number(h.average_price),
       ltp: ltp,
-      close: q.close != null ? Number(q.close) : ltp,
-      open: q.open != null ? Number(q.open) : null,
+      close: close,
     });
   });
 }
