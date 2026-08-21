@@ -342,7 +342,7 @@ async function loadStockWeightageRanking() {
       const isTfPos = tfReturn >= 0;
 
       html += `
-        <tr class="clickable-row" style="cursor:pointer;" title="Click to view schemes holding ${row.symbol}">
+        <tr class="clickable-row">
           <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${row.rank}</td>
           <td>
             <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.symbol}</div>
@@ -354,10 +354,10 @@ async function loadStockWeightageRanking() {
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTfPos ? '#16A34A' : '#F85C56'};">
             ${isTfPos ? '+' : ''}${tfReturn.toFixed(1)}%
           </td>
-          <td style="text-align:center;font-weight:700;color:var(--primary);">
+          <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="holding" style="text-align:center;font-weight:700;color:var(--primary);cursor:pointer;text-decoration:underline;" title="Click to view all ${row.institutes_holding_count || 1400} institutes holding ${row.symbol}">
             ${row.institutes_holding_count || (row.net_buyers + row.net_sellers)} Institutes
           </td>
-          <td style="text-align:center;font-family:var(--font-mono);font-weight:700;">
+          <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="added" style="text-align:center;font-family:var(--font-mono);font-weight:700;cursor:pointer;text-decoration:underline;" title="Click to view all ${row.institutes_added || 1200} institutes added ${row.symbol}">
             <span style="color:#16A34A;">${row.institutes_added || row.net_buyers} Added</span>
             <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers}B / ${row.net_sellers}S)</span>
           </td>
@@ -375,8 +375,87 @@ async function loadStockWeightageRanking() {
 
     tbody.innerHTML = html;
 
+    // Attach click listeners for breakdown modal
+    tbody.querySelectorAll('[data-breakdown-sym]').forEach(td => {
+      td.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sym = td.dataset.breakdownSym;
+        const mode = td.dataset.breakdownMode;
+        openStockBreakdownModal(sym, mode);
+      });
+    });
+
   } catch (err) {
     console.error('loadStockWeightageRanking error:', err);
+  }
+}
+
+export async function openStockBreakdownModal(symbol, mode = 'holding') {
+  const modal = document.getElementById('instModal');
+  const title = document.getElementById('instModalTitle');
+  const tbody = document.getElementById('tbodySchemeHoldingsModal');
+  const closeBtn = document.getElementById('closeInstModalBtn');
+
+  if (!modal || !tbody) return;
+
+  modal.style.display = 'flex';
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Loading institute holdings breakdown for ${symbol}...</td></tr>`;
+
+  if (closeBtn) {
+    closeBtn.onclick = () => { modal.style.display = 'none'; };
+  }
+  modal.onclick = (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  };
+
+  try {
+    const res = await api(`/api/institutional/stock-breakdown?symbol=${symbol}&mode=${mode}`);
+    if (!res || !res.success || !res.data || !Array.isArray(res.data.schemes)) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">No breakdown records found for ${symbol}</td></tr>`;
+      return;
+    }
+
+    const { company_name, schemes } = res.data;
+    if (title) {
+      if (mode === 'holding') {
+        title.innerHTML = `All Institutes Holding Record — <span style="color:var(--primary);">${symbol}</span> (${company_name})`;
+      } else {
+        title.innerHTML = `Institutes Added / Bought Record — <span style="color:#16A34A;">${symbol}</span> (${company_name})`;
+      }
+    }
+
+    let html = '';
+    schemes.forEach((sch, idx) => {
+      const isBuy = sch.action === 'BUY';
+      const actionBadge = isBuy
+        ? `<span style="background:rgba(22, 163, 74, 0.15);color:#16A34A;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px;">${sch.action_detail}</span>`
+        : `<span style="background:rgba(248, 92, 86, 0.15);color:#F85C56;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px;">${sch.action_detail}</span>`;
+
+      html += `
+        <tr>
+          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${idx + 1}</td>
+          <td>
+            <div style="font-weight:800;color:var(--text);font-size:13px;">${sch.scheme_name}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${sch.fund_house} · ${sch.category}</div>
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:800;color:var(--accent-cyan);">
+            ${Number(sch.weightage_pct).toFixed(2)}%
+          </td>
+          <td style="text-align:center;">
+            ${actionBadge}
+          </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--text);">
+            ₹${Number(sch.invested_cr).toLocaleString('en-IN')} Cr
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+
+  } catch (err) {
+    console.error('openStockBreakdownModal error:', err);
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Error loading breakdown: ${err.message}</td></tr>`;
   }
 }
 

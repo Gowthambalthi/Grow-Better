@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v132" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v133" />
 </head>
 <body>
 
@@ -802,21 +802,19 @@
                 </div>
                 <button id="closeInstModalBtn" class="edit-icon-btn" style="color:var(--text-muted);font-size:18px;font-weight:800;">✕</button>
               </div>
-              <div class="table-wrap" style="max-height:380px;overflow-y:auto;">
+              <div class="table-wrap" style="max-height:420px;overflow-y:auto;">
                 <table class="holdings-table">
                   <thead>
                     <tr>
-                      <th style="width:60px;text-align:center;">MF Rank</th>
-                      <th>Mutual Fund Scheme Name</th>
-                      <th>Fund House</th>
-                      <th style="text-align:center;">Monthly Action (Bought / Sold)</th>
-                      <th style="text-align:right;" id="modalMfReturnHeader">3M Return %</th>
-                      <th style="text-align:right;">Invested (₹ Cr)</th>
-                      <th style="text-align:right;">Weight %</th>
+                      <th style="width:55px;text-align:center;padding:10px 6px;">S.No</th>
+                      <th style="padding:10px 12px;">Institute Name (Scheme &amp; Fund House)</th>
+                      <th style="text-align:right;padding:10px 12px;">Holding %</th>
+                      <th style="text-align:center;padding:10px 12px;">Action (Buy / Sell)</th>
+                      <th style="text-align:right;padding:10px 12px;">Invested (₹ Cr)</th>
                     </tr>
                   </thead>
                   <tbody id="tbodySchemeHoldingsModal">
-                    <tr class="empty-row"><td colspan="6">Loading scheme details...</td></tr>
+                    <tr class="empty-row"><td colspan="5">Loading institute holding records...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1364,6 +1362,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v132"></script>
+  <script type="module" src="/js/app.js?v=20260821_v133"></script>
 </body>
 </html>

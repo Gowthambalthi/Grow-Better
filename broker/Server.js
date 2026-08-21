@@ -662,6 +662,16 @@ app.get('/api/institutional/stock-weightage-ranking', (req, res) => {
   }
 });
 
+app.get('/api/institutional/stock-breakdown', (req, res) => {
+  try {
+    const { symbol, mode } = req.query;
+    const breakdown = institutionalService.getSchemeBreakdownForStock(symbol, mode || 'holding');
+    res.json({ success: true, data: breakdown });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/institutional/conviction-leaderboard', (req, res) => {
   try {
     const { date } = req.query;
