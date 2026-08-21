@@ -213,6 +213,33 @@ function updateSummaryCards(mode = 'all') {
   setColoredCash('growwCashFundVal', growwCash);
   setColoredCash('totalCashFundVal', totalCash);
 
+  // Render Individual Stock Holdings Cash Breakdown in Popover
+  const popoverStockList = document.getElementById('cashPopoverStockList');
+  if (popoverStockList && Array.isArray(latestPortfolioData?.rows)) {
+    if (latestPortfolioData.rows.length === 0) {
+      popoverStockList.innerHTML = `<span style="font-size:11px;color:var(--text-muted);">No active stock holdings.</span>`;
+    } else {
+      popoverStockList.innerHTML = latestPortfolioData.rows.map(row => {
+        const sym = row.tradingsymbol || row.symbol || '';
+        const inv = Number(row.investedAmount || 0);
+        const brokerTag = row.broker === 'angelone' ? 'Angel' : 'Groww';
+        const isMtf = row.isMtf ? `<span style="font-size:9px;color:#2563EB;background:rgba(37,99,235,0.1);padding:1px 3px;border-radius:2px;font-weight:700;">MTF</span>` : '';
+        return `
+          <div class="fund-row" style="padding:4px 0;border-bottom:1px dashed var(--line-bright);">
+            <div class="broker-label" style="display:flex;align-items:center;gap:4px;">
+              <span style="font-weight:700;color:var(--text-primary);font-size:11.5px;">${sym}</span>
+              ${isMtf}
+              <small style="font-size:9.5px;color:var(--text-muted);background:var(--bg-raised);padding:1px 4px;border-radius:3px;">${brokerTag}</small>
+            </div>
+            <div style="text-align:right;">
+              <span class="fund-val" style="font-size:11.5px;font-weight:700;color:var(--text-primary);">₹${rawMoney(inv)}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
   setText('pnlCardValue', money(c.todayPL));
   const pnlSubEl = document.getElementById('pnlCardSub');
   if (pnlSubEl) {

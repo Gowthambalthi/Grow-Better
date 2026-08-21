@@ -447,6 +447,52 @@ export function initOrders() {
     btn.addEventListener('click', () => setSide(btn.dataset.side));
   });
 
+  // Product Type Buttons (INT / DEL)
+  document.querySelectorAll('.prod-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.prod-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeOrderParams.productType = btn.dataset.prod;
+
+      const mtfBtn = document.getElementById('omMtfPayBtn');
+      const fullBtn = document.getElementById('omFullPayBtn');
+
+      if (btn.dataset.prod === 'INTRADAY') {
+        if (mtfBtn) mtfBtn.classList.remove('active');
+        if (fullBtn) fullBtn.classList.add('active');
+      } else if (btn.dataset.prod === 'DELIVERY') {
+        if (!mtfBtn?.classList.contains('active') && !fullBtn?.classList.contains('active')) {
+          if (fullBtn) fullBtn.classList.add('active');
+        }
+      }
+      recalculateOmValues();
+    });
+  });
+
+  // Pay Mode Cards (MTF 3x vs Pay Full)
+  const mtfBtn = document.getElementById('omMtfPayBtn');
+  const fullBtn = document.getElementById('omFullPayBtn');
+
+  if (mtfBtn) {
+    mtfBtn.addEventListener('click', () => {
+      activeOrderParams.productType = 'MARGIN';
+      mtfBtn.classList.add('active');
+      if (fullBtn) fullBtn.classList.remove('active');
+      document.querySelectorAll('.prod-btn').forEach((b) => b.classList.toggle('active', b.dataset.prod === 'DELIVERY'));
+      recalculateOmValues();
+    });
+  }
+
+  if (fullBtn) {
+    fullBtn.addEventListener('click', () => {
+      activeOrderParams.productType = 'DELIVERY';
+      fullBtn.classList.add('active');
+      if (mtfBtn) mtfBtn.classList.remove('active');
+      document.querySelectorAll('.prod-btn').forEach((b) => b.classList.toggle('active', b.dataset.prod === 'DELIVERY'));
+      recalculateOmValues();
+    });
+  }
+
   // Order Mode Tabs (Regular / Stop Loss / GTT / SIP)
   document.querySelectorAll('.om-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
@@ -534,6 +580,10 @@ export function initOrders() {
       recalculateOmValues();
     });
   }
+
+  const omQtyInput = document.getElementById('omQtyInput');
+  if (omQtyInput) omQtyInput.addEventListener('input', recalculateOmValues);
+  if (priceInput) priceInput.addEventListener('input', recalculateOmValues);
 
   // Action Modal Handlers (Cancel & Edit Order)
   const actionModal = document.getElementById('orderActionModal');

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v104" />
+<link rel="stylesheet" href="/css/style.css?v=20260821_v105" />
 </head>
 <body>
 
@@ -185,22 +185,22 @@
             </div>
 
             <!-- Cash Breakdown Popover Dropdown -->
-            <div class="dropdown-popover cash-breakdown-popover" id="cashPopover">
+            <div class="dropdown-popover cash-breakdown-popover" id="cashPopover" style="width:280px;">
               <div class="popover-header">
-                <span class="popover-title">Available Cash Funds</span>
+                <span class="popover-title">Cash &amp; Individual Stock Breakdown</span>
               </div>
               <div class="popover-body">
                 <div class="fund-row">
                   <div class="broker-label">
                     <span class="dot-indicator dot-angel"></span>
-                    <span>Angel One</span>
+                    <span>Angel One Cash</span>
                   </div>
                   <span class="fund-val" id="angelCashFundVal" style="color:var(--loss);font-weight:700;">₹-185.08</span>
                 </div>
                 <div class="fund-row">
                   <div class="broker-label">
                     <span class="dot-indicator dot-groww"></span>
-                    <span>Groww</span>
+                    <span>Groww Cash</span>
                   </div>
                   <span class="fund-val" id="growwCashFundVal" style="color:var(--gain);font-weight:700;">₹134.21</span>
                 </div>
@@ -208,6 +208,13 @@
                 <div class="fund-row total-fund-row">
                   <span>Total Cash</span>
                   <span class="fund-val-total" id="totalCashFundVal" style="color:var(--loss);font-weight:700;">₹-50.88</span>
+                </div>
+
+                <!-- Individual Stock Cash Breakdown -->
+                <div class="popover-divider"></div>
+                <div style="padding:6px 0 4px 0;font-size:10.5px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Individual Stock Cash</div>
+                <div id="cashPopoverStockList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;padding-right:2px;">
+                  <!-- Dynamic per-stock cash rows render here -->
                 </div>
               </div>
             </div>
@@ -1336,6 +1343,6 @@
     </div>
   </div>
 
-  <script type="module" src="/js/app.js?v=20260821_v104"></script>
+  <script type="module" src="/js/app.js?v=20260821_v105"></script>
 </body>
 </html>
