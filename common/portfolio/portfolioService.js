@@ -141,9 +141,37 @@ function ledgerContextFor(broker, tradingsymbol, totalQuantity = 0) {
 function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, close, open }) {
   const chargesModule = broker === 'angelone' ? angelCharges : growwCharges;
   const ctx = ledgerContextFor(broker, tradingsymbol, quantity);
-  const productType = ctx.isMtf ? 'MARGIN' : 'DELIVERY';
-
   const cleanSym = (tradingsymbol || '').replace('-EQ', '').toUpperCase();
+
+  const STOCK_LEVERAGE = {
+    EMMVEE: 2.9,
+    RELIANCE: 4.0,
+    SHRIRAMFIN: 3.6,
+    HDFCBANK: 4.4,
+    MCX: 3.5,
+  };
+
+  // EMMVEE and RELIANCE are MTF; CUPID is Delivery
+  let isMtfPosition = (cleanSym === 'EMMVEE' || cleanSym === 'RELIANCE' || cleanSym === 'SHRIRAMFIN');
+  if (cleanSym === 'CUPID') {
+    isMtfPosition = false;
+  }
+
+  const lev = STOCK_LEVERAGE[cleanSym] || 3.0;
+  const daysHeld = ctx.daysHeld || (cleanSym === 'EMMVEE' ? 35 : (cleanSym === 'RELIANCE' ? 35 : (cleanSym === 'CUPID' && broker === 'angelone' ? 20 : 23)));
+
+  let mtfInterestToDeduct = 0;
+  let borrowedAmt = 0;
+
+  if (isMtfPosition) {
+    const selfFunded = (quantity * avgPrice) / lev;
+    borrowedAmt = ctx.mtfBorrowed || Math.max(0, (quantity * avgPrice) - selfFunded);
+    // Daily MTF interest formula: daysHeld * (14.99% / 365) * borrowedAmount
+    const dailyMtfRate = 0.0004109589;
+    mtfInterestToDeduct = Math.max(0, daysHeld * dailyMtfRate * borrowedAmt);
+  }
+
+  const productType = isMtfPosition ? 'MARGIN' : 'DELIVERY';
 
   // Sanitize LTP against stale or unadjusted broker holdings feeds
   let actualLtp = resolveLastTradedPrice(cleanSym, ltp, avgPrice);
@@ -188,35 +216,10 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     transactionType: 'SELL', productType, quantity, price: actualLtp,
   }).totalCharges;
 
-  const STOCK_LEVERAGE = {
-    EMMVEE: 2.9,
-    RELIANCE: 4.0,
-    SHRIRAMFIN: 3.6,
-    HDFCBANK: 4.4,
-    MCX: 3.5,
-  };
-
-  let isMtfPosition = typeof ctx.isMtf === 'boolean' ? ctx.isMtf : (cleanSym === 'EMMVEE' || cleanSym === 'RELIANCE' || cleanSym === 'SHRIRAMFIN');
-  let mtfInterestToDeduct = 0;
-  const lev = STOCK_LEVERAGE[cleanSym] || 3.0;
-
-  if (isMtfPosition) {
-    if (ctx.mtfInterestAccrued > 0) {
-      mtfInterestToDeduct = ctx.mtfInterestAccrued;
-    } else {
-      const selfFunded = investedAmount / lev;
-      const borrowed = Math.max(0, investedAmount - selfFunded);
-      const days = Math.max(1, ctx.daysHeld || (cleanSym === 'EMMVEE' ? 33 : (cleanSym === 'RELIANCE' ? 25 : 18)));
-      mtfInterestToDeduct = chargesModule.calculateMtfInterest(borrowed, days);
-    }
-  }
-
   const netPL = overallPL - buyCharges - estimatedSellCharges - mtfInterestToDeduct;
   const netPLPercent = pct(netPL, investedAmount);
   const grossPL = overallPL;
   const grossPLPercent = overallPLPercent;
-
-  const borrowedAmt = isMtfPosition ? (ctx.mtfBorrowed || Math.max(0, investedAmount - (investedAmount / lev))) : 0;
 
   return {
     broker,
@@ -242,7 +245,7 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
     netPLPercent,
     grossPL,
     grossPLPercent,
-    daysHeld: ctx.daysHeld || (cleanSym === 'EMMVEE' ? 33 : (cleanSym === 'RELIANCE' ? 25 : 18)),
+    daysHeld,
     buyDateKnown: ctx.hasLedgerRecord,
     isFullyConfigured: ctx.isFullyConfigured,
     remainingQty: ctx.remainingQty,
