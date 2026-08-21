@@ -2555,16 +2555,29 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .groww-price-sub.loss, .groww-returns-main.loss, .groww-returns-sub.loss { color: #EB5B56 !important; }
 .groww-invested-sub { color: #64748B; }
 
-/* Soft Light Colors for Net Profit & Loss Column in Stock Holdings Table */
+/* Soft Light Colors for NET P&L Column in Stock Holdings Table (Exact Match to Screenshot) */
 .net-pl-light-gain {
-  color: #10B981 !important; /* Soft light emerald green */
+  color: #00C48C !important; /* Soft Light Mint Green */
 }
+.net-pl-light-gain small {
+  color: #00C48C !important;
+  font-weight: 600;
+}
+
 .net-pl-light-loss {
-  color: #EF4444 !important; /* Soft light rose red */
+  color: #F85C56 !important; /* Soft Light Coral Red */
 }
-[data-theme="dark"] .net-pl-light-gain {
+.net-pl-light-loss small {
+  color: #F85C56 !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .net-pl-light-gain,
+[data-theme="dark"] .net-pl-light-gain small {
   color: #34D399 !important;
 }
-[data-theme="dark"] .net-pl-light-loss {
+
+[data-theme="dark"] .net-pl-light-loss,
+[data-theme="dark"] .net-pl-light-loss small {
   color: #F87171 !important;
 }
