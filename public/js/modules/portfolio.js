@@ -77,7 +77,7 @@ export function renderHoldingsRow(row) {
       <td>${money(row.investedAmount)}</td>
       <td>${money(row.currentAmount)}</td>
       <td class="${plClass(rawOverallPL)}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
-      <td class="${netPlClass}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:600;font-size:13px;">${money(netPL)}</span><br><small style="font-weight:500;opacity:0.85;">${pct(netPLPercent)}</small></td>
+      <td class="${plClass(netPL)}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}">${money(netPL)}<br><small>${pct(netPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:right;padding-right:20px !important;">${daysText}</td>
     </tr>`;
