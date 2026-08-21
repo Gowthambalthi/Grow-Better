@@ -85,12 +85,12 @@ const SCHEME_TYPES = [
 
 // High profile base stocks
 const BASE_STOCKS = [
-  { isin: 'INE213A01011', sym: 'EMMVEE', bse: '543210', name: 'Emmvee Photovoltaic Power Ltd', sec: 'Renewable Energy', cap: 4200, ltp: 326.45, score: 94.5, netFlow: 348.5, ret: 11.34, b: 12, s: 1 },
-  { isin: 'INE002A01018', sym: 'RELIANCE', bse: '500325', name: 'Reliance Industries Ltd', sec: 'Oil & Gas', cap: 1845000, ltp: 1313.20, score: 88.2, netFlow: 1425.0, ret: 4.12, b: 18, s: 2 },
-  { isin: 'INE213A01029', sym: 'SHRIRAMFIN', bse: '511218', name: 'Shriram Finance Ltd', sec: 'Banking & Financials', cap: 112000, ltp: 2985.40, score: 82.4, netFlow: 482.0, ret: 4.93, b: 14, s: 2 },
-  { isin: 'INE090A01021', sym: 'ICICIBANK', bse: '532174', name: 'ICICI Bank Ltd', sec: 'Banking & Financials', cap: 842000, ltp: 1195.00, score: 79.8, netFlow: 620.0, ret: 5.33, b: 15, s: 3 },
-  { isin: 'INE062A01020', sym: 'SBIN', bse: '500112', name: 'State Bank of India', sec: 'Banking & Financials', cap: 748000, ltp: 848.00, score: 76.5, netFlow: 540.0, ret: 5.42, b: 11, s: 2 },
-  { isin: 'INE094A01015', sym: 'CUPID', bse: '538418', name: 'Cupid Ltd', sec: 'Healthcare & Pharma', cap: 3100, ltp: 285.99, score: 71.2, netFlow: 184.0, ret: 9.01, b: 8, s: 1 }
+  { isin: 'INE213A01011', sym: 'EMMVEE', bse: '543210', name: 'Emmvee Photovoltaic Power Ltd', sec: 'Renewable Energy', cap: 4200, ltp: 326.45, score: 94.5, netFlow: 348.5, ret: 11.34, b: 1420, s: 60 },
+  { isin: 'INE002A01018', sym: 'RELIANCE', bse: '500325', name: 'Reliance Industries Ltd', sec: 'Oil & Gas', cap: 1845000, ltp: 1313.20, score: 88.2, netFlow: 1425.0, ret: 4.12, b: 1850, s: 90 },
+  { isin: 'INE213A01029', sym: 'SHRIRAMFIN', bse: '511218', name: 'Shriram Finance Ltd', sec: 'Banking & Financials', cap: 112000, ltp: 2985.40, score: 82.4, netFlow: 482.0, ret: 4.93, b: 1240, s: 70 },
+  { isin: 'INE090A01021', sym: 'ICICIBANK', bse: '532174', name: 'ICICI Bank Ltd', sec: 'Banking & Financials', cap: 842000, ltp: 1195.00, score: 79.8, netFlow: 620.0, ret: 5.33, b: 1650, s: 110 },
+  { isin: 'INE062A01020', sym: 'SBIN', bse: '500112', name: 'State Bank of India', sec: 'Banking & Financials', cap: 748000, ltp: 848.00, score: 76.5, netFlow: 540.0, ret: 5.42, b: 1410, s: 80 },
+  { isin: 'INE094A01015', sym: 'CUPID', bse: '538418', name: 'Cupid Ltd', sec: 'Healthcare & Pharma', cap: 3100, ltp: 285.99, score: 71.2, netFlow: 184.0, ret: 9.01, b: 840, s: 40 }
 ];
 
 function generate1600StocksAnd2000Schemes() {
@@ -135,8 +135,8 @@ function generate1600StocksAnd2000Schemes() {
 
       const baseScore = Number((15 + (i * 13.7) % 80).toFixed(1));
       const netFlow = Number((10 + (i * 29.4) % 1800).toFixed(1));
-      const bBuyers = 10 + (i % 12); // 10 to 21 buying institutes
-      const bSellers = 1 + (i % 3);  // 1 to 3 selling institutes
+      const bBuyers = 250 + ((i * 37) % 1500); // 250 to 1,750 buying mutual fund schemes
+      const bSellers = 10 + ((i * 11) % 110);   // 10 to 120 selling mutual fund schemes
       const ret = Number((-5 + (i * 7.3) % 45).toFixed(2));
 
       for (const tf of timeframes) {
