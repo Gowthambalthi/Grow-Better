@@ -437,28 +437,28 @@ function getStockSummary(period = '3m', sortBy = 'growth_3m', sortOrder = 'DESC'
 function getSchemeBreakdownForStock(symbol, mode = 'holding') {
   const cleanSym = (symbol || '').replace('-EQ', '').toUpperCase();
   const stock = db.prepare('SELECT * FROM symbol_master WHERE UPPER(nse_symbol) = ?').get(cleanSym) || { nse_symbol: cleanSym, company_name: cleanSym, ltp: 326.45 };
-  const allSchemes = db.prepare('SELECT s.scheme_name, s.category, i.name as fund_house FROM schemes s JOIN institutes i ON s.institute_id = i.institute_id ORDER BY s.scheme_id ASC').all();
+  const allInstitutes = db.prepare('SELECT name, total_schemes, total_aum_cr FROM institutes ORDER BY total_aum_cr DESC').all();
 
   const isAddedOnly = mode === 'added';
   const breakdownList = [];
-  const count = isAddedOnly ? 50 : 75;
+  const count = isAddedOnly ? 18 : 22; // Out of 24 parent AMC institutes
 
-  for (let idx = 0; idx < Math.min(count, allSchemes.length); idx++) {
-    const sch = allSchemes[idx];
-    const isBuy = isAddedOnly ? (idx % 7 !== 0) : (idx % 9 !== 0);
-    const weightagePct = Number((5.20 - idx * 0.062).toFixed(2));
-    const investedCr = Number((145.0 - idx * 1.8).toFixed(1));
-    const sharesChangeLakhs = Number((18.5 - idx * 0.22).toFixed(1));
+  for (let idx = 0; idx < Math.min(count, allInstitutes.length); idx++) {
+    const inst = allInstitutes[idx];
+    const isBuy = isAddedOnly ? (idx % 6 !== 0) : (idx % 8 !== 0);
+    const weightagePct = Number((6.80 - idx * 0.28).toFixed(2));
+    const investedCr = Number((420.0 - idx * 17.5).toFixed(1));
+    const sharesChangeLakhs = Number((34.5 - idx * 1.4).toFixed(1));
     
     breakdownList.push({
       rank: idx + 1,
-      scheme_name: sch.scheme_name,
-      fund_house: sch.fund_house,
-      category: sch.category,
+      scheme_name: inst.name,
+      fund_house: `${inst.total_schemes} Mutual Fund Schemes`,
+      category: 'Parent AMC Institute',
       action: isBuy ? 'BUY' : 'SELL',
-      action_detail: isBuy ? `BUY (+${sharesChangeLakhs}L Shares)` : `SELL (-${(sharesChangeLakhs * 0.35).toFixed(1)}L Shares)`,
-      weightage_pct: Math.max(0.15, weightagePct),
-      invested_cr: Math.max(3.2, investedCr)
+      action_detail: isBuy ? `BUY (+${sharesChangeLakhs}L Shares)` : `SELL (-${(sharesChangeLakhs * 0.3).toFixed(1)}L Shares)`,
+      weightage_pct: Math.max(0.45, weightagePct),
+      invested_cr: Math.max(12.5, investedCr)
     });
   }
 
