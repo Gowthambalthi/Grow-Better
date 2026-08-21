@@ -82,9 +82,9 @@ try {
     console.log('[DB Seeder] Fresh empty database detected. Seeding initial trade dates & overrides...');
 
     const targetTrades = [
-      { broker: 'angelone', tradingsymbol: 'CUPID-EQ', exchange: 'NSE', transaction_type: 'BUY', quantity: 48, price: 286.78, trade_date: '2026-08-01', product_type: 'MARGIN', is_mtf: 1, mtf_margin_paid: 4746.70, mtf_amount_borrowed: 9018.74 },
-      { broker: 'angelone', tradingsymbol: 'RELIANCE-EQ', exchange: 'NSE', transaction_type: 'BUY', quantity: 16, price: 1321.48, trade_date: '2026-07-17', product_type: 'DELIVERY', is_mtf: 0, mtf_margin_paid: null, mtf_amount_borrowed: null },
-      { broker: 'angelone', tradingsymbol: 'EMMVEE-EQ', exchange: 'NSE', transaction_type: 'BUY', quantity: 15, price: 346.37, trade_date: '2026-07-17', product_type: 'DELIVERY', is_mtf: 0, mtf_margin_paid: null, mtf_amount_borrowed: null },
+      { broker: 'angelone', tradingsymbol: 'CUPID-EQ', exchange: 'NSE', transaction_type: 'BUY', quantity: 48, price: 286.78, trade_date: '2026-08-01', product_type: 'DELIVERY', is_mtf: 0, mtf_margin_paid: null, mtf_amount_borrowed: null },
+      { broker: 'angelone', tradingsymbol: 'RELIANCE-EQ', exchange: 'NSE', transaction_type: 'BUY', quantity: 16, price: 1321.48, trade_date: '2026-07-17', product_type: 'MARGIN', is_mtf: 1, mtf_margin_paid: 5285.92, mtf_amount_borrowed: 15857.76 },
+      { broker: 'angelone', tradingsymbol: 'EMMVEE-EQ', exchange: 'NSE', transaction_type: 'BUY', quantity: 15, price: 346.37, trade_date: '2026-07-17', product_type: 'MARGIN', is_mtf: 1, mtf_margin_paid: 1792.46, mtf_amount_borrowed: 3403.09 },
       { broker: 'groww', tradingsymbol: 'CUPID', exchange: 'NSE', transaction_type: 'BUY', quantity: 13, price: 233.29, trade_date: '2026-07-29', product_type: 'DELIVERY', is_mtf: 0, mtf_margin_paid: null, mtf_amount_borrowed: null },
     ];
 
@@ -102,6 +102,13 @@ try {
       VALUES ('angelone', 6585.00, 2138.77)
     `).run();
   }
+
+  // Ensure migration runs on existing SQLite database files
+  db.exec(`
+    UPDATE trades SET is_mtf = 0, product_type = 'DELIVERY', mtf_margin_paid = NULL, mtf_amount_borrowed = NULL WHERE tradingsymbol LIKE '%CUPID%';
+    UPDATE trades SET is_mtf = 1, product_type = 'MARGIN', mtf_margin_paid = 1792.46, mtf_amount_borrowed = 3403.09 WHERE tradingsymbol LIKE '%EMMVEE%';
+    UPDATE trades SET is_mtf = 1, product_type = 'MARGIN', mtf_margin_paid = 5285.92, mtf_amount_borrowed = 15857.76 WHERE tradingsymbol LIKE '%RELIANCE%';
+  `);
 
   const fundsCount = db.prepare('SELECT COUNT(*) as cnt FROM funds_transactions').get().cnt;
   if (fundsCount === 0) {
