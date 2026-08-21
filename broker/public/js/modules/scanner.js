@@ -3,7 +3,7 @@
  * Frontend controller for AMFI Monthly Accumulation & Institutional Conviction Scanner
  */
 
-import { api } from '../core/router.js';
+import { api } from '../core/api.js';
 
 let currentPeriod = '3m';
 let currentSortBy = 'growth_3m';
