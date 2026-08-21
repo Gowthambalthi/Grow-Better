@@ -345,8 +345,8 @@ async function loadStockWeightageRanking() {
         <tr class="clickable-row">
           <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${row.rank}</td>
           <td>
-            <div style="font-weight:800;color:var(--text);font-size:13.5px;">${row.symbol}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${row.company_name}</div>
+            <div style="font-weight:800;color:var(--text);font-size:14px;letter-spacing:0.01em;">${row.symbol}</div>
+            <div style="font-size:11.5px;color:var(--text-muted);font-weight:600;margin-top:2px;">${row.company_name}</div>
           </td>
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTodayPos ? '#16A34A' : '#F85C56'};">
             ${isTodayPos ? '+' : ''}${todayPl.toFixed(2)}%
@@ -354,10 +354,10 @@ async function loadStockWeightageRanking() {
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTfPos ? '#16A34A' : '#F85C56'};">
             ${isTfPos ? '+' : ''}${tfReturn.toFixed(1)}%
           </td>
-          <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="holding" style="text-align:center;font-weight:700;color:var(--primary);cursor:pointer;text-decoration:underline;" title="Click to view all ${row.institutes_holding_count || 1400} institutes holding ${row.symbol}">
+          <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="holding" style="text-align:center;font-weight:700;color:var(--primary);cursor:pointer;text-decoration:underline;" title="Click to view all institutes holding ${row.symbol}">
             ${row.institutes_holding_count || (row.net_buyers + row.net_sellers)} Institutes
           </td>
-          <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="added" style="text-align:center;font-family:var(--font-mono);font-weight:700;cursor:pointer;text-decoration:underline;" title="Click to view all ${row.institutes_added || 1200} institutes added ${row.symbol}">
+          <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="added" style="text-align:center;font-family:var(--font-mono);font-weight:700;cursor:pointer;text-decoration:underline;" title="Click to view all institutes added ${row.symbol}">
             <span style="color:#16A34A;">${row.institutes_added || row.net_buyers} Added</span>
             <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers}B / ${row.net_sellers}S)</span>
           </td>

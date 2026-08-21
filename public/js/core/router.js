@@ -13,10 +13,11 @@ const PAGE_TITLES = {
 };
 
 export function goToView(name) {
-  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${name}`));
-  document.querySelectorAll('.nav-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.nav === name));
+  const target = name === 'institutes' ? 'scanner' : name;
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.id === `view-${target}`));
+  document.querySelectorAll('.nav-item').forEach((btn) => btn.classList.toggle('active', btn.dataset.nav === target || btn.dataset.nav === name));
   const titleEl = document.getElementById('topbarPageTitle');
-  if (titleEl && PAGE_TITLES[name]) titleEl.textContent = PAGE_TITLES[name];
+  if (titleEl && PAGE_TITLES[target]) titleEl.textContent = PAGE_TITLES[target];
 }
 
 export function initRouter() {
