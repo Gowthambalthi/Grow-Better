@@ -135,8 +135,8 @@ function generate1600StocksAnd2000Schemes() {
 
       const baseScore = Number((15 + (i * 13.7) % 80).toFixed(1));
       const netFlow = Number((10 + (i * 29.4) % 1800).toFixed(1));
-      const bBuyers = 1 + (i % 25);
-      const bSellers = (i % 5);
+      const bBuyers = 10 + (i % 12); // 10 to 21 buying institutes
+      const bSellers = 1 + (i % 3);  // 1 to 3 selling institutes
       const ret = Number((-5 + (i * 7.3) % 45).toFixed(2));
 
       for (const tf of timeframes) {
