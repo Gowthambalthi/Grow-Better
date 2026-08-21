@@ -394,7 +394,7 @@ async function loadStockWeightageRanking() {
           </td>
           <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="added" style="text-align:center;font-family:var(--font-mono);font-weight:700;cursor:pointer;text-decoration:underline;" title="Click to view all institutes added ${row.symbol}">
             <span style="color:#16A34A;">${row.institutes_added || row.net_buyers} Added</span>
-            <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers}B / ${row.net_sellers}S)</span>
+            <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers} buyers / ${row.net_sellers} sellers)</span>
           </td>
           <td style="text-align:center;">
             <span class="badge" style="background:${ratingBg};color:#ffffff;font-weight:800;padding:4px 10px;border-radius:12px;font-size:11px;letter-spacing:0.04em;">
