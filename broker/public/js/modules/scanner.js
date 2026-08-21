@@ -11,7 +11,8 @@
 import { api } from '../core/api.js';
 
 let currentMode = 'B'; // Dedicated 'B' (By Stock / Institutes Symbol)
-let currentTimeframe = '1m'; // '1m' or '3m'
+let currentTimeframe = '1m'; // '1m', '3m', '6m', '1y'
+let currentSortOrder = 'DESC'; // 'DESC' or 'ASC'
 
 export function initInstitutionalScanner() {
   bindControls();
@@ -20,10 +21,24 @@ export function initInstitutionalScanner() {
 
 function bindControls() {
   const tfSelect = document.getElementById('instPeriodSelect');
+  const sortBtn = document.getElementById('toggleSortDirectionBtn');
+  const sortLabel = document.getElementById('sortDirectionLabel');
 
   if (tfSelect) {
     tfSelect.addEventListener('change', (e) => {
       currentTimeframe = e.target.value;
+      loadData();
+    });
+  }
+
+  if (sortBtn) {
+    sortBtn.addEventListener('click', () => {
+      currentSortOrder = currentSortOrder === 'DESC' ? 'ASC' : 'DESC';
+      if (sortLabel) {
+        sortLabel.textContent = currentSortOrder === 'DESC' ? 'High to Low' : 'Low to High';
+      }
+      const arrow = sortBtn.querySelector('span:last-child');
+      if (arrow) arrow.textContent = currentSortOrder === 'DESC' ? '▼' : '▲';
       loadData();
     });
   }
@@ -33,6 +48,7 @@ function bindControls() {
  * Loads main table data for Institutes Symbol
  */
 export async function loadData() {
+  updateTableHeaders();
   await loadStockWeightageRanking();
 }
 
@@ -195,8 +211,15 @@ async function loadStockWeightageRanking() {
       return;
     }
 
+    const list = [...res.data];
+    if (currentSortOrder === 'ASC') {
+      list.sort((a, b) => Number(a.weightage_score || 0) - Number(b.weightage_score || 0));
+    } else {
+      list.sort((a, b) => Number(b.weightage_score || 0) - Number(a.weightage_score || 0));
+    }
+
     let html = '';
-    res.data.forEach((row, idx) => {
+    list.forEach((row, idx) => {
       const score = Number(row.weightage_score || 0);
       const todayPl = Number(row.today_pl_pct || 0);
       const isTodayPos = todayPl >= 0;

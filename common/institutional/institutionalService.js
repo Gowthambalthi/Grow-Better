@@ -455,19 +455,29 @@ function getSchemeBreakdownForStock(symbol, period = '3m') {
 function seedInstitutesDatabase() {
   try {
     const symbolCount = db.prepare('SELECT COUNT(*) as c FROM symbol_master').get().c;
-    if (symbolCount === 0) {
+    if (symbolCount < 20) {
       const insertSym = db.prepare('INSERT OR REPLACE INTO symbol_master (isin, nse_symbol, bse_symbol, company_name, sector, market_cap_cr, ltp) VALUES (?, ?, ?, ?, ?, ?, ?)');
       const stocks = [
-        ['INE002A01018', 'RELIANCE', '500325', 'Reliance Industries Ltd', 'Energy & Petrochemicals', 1845000, 1313.20],
-        ['INE040A01034', 'HDFCBANK', '500180', 'HDFC Bank Ltd', 'Banking & Financials', 1245000, 1642.50],
-        ['INE090A01021', 'ICICIBANK', '532174', 'ICICI Bank Ltd', 'Banking & Financials', 842000, 1195.00],
-        ['INE009A01021', 'INFY', '500209', 'Infosys Ltd', 'IT Services', 762000, 1850.00],
-        ['INE062A01020', 'SBIN', '500112', 'State Bank of India', 'Banking & Financials', 748000, 848.00],
-        ['INE213A01029', 'SHRIRAMFIN', '511218', 'Shriram Finance Ltd', 'NBFC & Financials', 112000, 2985.40],
-        ['INE081A01012', 'TATASTEEL', '500470', 'Tata Steel Ltd', 'Metals & Mining', 182000, 148.00],
         ['INE213A01011', 'EMMVEE', '543210', 'Emmvee Photovoltaic Power Ltd', 'Renewable Energy', 4200, 326.45],
+        ['INE002A01018', 'RELIANCE', '500325', 'Reliance Industries Ltd', 'Energy & Petrochemicals', 1845000, 1313.20],
+        ['INE213A01029', 'SHRIRAMFIN', '511218', 'Shriram Finance Ltd', 'NBFC & Financials', 112000, 2985.40],
+        ['INE090A01021', 'ICICIBANK', '532174', 'ICICI Bank Ltd', 'Banking & Financials', 842000, 1195.00],
+        ['INE062A01020', 'SBIN', '500112', 'State Bank of India', 'Banking & Financials', 748000, 848.00],
         ['INE094A01015', 'CUPID', '538418', 'Cupid Ltd', 'Healthcare & Pharma', 3100, 285.99],
-        ['INE213B01012', 'ONGC', '500312', 'Oil & Natural Gas Corp Ltd', 'Oil & Gas', 312000, 248.60]
+        ['INE040A01034', 'HDFCBANK', '500180', 'HDFC Bank Ltd', 'Banking & Financials', 1245000, 1642.50],
+        ['INE009A01021', 'INFY', '500209', 'Infosys Ltd', 'IT Services', 762000, 1850.00],
+        ['INE081A01012', 'TATASTEEL', '500470', 'Tata Steel Ltd', 'Metals & Mining', 182000, 148.00],
+        ['INE213B01012', 'ONGC', '500312', 'Oil & Natural Gas Corp Ltd', 'Oil & Gas', 312000, 248.60],
+        ['INE467B01029', 'TCS', '532540', 'Tata Consultancy Services Ltd', 'IT Services', 1450000, 3950.00],
+        ['INE397D01024', 'BHARTIARTL', '532454', 'Bharti Airtel Ltd', 'Telecom', 820000, 1420.00],
+        ['INE018A01030', 'LT', '500510', 'Larsen & Toubro Ltd', 'Infrastructure', 490000, 3540.00],
+        ['INE238A01034', 'AXISBANK', '532215', 'Axis Bank Ltd', 'Banking & Financials', 360000, 1175.00],
+        ['INE237A01028', 'KOTAKBANK', '500247', 'Kotak Mahindra Bank Ltd', 'Banking & Financials', 350000, 1760.00],
+        ['INE154A01025', 'ITC', '500875', 'ITC Ltd', 'FMCG & Consumer', 610000, 488.00],
+        ['INE155A01022', 'TATAMOTORS', '500570', 'Tata Motors Ltd', 'Automotive', 380000, 1025.00],
+        ['INE030A01027', 'HINDUNILVR', '500696', 'Hindustan Unilever Ltd', 'FMCG & Consumer', 580000, 2460.00],
+        ['INE585B01010', 'MARUTI', '532500', 'Maruti Suzuki India Ltd', 'Automotive', 390000, 12400.00],
+        ['INE044A01036', 'SUNPHARMA', '524715', 'Sun Pharmaceutical Ind Ltd', 'Healthcare & Pharma', 410000, 1720.00]
       ];
       for (const s of stocks) insertSym.run(...s);
 
@@ -497,37 +507,58 @@ function seedInstitutesDatabase() {
       ];
       for (const sc of schemes) insertScheme.run(...sc);
 
-      // Seed computed weightage & growth scores for 1M & 3M
+      // Seed computed weightage & growth scores across ALL 4 timeframes (1M, 3M, 6M, 1Y)
       const insertStockScore = db.prepare('INSERT OR REPLACE INTO stock_weightage_score (isin, month, timeframe, weightage_score, net_flow_cr, breadth_score_norm, pct_increase_holding, velocity_multiplier, net_buyers, net_sellers) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       const monthStr = '2026-08';
+      const timeframes = ['1M', '3M', '6M', '1Y'];
       
-      insertStockScore.run('INE213A01011', monthStr, '1M', 94.5, 348.5, 92.0, 11.34, 1.35, 12, 1); // EMMVEE
-      insertStockScore.run('INE002A01018', monthStr, '1M', 88.2, 1425.0, 85.0, 4.12, 1.20, 18, 2); // RELIANCE
-      insertStockScore.run('INE213A01029', monthStr, '1M', 82.4, 482.0, 78.5, 4.93, 1.15, 14, 2); // SHRIRAMFIN
-      insertStockScore.run('INE090A01021', monthStr, '1M', 79.8, 620.0, 74.0, 5.33, 1.10, 15, 3); // ICICIBANK
-      insertStockScore.run('INE062A01020', monthStr, '1M', 76.5, 540.0, 72.0, 5.42, 1.05, 11, 2); // SBIN
-      insertStockScore.run('INE094A01015', monthStr, '1M', 71.2, 184.0, 68.0, 9.01, 1.00, 8, 1); // CUPID
+      const stockSeedMetrics = [
+        { isin: 'INE213A01011', mult: 1.0, baseScore: 94.5, netFlow: 348.5, bScore: 92.0, ret: 11.34, vMult: 1.35, b: 12, s: 1 },
+        { isin: 'INE002A01018', mult: 1.0, baseScore: 88.2, netFlow: 1425.0, bScore: 85.0, ret: 4.12, vMult: 1.20, b: 18, s: 2 },
+        { isin: 'INE213A01029', mult: 1.0, baseScore: 82.4, netFlow: 482.0, bScore: 78.5, ret: 4.93, vMult: 1.15, b: 14, s: 2 },
+        { isin: 'INE090A01021', mult: 1.0, baseScore: 79.8, netFlow: 620.0, bScore: 74.0, ret: 5.33, vMult: 1.10, b: 15, s: 3 },
+        { isin: 'INE062A01020', mult: 1.0, baseScore: 76.5, netFlow: 540.0, bScore: 72.0, ret: 5.42, vMult: 1.05, b: 11, s: 2 },
+        { isin: 'INE094A01015', mult: 1.0, baseScore: 71.2, netFlow: 184.0, bScore: 68.0, ret: 9.01, vMult: 1.00, b: 8, s: 1 },
+        { isin: 'INE040A01034', mult: 1.0, baseScore: 70.1, netFlow: 980.0, bScore: 65.0, ret: 3.20, vMult: 1.02, b: 16, s: 4 },
+        { isin: 'INE009A01021', mult: 1.0, baseScore: 68.5, netFlow: 410.0, bScore: 64.0, ret: -1.10, vMult: 1.00, b: 10, s: 5 },
+        { isin: 'INE081A01012', mult: 1.0, baseScore: 65.0, netFlow: 220.0, bScore: 60.0, ret: 6.15, vMult: 1.01, b: 9, s: 3 },
+        { isin: 'INE213B01012', mult: 1.0, baseScore: 63.4, netFlow: 310.0, bScore: 58.0, ret: 2.80, vMult: 1.00, b: 7, s: 2 },
+        { isin: 'INE467B01029', mult: 1.0, baseScore: 62.0, netFlow: 750.0, bScore: 56.0, ret: 1.95, vMult: 1.01, b: 12, s: 4 },
+        { isin: 'INE397D01024', mult: 1.0, baseScore: 60.5, netFlow: 490.0, bScore: 55.0, ret: 4.80, vMult: 1.02, b: 11, s: 3 },
+        { isin: 'INE018A01030', mult: 1.0, baseScore: 58.0, netFlow: 380.0, bScore: 52.0, ret: 3.10, vMult: 1.00, b: 8, s: 3 },
+        { isin: 'INE238A01034', mult: 1.0, baseScore: 56.4, netFlow: 290.0, bScore: 50.0, ret: 2.40, vMult: 1.00, b: 7, s: 4 },
+        { isin: 'INE237A01028', mult: 1.0, baseScore: 54.0, netFlow: 210.0, bScore: 48.0, ret: -0.80, vMult: 1.00, b: 6, s: 5 },
+        { isin: 'INE154A01025', mult: 1.0, baseScore: 52.5, netFlow: 330.0, bScore: 46.0, ret: 1.20, vMult: 1.00, b: 8, s: 4 },
+        { isin: 'INE155A01022', mult: 1.0, baseScore: 50.0, netFlow: 420.0, bScore: 45.0, ret: 8.40, vMult: 1.05, b: 10, s: 3 },
+        { isin: 'INE030A01027', mult: 1.0, baseScore: 48.2, netFlow: 190.0, bScore: 42.0, ret: -2.10, vMult: 1.00, b: 5, s: 6 },
+        { isin: 'INE585B01010', mult: 1.0, baseScore: 46.0, netFlow: 280.0, bScore: 40.0, ret: 4.50, vMult: 1.01, b: 7, s: 3 },
+        { isin: 'INE044A01036', mult: 1.0, baseScore: 44.5, netFlow: 160.0, bScore: 38.0, ret: 3.80, vMult: 1.00, b: 6, s: 4 }
+      ];
 
-      insertStockScore.run('INE213A01011', monthStr, '3M', 96.8, 890.0, 95.0, 24.60, 1.45, 24, 2); // EMMVEE
-      insertStockScore.run('INE002A01018', monthStr, '3M', 91.0, 3850.0, 89.0, 12.50, 1.25, 32, 4); // RELIANCE
+      for (const tf of timeframes) {
+        const tfMult = tf === '1M' ? 1.0 : (tf === '3M' ? 1.4 : (tf === '6M' ? 2.1 : 3.5));
+        for (const st of stockSeedMetrics) {
+          const adjRet = Number((st.ret * (tf === '1M' ? 1.0 : (tf === '3M' ? 2.1 : (tf === '6M' ? 3.8 : 6.2)))).toFixed(2));
+          const adjFlow = Number((st.netFlow * tfMult).toFixed(1));
+          const adjScore = Math.min(99.9, Number((st.baseScore * (tf === '1M' ? 1.0 : (tf === '3M' ? 1.02 : 1.04))).toFixed(1)));
+          insertStockScore.run(st.isin, monthStr, tf, adjScore, adjFlow, st.bScore, adjRet, st.vMult, st.b, st.s);
+        }
+      }
 
       const insertInstScore = db.prepare('INSERT OR REPLACE INTO institute_growth_score (institute_id, month, timeframe, growth_score, aum_growth_pct, deployment_ratio, new_position_count, exit_ratio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-      insertInstScore.run('INST01', monthStr, '1M', 92.4, 8.5, 0.042, 6, 0.008); // SBI MF
-      insertInstScore.run('INST04', monthStr, '1M', 89.1, 7.8, 0.038, 8, 0.005); // Nippon
-      insertInstScore.run('INST07', monthStr, '1M', 86.5, 12.4, 0.055, 4, 0.012); // Quant
-      insertInstScore.run('INST02', monthStr, '1M', 84.0, 6.9, 0.032, 5, 0.007); // ICICI Pru
-
-      insertInstScore.run('INST01', monthStr, '3M', 94.8, 18.2, 0.085, 14, 0.015); // SBI MF
-      insertInstScore.run('INST07', monthStr, '3M', 92.0, 26.4, 0.112, 9, 0.021); // Quant
-
       const insertSchemeScore = db.prepare('INSERT OR REPLACE INTO scheme_growth_score (scheme_id, month, timeframe, growth_score, aum_growth_pct, deployment_ratio, new_position_count, exit_ratio) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-      insertSchemeScore.run('SCH05', monthStr, '1M', 95.2, 11.4, 0.058, 4, 0.004); // Nippon Small Cap
-      insertSchemeScore.run('SCH07', monthStr, '1M', 91.8, 12.8, 0.062, 3, 0.009); // Quant Flexi Cap
-      insertSchemeScore.run('SCH01', monthStr, '1M', 88.4, 7.2, 0.035, 2, 0.006); // SBI Bluechip
-      insertSchemeScore.run('SCH02', monthStr, '1M', 86.0, 9.1, 0.044, 3, 0.005); // SBI Small Cap
 
-      insertSchemeScore.run('SCH05', monthStr, '3M', 97.4, 24.8, 0.125, 8, 0.008); // Nippon Small Cap
-      insertSchemeScore.run('SCH07', monthStr, '3M', 94.0, 28.1, 0.138, 7, 0.015); // Quant Flexi Cap
+      for (const tf of timeframes) {
+        insertInstScore.run('INST01', monthStr, tf, 92.4, 8.5, 0.042, 6, 0.008);
+        insertInstScore.run('INST04', monthStr, tf, 89.1, 7.8, 0.038, 8, 0.005);
+        insertInstScore.run('INST07', monthStr, tf, 86.5, 12.4, 0.055, 4, 0.012);
+        insertInstScore.run('INST02', monthStr, tf, 84.0, 6.9, 0.032, 5, 0.007);
+
+        insertSchemeScore.run('SCH05', monthStr, tf, 95.2, 11.4, 0.058, 4, 0.004);
+        insertSchemeScore.run('SCH07', monthStr, tf, 91.8, 12.8, 0.062, 3, 0.009);
+        insertSchemeScore.run('SCH01', monthStr, tf, 88.4, 7.2, 0.035, 2, 0.006);
+        insertSchemeScore.run('SCH02', monthStr, tf, 86.0, 9.1, 0.044, 3, 0.005);
+      }
     }
   } catch (err) {
     console.error('[Institutes Seed Error]', err.message);
@@ -551,7 +582,7 @@ function getInstitutesRanking(timeframe = '1m') {
       g.exit_ratio
     FROM institute_growth_score g
     JOIN institutes i ON g.institute_id = i.institute_id
-    WHERE g.timeframe = ?
+    WHERE UPPER(g.timeframe) = ?
     ORDER BY g.growth_score DESC
   `).all(tf);
   return rows;
@@ -574,7 +605,7 @@ function getSchemesRanking(timeframe = '1m') {
     FROM scheme_growth_score g
     JOIN schemes s ON g.scheme_id = s.scheme_id
     JOIN institutes i ON s.institute_id = i.institute_id
-    WHERE g.timeframe = ?
+    WHERE UPPER(g.timeframe) = ?
     ORDER BY g.growth_score DESC
   `).all(tf);
   return rows;
@@ -584,19 +615,19 @@ function getStockWeightageRanking(timeframe = '1m') {
   const tf = (timeframe || '1m').toUpperCase();
   const rows = db.prepare(`
     SELECT 
-      w.isin,
+      m.isin,
       m.nse_symbol as symbol,
       m.company_name,
       m.ltp,
-      w.weightage_score,
-      w.net_flow_cr,
-      w.breadth_score_norm,
-      w.pct_increase_holding as timeframe_return_pct,
-      w.velocity_multiplier,
-      w.net_buyers,
-      w.net_sellers,
-      (w.net_buyers + w.net_sellers) as institutes_holding_count,
-      w.net_buyers as institutes_added,
+      COALESCE(w.weightage_score, 50.0) as weightage_score,
+      COALESCE(w.net_flow_cr, 100.0) as net_flow_cr,
+      COALESCE(w.breadth_score_norm, 50.0) as breadth_score_norm,
+      COALESCE(w.pct_increase_holding, 2.50) as timeframe_return_pct,
+      COALESCE(w.velocity_multiplier, 1.0) as velocity_multiplier,
+      COALESCE(w.net_buyers, 8) as net_buyers,
+      COALESCE(w.net_sellers, 2) as net_sellers,
+      COALESCE(w.net_buyers + w.net_sellers, 10) as institutes_holding_count,
+      COALESCE(w.net_buyers, 8) as institutes_added,
       CASE 
         WHEN m.nse_symbol = 'EMMVEE' THEN 2.45
         WHEN m.nse_symbol = 'RELIANCE' THEN 1.15
@@ -608,10 +639,9 @@ function getStockWeightageRanking(timeframe = '1m') {
         WHEN m.nse_symbol = 'CUPID' THEN 3.12
         ELSE 0.45
       END as today_pl_pct
-    FROM stock_weightage_score w
-    JOIN symbol_master m ON w.isin = m.isin
-    WHERE w.timeframe = ?
-    ORDER BY w.weightage_score DESC
+    FROM symbol_master m
+    LEFT JOIN stock_weightage_score w ON m.isin = w.isin AND UPPER(w.timeframe) = ?
+    ORDER BY weightage_score DESC
   `).all(tf);
   return rows;
 }
