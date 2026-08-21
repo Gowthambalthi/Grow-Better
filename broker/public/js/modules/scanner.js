@@ -276,7 +276,7 @@ export async function loadStockViewData() {
   thead.innerHTML = `
     <tr>
       <th data-sort-stk="rank" style="width:45px;text-align:center;padding:12px 6px;cursor:pointer;user-select:none;"># ${getSortIcon('rank', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:200px;cursor:pointer;user-select:none;">Institutes Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:200px;cursor:pointer;user-select:none;">Stock Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="today_pl_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Today's P&amp;L % ${getSortIcon('today_pl_pct', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Timeframe Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="institutes_holding_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Holding ${getSortIcon('institutes_holding_count', stkSortCol, stkSortDir)}</th>
