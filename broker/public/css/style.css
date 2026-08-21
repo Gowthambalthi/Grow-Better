@@ -2554,3 +2554,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .groww-price-sub.gain, .groww-returns-main.gain, .groww-returns-sub.gain { color: #00B386 !important; }
 .groww-price-sub.loss, .groww-returns-main.loss, .groww-returns-sub.loss { color: #EB5B56 !important; }
 .groww-invested-sub { color: #64748B; }
+
+/* Soft Light Colors for Net Profit & Loss Column in Stock Holdings Table */
+.net-pl-light-gain {
+  color: #10B981 !important; /* Soft light emerald green */
+}
+.net-pl-light-loss {
+  color: #EF4444 !important; /* Soft light rose red */
+}
+[data-theme="dark"] .net-pl-light-gain {
+  color: #34D399 !important;
+}
+[data-theme="dark"] .net-pl-light-loss {
+  color: #F87171 !important;
+}

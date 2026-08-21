@@ -53,6 +53,8 @@ export function renderHoldingsRow(row) {
   else if (firstLetter === 'R') logoBg = '#2563EB';
   else if (firstLetter === 'S') logoBg = '#F59E0B';
 
+  const netPlClass = netPL >= 0 ? 'net-pl-light-gain' : 'net-pl-light-loss';
+
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
       <td>
@@ -75,7 +77,7 @@ export function renderHoldingsRow(row) {
       <td>${money(row.investedAmount)}</td>
       <td>${money(row.currentAmount)}</td>
       <td class="${plClass(rawOverallPL)}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
-      <td class="${plClass(netPL)}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:800;">${money(netPL)}</span><br><small>${pct(netPLPercent)}</small></td>
+      <td class="${netPlClass}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:600;font-size:13px;">${money(netPL)}</span><br><small style="font-weight:500;opacity:0.85;">${pct(netPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:right;padding-right:20px !important;">${daysText}</td>
     </tr>`;
