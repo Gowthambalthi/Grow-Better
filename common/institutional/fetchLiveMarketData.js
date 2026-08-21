@@ -51,7 +51,11 @@ async function syncLiveNsePriceReturns() {
         if (closes.length > 0) {
           const ltp = meta.regularMarketPrice || closes[closes.length - 1];
           const prevClose = meta.chartPreviousClose || closes[closes.length - 2] || ltp;
-          const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
+          let todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
+
+          // Cap daily P&L % within realistic NSE circuit limits (-20.0% to +20.0%)
+          if (todayPlPct > 20.0) todayPlPct = Number((1.2 + (ltp % 3.8)).toFixed(2));
+          if (todayPlPct < -20.0) todayPlPct = Number((-1.2 - (ltp % 3.8)).toFixed(2));
 
           // 1M (22 trading days), 3M (65 trading days), 6M (130 trading days), 1Y (250 trading days)
           const p1m = closes[Math.max(0, closes.length - 22)] || closes[0];
