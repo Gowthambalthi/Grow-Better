@@ -10,92 +10,30 @@
 
 import { api } from '../core/api.js';
 
-let currentMode = 'A'; // 'A' (By Institute/Scheme) or 'B' (By Stock)
-let currentSubMode = 'AMC'; // 'AMC' (24 AMCs) or 'SCHEME' (~2000 Schemes)
+let currentMode = 'B'; // Dedicated 'B' (By Stock / Institutes Symbol)
 let currentTimeframe = '1m'; // '1m' or '3m'
-let currentBucketFilter = 'ALL';
 
 export function initInstitutionalScanner() {
   bindControls();
   loadData();
-  loadConvictionLeaderboard();
 }
 
 function bindControls() {
-  const btnModeInst = document.getElementById('btnModeInstitutes');
-  const btnModeStk = document.getElementById('btnModeStock');
-  const btnSubAmc = document.getElementById('btnSubAmc');
-  const btnSubSch = document.getElementById('btnSubScheme');
-  const subWrap = document.getElementById('subToggleWrap');
   const tfSelect = document.getElementById('instPeriodSelect');
-
-  if (btnModeInst && btnModeStk) {
-    btnModeInst.addEventListener('click', () => {
-      currentMode = 'A';
-      btnModeInst.classList.add('active');
-      btnModeStk.classList.remove('active');
-      if (subWrap) subWrap.style.display = 'flex';
-      loadData();
-    });
-
-    btnModeStk.addEventListener('click', () => {
-      currentMode = 'B';
-      btnModeStk.classList.add('active');
-      btnModeInst.classList.remove('active');
-      if (subWrap) subWrap.style.display = 'none';
-      loadData();
-    });
-  }
-
-  if (btnSubAmc && btnSubSch) {
-    btnSubAmc.addEventListener('click', () => {
-      currentSubMode = 'AMC';
-      btnSubAmc.classList.add('active');
-      btnSubSch.classList.remove('active');
-      loadData();
-    });
-
-    btnSubSch.addEventListener('click', () => {
-      currentSubMode = 'SCHEME';
-      btnSubSch.classList.add('active');
-      btnSubAmc.classList.remove('active');
-      loadData();
-    });
-  }
 
   if (tfSelect) {
     tfSelect.addEventListener('change', (e) => {
       currentTimeframe = e.target.value;
       loadData();
-      loadConvictionLeaderboard();
     });
   }
-
-  const pillBtns = document.querySelectorAll('.conviction-pill[data-bucket]');
-  pillBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      pillBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentBucketFilter = btn.dataset.bucket || 'ALL';
-      filterLeaderboardRows();
-    });
-  });
 }
 
 /**
- * Loads main table data based on currentMode, currentSubMode, and currentTimeframe
+ * Loads main table data for Institutes Symbol
  */
 export async function loadData() {
-  updateTableHeaders();
-  if (currentMode === 'A') {
-    if (currentSubMode === 'AMC') {
-      await load24AmcsRanking();
-    } else {
-      await load2000SchemesRanking();
-    }
-  } else {
-    await loadStockWeightageRanking();
-  }
+  await loadStockWeightageRanking();
 }
 
 function updateTableHeaders() {
