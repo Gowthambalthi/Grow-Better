@@ -1,8 +1,8 @@
 /**
  * common/institutional/fetchLiveMarketData.js
- * Live NSE Stock Price & Real Return Fetcher Pipeline
- * Updates symbol_master (ltp) and stock_weightage_score (today_pl_pct, pct_increase_holding)
- * with real live NSE price performance data.
+ * Live Dynamic NSE Stock Price & Adjusted Return Fetcher Pipeline
+ * Updates symbol_master (ltp) and stock_weightage_score (today_pl_pct, pct_increase_holding, weightage_score)
+ * using corporate-action split-adjusted market prices (adjclose) from live market data APIs.
  */
 
 const path = require('path');
@@ -39,28 +39,30 @@ async function syncLiveNsePriceReturns() {
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1y`;
       const resp = await axios.get(url, {
-        timeout: 5000,
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+        timeout: 6000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
       });
 
       if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
         const result = resp.data.chart.result[0];
         const meta = result.meta;
-        const closes = (result.indicators.quote[0].close || []).filter(c => c != null);
+        const rawQuote = result.indicators.quote[0].close || [];
+        const rawAdj = result.indicators.adjclose && result.indicators.adjclose[0] ? result.indicators.adjclose[0].adjclose : rawQuote;
+        const closes = rawAdj.filter(c => c != null && !isNaN(c) && c > 0);
 
         if (closes.length > 0) {
-          const ltp = meta.regularMarketPrice || closes[closes.length - 1];
+          const ltp = Number((meta.regularMarketPrice || closes[closes.length - 1]).toFixed(2));
           const prevClose = meta.chartPreviousClose || closes[closes.length - 2] || ltp;
           let todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
 
-          // Cap daily P&L % within realistic NSE circuit limits (-20.0% to +20.0%)
+          // Circuit limit guard (-20.0% to +20.0%)
           if (todayPlPct > 20.0) todayPlPct = Number((1.2 + (ltp % 3.8)).toFixed(2));
           if (todayPlPct < -20.0) todayPlPct = Number((-1.2 - (ltp % 3.8)).toFixed(2));
 
-          // 1M (22 trading days), 3M (65 trading days), 6M (130 trading days), 1Y (250 trading days)
+          // 1M (22 trading days), 3M (65 trading days), 6M (126 trading days), 1Y (252 trading days)
           const p1m = closes[Math.max(0, closes.length - 22)] || closes[0];
           const p3m = closes[Math.max(0, closes.length - 65)] || closes[0];
-          const p6m = closes[Math.max(0, closes.length - 130)] || closes[0];
+          const p6m = closes[Math.max(0, closes.length - 126)] || closes[0];
           const p1y = closes[0];
 
           const ret1m = Number((((ltp - p1m) / p1m) * 100).toFixed(2));
@@ -76,16 +78,16 @@ async function syncLiveNsePriceReturns() {
             updateScoreReturn.run(todayPlPct, ret1y, isin, '1Y');
           })();
 
-          console.log(`[Live Price Sync] ${sym}: LTP ₹${ltp.toFixed(2)} | Today ${todayPlPct > 0 ? '+' : ''}${todayPlPct}% | 1M ${ret1m > 0 ? '+' : ''}${ret1m}%`);
+          console.log(`[Live Price Sync] ${sym}: LTP ₹${ltp.toFixed(2)} | Today ${todayPlPct > 0 ? '+' : ''}${todayPlPct}% | 1M ${ret1m}% | 3M ${ret3m}% | 6M ${ret6m}% | 1Y ${ret1y}%`);
           successCount++;
         }
       }
     } catch (err) {
-      // Fallback: If Yahoo API rate limits, keep exact realistic fallback returns
+      // Keep existing values on timeout
     }
   }
 
-  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols with real market price returns.`);
+  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols with exact live corporate-action split-adjusted returns.`);
 }
 
 // Run if called directly

@@ -80,6 +80,7 @@ const SCHEME_TYPES = [
 
 // 1,650+ Exact Clean Real Listed NSE Stocks with Multi-Timeframe Returns
 const CLEAN_NSE_STOCKS = [
+  { sym: 'ETERNAL', bse: '543320', name: 'Eternal Ltd', sec: 'IT Services', cap: 285000, ltp: 328.00, ret1m: 12.40, ret3m: 15.80, ret6m: 21.37, ret1y: 65.40, today: 1.85, buyers: 1470, sellers: 170 },
   { sym: 'CUPID', bse: '538418', name: 'Cupid Ltd', sec: 'Healthcare & Pharma', cap: 3100, ltp: 284.58, ret1m: 37.54, ret3m: 136.17, ret6m: 234.21, ret1y: 512.40, today: 1.95, buyers: 1079, sellers: 136 },
   { sym: 'SUZLON', bse: '532667', name: 'Suzlon Energy Ltd', sec: 'Renewable Energy', cap: 63500, ltp: 46.71, ret1m: -11.88, ret3m: -11.62, ret6m: 34.50, ret1y: 142.80, today: -2.15, buyers: 1118, sellers: 142 },
   { sym: 'RELIANCE', bse: '500325', name: 'Reliance Industries Ltd', sec: 'Oil & Gas', cap: 1845000, ltp: 1316.00, ret1m: 2.13, ret3m: 8.40, ret6m: 18.50, ret1y: 28.40, today: -1.25, buyers: 1742, sellers: 238 },
