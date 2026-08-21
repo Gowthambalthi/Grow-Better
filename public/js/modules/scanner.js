@@ -275,7 +275,6 @@ export async function loadStockViewData() {
 
   thead.innerHTML = `
     <tr>
-      <th data-sort-stk="rank" style="width:45px;text-align:center;padding:12px 6px;cursor:pointer;user-select:none;"># ${getSortIcon('rank', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:200px;cursor:pointer;user-select:none;">Stock Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="today_pl_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Today's P&amp;L % ${getSortIcon('today_pl_pct', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Timeframe Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
@@ -316,7 +315,7 @@ async function loadStockWeightageRanking() {
   try {
     const res = await api(`/api/institutional/stock-weightage-ranking?timeframe=${currentTimeframeStk}`);
     if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No stock weightage ranking data available</td></tr>';
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No stock weightage ranking data available</td></tr>';
       return;
     }
 
@@ -343,7 +342,6 @@ async function loadStockWeightageRanking() {
 
       html += `
         <tr class="clickable-row">
-          <td style="text-align:center;font-weight:800;color:var(--text-muted);font-family:var(--font-mono);">#${row.rank}</td>
           <td>
             <div style="font-weight:800;color:var(--text);font-size:14px;letter-spacing:0.01em;">${row.symbol}</div>
             <div style="font-size:11.5px;color:var(--text-muted);font-weight:600;margin-top:2px;">${row.company_name}</div>
