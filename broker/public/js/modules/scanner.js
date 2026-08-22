@@ -284,13 +284,14 @@ export async function loadStockViewData() {
 
   thead.innerHTML = `
     <tr>
-      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:200px;cursor:pointer;user-select:none;">Stock Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="today_pl_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Today's P&amp;L % ${getSortIcon('today_pl_pct', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Timeframe Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:190px;cursor:pointer;user-select:none;">Stock Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="ltp" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:110px;cursor:pointer;user-select:none;">LTP (₹) ${getSortIcon('ltp', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="today_pl_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Today P&amp;L % ${getSortIcon('today_pl_pct', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
       <th data-sort-stk="institutes_holding_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Holding ${getSortIcon('institutes_holding_count', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="institutes_added" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;cursor:pointer;user-select:none;">Institutes Added ${getSortIcon('institutes_added', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Conviction Rating ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;cursor:pointer;user-select:none;">Weightage Score ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="institutes_added" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Added ${getSortIcon('institutes_added', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Conviction ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;cursor:pointer;user-select:none;">Weightage Score ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
     </tr>
   `;
 
@@ -357,6 +358,7 @@ async function loadStockWeightageRanking() {
     let html = '';
     list.forEach((row) => {
       const score = Number(row.weightage_score || 0);
+      const ltpVal = Number(row.ltp || 0);
       const todayPl = Number(row.today_pl_pct || 0);
       const isTodayPos = todayPl >= 0;
 
@@ -364,9 +366,6 @@ async function loadStockWeightageRanking() {
       const isTfPos = tfReturn >= 0;
 
       // Conviction Rating & Percentile Color Mapping:
-      // Score >= 70: BUY (Green #10B981)
-      // Score 40-69: HOLD (Orange #F59E0B)
-      // Score < 40: SELL (Red #EF4444)
       let ratingLabel = 'BUY';
       let ratingBg = '#10B981';
       if (score < 40) {
@@ -383,18 +382,21 @@ async function loadStockWeightageRanking() {
             <div style="font-weight:800;color:var(--text);font-size:14px;letter-spacing:0.01em;">${row.symbol}</div>
             <div style="font-size:11.5px;color:var(--text-muted);font-weight:600;margin-top:2px;">${row.company_name}</div>
           </td>
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--text);">
+            ₹${ltpVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </td>
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTodayPos ? '#16A34A' : '#F85C56'};">
             ${isTodayPos ? '+' : ''}${todayPl.toFixed(2)}%
           </td>
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTfPos ? '#16A34A' : '#F85C56'};">
-            ${isTfPos ? '+' : ''}${tfReturn.toFixed(1)}%
+            ${isTfPos ? '+' : ''}${tfReturn.toFixed(2)}%
           </td>
           <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="holding" style="text-align:center;font-weight:700;color:var(--primary);cursor:pointer;text-decoration:underline;" title="Click to view all institutes holding ${row.symbol}">
-            ${row.institutes_holding_count || (row.net_buyers + row.net_sellers)} Institutes
+            ${row.institutes_holding_count || (row.net_buyers + row.net_sellers)} AMCs
           </td>
           <td data-breakdown-sym="${row.symbol}" data-breakdown-mode="added" style="text-align:center;font-family:var(--font-mono);font-weight:700;cursor:pointer;text-decoration:underline;" title="Click to view all institutes added ${row.symbol}">
             <span style="color:#16A34A;">${row.institutes_added || row.net_buyers} Added</span>
-            <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers} buyers / ${row.net_sellers} sellers)</span>
+            <span style="font-size:10.5px;color:var(--text-muted);margin-left:4px;">(${row.net_buyers} / ${row.net_sellers})</span>
           </td>
           <td style="text-align:center;">
             <span class="badge" style="background:${ratingBg};color:#ffffff;font-weight:800;padding:4px 10px;border-radius:12px;font-size:11px;letter-spacing:0.04em;">
