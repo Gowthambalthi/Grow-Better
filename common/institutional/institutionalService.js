@@ -394,20 +394,25 @@ function getStockWeightageRanking(timeframe = '1m') {
       COALESCE(w.weightage_score, 50.0) as weightage_score,
       COALESCE(w.net_flow_cr, 100.0) as net_flow_cr,
       COALESCE(w.breadth_score_norm, 50.0) as breadth_score_norm,
-      COALESCE(w.pct_increase_holding, 2.50) as timeframe_return_pct,
+      COALESCE(w.pct_increase_holding, 0.0) as timeframe_return_pct,
+      COALESCE(w_last.pct_increase_holding, 0.0) as last_month_return_pct,
       COALESCE(w.velocity_multiplier, 1.0) as velocity_multiplier,
       COALESCE(w.net_buyers, 8) as net_buyers,
       COALESCE(w.net_sellers, 2) as net_sellers,
       COALESCE(w.net_buyers + w.net_sellers, 10) as institutes_holding_count,
       COALESCE(w.net_buyers, 8) as institutes_added,
-      COALESCE(w.today_pl_pct, 1.25) as today_pl_pct
+      COALESCE(w.today_pl_pct, 0.0) as today_pl_pct,
+      COALESCE(w.data_source, 'YAHOO_FINANCE') as data_source
     FROM symbol_master m
     LEFT JOIN stock_weightage_score w ON m.isin = w.isin AND UPPER(w.timeframe) = ?
+    LEFT JOIN stock_weightage_score w_last ON m.isin = w_last.isin AND UPPER(w_last.timeframe) = 'LAST_MONTH'
     ORDER BY weightage_score DESC
   `).all(tf);
   return rows.map(r => ({
     ...r,
-    today_pl_pct: Number((r.today_pl_pct || 0).toFixed(2))
+    today_pl_pct: Number((r.today_pl_pct || 0).toFixed(2)),
+    timeframe_return_pct: Number((r.timeframe_return_pct || 0).toFixed(2)),
+    last_month_return_pct: Number((r.last_month_return_pct || 0).toFixed(2))
   }));
 }
 

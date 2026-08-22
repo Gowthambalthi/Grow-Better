@@ -225,7 +225,8 @@ async function syncAllEquitiesInParallel() {
         const ret1y = Number((((ltp - c1y.close) / c1y.close) * 100).toFixed(2));
 
         const tfMap = {
-          '1M': mtdPct,      // This Month (MTD so far until today)
+          '1M': mtdPct,            // Current Month MTD (Start of Month to Today)
+          'LAST_MONTH': lastMonthPct, // Last Month Full Return (Prior Month)
           '3M': ret3m,
           '6M': ret6m,
           '1Y': ret1y

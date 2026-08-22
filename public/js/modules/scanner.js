@@ -284,14 +284,14 @@ export async function loadStockViewData() {
 
   thead.innerHTML = `
     <tr>
-      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:190px;cursor:pointer;user-select:none;">Stock Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="ltp" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:110px;cursor:pointer;user-select:none;">LTP (₹) ${getSortIcon('ltp', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="today_pl_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Today P&amp;L % ${getSortIcon('today_pl_pct', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Return % (${tfLabel}) ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="institutes_holding_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Holding ${getSortIcon('institutes_holding_count', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="institutes_added" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Institutes Added ${getSortIcon('institutes_added', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Conviction ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
-      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;cursor:pointer;user-select:none;">Weightage Score ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="symbol" style="white-space:nowrap;padding:12px 14px;min-width:180px;cursor:pointer;user-select:none;">Stock Symbol ${getSortIcon('symbol', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="ltp" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:160px;cursor:pointer;user-select:none;">LTP (Today P&amp;L %) ${getSortIcon('ltp', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="last_month_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Last Month % ${getSortIcon('last_month_return_pct', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="timeframe_return_pct" style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">This Month (${tfLabel}) % ${getSortIcon('timeframe_return_pct', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="institutes_holding_count" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Institutes Holding ${getSortIcon('institutes_holding_count', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="institutes_added" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:140px;cursor:pointer;user-select:none;">Institutes Added ${getSortIcon('institutes_added', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:130px;cursor:pointer;user-select:none;">Conviction ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
+      <th data-sort-stk="weightage_score" style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;cursor:pointer;user-select:none;">Weightage Score ${getSortIcon('weightage_score', stkSortCol, stkSortDir)}</th>
     </tr>
   `;
 
@@ -362,6 +362,9 @@ async function loadStockWeightageRanking() {
       const todayPl = Number(row.today_pl_pct || 0);
       const isTodayPos = todayPl >= 0;
 
+      const lastMonthReturn = Number(row.last_month_return_pct || 0);
+      const isLastMonthPos = lastMonthReturn >= 0;
+
       const tfReturn = Number(row.timeframe_return_pct || 0);
       const isTfPos = tfReturn >= 0;
 
@@ -382,11 +385,12 @@ async function loadStockWeightageRanking() {
             <div style="font-weight:800;color:var(--text);font-size:14px;letter-spacing:0.01em;">${row.symbol}</div>
             <div style="font-size:11.5px;color:var(--text-muted);font-weight:600;margin-top:2px;">${row.company_name}</div>
           </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:var(--text);">
-            ₹${ltpVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;">
+            <span style="color:var(--text);font-size:13.5px;">₹${ltpVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span style="color:${isTodayPos ? '#16A34A' : '#F85C56'};font-size:12px;margin-left:4px;font-weight:700;">(${isTodayPos ? '+' : ''}${todayPl.toFixed(2)}%)</span>
           </td>
-          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTodayPos ? '#16A34A' : '#F85C56'};">
-            ${isTodayPos ? '+' : ''}${todayPl.toFixed(2)}%
+          <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isLastMonthPos ? '#16A34A' : '#F85C56'};">
+            ${isLastMonthPos ? '+' : ''}${lastMonthReturn.toFixed(2)}%
           </td>
           <td style="text-align:right;font-family:var(--font-mono);font-weight:700;color:${isTfPos ? '#16A34A' : '#F85C56'};">
             ${isTfPos ? '+' : ''}${tfReturn.toFixed(2)}%

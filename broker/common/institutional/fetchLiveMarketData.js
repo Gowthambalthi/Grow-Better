@@ -1,8 +1,11 @@
 /**
  * common/institutional/fetchLiveMarketData.js
- * Single-Source & Tagged Market Sync Engine for ALL 2,291 NSE Equities
- * Live Market Hours: Real-time Live Traded Price (LTP) + Finalized Previous Candle Close (prevClose)
- * Historical Returns (1M, 3M, 6M, 1Y): Split-adjusted 2Y candle history (280 minimum floor)
+ * Monthly Calendar & MTD Return Engine for ALL 2,291 NSE Equities
+ * Tracks:
+ * - Today P&L % & Price Change ₹ (LTP vs Prev Close)
+ * - This Month MTD Return % & Change ₹ (Month Start to Today)
+ * - Last Month Full Return % & Change ₹ (Prior Month Start to Current Month Start)
+ * - Composite Weightage Score calculated from Institutional Buying + This Month + Last Month + Today P&L
  */
 
 const path = require('path');
@@ -26,7 +29,7 @@ try {
  * Finds close price for exact target calendar days ago (accounting for Sundays/Mondays/holidays)
  */
 function getCloseForCalendarDaysAgo(candles, daysAgo) {
-  if (!candles || candles.length === 0) return 0;
+  if (!candles || candles.length === 0) return candles[0] || { close: 0, time: 0 };
   const latestTime = candles[candles.length - 1].time;
   const targetTime = latestTime - (daysAgo * 24 * 60 * 60 * 1000);
 
@@ -39,6 +42,52 @@ function getCloseForCalendarDaysAgo(candles, daysAgo) {
     }
   }
   return closest;
+}
+
+/**
+ * Computes Exact Calendar Month Returns:
+ * - mtdPct / mtdChange: Current Month Start to Today
+ * - lastMonthPct / lastMonthChange: Prior Month Start to Current Month Start
+ */
+function getMonthlyCalendarReturns(candles) {
+  if (!candles || candles.length === 0) return { lastMonthPct: 0, lastMonthChange: 0, mtdPct: 0, mtdChange: 0 };
+  
+  const latestCandle = candles[candles.length - 1];
+  const latestDate = new Date(latestCandle.time);
+  const currentYear = latestDate.getFullYear();
+  const currentMonth = latestDate.getMonth();
+
+  const currentMonthStartTime = new Date(currentYear, currentMonth, 1).getTime();
+  const priorMonthStartTime = new Date(currentYear, currentMonth - 1, 1).getTime();
+
+  let currentMonthStartCandle = candles[0];
+  let priorMonthStartCandle = candles[0];
+
+  for (const c of candles) {
+    if (c.time <= currentMonthStartTime) {
+      currentMonthStartCandle = c;
+    }
+    if (c.time <= priorMonthStartTime) {
+      priorMonthStartCandle = c;
+    }
+  }
+
+  const ltp = latestCandle.close;
+
+  // This Month (MTD so far)
+  const mtdChange = ltp - currentMonthStartCandle.close;
+  const mtdPct = ((ltp - currentMonthStartCandle.close) / Math.max(0.01, currentMonthStartCandle.close)) * 100;
+
+  // Last Month (Full Prior Month)
+  const lastMonthChange = currentMonthStartCandle.close - priorMonthStartCandle.close;
+  const lastMonthPct = ((currentMonthStartCandle.close - priorMonthStartCandle.close) / Math.max(0.01, priorMonthStartCandle.close)) * 100;
+
+  return {
+    lastMonthPct: Number(lastMonthPct.toFixed(2)),
+    lastMonthChange: Number(lastMonthChange.toFixed(2)),
+    mtdPct: Number(mtdPct.toFixed(2)),
+    mtdChange: Number(mtdChange.toFixed(2))
+  };
 }
 
 /**
@@ -66,14 +115,13 @@ async function fetchAngelSymbolCandles(symboltoken) {
       })).filter(c => c.close > 0);
 
       if (candles.length >= 280) {
-        // Finalized previous candle close
         const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : candles[candles.length - 1].close;
         const ltp = candles[candles.length - 1].close;
         return { candles, ltp, prevClose, source: 'ANGEL_ONE' };
       }
     }
   } catch (err) {
-    // Return null on HTTP 403 or failure to seamlessly proceed to secondary source
+    // Return null on HTTP 403 or failure to proceed to fallback
   }
   return null;
 }
@@ -81,7 +129,6 @@ async function fetchAngelSymbolCandles(symboltoken) {
 async function fetchYahooSymbolData(sym) {
   try {
     const yahooSym = `${sym}.NS`;
-    // Query 2-year range (500+ daily candles) so 1Y target date has full lookback buffer
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=2y`;
     const resp = await axios.get(url, {
       timeout: 7000,
@@ -93,7 +140,6 @@ async function fetchYahooSymbolData(sym) {
       const meta = result.meta;
       const timestamps = result.timestamp || [];
       const rawQuote = result.indicators.quote[0].close || [];
-      // 100% Split-Adjusted Close (adjclose): handles stock splits, bonuses, rights issues
       const rawAdj = result.indicators.adjclose && result.indicators.adjclose[0] ? result.indicators.adjclose[0].adjclose : rawQuote;
 
       const candles = [];
@@ -101,17 +147,14 @@ async function fetchYahooSymbolData(sym) {
         const price = rawAdj[i];
         if (price != null && !isNaN(price) && price > 0) {
           candles.push({
-            time: timestamps[i] * 1000, // Unix seconds to JavaScript milliseconds
-            close: price // Split-adjusted adjclose price
+            time: timestamps[i] * 1000,
+            close: price
           });
         }
       }
 
-      // Enforce 280-candle minimum history threshold for valid 1Y lookbacks
       if (candles.length >= 280) {
-        // Real-time live market price (regularMarketPrice) for live intraday accuracy
         const ltp = Number((meta.regularMarketPrice || candles[candles.length - 1].close).toFixed(2));
-        // Finalized previous daily candle close for exact 1-day P&L %
         const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
         return { candles, ltp, prevClose, source: 'YAHOO_FINANCE' };
       }
@@ -123,11 +166,11 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Market Pipeline] Syncing ALL 2,291 NSE Equities (Real-Time Live LTP + Split-Adjusted 2Y Buffer)...');
+  console.log('[Monthly Calendar Pipeline] Syncing ALL 2,291 NSE Equities (Last Month + This Month MTD + Today P&L)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
-    console.log('[Market Pipeline] No symbols found in symbol_master.');
+    console.log('[Monthly Calendar Pipeline] No symbols found in symbol_master.');
     return;
   }
 
@@ -166,19 +209,27 @@ async function syncAllEquitiesInParallel() {
         const sym = item.nse_symbol;
         const { candles, ltp, prevClose, source } = data;
 
-        // 100% Real-Time Live LTP vs Finalized Previous Close for Today P&L %
+        // 1. Today P&L %
         const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
 
-        const c1m = getCloseForCalendarDaysAgo(candles, 30);
+        // 2. Exact Calendar Month Returns (Last Month vs This Month MTD)
+        const { lastMonthPct, mtdPct } = getMonthlyCalendarReturns(candles);
+
+        // 3. Standard Rolling Window Returns (3M, 6M, 1Y)
         const c3m = getCloseForCalendarDaysAgo(candles, 90);
         const c6m = getCloseForCalendarDaysAgo(candles, 180);
         const c1y = getCloseForCalendarDaysAgo(candles, 365);
 
+        const ret3m = Number((((ltp - c3m.close) / c3m.close) * 100).toFixed(2));
+        const ret6m = Number((((ltp - c6m.close) / c6m.close) * 100).toFixed(2));
+        const ret1y = Number((((ltp - c1y.close) / c1y.close) * 100).toFixed(2));
+
         const tfMap = {
-          '1M': Number((((ltp - c1m.close) / c1m.close) * 100).toFixed(2)),
-          '3M': Number((((ltp - c3m.close) / c3m.close) * 100).toFixed(2)),
-          '6M': Number((((ltp - c6m.close) / c6m.close) * 100).toFixed(2)),
-          '1Y': Number((((ltp - c1y.close) / c1y.close) * 100).toFixed(2))
+          '1M': mtdPct,            // Current Month MTD (Start of Month to Today)
+          'LAST_MONTH': lastMonthPct, // Last Month Full Return (Prior Month)
+          '3M': ret3m,
+          '6M': ret6m,
+          '1Y': ret1y
         };
 
         updateSymLtp.run(ltp, isin);
@@ -190,9 +241,18 @@ async function syncAllEquitiesInParallel() {
           const netFlowCr = existing ? existing.net_flow_cr : 50;
 
           const buyerRatio = (buyers / Math.max(1, buyers + sellers)) * 100;
-          const returnScore = Math.min(100, Math.max(0, 50 + retVal * 0.8));
-          const flowScore = Math.min(100, Math.max(10, Math.abs(netFlowCr) * 0.5));
-          const newScore = Number(((0.40 * buyerRatio) + (0.35 * flowScore) + (0.25 * returnScore)).toFixed(1));
+          
+          // Weightage Score blending: 35% Buyer Ratio, 30% MTD Return, 20% Last Month Return, 15% Today P&L
+          const mtdScore = Math.min(100, Math.max(0, 50 + mtdPct * 0.8));
+          const lastMonthScore = Math.min(100, Math.max(0, 50 + lastMonthPct * 0.8));
+          const todayScore = Math.min(100, Math.max(0, 50 + todayPlPct * 2.0));
+
+          const newScore = Number((
+            (0.35 * buyerRatio) + 
+            (0.30 * mtdScore) + 
+            (0.20 * lastMonthScore) + 
+            (0.15 * todayScore)
+          ).toFixed(1));
 
           updateScoreReturn.run(todayPlPct, retVal, newScore, source, isin, tf);
         }
@@ -201,10 +261,10 @@ async function syncAllEquitiesInParallel() {
       }
     })();
 
-    console.log(`[Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
+    console.log(`[Monthly Calendar Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
   }
 
-  console.log(`[Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities.`);
+  console.log(`[Monthly Calendar Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities.`);
 }
 
 if (require.main === module) {
