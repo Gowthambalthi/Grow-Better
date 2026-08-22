@@ -2,6 +2,7 @@
  * common/institutional/fetchLiveMarketData.js
  * Live Dynamic NSE Stock Price & Calendar-Day Return Fetcher Pipeline
  * Counts CALENDAR DAYS (including Sundays, Mondays, Saturdays, and all holidays):
+ * - Today P&L %: Exact 1 Calendar Session Price Change ((LTP - PrevClose)/PrevClose * 100)
  * - 1M: 30 Calendar Days ago
  * - 3M: 90 Calendar Days ago
  * - 6M: 180 Calendar Days ago
@@ -67,7 +68,7 @@ async function fetchAngelCandlesWithTime(symboltoken) {
 }
 
 async function syncLiveNsePriceReturns() {
-  console.log('[Live Price Sync] Fetching real live price returns based on CALENDAR DAYS (30d, 90d, 180d, 365d including Sundays/Mondays)...');
+  console.log('[Live Price Sync] Fetching 100% REAL 1-Day Today P&L % and Calendar Day Returns (30d, 90d, 180d, 365d)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
@@ -150,11 +151,8 @@ async function syncLiveNsePriceReturns() {
       if (!ltp) ltp = Number(candles[candles.length - 1].close.toFixed(2));
       if (!prevClose) prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
 
-      let todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
-
-      // Circuit limit guard (-20.0% to +20.0%)
-      if (todayPlPct > 20.0) todayPlPct = Number((1.2 + (ltp % 3.8)).toFixed(2));
-      if (todayPlPct < -20.0) todayPlPct = Number((-1.2 - (ltp % 3.8)).toFixed(2));
+      // 100% REAL 1-DAY TODAY P&L % (NO Artificial Guards or Overrides!)
+      const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
 
       // Exact CALENDAR DAYS calculation (including Sundays, Mondays, and holidays)
       const p1m = getCloseForCalendarDaysAgo(candles, 30);   // 30 Calendar Days
@@ -192,7 +190,7 @@ async function syncLiveNsePriceReturns() {
     }
   }
 
-  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols using CALENDAR DAYS (Angel One SmartAPI: ${angelCount}, yfinance: ${yfinanceCount}).`);
+  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols with exact 1-Day Today P&L % and Calendar Day Returns.`);
 }
 
 // Run if called directly
