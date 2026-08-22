@@ -1,8 +1,7 @@
 /**
  * common/institutional/fetchLiveMarketData.js
- * Hybrid Market Sync Engine for ALL 2,291 NSE Equities
- * - Today P&L %: Real-time broker feed (Angel One / Live LTP)
- * - Historical Returns (1M, 3M, 6M, 1Y): Split-adjusted 2Y candle history (Yahoo Finance adjclose)
+ * Single-Source & Tagged Market Sync Engine for ALL 2,291 NSE Equities
+ * Tags data source ('ANGEL_ONE' vs 'YAHOO_FINANCE') and enforces 280-candle minimum history buffer.
  */
 
 const path = require('path');
@@ -14,6 +13,13 @@ const { getCandleData } = require('../../angelone/historical');
 const DB_PATH = path.join(__dirname, '../../data/institutional.db');
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
+
+// Ensure data_source column exists in stock_weightage_score table
+try {
+  db.exec('ALTER TABLE stock_weightage_score ADD COLUMN data_source TEXT DEFAULT "YAHOO_FINANCE"');
+} catch (e) {
+  // Column already exists
+}
 
 /**
  * Finds close price for exact target calendar days ago (accounting for Sundays/Mondays/holidays)
@@ -46,7 +52,6 @@ async function fetchYahooSymbolData(sym) {
 
     if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
       const result = resp.data.chart.result[0];
-      const meta = result.meta;
       const timestamps = result.timestamp || [];
       const rawQuote = result.indicators.quote[0].close || [];
       // 100% Split-Adjusted Close (adjclose): handles stock splits, bonuses, rights issues
@@ -63,11 +68,11 @@ async function fetchYahooSymbolData(sym) {
         }
       }
 
-      if (candles.length > 0) {
-        // Same-basis candle array LTP & prevClose for guaranteed consistency
+      // Enforce 280-candle minimum history threshold for valid 1Y lookbacks
+      if (candles.length >= 280) {
         const ltp = Number(candles[candles.length - 1].close.toFixed(2));
         const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
-        return { candles, ltp, prevClose };
+        return { candles, ltp, prevClose, source: 'YAHOO_FINANCE' };
       }
     }
   } catch (err) {
@@ -77,11 +82,11 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Hybrid Market Pipeline] Syncing ALL 2,291 NSE Equities (Broker LTP + Split-Adjusted Candles)...');
+  console.log('[Market Pipeline] Syncing ALL 2,291 NSE Equities (Tagged Source + 280 Candle Minimum)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
-    console.log('[Hybrid Market Pipeline] No symbols found in symbol_master.');
+    console.log('[Market Pipeline] No symbols found in symbol_master.');
     return;
   }
 
@@ -89,7 +94,7 @@ async function syncAllEquitiesInParallel() {
   const getExistingScore = db.prepare('SELECT net_buyers, net_sellers, net_flow_cr FROM stock_weightage_score WHERE isin = ? AND UPPER(timeframe) = ?');
   const updateScoreReturn = db.prepare(`
     UPDATE stock_weightage_score 
-    SET today_pl_pct = ?, pct_increase_holding = ?, weightage_score = ? 
+    SET today_pl_pct = ?, pct_increase_holding = ?, weightage_score = ?, data_source = ? 
     WHERE isin = ? AND UPPER(timeframe) = ?
   `);
 
@@ -111,7 +116,7 @@ async function syncAllEquitiesInParallel() {
         if (!data || !data.candles || data.candles.length === 0) continue;
         const isin = item.isin;
         const sym = item.nse_symbol;
-        const { candles, ltp, prevClose } = data;
+        const { candles, ltp, prevClose, source } = data;
 
         // 100% Same-Basis 1-Day Today P&L %
         const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
@@ -141,17 +146,17 @@ async function syncAllEquitiesInParallel() {
           const flowScore = Math.min(100, Math.max(10, Math.abs(netFlowCr) * 0.5));
           const newScore = Number(((0.40 * buyerRatio) + (0.35 * flowScore) + (0.25 * returnScore)).toFixed(1));
 
-          updateScoreReturn.run(todayPlPct, retVal, newScore, isin, tf);
+          updateScoreReturn.run(todayPlPct, retVal, newScore, source, isin, tf);
         }
 
         totalSuccess++;
       }
     })();
 
-    console.log(`[Hybrid Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
+    console.log(`[Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
   }
 
-  console.log(`[Hybrid Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities.`);
+  console.log(`[Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities.`);
 }
 
 if (require.main === module) {
