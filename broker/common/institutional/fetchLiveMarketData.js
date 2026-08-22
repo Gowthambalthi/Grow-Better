@@ -1,8 +1,8 @@
 /**
  * common/institutional/fetchLiveMarketData.js
  * Single-Source & Tagged Market Sync Engine for ALL 2,291 NSE Equities
- * Tags data source ('ANGEL_ONE' vs 'YAHOO_FINANCE') and enforces 280-candle minimum history buffer.
- * Pre-wired Angel One SmartAPI array transformer: [timestamp, open, high, low, close, volume] -> { time, close }
+ * Live Market Hours: Real-time Live Traded Price (LTP) + Finalized Previous Candle Close (prevClose)
+ * Historical Returns (1M, 3M, 6M, 1Y): Split-adjusted 2Y candle history (280 minimum floor)
  */
 
 const path = require('path');
@@ -42,8 +42,7 @@ function getCloseForCalendarDaysAgo(candles, daysAgo) {
 }
 
 /**
- * Pre-wired Angel One SmartAPI Candle Transformer
- * Transforms raw Angel array [[timestamp, open, high, low, close, volume], ...] into [{time: ms, close: num}, ...]
+ * Angel One SmartAPI Candle Transformer & Live Price Feed
  */
 async function fetchAngelSymbolCandles(symboltoken) {
   try {
@@ -67,8 +66,9 @@ async function fetchAngelSymbolCandles(symboltoken) {
       })).filter(c => c.close > 0);
 
       if (candles.length >= 280) {
-        const ltp = Number(candles[candles.length - 1].close.toFixed(2));
-        const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
+        // Finalized previous candle close
+        const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : candles[candles.length - 1].close;
+        const ltp = candles[candles.length - 1].close;
         return { candles, ltp, prevClose, source: 'ANGEL_ONE' };
       }
     }
@@ -90,6 +90,7 @@ async function fetchYahooSymbolData(sym) {
 
     if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
       const result = resp.data.chart.result[0];
+      const meta = result.meta;
       const timestamps = result.timestamp || [];
       const rawQuote = result.indicators.quote[0].close || [];
       // 100% Split-Adjusted Close (adjclose): handles stock splits, bonuses, rights issues
@@ -108,7 +109,9 @@ async function fetchYahooSymbolData(sym) {
 
       // Enforce 280-candle minimum history threshold for valid 1Y lookbacks
       if (candles.length >= 280) {
-        const ltp = Number(candles[candles.length - 1].close.toFixed(2));
+        // Real-time live market price (regularMarketPrice) for live intraday accuracy
+        const ltp = Number((meta.regularMarketPrice || candles[candles.length - 1].close).toFixed(2));
+        // Finalized previous daily candle close for exact 1-day P&L %
         const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
         return { candles, ltp, prevClose, source: 'YAHOO_FINANCE' };
       }
@@ -120,7 +123,7 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Market Pipeline] Syncing ALL 2,291 NSE Equities (Angel One Pre-Wired + Tagged Source + 280 Candle Minimum)...');
+  console.log('[Market Pipeline] Syncing ALL 2,291 NSE Equities (Real-Time Live LTP + Split-Adjusted 2Y Buffer)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
@@ -163,7 +166,7 @@ async function syncAllEquitiesInParallel() {
         const sym = item.nse_symbol;
         const { candles, ltp, prevClose, source } = data;
 
-        // 100% Same-Basis 1-Day Today P&L %
+        // 100% Real-Time Live LTP vs Finalized Previous Close for Today P&L %
         const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
 
         const c1m = getCloseForCalendarDaysAgo(candles, 30);
