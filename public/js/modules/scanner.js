@@ -323,6 +323,20 @@ async function loadStockWeightageRanking() {
   const tbody = document.getElementById('tbodyInstitutionalScanner');
   if (!tbody) return;
 
+  // Render Skeleton Loading Rows while fetching API
+  tbody.innerHTML = Array(6).fill(0).map(() => `
+    <tr style="opacity:0.6;">
+      <td style="padding:14px;"><div style="height:14px;width:110px;background:var(--bg-raised);border-radius:4px;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:right;"><div style="height:14px;width:90px;background:var(--bg-raised);border-radius:4px;margin-left:auto;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:right;"><div style="height:14px;width:70px;background:var(--bg-raised);border-radius:4px;margin-left:auto;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:right;"><div style="height:14px;width:70px;background:var(--bg-raised);border-radius:4px;margin-left:auto;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:center;"><div style="height:14px;width:80px;background:var(--bg-raised);border-radius:4px;margin:0 auto;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:center;"><div style="height:14px;width:90px;background:var(--bg-raised);border-radius:4px;margin:0 auto;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:center;"><div style="height:20px;width:60px;background:var(--bg-raised);border-radius:10px;margin:0 auto;animation:pulse 1.2s infinite;"></div></td>
+      <td style="padding:14px;text-align:center;"><div style="height:14px;width:50px;background:var(--bg-raised);border-radius:4px;margin:0 auto;animation:pulse 1.2s infinite;"></div></td>
+    </tr>
+  `).join('');
+
   try {
     const res = await api(`/api/institutional/stock-weightage-ranking?timeframe=${currentTimeframeStk}`);
     if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
