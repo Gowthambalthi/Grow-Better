@@ -1,12 +1,8 @@
 /**
  * common/institutional/fetchLiveMarketData.js
- * Live Dynamic NSE Stock Price & Calendar-Day Return Fetcher Pipeline
- * Counts CALENDAR DAYS (including Sundays, Mondays, Saturdays, and all holidays):
- * - Today P&L %: Exact 1 Calendar Session Price Change ((LTP - PrevClose)/PrevClose * 100)
- * - 1M: 30 Calendar Days ago
- * - 3M: 90 Calendar Days ago
- * - 6M: 180 Calendar Days ago
- * - 1Y: 365 Calendar Days ago
+ * Fast Parallel Batch Market Sync Engine for ALL 2,291 NSE Equities
+ * Updates symbol_master (ltp) and stock_weightage_score (today_pl_pct, pct_increase_holding, weightage_score)
+ * using real corporate-action split-adjusted market prices (adjclose) from live APIs.
  */
 
 const path = require('path');
@@ -21,8 +17,6 @@ db.pragma('journal_mode = WAL');
 
 /**
  * Finds close price for exact target calendar days ago (accounting for Sundays/Mondays/holidays)
- * @param {Array<{time: number, close: number}>} candles
- * @param {number} daysAgo - 30 (1M), 90 (3M), 180 (6M), 365 (1Y)
  */
 function getCloseForCalendarDaysAgo(candles, daysAgo) {
   if (!candles || candles.length === 0) return 0;
@@ -40,39 +34,51 @@ function getCloseForCalendarDaysAgo(candles, daysAgo) {
   return closest.close;
 }
 
-async function fetchAngelCandlesWithTime(symboltoken) {
+async function fetchYahooSymbolData(sym) {
   try {
-    const today = new Date();
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-    const fmt = (d) => d.toISOString().slice(0, 10);
-    const raw = await getCandleData({
-      symboltoken,
-      fromdate: `${fmt(oneYearAgo)} 09:15`,
-      todate: `${fmt(today)} 15:30`,
-      interval: 'ONE_DAY',
-      exchange: 'NSE'
+    const yahooSym = `${sym}.NS`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1y`;
+    const resp = await axios.get(url, {
+      timeout: 7000,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
 
-    if (Array.isArray(raw) && raw.length > 0) {
-      return raw.map(c => ({
-        time: new Date(c[0]).getTime(),
-        close: Number(c[4])
-      })).filter(c => c.close > 0);
+    if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
+      const result = resp.data.chart.result[0];
+      const meta = result.meta;
+      const timestamps = result.timestamp || [];
+      const rawQuote = result.indicators.quote[0].close || [];
+      const rawAdj = result.indicators.adjclose && result.indicators.adjclose[0] ? result.indicators.adjclose[0].adjclose : rawQuote;
+
+      const candles = [];
+      for (let i = 0; i < timestamps.length; i++) {
+        const price = rawAdj[i];
+        if (price != null && !isNaN(price) && price > 0) {
+          candles.push({
+            time: timestamps[i] * 1000,
+            close: price
+          });
+        }
+      }
+
+      if (candles.length > 0) {
+        const ltp = Number((meta.regularMarketPrice || candles[candles.length - 1].close).toFixed(2));
+        const prevClose = meta.chartPreviousClose || (candles.length >= 2 ? candles[candles.length - 2].close : ltp);
+        return { candles, ltp, prevClose };
+      }
     }
   } catch (err) {
-    // Return null on failure to trigger yfinance fallback
+    // Return null on failure
   }
   return null;
 }
 
-async function syncLiveNsePriceReturns() {
-  console.log('[Live Price Sync] Fetching 100% REAL 1-Day Today P&L % and Calendar Day Returns (30d, 90d, 180d, 365d)...');
+async function syncAllEquitiesInParallel() {
+  console.log('[Live Market Pipeline] Starting FAST BATCH SYNC for ALL 2,291 NSE Equities...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
-    console.log('[Live Price Sync] No symbols found in symbol_master.');
+    console.log('[Live Market Pipeline] No symbols found in symbol_master.');
     return;
   }
 
@@ -84,90 +90,40 @@ async function syncLiveNsePriceReturns() {
     WHERE isin = ? AND UPPER(timeframe) = ?
   `);
 
-  let successCount = 0;
-  let angelCount = 0;
-  let yfinanceCount = 0;
+  const BATCH_SIZE = 40;
+  let totalSuccess = 0;
 
-  const isAngelConfigured = Boolean(env.angel.apiKey() && env.angel.clientCode());
+  for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+    const batch = symbols.slice(i, i + BATCH_SIZE);
+    
+    const results = await Promise.all(
+      batch.map(async (s) => {
+        const res = await fetchYahooSymbolData(s.nse_symbol);
+        return { item: s, data: res };
+      })
+    );
 
-  for (const s of symbols) {
-    const isin = s.isin;
-    const sym = s.nse_symbol;
-    const token = s.bse_symbol || '';
+    db.transaction(() => {
+      for (const { item, data } of results) {
+        if (!data || !data.candles || data.candles.length === 0) continue;
+        const isin = item.isin;
+        const sym = item.nse_symbol;
+        const { candles, ltp, prevClose } = data;
 
-    let candles = null;
-    let ltp = 0;
-    let prevClose = 0;
-    let usedSource = 'yfinance';
+        const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
 
-    // 1. Try Angel One SmartAPI getCandleData if configured and token exists
-    if (isAngelConfigured && token) {
-      candles = await fetchAngelCandlesWithTime(token);
-      if (candles && candles.length > 0) {
-        usedSource = 'Angel One SmartAPI';
-        angelCount++;
-      }
-    }
+        const p1m = getCloseForCalendarDaysAgo(candles, 30);
+        const p3m = getCloseForCalendarDaysAgo(candles, 90);
+        const p6m = getCloseForCalendarDaysAgo(candles, 180);
+        const p1y = getCloseForCalendarDaysAgo(candles, 365);
 
-    // 2. Fallback to yfinance (Yahoo Finance split-adjusted adjclose)
-    if (!candles || candles.length === 0) {
-      try {
-        const yahooSym = `${sym}.NS`;
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1y`;
-        const resp = await axios.get(url, {
-          timeout: 6000,
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-        });
+        const tfMap = {
+          '1M': Number((((ltp - p1m) / p1m) * 100).toFixed(2)),
+          '3M': Number((((ltp - p3m) / p3m) * 100).toFixed(2)),
+          '6M': Number((((ltp - p6m) / p6m) * 100).toFixed(2)),
+          '1Y': Number((((ltp - p1y) / p1y) * 100).toFixed(2))
+        };
 
-        if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
-          const result = resp.data.chart.result[0];
-          const meta = result.meta;
-          const timestamps = result.timestamp || [];
-          const rawQuote = result.indicators.quote[0].close || [];
-          const rawAdj = result.indicators.adjclose && result.indicators.adjclose[0] ? result.indicators.adjclose[0].adjclose : rawQuote;
-
-          candles = [];
-          for (let i = 0; i < timestamps.length; i++) {
-            const price = rawAdj[i];
-            if (price != null && !isNaN(price) && price > 0) {
-              candles.push({
-                time: timestamps[i] * 1000,
-                close: price
-              });
-            }
-          }
-
-          ltp = Number((meta.regularMarketPrice || candles[candles.length - 1].close).toFixed(2));
-          prevClose = meta.chartPreviousClose || (candles.length >= 2 ? candles[candles.length - 2].close : ltp);
-          usedSource = 'yfinance';
-          yfinanceCount++;
-        }
-      } catch (err) {
-        // Skip on error
-      }
-    }
-
-    if (candles && candles.length > 0) {
-      if (!ltp) ltp = Number(candles[candles.length - 1].close.toFixed(2));
-      if (!prevClose) prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
-
-      // 100% REAL 1-DAY TODAY P&L % (NO Artificial Guards or Overrides!)
-      const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
-
-      // Exact CALENDAR DAYS calculation (including Sundays, Mondays, and holidays)
-      const p1m = getCloseForCalendarDaysAgo(candles, 30);   // 30 Calendar Days
-      const p3m = getCloseForCalendarDaysAgo(candles, 90);   // 90 Calendar Days
-      const p6m = getCloseForCalendarDaysAgo(candles, 180);  // 180 Calendar Days
-      const p1y = getCloseForCalendarDaysAgo(candles, 365);  // 365 Calendar Days
-
-      const tfMap = {
-        '1M': Number((((ltp - p1m) / p1m) * 100).toFixed(2)),
-        '3M': Number((((ltp - p3m) / p3m) * 100).toFixed(2)),
-        '6M': Number((((ltp - p6m) / p6m) * 100).toFixed(2)),
-        '1Y': Number((((ltp - p1y) / p1y) * 100).toFixed(2))
-      };
-
-      db.transaction(() => {
         updateSymLtp.run(ltp, isin);
 
         for (const [tf, retVal] of Object.entries(tfMap)) {
@@ -183,19 +139,19 @@ async function syncLiveNsePriceReturns() {
 
           updateScoreReturn.run(todayPlPct, retVal, newScore, isin, tf);
         }
-      })();
 
-      console.log(`[Live Price Sync] [${usedSource}] ${sym}: LTP ₹${ltp.toFixed(2)} | Today ${todayPlPct > 0 ? '+' : ''}${todayPlPct}% | 1M(30d) ${tfMap['1M']}% | 3M(90d) ${tfMap['3M']}% | 6M(180d) ${tfMap['6M']}% | 1Y(365d) ${tfMap['1Y']}%`);
-      successCount++;
-    }
+        totalSuccess++;
+      }
+    })();
+
+    console.log(`[Live Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
   }
 
-  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols with exact 1-Day Today P&L % and Calendar Day Returns.`);
+  console.log(`[Live Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities with 100% real live market data.`);
 }
 
-// Run if called directly
 if (require.main === module) {
-  syncLiveNsePriceReturns();
+  syncAllEquitiesInParallel();
 }
 
-module.exports = { syncLiveNsePriceReturns };
+module.exports = { syncLiveNsePriceReturns: syncAllEquitiesInParallel };
