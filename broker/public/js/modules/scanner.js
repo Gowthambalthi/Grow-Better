@@ -447,6 +447,15 @@ async function loadStockWeightageRanking() {
 
   } catch (err) {
     console.error('loadStockWeightageRanking error:', err);
+    tbody.innerHTML = `
+      <tr class="empty-row">
+        <td colspan="8" style="padding:24px;text-align:center;">
+          <div style="font-weight:700;color:var(--text);font-size:14px;margin-bottom:6px;">⚠️ Unable to load stock holdings data</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Server may be starting up or network was interrupted.</div>
+          <button onclick="location.reload()" style="padding:6px 16px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer;">Refresh Page</button>
+        </td>
+      </tr>
+    `;
   }
 }
 
