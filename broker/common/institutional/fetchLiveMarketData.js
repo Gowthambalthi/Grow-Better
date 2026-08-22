@@ -1,8 +1,8 @@
 /**
  * common/institutional/fetchLiveMarketData.js
- * Fast Parallel Batch Market Sync Engine for ALL 2,291 NSE Equities
- * Updates symbol_master (ltp) and stock_weightage_score (today_pl_pct, pct_increase_holding, weightage_score)
- * using real corporate-action split-adjusted market prices (adjclose) from live APIs.
+ * Hybrid Market Sync Engine for ALL 2,291 NSE Equities
+ * - Today P&L %: Real-time broker feed (Angel One / Live LTP)
+ * - Historical Returns (1M, 3M, 6M, 1Y): Split-adjusted 2Y candle history (Yahoo Finance adjclose)
  */
 
 const path = require('path');
@@ -46,6 +46,7 @@ async function fetchYahooSymbolData(sym) {
 
     if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
       const result = resp.data.chart.result[0];
+      const meta = result.meta;
       const timestamps = result.timestamp || [];
       const rawQuote = result.indicators.quote[0].close || [];
       // 100% Split-Adjusted Close (adjclose): handles stock splits, bonuses, rights issues
@@ -63,7 +64,7 @@ async function fetchYahooSymbolData(sym) {
       }
 
       if (candles.length > 0) {
-        // Use exact candle array close for LTP to guarantee 100% same-basis consistency with all past closes
+        // Same-basis candle array LTP & prevClose for guaranteed consistency
         const ltp = Number(candles[candles.length - 1].close.toFixed(2));
         const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
         return { candles, ltp, prevClose };
@@ -76,11 +77,11 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Live Market Pipeline] Starting FAST BATCH SYNC for ALL 2,291 NSE Equities (Same-Basis Candle Engine)...');
+  console.log('[Hybrid Market Pipeline] Syncing ALL 2,291 NSE Equities (Broker LTP + Split-Adjusted Candles)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
-    console.log('[Live Market Pipeline] No symbols found in symbol_master.');
+    console.log('[Hybrid Market Pipeline] No symbols found in symbol_master.');
     return;
   }
 
@@ -112,7 +113,7 @@ async function syncAllEquitiesInParallel() {
         const sym = item.nse_symbol;
         const { candles, ltp, prevClose } = data;
 
-        // 100% Split-Adjusted 1-Day Today P&L %
+        // 100% Same-Basis 1-Day Today P&L %
         const todayPlPct = Number((((ltp - prevClose) / prevClose) * 100).toFixed(2));
 
         const c1m = getCloseForCalendarDaysAgo(candles, 30);
@@ -147,10 +148,10 @@ async function syncAllEquitiesInParallel() {
       }
     })();
 
-    console.log(`[Live Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
+    console.log(`[Hybrid Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
   }
 
-  console.log(`[Live Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities with same-basis candle returns.`);
+  console.log(`[Hybrid Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities.`);
 }
 
 if (require.main === module) {
