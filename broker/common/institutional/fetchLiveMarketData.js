@@ -2,6 +2,7 @@
  * common/institutional/fetchLiveMarketData.js
  * Single-Source & Tagged Market Sync Engine for ALL 2,291 NSE Equities
  * Tags data source ('ANGEL_ONE' vs 'YAHOO_FINANCE') and enforces 280-candle minimum history buffer.
+ * Pre-wired Angel One SmartAPI array transformer: [timestamp, open, high, low, close, volume] -> { time, close }
  */
 
 const path = require('path');
@@ -38,6 +39,43 @@ function getCloseForCalendarDaysAgo(candles, daysAgo) {
     }
   }
   return closest;
+}
+
+/**
+ * Pre-wired Angel One SmartAPI Candle Transformer
+ * Transforms raw Angel array [[timestamp, open, high, low, close, volume], ...] into [{time: ms, close: num}, ...]
+ */
+async function fetchAngelSymbolCandles(symboltoken) {
+  try {
+    const today = new Date();
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(today.getFullYear() - 2);
+
+    const fmt = (d) => d.toISOString().slice(0, 10);
+    const raw = await getCandleData({
+      symboltoken,
+      fromdate: `${fmt(twoYearsAgo)} 09:15`,
+      todate: `${fmt(today)} 15:30`,
+      interval: 'ONE_DAY',
+      exchange: 'NSE'
+    });
+
+    if (Array.isArray(raw) && raw.length >= 280) {
+      const candles = raw.map(c => ({
+        time: new Date(c[0]).getTime(),
+        close: Number(c[4])
+      })).filter(c => c.close > 0);
+
+      if (candles.length >= 280) {
+        const ltp = Number(candles[candles.length - 1].close.toFixed(2));
+        const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
+        return { candles, ltp, prevClose, source: 'ANGEL_ONE' };
+      }
+    }
+  } catch (err) {
+    // Return null on HTTP 403 or failure to seamlessly proceed to secondary source
+  }
+  return null;
 }
 
 async function fetchYahooSymbolData(sym) {
@@ -82,7 +120,7 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Market Pipeline] Syncing ALL 2,291 NSE Equities (Tagged Source + 280 Candle Minimum)...');
+  console.log('[Market Pipeline] Syncing ALL 2,291 NSE Equities (Angel One Pre-Wired + Tagged Source + 280 Candle Minimum)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
@@ -98,6 +136,7 @@ async function syncAllEquitiesInParallel() {
     WHERE isin = ? AND UPPER(timeframe) = ?
   `);
 
+  const isAngelConfigured = Boolean(env.angel.apiKey() && env.angel.clientCode());
   const BATCH_SIZE = 40;
   let totalSuccess = 0;
 
@@ -106,7 +145,13 @@ async function syncAllEquitiesInParallel() {
     
     const results = await Promise.all(
       batch.map(async (s) => {
-        const res = await fetchYahooSymbolData(s.nse_symbol);
+        let res = null;
+        if (isAngelConfigured && s.bse_symbol) {
+          res = await fetchAngelSymbolCandles(s.bse_symbol);
+        }
+        if (!res) {
+          res = await fetchYahooSymbolData(s.nse_symbol);
+        }
         return { item: s, data: res };
       })
     );
