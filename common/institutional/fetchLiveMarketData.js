@@ -46,7 +46,6 @@ async function fetchYahooSymbolData(sym) {
 
     if (resp.data && resp.data.chart && resp.data.chart.result && resp.data.chart.result[0]) {
       const result = resp.data.chart.result[0];
-      const meta = result.meta;
       const timestamps = result.timestamp || [];
       const rawQuote = result.indicators.quote[0].close || [];
       // 100% Split-Adjusted Close (adjclose): handles stock splits, bonuses, rights issues
@@ -64,8 +63,8 @@ async function fetchYahooSymbolData(sym) {
       }
 
       if (candles.length > 0) {
-        const ltp = Number((meta.regularMarketPrice || candles[candles.length - 1].close).toFixed(2));
-        // Use split-adjusted previous candle close for exact 1-day P&L % (avoiding unadjusted chartPreviousClose)
+        // Use exact candle array close for LTP to guarantee 100% same-basis consistency with all past closes
+        const ltp = Number(candles[candles.length - 1].close.toFixed(2));
         const prevClose = candles.length >= 2 ? candles[candles.length - 2].close : ltp;
         return { candles, ltp, prevClose };
       }
@@ -77,7 +76,7 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Live Market Pipeline] Starting FAST BATCH SYNC for ALL 2,291 NSE Equities (Split-Adjusted 2Y Buffer)...');
+  console.log('[Live Market Pipeline] Starting FAST BATCH SYNC for ALL 2,291 NSE Equities (Same-Basis Candle Engine)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
@@ -151,7 +150,7 @@ async function syncAllEquitiesInParallel() {
     console.log(`[Live Market Pipeline] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(symbols.length / BATCH_SIZE)} complete (${totalSuccess}/${symbols.length} synced).`);
   }
 
-  console.log(`[Live Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities with split-adjusted 1-day P&L % and 2Y calendar returns.`);
+  console.log(`[Live Market Pipeline] BATCH SYNC FINISHED! Updated ${totalSuccess} out of ${symbols.length} official equities with same-basis candle returns.`);
 }
 
 if (require.main === module) {
