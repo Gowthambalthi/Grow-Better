@@ -37,7 +37,8 @@ function getCloseForCalendarDaysAgo(candles, daysAgo) {
 async function fetchYahooSymbolData(sym) {
   try {
     const yahooSym = `${sym}.NS`;
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=1y`;
+    // Query 2-year range so 1Y (365d) target date has ample lookback buffer past index 0
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSym}?interval=1d&range=2y`;
     const resp = await axios.get(url, {
       timeout: 7000,
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
@@ -48,6 +49,7 @@ async function fetchYahooSymbolData(sym) {
       const meta = result.meta;
       const timestamps = result.timestamp || [];
       const rawQuote = result.indicators.quote[0].close || [];
+      // 100% Split-Adjusted Close (adjclose): handles stock splits, bonuses, rights issues
       const rawAdj = result.indicators.adjclose && result.indicators.adjclose[0] ? result.indicators.adjclose[0].adjclose : rawQuote;
 
       const candles = [];
@@ -55,8 +57,8 @@ async function fetchYahooSymbolData(sym) {
         const price = rawAdj[i];
         if (price != null && !isNaN(price) && price > 0) {
           candles.push({
-            time: timestamps[i] * 1000,
-            close: price
+            time: timestamps[i] * 1000, // Unix seconds to JavaScript milliseconds
+            close: price // Split-adjusted adjclose price
           });
         }
       }
@@ -74,7 +76,7 @@ async function fetchYahooSymbolData(sym) {
 }
 
 async function syncAllEquitiesInParallel() {
-  console.log('[Live Market Pipeline] Starting FAST BATCH SYNC for ALL 2,291 NSE Equities...');
+  console.log('[Live Market Pipeline] Starting FAST BATCH SYNC for ALL 2,291 NSE Equities (2Y Range Buffer)...');
 
   const symbols = db.prepare('SELECT isin, nse_symbol, bse_symbol FROM symbol_master').all();
   if (symbols.length === 0) {
