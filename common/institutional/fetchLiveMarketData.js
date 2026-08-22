@@ -23,9 +23,10 @@ async function syncLiveNsePriceReturns() {
   }
 
   const updateSymLtp = db.prepare('UPDATE symbol_master SET ltp = ? WHERE isin = ?');
+  const getExistingScore = db.prepare('SELECT net_buyers, net_sellers, net_flow_cr FROM stock_weightage_score WHERE isin = ? AND UPPER(timeframe) = ?');
   const updateScoreReturn = db.prepare(`
     UPDATE stock_weightage_score 
-    SET today_pl_pct = ?, pct_increase_holding = ? 
+    SET today_pl_pct = ?, pct_increase_holding = ?, weightage_score = ? 
     WHERE isin = ? AND UPPER(timeframe) = ?
   `);
 
@@ -65,20 +66,32 @@ async function syncLiveNsePriceReturns() {
           const p6m = closes[Math.max(0, closes.length - 126)] || closes[0];
           const p1y = closes[0];
 
-          const ret1m = Number((((ltp - p1m) / p1m) * 100).toFixed(2));
-          const ret3m = Number((((ltp - p3m) / p3m) * 100).toFixed(2));
-          const ret6m = Number((((ltp - p6m) / p6m) * 100).toFixed(2));
-          const ret1y = Number((((ltp - p1y) / p1y) * 100).toFixed(2));
+          const tfMap = {
+            '1M': Number((((ltp - p1m) / p1m) * 100).toFixed(2)),
+            '3M': Number((((ltp - p3m) / p3m) * 100).toFixed(2)),
+            '6M': Number((((ltp - p6m) / p6m) * 100).toFixed(2)),
+            '1Y': Number((((ltp - p1y) / p1y) * 100).toFixed(2))
+          };
 
           db.transaction(() => {
             updateSymLtp.run(ltp, isin);
-            updateScoreReturn.run(todayPlPct, ret1m, isin, '1M');
-            updateScoreReturn.run(todayPlPct, ret3m, isin, '3M');
-            updateScoreReturn.run(todayPlPct, ret6m, isin, '6M');
-            updateScoreReturn.run(todayPlPct, ret1y, isin, '1Y');
+
+            for (const [tf, retVal] of Object.entries(tfMap)) {
+              const existing = getExistingScore.get(isin, tf);
+              const buyers = existing ? existing.net_buyers : 500;
+              const sellers = existing ? existing.net_sellers : 100;
+              const netFlowCr = existing ? existing.net_flow_cr : 50;
+
+              const buyerRatio = (buyers / Math.max(1, buyers + sellers)) * 100;
+              const returnScore = Math.min(100, Math.max(0, 50 + retVal * 0.8));
+              const flowScore = Math.min(100, Math.max(10, Math.abs(netFlowCr) * 0.5));
+              const newScore = Number(((0.40 * buyerRatio) + (0.35 * flowScore) + (0.25 * returnScore)).toFixed(1));
+
+              updateScoreReturn.run(todayPlPct, retVal, newScore, isin, tf);
+            }
           })();
 
-          console.log(`[Live Price Sync] ${sym}: LTP ₹${ltp.toFixed(2)} | Today ${todayPlPct > 0 ? '+' : ''}${todayPlPct}% | 1M ${ret1m}% | 3M ${ret3m}% | 6M ${ret6m}% | 1Y ${ret1y}%`);
+          console.log(`[Live Price Sync] ${sym}: LTP ₹${ltp.toFixed(2)} | Today ${todayPlPct > 0 ? '+' : ''}${todayPlPct}% | 1M ${tfMap['1M']}% | 3M ${tfMap['3M']}% | 6M ${tfMap['6M']}% | 1Y ${tfMap['1Y']}%`);
           successCount++;
         }
       }
@@ -87,7 +100,7 @@ async function syncLiveNsePriceReturns() {
     }
   }
 
-  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols with exact live corporate-action split-adjusted returns.`);
+  console.log(`[Live Price Sync] Successfully updated ${successCount} symbols with exact live corporate-action split-adjusted returns & weightage scores.`);
 }
 
 // Run if called directly
