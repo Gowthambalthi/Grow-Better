@@ -95,7 +95,7 @@ const CLEAN_NSE_STOCKS = [
   { sym: 'HINDUNILVR', bse: '500696', name: 'Hindustan Unilever Ltd', sec: 'FMCG & Consumer', cap: 595000, ltp: 2015.00, ret1m: -6.48, ret3m: 2.40, ret6m: 9.80, ret1y: 18.20, today: -1.25, buyers: 1625, sellers: 220 },
   { sym: 'LT', bse: '500510', name: 'Larsen & Toubro Ltd', sec: 'Capital Goods', cap: 495000, ltp: 4093.00, ret1m: 7.22, ret3m: 18.60, ret6m: 32.40, ret1y: 54.10, today: 2.80, buyers: 1612, sellers: 218 },
   { sym: 'BAJFINANCE', bse: '500034', name: 'Bajaj Finance Ltd', sec: 'Banking & Financials', cap: 442000, ltp: 1095.00, ret1m: 3.27, ret3m: 12.40, ret6m: 26.50, ret1y: 43.80, today: 1.65, buyers: 1599, sellers: 216 },
-  { sym: 'ZOMATO', bse: '543320', name: 'Zomato Ltd', sec: 'IT Services', cap: 235000, ltp: 265.00, ret1m: 31.20, ret3m: 68.40, ret6m: 112.50, ret1y: 185.00, today: 5.40, buyers: 1300, sellers: 170 },
+  { sym: 'ZOMATO', bse: '543320', name: 'Zomato Ltd (Eternal)', sec: 'IT Services', cap: 285000, ltp: 328.00, ret1m: 12.40, ret3m: 15.80, ret6m: 21.37, ret1y: 65.40, today: 1.85, buyers: 1470, sellers: 170 },
   { sym: 'IRFC', bse: '543257', name: 'Indian Railway Finance Corp Ltd', sec: 'Banking & Financials', cap: 228000, ltp: 86.40, ret1m: -1.13, ret3m: 16.80, ret6m: 48.20, ret1y: 124.50, today: -1.45, buyers: 858, sellers: 102 },
   { sym: 'HUDCO', bse: '540530', name: 'Housing & Urban Development Corp Ltd', sec: 'Banking & Financials', cap: 59500, ltp: 186.09, ret1m: -6.17, ret3m: 22.40, ret6m: 62.80, ret1y: 154.20, today: -1.20, buyers: 845, sellers: 100 },
   { sym: 'SHRIRAMFIN', bse: '511218', name: 'Shriram Finance Ltd', sec: 'Banking & Financials', cap: 112000, ltp: 1130.00, ret1m: 6.72, ret3m: 19.50, ret6m: 36.40, ret1y: 58.20, today: 1.85, buyers: 1105, sellers: 140 },
