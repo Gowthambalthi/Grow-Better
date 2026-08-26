@@ -183,6 +183,7 @@ class MutualFundsService {
       const category = item.category || this._extractCategory(sName);
       const id = 'mf-' + code;
 
+      const displayMeta = this._cleanSchemeDisplay(sName);
       const baseFundKey = this._getBaseFundKey(sName);
       const retVal = this._calculateReturn(baseFundKey, sName, code, tfKey);
       const holdings = this._generateFullPortfolioHoldings(baseFundKey, code).slice(0, 4);
@@ -191,6 +192,9 @@ class MutualFundsService {
         id,
         schemeCode: code,
         schemeName: sName,
+        cleanTitle: displayMeta.cleanTitle,
+        planTag: displayMeta.planTag,
+        optionTag: displayMeta.optionTag,
         parentAmc,
         category,
         currentNav: item.currentNav || 100,
@@ -292,6 +296,39 @@ class MutualFundsService {
     };
   }
 
+  _cleanSchemeDisplay(rawName) {
+    let name = rawName || '';
+    
+    // Extract Plan Tag (Direct / Regular / Retail / Institutional)
+    let planTag = 'Direct Plan';
+    if (/regular/i.test(name)) planTag = 'Regular Plan';
+    else if (/institutional/i.test(name)) planTag = 'Institutional';
+    else if (/retail/i.test(name)) planTag = 'Retail';
+
+    // Extract Option Tag (Growth / IDCW / Dividend)
+    let optionTag = 'Growth';
+    if (/idcw.*reinvestment|re-investment/i.test(name)) optionTag = 'IDCW Reinvest';
+    else if (/idcw.*payout/i.test(name)) optionTag = 'IDCW Payout';
+    else if (/idcw/i.test(name)) optionTag = 'IDCW';
+    else if (/dividend/i.test(name)) optionTag = 'Dividend';
+
+    // Clean Main Title by stripping repetitive suffix patterns
+    let cleanTitle = name
+      .replace(/-?\s*(direct|regular|retail|institutional)\s*plan\s*/gi, '')
+      .replace(/-?\s*(growth|idcw|dividend)\s*(option|payout|re-investment|reinvestment)?\s*/gi, '')
+      .replace(/-?\s*plan\s*[a-z0-9]+\s*/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Convert ALL-CAPS text to Title Case
+    if (cleanTitle === cleanTitle.toUpperCase()) {
+      cleanTitle = cleanTitle.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase());
+      cleanTitle = cleanTitle.replace(/\b(Hdfc|Sbi|Icici|Uti|Dsp|Lic|L&t|Ev|Elss|Etf)\b/g, m => m.toUpperCase());
+    }
+
+    return { cleanTitle: cleanTitle || name, planTag, optionTag };
+  }
+
   _getBaseFundKey(schemeName) {
     return (schemeName || '')
       .toLowerCase()
@@ -323,6 +360,7 @@ class MutualFundsService {
 
   _extractParentAmc(schemeName) {
     const s = schemeName.toLowerCase();
+    if (s.includes('angel one') || s.includes('angelone') || s.includes('angel')) return 'Angel One Mutual Fund';
     if (s.includes('hdfc')) return 'HDFC Mutual Fund';
     if (s.includes('sbi')) return 'SBI Mutual Fund';
     if (s.includes('icici')) return 'ICICI Prudential Mutual Fund';
