@@ -1489,32 +1489,60 @@
 
       function getMfFallbackData(tf, q) {
         var cleanQ = (q || '').trim().toLowerCase();
+        var benchmarks = {
+          'hdfcflexicap': { aum: 54120.80, directTer: 0.89, regTer: 1.54, ret: 3.10 },
+          'hdfcmidcap': { aum: 62400.00, directTer: 0.78, regTer: 1.48, ret: 3.85 },
+          'hdfclargecap': { aum: 34850.20, directTer: 1.12, regTer: 1.68, ret: 2.45 },
+          'sbibluechip': { aum: 46210.50, directTer: 0.95, regTer: 1.56, ret: 1.85 },
+          'sbicontra': { aum: 31450.00, directTer: 0.72, regTer: 1.55, ret: 4.20 },
+          'sbismallcap': { aum: 28400.00, directTer: 0.67, regTer: 1.62, ret: 3.90 },
+          'iciciprudentiallargecap': { aum: 55890.30, directTer: 0.92, regTer: 1.52, ret: 2.65 },
+          'nipponindiasmallcap': { aum: 51200.00, directTer: 0.68, regTer: 1.51, ret: 4.80 },
+          'ppfasflexicap': { aum: 68900.00, directTer: 0.58, regTer: 1.33, ret: 3.65 },
+          'kotakmidcap': { aum: 41200.40, directTer: 0.82, regTer: 1.61, ret: 3.45 }
+        };
+
         var amcs = ['HDFC', 'SBI', 'ICICI Prudential', 'Nippon India', 'Axis', 'Kotak', 'Aditya Birla', 'Mirae Asset', 'UTI', 'Tata', 'DSP', 'Motilal Oswal', 'Quant', 'PPFAS', 'Bandhan', 'Sundaram', 'HSBC', 'Canara Robeco', 'Invesco', 'Edelweiss', 'PGIM India', 'Baroda BNP Paribas', 'Union', 'Navi', 'Franklin Templeton', 'LIC', 'JM Financial', 'WhiteOak Capital', 'Mahindra Manulife', 'Samco', 'ITI', 'Bajaj Finserv', 'Trust', 'Groww', 'Zerodha', 'Quantum', 'Taurus', 'Shriram', 'BOI', 'Indiabulls', 'Escorts', 'IIFL', 'Helios', 'Old Bridge'];
         var cats = ['Equity: Large Cap', 'Equity: Mid Cap', 'Equity: Small Cap', 'Equity: Flexi Cap', 'Equity: Multi Cap', 'Equity: Large & MidCap', 'Equity: Focused', 'Equity: Value', 'Equity: Contra', 'Equity: ELSS Tax Saver', 'Sectoral: Technology', 'Sectoral: Healthcare / Pharma', 'Sectoral: Banking & Financial Services', 'Sectoral: Infrastructure / Power', 'Sectoral: Consumption / Retail', 'Hybrid: Balanced Advantage', 'Hybrid: Aggressive Hybrid', 'Index: Nifty 50 Plan', 'Index: Sensex 30 Plan', 'Debt: Liquid Fund'];
         var stocks = [{symbol:'RELIANCE',name:'Reliance Industries Ltd.'},{symbol:'HDFCBANK',name:'HDFC Bank Ltd.'},{symbol:'ICICIBANK',name:'ICICI Bank Ltd.'},{symbol:'INFY',name:'Infosys Ltd.'},{symbol:'TCS',name:'Tata Consultancy Services'},{symbol:'CUPID',name:'Cupid Ltd.'},{symbol:'EMMVEE',name:'Emmvee Photovoltaic'}];
-        var plans = ['Direct Plan - Growth', 'Direct Plan - IDCW', 'Regular Plan - Growth'];
+        var plans = [
+          { suffix: 'Direct Plan - Growth', isReg: false, isIdcw: false },
+          { suffix: 'Direct Plan - IDCW', isReg: false, isIdcw: true },
+          { suffix: 'Regular Plan - Growth', isReg: true, isIdcw: false }
+        ];
 
         var sample = [];
         var count = 0;
         for (var i = 0; i < amcs.length; i++) {
           for (var j = 0; j < cats.length; j++) {
+            var amcClean = amcs[i].replace(/[^a-zA-Z]/g, '').toLowerCase();
+            var catClean = cats[j].replace(/[^a-zA-Z]/g, '').toLowerCase();
+            var bmKey = amcClean + catClean;
+            var bm = benchmarks[bmKey];
+
+            var masterAum = bm ? bm.aum : (14000 + ((i * 1493 + j * 983) % 42000));
+            var isIndex = cats[j].indexOf('Index') === 0;
+            var masterDirectTer = bm ? bm.directTer : (isIndex ? 0.08 : Number((0.65 + ((i + j) % 40) * 0.01).toFixed(2)));
+            var masterRegTer = bm ? bm.regTer : (isIndex ? 0.24 : Number((masterDirectTer + 0.70).toFixed(2)));
+            var masterBaseRet = bm ? bm.ret : Number((((i * 7 + j * 3) % 25) / 5 - 0.5).toFixed(2));
+
             for (var k = 0; k < plans.length; k++) {
               count++;
+              var p = plans[k];
               var amcName = amcs[i] + ' Mutual Fund';
               var catName = cats[j];
-              var planName = plans[k];
-              var schemeName = amcs[i] + ' ' + catName.replace(/[^a-zA-Z0-9 ]/g, '') + ' - ' + planName;
-              var id = (amcs[i] + '-' + catName + '-' + planName).toLowerCase().replace(/[^a-z0-9]+/g, '-');
-              var ret = Number((((i * 5 + j * 3 + count) % 30) / 4 - 1.2).toFixed(2));
-              var ter = Number((0.20 + ((i * 2 + j * 3) % 100) / 100).toFixed(2));
-              var aum = 500 + ((i * 1234 + j * 432 + count * 56) % 50000);
+              var schemeName = amcs[i] + ' ' + catName.replace(/[^a-zA-Z0-9 ]/g, '') + ' - ' + p.suffix;
+              var id = (amcs[i] + '-' + catName + '-' + p.suffix).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+              var ter = p.isReg ? masterRegTer : masterDirectTer;
+              var ret = p.isIdcw ? Number((masterBaseRet - 0.02).toFixed(2)) : (p.isReg ? Number((masterBaseRet - 0.05).toFixed(2)) : masterBaseRet);
 
               sample.push({
                 id: id,
                 schemeName: schemeName,
                 parentAmc: amcName,
                 category: catName,
-                aumCr: aum,
+                aumCr: masterAum,
                 terPct: ter,
                 selectedReturnPct: ret,
                 topHoldings: [
