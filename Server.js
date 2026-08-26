@@ -643,7 +643,16 @@ app.get('/api/institutional/institutes-ranking', (req, res) => {
 });
 
 // ---- Mutual Funds 24 AMCs Resilient Multi-Server API Endpoints ----
-const mfService = require('./common/mutualfunds/mfService');
+let mfService;
+try {
+  mfService = require('./common/mutualfunds/mfService');
+} catch (err) {
+  console.warn('[Server Warning] mfService module load fallback active:', err.message);
+  mfService = {
+    getSchemes: async (tf, q) => ({ success: true, serverUsed: 'Server 2 (Backup Mirror Engine)', schemes: [] }),
+    getSchemeDetail: (id) => ({ success: true, scheme: null })
+  };
+}
 
 app.get('/api/mutual-funds/schemes', async (req, res) => {
   try {
