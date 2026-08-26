@@ -1467,12 +1467,48 @@
       }
 
       function getMfFallbackData(tf, q) {
-        return [
+        var cleanQ = (q || '').trim().toLowerCase();
+        var sample = [
           { id:'hdfc-top-100', schemeName:'HDFC Top 100 Fund - Direct Plan', parentAmc:'HDFC Mutual Fund', category:'Equity: Large Cap', aumCr:34850, terPct:1.12, selectedReturnPct:2.45, topHoldings:[{symbol:'RELIANCE',pct:9.8},{symbol:'ICICIBANK',pct:8.4},{symbol:'HDFCBANK',pct:7.9}] },
+          { id:'hdfc-flexi-cap', schemeName:'HDFC Flexi Cap Fund - Direct Plan', parentAmc:'HDFC Mutual Fund', category:'Equity: Flexi Cap', aumCr:54120, terPct:0.89, selectedReturnPct:3.10, topHoldings:[{symbol:'ICICIBANK',pct:9.2},{symbol:'HDFCBANK',pct:8.7},{symbol:'AXISBANK',pct:6.8}] },
+          { id:'hdfc-mid-cap-opportunities', schemeName:'HDFC Mid-Cap Opportunities Fund - Direct', parentAmc:'HDFC Mutual Fund', category:'Equity: Mid Cap', aumCr:62400, terPct:0.78, selectedReturnPct:3.85, topHoldings:[{symbol:'INDIANHOTE',pct:4.8},{symbol:'MAXHEALTH',pct:4.2}] },
           { id:'sbi-bluechip', schemeName:'SBI Bluechip Fund - Direct Plan', parentAmc:'SBI Mutual Fund', category:'Equity: Large Cap', aumCr:46210, terPct:0.95, selectedReturnPct:1.85, topHoldings:[{symbol:'HDFCBANK',pct:9.4},{symbol:'ICICIBANK',pct:8.1},{symbol:'RELIANCE',pct:7.2}] },
+          { id:'sbi-contra', schemeName:'SBI Contra Fund - Direct Plan', parentAmc:'SBI Mutual Fund', category:'Equity: Contra', aumCr:31450, terPct:0.72, selectedReturnPct:4.20, topHoldings:[{symbol:'SBIN',pct:6.9},{symbol:'GAIL',pct:5.4},{symbol:'COALINDIA',pct:4.8}] },
+          { id:'sbi-small-cap', schemeName:'SBI Small Cap Fund - Direct Plan', parentAmc:'SBI Mutual Fund', category:'Equity: Small Cap', aumCr:28400, terPct:0.67, selectedReturnPct:3.90, topHoldings:[{symbol:'BLUESTARCO',pct:4.3},{symbol:'EMMVEE',pct:3.2}] },
           { id:'icici-prudential-bluechip', schemeName:'ICICI Prudential Bluechip - Direct', parentAmc:'ICICI Prudential Mutual Fund', category:'Equity: Large Cap', aumCr:55890, terPct:0.92, selectedReturnPct:2.65, topHoldings:[{symbol:'ICICIBANK',pct:9.9},{symbol:'RELIANCE',pct:8.8}] },
-          { id:'nippon-india-small-cap', schemeName:'Nippon India Small Cap Fund - Direct', parentAmc:'Nippon India Mutual Fund', category:'Equity: Small Cap', aumCr:51200, terPct:0.68, selectedReturnPct:4.80, topHoldings:[{symbol:'CUPID',pct:3.8},{symbol:'EMMVEE',pct:3.5}] }
+          { id:'icici-prudential-value-discovery', schemeName:'ICICI Prudential Value Discovery - Direct', parentAmc:'ICICI Prudential Mutual Fund', category:'Equity: Value', aumCr:42800, terPct:0.74, selectedReturnPct:3.40, topHoldings:[{symbol:'ONGC',pct:8.4},{symbol:'NTPC',pct:7.1}] },
+          { id:'nippon-india-small-cap', schemeName:'Nippon India Small Cap Fund - Direct', parentAmc:'Nippon India Mutual Fund', category:'Equity: Small Cap', aumCr:51200, terPct:0.68, selectedReturnPct:4.80, topHoldings:[{symbol:'TUBEINVEST',pct:4.2},{symbol:'CUPID',pct:3.8},{symbol:'EMMVEE',pct:3.5}] },
+          { id:'nippon-india-growth-midcap', schemeName:'Nippon India Growth Fund (Midcap) - Direct', parentAmc:'Nippon India Mutual Fund', category:'Equity: Mid Cap', aumCr:28900, terPct:0.84, selectedReturnPct:3.75, topHoldings:[{symbol:'POWERGRID',pct:5.1},{symbol:'CHOLAFIN',pct:4.6}] },
+          { id:'axis-growth-opportunities', schemeName:'Axis Growth Opportunities Fund - Direct', parentAmc:'Axis Mutual Fund', category:'Equity: Large & MidCap', aumCr:12450, terPct:1.05, selectedReturnPct:2.10, topHoldings:[{symbol:'TCS',pct:7.8},{symbol:'BAJFINANCE',pct:6.4}] },
+          { id:'kotak-emerging-equity', schemeName:'Kotak Emerging Equity Fund - Direct Plan', parentAmc:'Kotak Mutual Fund', category:'Equity: Mid Cap', aumCr:41200, terPct:0.82, selectedReturnPct:3.45, topHoldings:[{symbol:'PERSISTENT',pct:5.8},{symbol:'SUPREMEIND',pct:4.9}] },
+          { id:'absl-frontline-equity', schemeName:'Aditya Birla Sun Life Frontline Equity - Direct', parentAmc:'Aditya Birla Sun Life Mutual Fund', category:'Equity: Large Cap', aumCr:26800, terPct:1.08, selectedReturnPct:2.15, topHoldings:[{symbol:'ICICIBANK',pct:9.1},{symbol:'RELIANCE',pct:8.2}] },
+          { id:'mirae-asset-large-cap', schemeName:'Mirae Asset Large Cap Fund - Direct Plan', parentAmc:'Mirae Asset Mutual Fund', category:'Equity: Large Cap', aumCr:38900, terPct:0.85, selectedReturnPct:2.30, topHoldings:[{symbol:'HDFCBANK',pct:9.6},{symbol:'ICICIBANK',pct:8.9}] },
+          { id:'uti-nifty-50-index', schemeName:'UTI Nifty 50 Index Fund - Direct Plan', parentAmc:'UTI Mutual Fund', category:'Index: Nifty 50', aumCr:18400, terPct:0.21, selectedReturnPct:2.05, topHoldings:[{symbol:'HDFCBANK',pct:11.4},{symbol:'RELIANCE',pct:9.7}] },
+          { id:'tata-digital-india', schemeName:'Tata Digital India Fund - Direct Plan', parentAmc:'Tata Mutual Fund', category:'Sectoral: Technology', aumCr:9450, terPct:0.98, selectedReturnPct:3.80, topHoldings:[{symbol:'INFY',pct:18.4},{symbol:'TCS',pct:14.9}] },
+          { id:'dsp-midcap-fund', schemeName:'DSP Midcap Fund - Direct Plan', parentAmc:'DSP Mutual Fund', category:'Equity: Mid Cap', aumCr:16800, terPct:0.88, selectedReturnPct:3.15, topHoldings:[{symbol:'TIINDIA',pct:5.4},{symbol:'SUPREMEIND',pct:4.7}] },
+          { id:'motilal-oswal-midcap', schemeName:'Motilal Oswal Midcap Fund - Direct Plan', parentAmc:'Motilal Oswal Mutual Fund', category:'Equity: Mid Cap', aumCr:11200, terPct:0.76, selectedReturnPct:4.90, topHoldings:[{symbol:'JIOFIN',pct:8.9},{symbol:'EMMVEE',pct:4.5}] },
+          { id:'quant-small-cap', schemeName:'Quant Small Cap Fund - Direct Plan', parentAmc:'Quant Mutual Fund', category:'Equity: Small Cap', aumCr:21400, terPct:0.64, selectedReturnPct:5.20, topHoldings:[{symbol:'RELIANCE',pct:8.4},{symbol:'CUPID',pct:3.9}] },
+          { id:'ppfas-flexi-cap', schemeName:'Parag Parikh Flexi Cap Fund - Direct Plan', parentAmc:'PPFAS Mutual Fund', category:'Equity: Flexi Cap', aumCr:68900, terPct:0.58, selectedReturnPct:3.65, topHoldings:[{symbol:'HDFCBANK',pct:8.2},{symbol:'GOOGL',pct:6.9}] },
+          { id:'bandhan-sterling-value', schemeName:'Bandhan Sterling Value Fund - Direct Plan', parentAmc:'Bandhan Mutual Fund', category:'Equity: Value', aumCr:9150, terPct:0.88, selectedReturnPct:2.90, topHoldings:[{symbol:'ICICIBANK',pct:6.8},{symbol:'AXISBANK',pct:5.4}] },
+          { id:'sundaram-mid-cap', schemeName:'Sundaram Mid Cap Fund - Direct Plan', parentAmc:'Sundaram Mutual Fund', category:'Equity: Mid Cap', aumCr:10400, terPct:0.94, selectedReturnPct:2.80, topHoldings:[{symbol:'TIINDIA',pct:5.1},{symbol:'SUNDARMFIN',pct:4.6}] },
+          { id:'hsbc-large-cap', schemeName:'HSBC Large Cap Fund - Direct Plan', parentAmc:'HSBC Mutual Fund', category:'Equity: Large Cap', aumCr:3850, terPct:1.15, selectedReturnPct:1.95, topHoldings:[{symbol:'ICICIBANK',pct:9.4},{symbol:'RELIANCE',pct:8.6}] },
+          { id:'canara-robeco-emerging-equities', schemeName:'Canara Robeco Emerging Equities - Direct', parentAmc:'Canara Robeco Mutual Fund', category:'Equity: Large & MidCap', aumCr:21800, terPct:0.62, selectedReturnPct:2.70, topHoldings:[{symbol:'ICICIBANK',pct:7.8},{symbol:'HDFCBANK',pct:6.9}] },
+          { id:'invesco-india-growth-opportunities', schemeName:'Invesco India Growth Opportunities - Direct', parentAmc:'Invesco Mutual Fund', category:'Equity: Large & MidCap', aumCr:5400, terPct:0.98, selectedReturnPct:2.35, topHoldings:[{symbol:'ICICIBANK',pct:8.2},{symbol:'RELIANCE',pct:7.4}] },
+          { id:'edelweiss-mid-cap', schemeName:'Edelweiss Mid Cap Fund - Direct Plan', parentAmc:'Edelweiss Mutual Fund', category:'Equity: Mid Cap', aumCr:5900, terPct:0.52, selectedReturnPct:3.20, topHoldings:[{symbol:'PERSISTENT',pct:5.4},{symbol:'CUMMINSIND',pct:4.8}] },
+          { id:'pgim-india-flexi-cap', schemeName:'PGIM India Flexi Cap Fund - Direct Plan', parentAmc:'PGIM India Mutual Fund', category:'Equity: Flexi Cap', aumCr:5200, terPct:0.48, selectedReturnPct:2.10, topHoldings:[{symbol:'ICICIBANK',pct:8.9},{symbol:'HDFCBANK',pct:7.8}] },
+          { id:'baroda-bnp-paribas-large-cap', schemeName:'Baroda BNP Paribas Large Cap Fund - Direct', parentAmc:'Baroda BNP Paribas Mutual Fund', category:'Equity: Large Cap', aumCr:1950, terPct:1.02, selectedReturnPct:1.90, topHoldings:[{symbol:'ICICIBANK',pct:9.1},{symbol:'RELIANCE',pct:8.4}] },
+          { id:'union-small-cap', schemeName:'Union Small Cap Fund - Direct Plan', parentAmc:'Union Mutual Fund', category:'Equity: Small Cap', aumCr:1420, terPct:1.25, selectedReturnPct:3.60, topHoldings:[{symbol:'CUPID',pct:4.1},{symbol:'EMMVEE',pct:3.8}] },
+          { id:'navi-nifty-50-index', schemeName:'Navi Nifty 50 Index Fund - Direct Plan', parentAmc:'Navi Mutual Fund', category:'Index: Nifty 50', aumCr:1850, terPct:0.06, selectedReturnPct:2.06, topHoldings:[{symbol:'HDFCBANK',pct:11.4},{symbol:'RELIANCE',pct:9.7}] }
         ];
+
+        if (!cleanQ) return sample;
+        return sample.filter(function(s) {
+          var inName = s.schemeName.toLowerCase().indexOf(cleanQ) !== -1;
+          var inAmc = s.parentAmc.toLowerCase().indexOf(cleanQ) !== -1;
+          var inCat = s.category.toLowerCase().indexOf(cleanQ) !== -1;
+          var inStock = s.topHoldings.some(function(h) { return h.symbol.toLowerCase().indexOf(cleanQ) !== -1; });
+          return inName || inAmc || inCat || inStock;
+        });
       }
 
       // Event Listeners

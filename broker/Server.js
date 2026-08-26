@@ -637,6 +637,11 @@ app.get('/api/institutional/institutes-ranking', (req, res) => {
     const { timeframe } = req.query;
     const ranking = institutionalService.getInstitutesRanking(timeframe || '1m');
     res.json({ success: true, count: ranking.length, timeframe: timeframe || '1m', data: ranking });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ---- Mutual Funds 24 AMCs Resilient Multi-Server API Endpoints ----
 const mfService = require('./common/mutualfunds/mfService');
 
