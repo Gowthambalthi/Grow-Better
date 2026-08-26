@@ -1461,10 +1461,10 @@
           var isOfficial = s.isOfficialDisclosure;
           var sourceTagHtml = isOfficial
             ? '<span style="background:rgba(16,185,129,0.12);color:#10B981;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AMFI Official Filing</span>'
-            : '<span style="background:rgba(148,163,184,0.12);color:var(--text-muted);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AUM/TER: N/A</span>';
+            : '<span style="background:rgba(148,163,184,0.12);color:var(--text-muted);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AUM/TER: Not available</span>';
 
-          var aumStr = (s.aumCr !== null && s.aumCr !== undefined) ? '₹' + Math.round(s.aumCr).toLocaleString('en-IN') + ' Cr' : 'N/A';
-          var terStr = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'N/A';
+          var aumStr = (s.aumCr !== null && s.aumCr !== undefined) ? '₹' + Math.round(s.aumCr).toLocaleString('en-IN') + ' Cr' : 'Not available';
+          var terStr = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
 
           var holdingsBadges = (s.topHoldings || []).slice(0, 4).map(function(h) {
             return '<span style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">' + h.symbol + ' (' + h.pct + '%)</span>';
