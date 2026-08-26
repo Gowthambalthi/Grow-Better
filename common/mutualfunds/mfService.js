@@ -168,8 +168,8 @@ class MutualFundsService {
         isOfficialDisclosure: disc.isOfficial,
         dataProvenance: {
           navSource: 'Live AMFI NAV (api.mfapi.in)',
-          aumSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'AMFI Category Benchmark Estimate',
-          terSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'AMFI Category Benchmark Estimate'
+          aumSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'N/A (Missing Live Filing)',
+          terSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'N/A (Missing Live Filing)'
         },
         selectedReturnPct: retVal,
         returns: {
@@ -351,9 +351,8 @@ class MutualFundsService {
   _getDisclosures(schemeName, code) {
     const s = schemeName.toLowerCase();
     const isReg = s.includes('regular');
-    const isIndex = s.includes('index') || s.includes('nifty') || s.includes('sensex') || s.includes('etf');
 
-    // 1. Direct Benchmark Match
+    // 1. Match against verified official AMFI filings lookup
     let matchedAum = null;
     let matchedTer = null;
 
@@ -365,41 +364,14 @@ class MutualFundsService {
       }
     });
 
-    if (matchedAum && matchedTer) {
+    if (matchedAum !== null && matchedTer !== null) {
       return { aum: matchedAum, ter: matchedTer, isOfficial: true };
     }
 
-    // 2. Dynamic Scheme-Specific AUM Generator (Benchmark estimate)
-    let baseAumTier = 14500.00;
-    if (s.includes('hdfc')) baseAumTier = 38500.00;
-    else if (s.includes('sbi')) baseAumTier = 32400.00;
-    else if (s.includes('icici')) baseAumTier = 36800.00;
-    else if (s.includes('nippon')) baseAumTier = 28900.00;
-    else if (s.includes('aditya birla') || s.includes('absl')) baseAumTier = 24200.00;
-    else if (s.includes('kotak')) baseAumTier = 26500.00;
-    else if (s.includes('axis')) baseAumTier = 21800.00;
-    else if (s.includes('quant')) baseAumTier = 16800.00;
-
-    const codeNum = Number(code || 100000);
-    const dynamicAum = Number((baseAumTier + ((codeNum * 137 + (s.length * 43)) % 24000) + 420.50).toFixed(2));
-
-    // 3. Dynamic Category TER Generator
-    let dynamicTer = 0.82;
-    if (isIndex) {
-      dynamicTer = isReg ? 0.24 : 0.08;
-    } else if (s.includes('small cap') || s.includes('smallcap')) {
-      dynamicTer = isReg ? 1.62 : 0.68;
-    } else if (s.includes('mid cap') || s.includes('midcap')) {
-      dynamicTer = isReg ? 1.58 : 0.78;
-    } else if (s.includes('large cap') || s.includes('bluechip')) {
-      dynamicTer = isReg ? 1.52 : 0.92;
-    } else if (isReg) {
-      dynamicTer = 1.55;
-    } else {
-      dynamicTer = Number((0.65 + (codeNum % 35) * 0.01).toFixed(2));
-    }
-
-    return { aum: dynamicAum, ter: dynamicTer, isOfficial: false };
+    // STRICT USER DIRECTIVE: Remove scheme-code hashing and category formulas entirely!
+    // Never fabricate a substitute. If missing from live filing, return null -> UI renders N/A.
+    console.log(`[Data Audit Warning] Scheme Code ${code} (${schemeName.slice(0, 40)}...): AUM/TER missing from live filing -> AUM: N/A, TER: N/A`);
+    return { aum: null, ter: null, isOfficial: false };
   }
 
   _calculateReturn(baseFundKey, schemeName, code, tfKey) {
