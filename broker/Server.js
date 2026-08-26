@@ -849,18 +849,31 @@ app.post('/api/notifications/test', async (req, res) => {
 
 
 async function start() {
-  // Ensure clean 100% real NSE/BSE equity stock universe is seeded on boot
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+  } catch (e) {
+    console.warn('[server] data directory creation warning:', e.message);
+  }
+
   try {
     const Database = require('better-sqlite3');
     const path = require('path');
-    const db = new Database(path.join(__dirname, 'data/institutional.db'));
-    const oldRow = db.prepare("SELECT COUNT(*) as c FROM symbol_master WHERE nse_symbol LIKE '%-INDI%' OR nse_symbol LIKE '%_2%' OR nse_symbol LIKE '%JINDAL%'").get();
-    if (oldRow.c > 0) {
-      console.log('[server] Detected legacy seed data. Re-generating clean real NSE stocks...');
-      require('./common/institutional/generateLargeDataset');
+    const dbPath = path.join(__dirname, 'data/institutional.db');
+    if (require('fs').existsSync(dbPath)) {
+      const db = new Database(dbPath);
+      const oldRow = db.prepare("SELECT COUNT(*) as c FROM symbol_master WHERE nse_symbol LIKE '%-INDI%' OR nse_symbol LIKE '%_2%' OR nse_symbol LIKE '%JINDAL%'").get();
+      if (oldRow && oldRow.c > 0) {
+        console.log('[server] Detected legacy seed data. Re-generating clean real NSE stocks...');
+        try { require('./common/institutional/generateLargeDataset'); } catch (e) {}
+      }
     }
   } catch (dbErr) {
-    try { require('./common/institutional/generateLargeDataset'); } catch (e) {}
+    console.warn('[server] DB startup check non-fatal warning:', dbErr.message);
   }
 
   await initBrokers();
