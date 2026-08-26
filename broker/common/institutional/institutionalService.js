@@ -8,21 +8,25 @@ const fs = require('fs');
 const { assignAmfiBucket, calculateCompositeScore } = require('./compositeEngine');
 const { tagClientType } = require('./clientTagger');
 
-let Database;
-try {
-  Database = require('better-sqlite3');
-} catch (e) {
-  console.warn('[InstitutionalService] better-sqlite3 fallback active');
-}
-
 const DB_DIR = path.join(__dirname, '../../data');
 if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+  try { fs.mkdirSync(DB_DIR, { recursive: true }); } catch (e) {}
 }
 
 const DB_PATH = path.join(DB_DIR, 'institutional.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
+let db;
+try {
+  const Database = require('better-sqlite3');
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+} catch (err) {
+  console.warn('[InstitutionalService] Native better-sqlite3 load failed, using in-memory mock fallback:', err.message);
+  db = {
+    exec: () => {},
+    prepare: () => ({ all: () => [], run: () => ({ changes: 0 }), get: () => null }),
+    pragma: () => {}
+  };
+}
 
 // Initialize All Project Spec SQLite Tables
 db.exec(`

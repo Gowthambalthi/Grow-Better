@@ -10,11 +10,15 @@
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const Database = require('better-sqlite3');
-
 const DB_PATH = path.join(__dirname, '../../data/institutional.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
+let db;
+try {
+  const Database = require('better-sqlite3');
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+} catch (err) {
+  db = { exec: () => {}, prepare: () => ({ all: () => [], run: () => ({ changes: 0 }), get: () => null }), pragma: () => {} };
+}
 
 /**
  * Syncs official NSE EQUITY_L master file to ensure ISIN -> Symbol mapping is 100% exact

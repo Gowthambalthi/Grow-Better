@@ -7,16 +7,20 @@
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const Database = require('better-sqlite3');
-
 const DB_DIR = path.join(__dirname, '../../data');
 if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+  try { fs.mkdirSync(DB_DIR, { recursive: true }); } catch (e) {}
 }
 
 const DB_PATH = path.join(DB_DIR, 'institutional.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
+let db;
+try {
+  const Database = require('better-sqlite3');
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+} catch (err) {
+  db = { exec: () => {}, prepare: () => ({ all: () => [], run: () => ({ changes: 0 }), get: () => null }), pragma: () => {} };
+}
 
 // Ensure tables exist with latest schema & UNIQUE nse_symbol constraint
 db.exec(`

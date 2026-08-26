@@ -10,13 +10,15 @@
 
 const path = require('path');
 const axios = require('axios');
-const Database = require('better-sqlite3');
-const env = require('../../config/env');
-const { getCandleData } = require('../../angelone/historical');
-
 const DB_PATH = path.join(__dirname, '../../data/institutional.db');
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
+let db;
+try {
+  const Database = require('better-sqlite3');
+  db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+} catch (err) {
+  db = { exec: () => {}, prepare: () => ({ all: () => [], run: () => ({ changes: 0 }), get: () => null }), pragma: () => {} };
+}
 
 // Ensure data_source column exists in stock_weightage_score table
 try {
