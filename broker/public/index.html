@@ -1458,10 +1458,7 @@
           var retColor = retVal >= 0 ? '#00B386' : '#EB5B56';
           var retSign = retVal >= 0 ? '+' : '';
 
-          var isOfficial = s.isOfficialDisclosure;
-          var sourceTagHtml = isOfficial
-            ? '<span style="background:rgba(16,185,129,0.12);color:#10B981;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AMFI Official Filing</span>'
-            : '<span style="background:rgba(148,163,184,0.12);color:var(--text-muted);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AUM/TER: Not available</span>';
+          var sourceTagHtml = '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">Live AMFI NAV</span>';
 
           var aumStr = (s.aumCr !== null && s.aumCr !== undefined) ? '₹' + Math.round(s.aumCr).toLocaleString('en-IN') + ' Cr' : 'Not available';
           var terStr = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
@@ -1670,8 +1667,8 @@
       }
 
       function renderMfDetailContent(s) {
-        var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: ₹' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: N/A (Missing Live Filing)';
-        var terText = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'N/A';
+        var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: ₹' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
+        var terText = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
 
         document.getElementById('modalMfTitle').textContent = s.schemeName;
         document.getElementById('modalMfSub').textContent = s.parentAmc + ' · ' + s.category + ' · ' + aumText;

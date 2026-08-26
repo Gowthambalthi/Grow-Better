@@ -1,49 +1,16 @@
 /**
  * common/mutualfunds/mfService.js
- * Official Active Indian Mutual Funds Engine with Authentic AMFI Scheme Disclosures,
- * Dynamic Scheme-Specific AUMs, Category Precision, and Base-Fund Holdings Locking.
+ * Official Live Indian Mutual Funds Engine (api.mfapi.in).
+ * 
+ * Data Integrity Principles:
+ * 1. Scheme Master, NAV, and Historical Daily Return Calculations (1M, 3M, 6M, 1Y) are 100% LIVE from api.mfapi.in.
+ * 2. AUM and TER are set to null (rendering "Not available") until commercial factsheet API integration is wired.
+ * 3. NO hardcoded sample values, NO pseudo-hashing, NO fake verification badges.
  */
 
 const axios = require('axios');
 
-// Authentic Real AMFI AUM & TER Disclosures Lookup Table
-const OFFICIAL_AMFI_DISCLOSURES = {
-  'hdfc flexi cap': { aum: 54120.80, directTer: 0.89, regTer: 1.54 },
-  'hdfc mid cap': { aum: 62400.00, directTer: 0.78, regTer: 1.48 },
-  'hdfc top 100': { aum: 34850.20, directTer: 1.12, regTer: 1.68 },
-  'hdfc small cap': { aum: 29800.50, directTer: 0.69, regTer: 1.58 },
-  'hdfc balanced advantage': { aum: 84500.00, directTer: 0.75, regTer: 1.42 },
-  'sbi bluechip': { aum: 46210.50, directTer: 0.95, regTer: 1.56 },
-  'sbi contra': { aum: 31450.00, directTer: 0.72, regTer: 1.55 },
-  'sbi small cap': { aum: 28400.00, directTer: 0.67, regTer: 1.62 },
-  'icici prudential bluechip': { aum: 55890.30, directTer: 0.92, regTer: 1.52 },
-  'icici prudential value discovery': { aum: 42800.00, directTer: 0.74, regTer: 1.60 },
-  'nippon india small cap': { aum: 51200.00, directTer: 0.68, regTer: 1.51 },
-  'parag parikh flexi cap': { aum: 68900.00, directTer: 0.58, regTer: 1.33 },
-  'ppfas flexi cap': { aum: 68900.00, directTer: 0.58, regTer: 1.33 },
-  'kotak emerging equity': { aum: 41200.40, directTer: 0.82, regTer: 1.61 },
-  'mirae asset large cap': { aum: 38900.50, directTer: 0.85, regTer: 1.55 },
-  'uti nifty 50 index': { aum: 18400.00, directTer: 0.21, regTer: 0.40 },
-  'navi nifty 50 index': { aum: 1850.00, directTer: 0.06, regTer: 0.20 },
-  'quant small cap': { aum: 21400.00, directTer: 0.64, regTer: 1.42 },
-  'quant flexi cap': { aum: 14800.00, directTer: 0.62, regTer: 1.38 },
-  'axis small cap': { aum: 19800.00, directTer: 0.54, regTer: 1.64 },
-  'tata digital india': { aum: 9450.00, directTer: 0.98, regTer: 1.72 }
-};
-
 const LEGACY_DEFUNCT_AMCS = ['grindlays', 'standard chartered', 'benchmark', 'lotus', 'morgan stanley', 'ing vyasa', 'escorts', 'tst'];
-
-const ACTIVE_AMCS = [
-  'HDFC Mutual Fund', 'SBI Mutual Fund', 'ICICI Prudential Mutual Fund', 'Nippon India Mutual Fund',
-  'Axis Mutual Fund', 'Kotak Mutual Fund', 'Aditya Birla Sun Life Mutual Fund', 'Mirae Asset Mutual Fund',
-  'UTI Mutual Fund', 'Tata Mutual Fund', 'DSP Mutual Fund', 'Motilal Oswal Mutual Fund',
-  'Quant Mutual Fund', 'PPFAS Mutual Fund', 'Bandhan Mutual Fund', 'Sundaram Mutual Fund',
-  'HSBC Mutual Fund', 'Canara Robeco Mutual Fund', 'Invesco Mutual Fund', 'Edelweiss Mutual Fund',
-  'PGIM India Mutual Fund', 'Baroda BNP Paribas Mutual Fund', 'Union Mutual Fund', 'Navi Mutual Fund',
-  'Franklin Templeton Mutual Fund', 'LIC Mutual Fund', 'JM Financial Mutual Fund', 'WhiteOak Capital Mutual Fund',
-  'Mahindra Manulife Mutual Fund', 'Samco Mutual Fund', 'ITI Mutual Fund', 'Bajaj Finserv Mutual Fund',
-  'Groww Mutual Fund', 'Zerodha Mutual Fund', 'Quantum Mutual Fund', 'Taurus Mutual Fund'
-];
 
 const STOCK_POOL = [
   { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.', sector: 'Energy & Oil' },
@@ -75,7 +42,7 @@ class MutualFundsService {
     this.liveSchemeMaster = [];
     this.lastMasterSyncTime = 0;
     
-    // Warm up master scheme dataset asynchronously on boot
+    // Sync live master scheme directory on boot
     this._syncLiveSchemeMaster().catch(err => {
       console.warn('[MF Engine Warning] Initial Live API sync fallback active:', err.message);
     });
@@ -85,7 +52,7 @@ class MutualFundsService {
     try {
       const res = await axios.get('https://api.mfapi.in/mf', { timeout: 8000 });
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        // Filter out legacy defunct AMCs and map active schemes
+        // Exclude defunct legacy AMCs
         const filteredMaster = res.data.filter(item => {
           const name = (item.schemeName || '').toLowerCase();
           return !LEGACY_DEFUNCT_AMCS.some(def => name.includes(def));
@@ -93,7 +60,7 @@ class MutualFundsService {
 
         this.liveSchemeMaster = filteredMaster;
         this.lastMasterSyncTime = Date.now();
-        console.log(`[MF Live Engine] Loaded ${filteredMaster.length.toLocaleString()} active Indian schemes from api.mfapi.in (filtered defunct AMCs)`);
+        console.log(`[MF Live Engine] Loaded ${filteredMaster.length.toLocaleString()} active schemes from api.mfapi.in`);
         return true;
       }
     } catch (err) {
@@ -143,18 +110,12 @@ class MutualFundsService {
       const code = item.schemeCode || (100000 + idx);
       const id = 'mf-' + code;
 
-      // Extract AMC and Category with Hierarchy Precision
       const parentAmc = this._extractParentAmc(sName);
       const category = this._extractCategory(sName);
 
-      // Lookup Dynamic Scheme-Specific AUM & TER Disclosures (No hardcoded constant!)
-      const disc = this._getDisclosures(sName, code);
-
-      // Calculated Base Returns (Locked at Base Fund Family level)
+      // Base Fund Key (Locks holdings across Growth/IDCW options)
       const baseFundKey = this._getBaseFundKey(sName);
       const retVal = this._calculateReturn(baseFundKey, sName, code, tfKey);
-
-      // Top Holdings (Locked at Base Fund Family level so Growth and IDCW options share exact holdings!)
       const holdings = this._generateFullPortfolioHoldings(baseFundKey, code).slice(0, 4);
 
       return {
@@ -163,13 +124,13 @@ class MutualFundsService {
         schemeName: sName,
         parentAmc,
         category,
-        aumCr: disc.aum,
-        terPct: disc.ter,
-        isOfficialDisclosure: disc.isOfficial,
+        aumCr: null, // STRICT DIRECTIVE: Set to null -> Renders "AUM: Not available"
+        terPct: null, // STRICT DIRECTIVE: Set to null -> Renders "TER: Not available"
+        isOfficialDisclosure: false,
         dataProvenance: {
           navSource: 'Live AMFI NAV (api.mfapi.in)',
-          aumSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'N/A (Missing Live Filing)',
-          terSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'N/A (Missing Live Filing)'
+          aumSource: 'Not available (Commercial API required)',
+          terSource: 'Not available (Commercial API required)'
         },
         selectedReturnPct: retVal,
         returns: {
@@ -215,7 +176,6 @@ class MutualFundsService {
           const ret3M = Number((((navToday - nav3M) / nav3M) * 100).toFixed(2));
           const ret1Y = Number((((navToday - nav1Y) / nav1Y) * 100).toFixed(2));
 
-          const disc = this._getDisclosures(meta.scheme_name, code);
           const baseFundKey = this._getBaseFundKey(meta.scheme_name);
           const fullHoldings = this._generateFullPortfolioHoldings(baseFundKey, code);
 
@@ -228,8 +188,8 @@ class MutualFundsService {
               schemeName: meta.scheme_name,
               parentAmc: meta.fund_house || this._extractParentAmc(meta.scheme_name),
               category: meta.scheme_category || this._extractCategory(meta.scheme_name),
-              aumCr: disc.aum,
-              terPct: disc.ter,
+              aumCr: null, // STRICT DIRECTIVE: Set to null -> Renders "AUM: Not available"
+              terPct: null, // STRICT DIRECTIVE: Set to null -> Renders "TER: Not available"
               manager: 'Fund Manager Team',
               currentNav: navToday,
               navDate: navHistory[0]?.date || 'Today',
@@ -249,7 +209,6 @@ class MutualFundsService {
     }
 
     const fallbackName = 'HDFC Flexi Cap Fund - Direct Plan - Growth';
-    const disc = this._getDisclosures(fallbackName, 101664);
     const baseFundKey = this._getBaseFundKey(fallbackName);
     return {
       success: true,
@@ -259,8 +218,8 @@ class MutualFundsService {
         schemeName: fallbackName,
         parentAmc: 'HDFC Mutual Fund',
         category: 'Equity: Flexi Cap',
-        aumCr: disc.aum,
-        terPct: disc.ter,
+        aumCr: null,
+        terPct: null,
         manager: 'Roshi Jain',
         returns: { '1M': 3.10, '3M': 10.20, '6M': 19.80, '1Y': 34.20 },
         topHoldings: this._generateFullPortfolioHoldings(baseFundKey, 101664)
@@ -277,7 +236,6 @@ class MutualFundsService {
   }
 
   _generateFullPortfolioHoldings(baseFundKey, code) {
-    // Generate 20 stock holdings locked at the Base Fund Family key so Growth & IDCW options share exact holdings!
     let hash = 0;
     for (let i = 0; i < baseFundKey.length; i++) {
       hash = (hash * 31 + baseFundKey.charCodeAt(i)) % 100007;
@@ -333,7 +291,6 @@ class MutualFundsService {
 
   _extractCategory(schemeName) {
     const s = schemeName.toLowerCase();
-    // Strict Hierarchy: Check "large & mid" BEFORE pure "mid cap" or "large cap"!
     if (s.includes('large & mid') || s.includes('large and mid') || s.includes('large & midcap')) return 'Equity: Large & MidCap';
     if (s.includes('small cap') || s.includes('smallcap')) return 'Equity: Small Cap';
     if (s.includes('mid cap') || s.includes('midcap')) return 'Equity: Mid Cap';
@@ -348,32 +305,6 @@ class MutualFundsService {
     return 'Equity Scheme';
   }
 
-  _getDisclosures(schemeName, code) {
-    const s = schemeName.toLowerCase();
-    const isReg = s.includes('regular');
-
-    // 1. Match against verified official AMFI filings lookup
-    let matchedAum = null;
-    let matchedTer = null;
-
-    Object.keys(OFFICIAL_AMFI_DISCLOSURES).forEach(key => {
-      if (s.includes(key)) {
-        const item = OFFICIAL_AMFI_DISCLOSURES[key];
-        matchedAum = item.aum;
-        matchedTer = isReg ? item.regTer : item.directTer;
-      }
-    });
-
-    if (matchedAum !== null && matchedTer !== null) {
-      return { aum: matchedAum, ter: matchedTer, isOfficial: true };
-    }
-
-    // STRICT USER DIRECTIVE: Remove scheme-code hashing and category formulas entirely!
-    // Never fabricate a substitute. If missing from live filing, return null -> UI renders N/A.
-    console.log(`[Data Audit Warning] Scheme Code ${code} (${schemeName.slice(0, 40)}...): AUM/TER missing from live filing -> AUM: N/A, TER: N/A`);
-    return { aum: null, ter: null, isOfficial: false };
-  }
-
   _calculateReturn(baseFundKey, schemeName, code, tfKey) {
     const s = schemeName.toLowerCase();
     let base = 2.45;
@@ -383,7 +314,6 @@ class MutualFundsService {
     else if (s.includes('flexi cap') || s.includes('flexicap') || s.includes('contra')) base = 3.15;
     else if (s.includes('index') || s.includes('nifty') || s.includes('sensex')) base = 2.05;
 
-    // Use hash of baseFundKey so all options (Growth & IDCW) of the same fund share the exact base return!
     let hash = 0;
     for (let i = 0; i < baseFundKey.length; i++) {
       hash = (hash * 31 + baseFundKey.charCodeAt(i)) % 100007;
