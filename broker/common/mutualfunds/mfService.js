@@ -205,6 +205,7 @@ class MutualFundsService {
           const ret1Y = Number((((navToday - nav1Y) / nav1Y) * 100).toFixed(2));
 
           const disc = this._getDisclosures(meta.scheme_name);
+          const fullHoldings = this._generateFullPortfolioHoldings(code, meta.scheme_name);
 
           return {
             success: true,
@@ -226,13 +227,7 @@ class MutualFundsService {
                 '6M': Number((ret3M * 1.8).toFixed(2)),
                 '1Y': ret1Y
               },
-              topHoldings: [
-                { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.', pct: 9.80 },
-                { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.', pct: 8.40 },
-                { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.', pct: 7.90 },
-                { symbol: 'INFY', name: 'Infosys Ltd.', pct: 6.20 },
-                { symbol: 'TCS', name: 'Tata Consultancy Services', pct: 4.50 }
-              ]
+              topHoldings: fullHoldings
             }
           };
         }
@@ -241,25 +236,59 @@ class MutualFundsService {
       }
     }
 
+    const fallbackName = 'HDFC Flexi Cap Fund - Direct Plan - Growth';
     return {
       success: true,
       serverUsed: 'Server 2 (Backup Mirror)',
       scheme: {
         id: schemeId,
-        schemeName: 'HDFC Flexi Cap Fund - Direct Plan - Growth',
+        schemeName: fallbackName,
         parentAmc: 'HDFC Mutual Fund',
         category: 'Equity: Flexi Cap',
         aumCr: 54120.80,
         terPct: 0.89,
         manager: 'Roshi Jain',
         returns: { '1M': 3.10, '3M': 10.20, '6M': 19.80, '1Y': 34.20 },
-        topHoldings: [
-          { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.', pct: 9.20 },
-          { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.', pct: 8.70 },
-          { symbol: 'AXISBANK', name: 'Axis Bank Ltd.', pct: 6.80 }
-        ]
+        topHoldings: this._generateFullPortfolioHoldings(101664, fallbackName)
       }
     };
+  }
+
+  _generateFullPortfolioHoldings(code, schemeName) {
+    const s = (schemeName || '').toLowerCase();
+    const FULL_STOCK_POOL = [
+      { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.', sector: 'Energy & Oil', basePct: 9.80 },
+      { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.', sector: 'Banking & Financials', basePct: 8.60 },
+      { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.', sector: 'Banking & Financials', basePct: 7.90 },
+      { symbol: 'INFY', name: 'Infosys Ltd.', sector: 'Information Technology', basePct: 6.40 },
+      { symbol: 'TCS', name: 'Tata Consultancy Services', sector: 'Information Technology', basePct: 5.20 },
+      { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd.', sector: 'Telecommunications', basePct: 4.80 },
+      { symbol: 'ITC', name: 'ITC Ltd.', sector: 'FMCG & Consumer Goods', basePct: 4.10 },
+      { symbol: 'L&T', name: 'Larsen & Toubro Ltd.', sector: 'Infrastructure & Engineering', basePct: 3.80 },
+      { symbol: 'AXISBANK', name: 'Axis Bank Ltd.', sector: 'Banking & Financials', basePct: 3.40 },
+      { symbol: 'SBIN', name: 'State Bank of India', sector: 'Public Sector Banking', basePct: 3.10 },
+      { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank Ltd.', sector: 'Banking & Financials', basePct: 2.90 },
+      { symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd.', sector: 'NBFC & Financial Services', basePct: 2.70 },
+      { symbol: 'HCLTECH', name: 'HCL Technologies Ltd.', sector: 'Information Technology', basePct: 2.40 },
+      { symbol: 'M&M', name: 'Mahindra & Mahindra Ltd.', sector: 'Automotive & EV', basePct: 2.20 },
+      { symbol: 'MARUTI', name: 'Maruti Suzuki India Ltd.', sector: 'Automotive', basePct: 2.00 },
+      { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical Industries', sector: 'Healthcare & Pharma', basePct: 1.80 },
+      { symbol: 'NTPC', name: 'NTPC Ltd.', sector: 'Power & Green Energy', basePct: 1.60 },
+      { symbol: 'TATAMOTORS', name: 'Tata Motors Ltd.', sector: 'Automotive & EV', basePct: 1.50 },
+      { symbol: 'TATASTEEL', name: 'Tata Steel Ltd.', sector: 'Metals & Mining', basePct: 1.40 },
+      { symbol: 'POWERGRID', name: 'Power Grid Corp of India', sector: 'Utilities & Power', basePct: 1.20 }
+    ];
+
+    const offset = Number(code || 0) % 5;
+    return FULL_STOCK_POOL.map((stk, i) => {
+      const p = Number((stk.basePct * (1.0 + ((offset * 3 + i) % 7 - 3) * 0.04)).toFixed(2));
+      return {
+        symbol: stk.symbol,
+        name: stk.name,
+        sector: stk.sector,
+        pct: Math.max(0.40, p)
+      };
+    });
   }
 
   _extractParentAmc(schemeName) {
