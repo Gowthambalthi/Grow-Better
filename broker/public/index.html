@@ -1442,8 +1442,8 @@
           return;
         }
 
-        // Display up to 200 items in DOM for high performance rendering
-        var displayItems = schemes.slice(0, 200);
+        var maxCount = window.mfDisplayCount || 2500;
+        var displayItems = schemes.slice(0, maxCount);
 
         var html = displayItems.map(function(s) {
           var retVal = Number(s.selectedReturnPct || 0);
@@ -1476,8 +1476,12 @@
                  '</div>';
         }).join('');
 
-        if (schemes.length > 200) {
-          html += '<div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--text-muted);font-size:12px;font-weight:700;">Showing 200 of ' + schemes.length.toLocaleString('en-IN') + ' schemes matching your search. Type in the search box to filter across all 2,000+ schemes!</div>';
+        if (schemes.length > displayItems.length) {
+          html += '<div style="grid-column:1/-1;text-align:center;padding:20px;">' +
+                    '<button id="btnLoadAllMfSchemes" style="background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,0.3);">' +
+                      'LOAD ALL ' + schemes.length.toLocaleString('en-IN') + ' SCHEMES' +
+                    '</button>' +
+                  '</div>';
         }
 
         grid.innerHTML = html;
@@ -1535,6 +1539,13 @@
 
       // Event Listeners
       document.addEventListener('click', function(e) {
+        var loadAllBtn = e.target.closest('#btnLoadAllMfSchemes');
+        if (loadAllBtn) {
+          window.mfDisplayCount = 2500;
+          fetchMfSchemes(currentMfTimeframe, currentMfSearch);
+          return;
+        }
+
         var navBtn = e.target.closest('[data-nav]');
         if (navBtn) {
           var target = navBtn.getAttribute('data-nav');

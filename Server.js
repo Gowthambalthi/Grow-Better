@@ -656,8 +656,8 @@ try {
 
 app.get('/api/mutual-funds/schemes', async (req, res) => {
   try {
-    const { timeframe, search } = req.query;
-    const result = await mfService.getSchemes(timeframe || '1M', search || '');
+    const { timeframe, search, limit, page } = req.query;
+    const result = await mfService.getSchemes(timeframe || '1M', search || '', limit ? Number(limit) : 2500, page ? Number(page) : 1);
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

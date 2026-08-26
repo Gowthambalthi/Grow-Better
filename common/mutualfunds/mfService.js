@@ -147,7 +147,7 @@ class MutualFundsService {
     this.failoverCount = 0;
   }
 
-  async getSchemes(timeframe = '1M', search = '', limit = 100, page = 1) {
+  async getSchemes(timeframe = '1M', search = '', limit = 2500, page = 1) {
     let resultSchemes = [];
     let serverUsed = 'Server 1 (Primary AMFI Engine)';
 
@@ -165,7 +165,7 @@ class MutualFundsService {
     }
 
     const totalCount = resultSchemes.length;
-    const l = Math.min(Number(limit) || 100, 500);
+    const l = Math.min(Number(limit) || 2500, 5000);
     const p = Math.max(Number(page) || 1, 1);
     const paginated = resultSchemes.slice((p - 1) * l, p * l);
 
