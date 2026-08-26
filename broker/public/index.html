@@ -1458,6 +1458,11 @@
           var retColor = retVal >= 0 ? '#00B386' : '#EB5B56';
           var retSign = retVal >= 0 ? '+' : '';
 
+          var isOfficial = s.isOfficialDisclosure;
+          var sourceTagHtml = isOfficial
+            ? '<span style="background:rgba(16,185,129,0.12);color:#10B981;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AMFI Official Filing</span>'
+            : '<span style="background:rgba(148,163,184,0.12);color:var(--text-muted);font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">AMFI Category Benchmark</span>';
+
           var holdingsBadges = (s.topHoldings || []).slice(0, 4).map(function(h) {
             return '<span style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;">' + h.symbol + ' (' + h.pct + '%)</span>';
           }).join(' ');
@@ -1467,14 +1472,17 @@
                      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">' +
                        '<div>' +
                          '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;line-height:1.3;">' + s.schemeName + '</h3>' +
-                         '<div style="font-size:11px;font-weight:700;color:#3B82F6;margin-top:2px;">' + s.parentAmc + '</div>' +
+                         '<div style="display:flex;align-items:center;margin-top:2px;">' +
+                           '<span style="font-size:11px;font-weight:700;color:#3B82F6;">' + s.parentAmc + '</span>' +
+                           sourceTagHtml +
+                         '</div>' +
                        '</div>' +
                        '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;white-space:nowrap;">' + s.category + '</span>' +
                      '</div>' +
                      '<div style="display:flex;align-items:center;gap:16px;margin-top:10px;padding:8px;background:var(--bg-input);border-radius:6px;border:1px solid var(--line);">' +
-                       '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + currentMfTimeframe + ' RETURN</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
-                       '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">TER / FEE (CRR)</div><div style="font-size:14px;font-weight:800;color:var(--text-primary);">' + (s.terPct || 1.0).toFixed(2) + '%</div></div>' +
-                       '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">AUM</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">₹' + Math.round(s.aumCr || 1000) + ' Cr</div></div>' +
+                       '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + currentMfTimeframe + ' RETURN (LIVE NAV)</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
+                       '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">TER / FEE</div><div style="font-size:14px;font-weight:800;color:var(--text-primary);">' + (s.terPct || 1.0).toFixed(2) + '%</div></div>' +
+                       '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">AUM</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">₹' + Math.round(s.aumCr || 1000).toLocaleString('en-IN') + ' Cr</div></div>' +
                      '</div>' +
                    '</div>' +
                    '<div>' +

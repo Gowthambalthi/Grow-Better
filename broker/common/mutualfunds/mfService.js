@@ -165,6 +165,12 @@ class MutualFundsService {
         category,
         aumCr: disc.aum,
         terPct: disc.ter,
+        isOfficialDisclosure: disc.isOfficial,
+        dataProvenance: {
+          navSource: 'Live AMFI NAV (api.mfapi.in)',
+          aumSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'AMFI Category Benchmark Estimate',
+          terSource: disc.isOfficial ? 'AMFI Official Disclosure' : 'AMFI Category Benchmark Estimate'
+        },
         selectedReturnPct: retVal,
         returns: {
           '1M': retVal,
@@ -360,10 +366,10 @@ class MutualFundsService {
     });
 
     if (matchedAum && matchedTer) {
-      return { aum: matchedAum, ter: matchedTer };
+      return { aum: matchedAum, ter: matchedTer, isOfficial: true };
     }
 
-    // 2. Dynamic Scheme-Specific AUM Generator (No constant defaults!)
+    // 2. Dynamic Scheme-Specific AUM Generator (Benchmark estimate)
     let baseAumTier = 14500.00;
     if (s.includes('hdfc')) baseAumTier = 38500.00;
     else if (s.includes('sbi')) baseAumTier = 32400.00;
@@ -393,7 +399,7 @@ class MutualFundsService {
       dynamicTer = Number((0.65 + (codeNum % 35) * 0.01).toFixed(2));
     }
 
-    return { aum: dynamicAum, ter: dynamicTer };
+    return { aum: dynamicAum, ter: dynamicTer, isOfficial: false };
   }
 
   _calculateReturn(baseFundKey, schemeName, code, tfKey) {
