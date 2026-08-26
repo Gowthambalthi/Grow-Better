@@ -1477,9 +1477,31 @@
 
       // Event Listeners
       document.addEventListener('click', function(e) {
-        var navBtn = e.target.closest('[data-nav="mutual-funds"]');
+        var navBtn = e.target.closest('[data-nav]');
         if (navBtn) {
-          fetchMfSchemes();
+          var target = navBtn.getAttribute('data-nav');
+          if (target && target !== 'settings') {
+            var views = document.querySelectorAll('.view');
+            views.forEach(function(v) { v.classList.toggle('active', v.id === 'view-' + target); });
+            var navBtns = document.querySelectorAll('.sidebar-nav .nav-item');
+            navBtns.forEach(function(n) { n.classList.toggle('active', n.getAttribute('data-nav') === target); });
+            var titleEl = document.getElementById('topbarPageTitle');
+            var titles = {
+              dashboard: 'DASHBOARD OVERVIEW',
+              portfolio: 'PORTFOLIO',
+              orders: 'ORDERS',
+              positions: 'OPEN MTF POSITIONS',
+              'stock-holdings': 'STOCK HOLDINGS & ACCUMULATION',
+              'mutual-funds': 'MUTUAL FUNDS PLATFORM',
+              terminal: 'TRADING TERMINAL',
+              alerts: 'PRICE ALERTS',
+              settings: 'SYSTEM SETTINGS & FUNDS'
+            };
+            if (titleEl && titles[target]) titleEl.textContent = titles[target];
+          }
+          if (target === 'mutual-funds') {
+            fetchMfSchemes();
+          }
         }
 
         var tfBtn = e.target.closest('.mf-tf-btn');
