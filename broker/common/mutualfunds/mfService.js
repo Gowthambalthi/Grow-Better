@@ -1,17 +1,14 @@
 /**
  * common/mutualfunds/mfService.js
- * Dual-Server Automatic Failover Mutual Funds Engine:
- * - Server 1 (Primary Government Server): AMFI Official Govt Portal (https://www.amfiindia.com/spages/NAVAll.txt)
- * - Server 2 (Backup Mirror API): Scheme API Mirror (https://api.mfapi.in/mf)
- * 
- * Auto-Failover: If Server 1 times out or drops, Server 2 connects automatically without breaking the UI.
+ * Dual-Server Automatic Failover Mutual Funds Engine with Category-Gated Debt/Equity Holdings,
+ * Realistic Debt Return Modeling, and Angel One-Style Clean Title Parsing.
  */
 
 const axios = require('axios');
 
 const LEGACY_DEFUNCT_AMCS = ['grindlays', 'standard chartered', 'benchmark', 'lotus', 'morgan stanley', 'ing vyasa', 'escorts', 'tst'];
 
-const STOCK_POOL = [
+const EQUITY_STOCK_POOL = [
   { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.', sector: 'Energy & Oil' },
   { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.', sector: 'Banking & Financials' },
   { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.', sector: 'Banking & Financials' },
@@ -34,6 +31,23 @@ const STOCK_POOL = [
   { symbol: 'POWERGRID', name: 'Power Grid Corp of India', sector: 'Utilities & Power' }
 ];
 
+const DEBT_INSTRUMENT_POOL = [
+  { symbol: '7.18% GS 2033', name: '7.18% Government of India Sovereign Bond 2033', sector: 'Sovereign G-Sec' },
+  { symbol: 'NABARD AAA', name: 'NABARD AAA Corporate Debt Security', sector: 'PSU Financial Debt' },
+  { symbol: 'REC AAA 2028', name: 'Rural Electrification Corp AAA Bond 2028', sector: 'PSU Power Debt' },
+  { symbol: 'PFC AAA 2027', name: 'Power Finance Corp AAA Bond 2027', sector: 'PSU Power Debt' },
+  { symbol: 'SIDBI AAA', name: 'SIDBI AAA Rated PSU Instrument', sector: 'PSU Financial Debt' },
+  { symbol: 'NHAI AAA 2030', name: 'National Highways Auth AAA Bond', sector: 'Infrastructure Debt' },
+  { symbol: '91D T-BILL', name: '91-Day Government Treasury Bill', sector: 'Sovereign Money Market' },
+  { symbol: '182D T-BILL', name: '182-Day Government Treasury Bill', sector: 'Sovereign Money Market' },
+  { symbol: 'HDFC BANK CD', name: 'HDFC Bank AAA Certificate of Deposit', sector: 'Banking Debt' },
+  { symbol: 'ICICI BANK CD', name: 'ICICI Bank AAA Certificate of Deposit', sector: 'Banking Debt' },
+  { symbol: 'AXIS BANK CD', name: 'Axis Bank AAA Certificate of Deposit', sector: 'Banking Debt' },
+  { symbol: '7.26% GS 2032', name: '7.26% Government of India Sovereign Bond 2032', sector: 'Sovereign G-Sec' },
+  { symbol: 'LIC HF AAA', name: 'LIC Housing Finance AAA Bond', sector: 'Housing Finance Debt' },
+  { symbol: 'IRFC AAA 2031', name: 'Indian Railway Finance Corp AAA Bond', sector: 'PSU Railway Debt' }
+];
+
 class MutualFundsService {
   constructor() {
     this.primaryServerActive = true;
@@ -42,14 +56,12 @@ class MutualFundsService {
     this.server2Cache = [];
     this.lastSyncTime = 0;
     
-    // Initial dual-server warm up on boot
     this._syncDualServers().catch(err => {
       console.warn('[Dual-Server Engine Warning] Initial boot sync fallback active:', err.message);
     });
   }
 
   async _syncDualServers() {
-    // 1. Attempt Server 1 (AMFI Government Official Feed)
     try {
       const res = await axios.get('https://www.amfiindia.com/spages/NAVAll.txt', { timeout: 6000 });
       if (res.data && typeof res.data === 'string' && res.data.length > 1000) {
@@ -63,12 +75,11 @@ class MutualFundsService {
         }
       }
     } catch (err) {
-      console.warn('[Dual-Server Failover Alert] Server 1 (AMFI Govt Portal) unreachable. Switching to Server 2 (Backup Scheme API)...', err.message);
+      console.warn('[Dual-Server Failover Alert] Server 1 unreachable. Switching to Server 2...', err.message);
       this.primaryServerActive = false;
       this.failoverCount++;
     }
 
-    // 2. Attempt Server 2 (Backup Mirror API - api.mfapi.in)
     try {
       const res2 = await axios.get('https://api.mfapi.in/mf', { timeout: 6000 });
       if (res2.data && Array.isArray(res2.data) && res2.data.length > 0) {
@@ -78,7 +89,7 @@ class MutualFundsService {
         });
         this.server2Cache = filtered;
         this.lastSyncTime = Date.now();
-        console.log(`[Dual-Server Engine] Server 2 (Backup Scheme API) Connected: Loaded ${filtered.length.toLocaleString()} mirrored schemes`);
+        console.log(`[Dual-Server Engine] Server 2 Connected: Loaded ${filtered.length.toLocaleString()} mirrored schemes`);
         return true;
       }
     } catch (err) {
@@ -112,14 +123,23 @@ class MutualFundsService {
         const parts = line.split(';');
         if (parts.length >= 6 && parts[0] !== 'Scheme Code') {
           const code = Number(parts[0]);
-          const rawName = parts[3] || parts[1] || '';
-          const plan = parts[4] || '';
-          const option = parts[5] || '';
+          const rawName = (parts[3] || parts[1] || '').trim();
+          const plan = (parts[4] || '').trim();
+          const option = (parts[5] || '').trim();
           const nav = parseFloat(parts[6]);
-          const date = parts[7] || 'Today';
+          const date = (parts[7] || 'Today').trim();
 
           if (code && rawName) {
-            const fullName = `${rawName} ${plan} ${option}`.trim().replace(/\s+/g, ' ');
+            // Clean separator spacing to prevent "DEBT FUNDMONTHLY" concatenation bugs
+            let fullName = rawName;
+            if (plan && !fullName.toLowerCase().includes(plan.toLowerCase())) {
+              fullName += ' ' + plan;
+            }
+            if (option && !fullName.toLowerCase().includes(option.toLowerCase())) {
+              fullName += ' ' + option;
+            }
+            fullName = fullName.replace(/\s+/g, ' ').trim();
+
             const lowerName = fullName.toLowerCase();
 
             if (!LEGACY_DEFUNCT_AMCS.some(def => lowerName.includes(def))) {
@@ -163,7 +183,7 @@ class MutualFundsService {
     const cleanSearch = (search || '').trim().toLowerCase();
     const tfKey = ['1M', '3M', '6M', '1Y'].includes(timeframe) ? timeframe : '1M';
 
-    // 1. Runtime Grouping Layer: Group raw variants by (baseFundKey + parentAmc)
+    // 1. Group raw variants by (baseFundKey + parentAmc)
     const groupsMap = new Map();
     const amcSet = new Set();
 
@@ -179,7 +199,9 @@ class MutualFundsService {
       const baseFundKey = this._getBaseFundKey(sName);
       const groupKey = baseFundKey + '::' + parentAmc.toLowerCase();
 
-      const retVal = this._calculateReturn(baseFundKey, sName, code, tfKey);
+      // Return percentages calculated realistically by asset category
+      const returnsObj = this._calculateReturnsObj(baseFundKey, sName, category, code);
+      const retVal = returnsObj[tfKey] || returnsObj['1M'];
 
       const variantObj = {
         schemeCode: code,
@@ -187,17 +209,13 @@ class MutualFundsService {
         planTag: displayMeta.planTag,
         optionTag: displayMeta.optionTag,
         currentNav: item.currentNav || 100,
-        returns: {
-          '1M': retVal,
-          '3M': Number((retVal * 3.1).toFixed(2)),
-          '6M': Number((retVal * 5.8).toFixed(2)),
-          '1Y': Number((retVal * 9.4).toFixed(2))
-        }
+        returns: returnsObj
       };
 
       if (!groupsMap.has(groupKey)) {
         const id = 'mf-group-' + code;
-        const holdings = this._generateFullPortfolioHoldings(baseFundKey, code).slice(0, 4);
+        const isDebt = this._isDebtCategory(category, sName);
+        const holdings = this._generateFullPortfolioHoldings(baseFundKey, category, code).slice(0, 4);
 
         groupsMap.set(groupKey, {
           id,
@@ -207,6 +225,7 @@ class MutualFundsService {
           cleanTitle: displayMeta.cleanTitle,
           parentAmc,
           category,
+          isDebt,
           aumCr: null,
           terPct: null,
           variants: [variantObj],
@@ -232,6 +251,7 @@ class MutualFundsService {
         cleanTitle: group.cleanTitle,
         parentAmc: group.parentAmc,
         category: group.category,
+        isDebt: group.isDebt,
         currentNav: repVariant.currentNav,
         aumCr: null,
         terPct: null,
@@ -244,7 +264,7 @@ class MutualFundsService {
       };
     });
 
-    // 3. Multi-Term Search Filter Engine
+    // 3. Search Engine Filter
     let searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
     const filteredGroups = groupedFunds.filter(group => {
       if (searchTerms.length === 0) return true;
@@ -276,7 +296,7 @@ class MutualFundsService {
   }
 
   async getSchemeDetail(schemeId) {
-    const codeStr = String(schemeId).replace('mf-', '');
+    const codeStr = String(schemeId).replace('mf-group-', '').replace('mf-', '');
     const code = Number(codeStr);
 
     if (code && !isNaN(code)) {
@@ -295,8 +315,12 @@ class MutualFundsService {
           const ret3M = Number((((navToday - nav3M) / nav3M) * 100).toFixed(2));
           const ret1Y = Number((((navToday - nav1Y) / nav1Y) * 100).toFixed(2));
 
+          const cat = meta.scheme_category || this._extractCategory(meta.scheme_name);
+          const isDebt = this._isDebtCategory(cat, meta.scheme_name);
           const baseFundKey = this._getBaseFundKey(meta.scheme_name);
-          const fullHoldings = this._generateFullPortfolioHoldings(baseFundKey, code);
+          const fullHoldings = this._generateFullPortfolioHoldings(baseFundKey, cat, code);
+
+          const displayMeta = this._cleanSchemeDisplay(meta.scheme_name);
 
           return {
             success: true,
@@ -305,8 +329,10 @@ class MutualFundsService {
               id: schemeId,
               schemeCode: code,
               schemeName: meta.scheme_name,
+              cleanTitle: displayMeta.cleanTitle,
               parentAmc: meta.fund_house || this._extractParentAmc(meta.scheme_name),
-              category: meta.scheme_category || this._extractCategory(meta.scheme_name),
+              category: cat,
+              isDebt,
               aumCr: null,
               terPct: null,
               manager: 'Fund Manager Team',
@@ -335,45 +361,56 @@ class MutualFundsService {
       scheme: {
         id: schemeId,
         schemeName: fallbackName,
+        cleanTitle: 'HDFC Flexi Cap Fund',
         parentAmc: 'HDFC Mutual Fund',
         category: 'Equity: Flexi Cap',
+        isDebt: false,
         aumCr: null,
         terPct: null,
         manager: 'Roshi Jain',
         returns: { '1M': 3.10, '3M': 10.20, '6M': 19.80, '1Y': 34.20 },
-        topHoldings: this._generateFullPortfolioHoldings(baseFundKey, 101664)
+        topHoldings: this._generateFullPortfolioHoldings(baseFundKey, 'Equity: Flexi Cap', 101664)
       }
     };
   }
 
+  _isDebtCategory(category, schemeName) {
+    const s = ((category || '') + ' ' + (schemeName || '')).toLowerCase();
+    return s.includes('debt') || s.includes('liquid') || s.includes('money market') || s.includes('gilt') || s.includes('treasury') || s.includes('bond') || s.includes('overnight');
+  }
+
   _cleanSchemeDisplay(rawName) {
-    let name = rawName || '';
+    let name = (rawName || '').trim();
     
-    // Extract Plan Tag (Direct / Regular / Retail / Institutional)
+    // Extract Plan Tag
     let planTag = 'Direct Plan';
     if (/regular/i.test(name)) planTag = 'Regular Plan';
     else if (/institutional/i.test(name)) planTag = 'Institutional';
     else if (/retail/i.test(name)) planTag = 'Retail';
 
-    // Extract Option Tag (Growth / IDCW / Dividend)
+    // Extract Option Tag with Payout Frequency
     let optionTag = 'Growth';
-    if (/idcw.*reinvestment|re-investment/i.test(name)) optionTag = 'IDCW Reinvest';
-    else if (/idcw.*payout/i.test(name)) optionTag = 'IDCW Payout';
-    else if (/idcw/i.test(name)) optionTag = 'IDCW';
+    if (/monthly/i.test(name) && /idcw|dcw|dividend/i.test(name)) optionTag = 'Monthly IDCW';
+    else if (/quarterly/i.test(name) && /idcw|dcw|dividend/i.test(name)) optionTag = 'Quarterly IDCW';
+    else if (/annual/i.test(name) && /idcw|dcw|dividend/i.test(name)) optionTag = 'Annual IDCW';
+    else if (/idcw.*reinvestment|re-investment/i.test(name)) optionTag = 'IDCW Reinvest';
+    else if (/idcw.*payout|payout/i.test(name)) optionTag = 'IDCW Payout';
+    else if (/idcw|dcw/i.test(name)) optionTag = 'IDCW';
     else if (/dividend/i.test(name)) optionTag = 'Dividend';
+    else if (/growth/i.test(name)) optionTag = 'Growth';
 
-    // Clean Main Title by stripping repetitive suffix patterns
+    // Clean Main Title: Strip Suffixes Cleanly
     let cleanTitle = name
-      .replace(/-?\s*(direct|regular|retail|institutional)\s*plan\s*/gi, '')
-      .replace(/-?\s*(growth|idcw|dividend)\s*(option|payout|re-investment|reinvestment)?\s*/gi, '')
-      .replace(/-?\s*plan\s*[a-z0-9]+\s*/gi, '')
+      .replace(/(?:-|\s)*(?:direct|regular|retail|institutional)\s*plan\s*/gi, ' ')
+      .replace(/(?:-|\s)*(?:monthly|quarterly|annual|weekly|daily)?\s*(?:idcw|dcw|dividend|growth)\s*(?:option|payout|re-investment|reinvestment)?\s*/gi, ' ')
+      .replace(/(?:-|\s)*plan\s*[a-z0-9]+\s*/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Convert ALL-CAPS text to Title Case
-    if (cleanTitle === cleanTitle.toUpperCase()) {
+    // Sentence Case formatting (Title Case)
+    if (cleanTitle === cleanTitle.toUpperCase() || cleanTitle === cleanTitle.toLowerCase()) {
       cleanTitle = cleanTitle.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase());
-      cleanTitle = cleanTitle.replace(/\b(Hdfc|Sbi|Icici|Uti|Dsp|Lic|L&t|Ev|Elss|Etf)\b/g, m => m.toUpperCase());
+      cleanTitle = cleanTitle.replace(/\b(Hdfc|Sbi|Icici|Uti|Dsp|Lic|L&t|Ev|Elss|Etf|Psu|Gsec|Navi)\b/g, m => m.toUpperCase());
     }
 
     return { cleanTitle: cleanTitle || name, planTag, optionTag };
@@ -382,22 +419,61 @@ class MutualFundsService {
   _getBaseFundKey(schemeName) {
     return (schemeName || '')
       .toLowerCase()
-      .replace(/- direct plan|- regular plan|- growth option|- idcw option|- dividend option|direct|regular|growth|idcw|dividend|re-investment|payout/gi, '')
+      .replace(/- direct plan|- regular plan|- growth option|- idcw option|- dividend option|direct|regular|growth|idcw|dcw|dividend|re-investment|payout|monthly|quarterly|annual|retail|institutional/gi, '')
       .replace(/[^a-z0-9]+/g, '-')
       .trim();
   }
 
-  _generateFullPortfolioHoldings(baseFundKey, code) {
+  _calculateReturnsObj(baseFundKey, schemeName, category, code) {
+    const isDebt = this._isDebtCategory(category, schemeName);
+    
     let hash = 0;
     for (let i = 0; i < baseFundKey.length; i++) {
       hash = (hash * 31 + baseFundKey.charCodeAt(i)) % 100007;
     }
 
-    return STOCK_POOL.map((stk, i) => {
-      const idx = (hash + i) % STOCK_POOL.length;
-      const targetStk = STOCK_POOL[idx];
-      const baseWeight = 9.5 - i * 0.42;
-      const weight = Number((Math.max(0.40, baseWeight + ((hash + i) % 5) * 0.1)).toFixed(2));
+    if (isDebt) {
+      // Realistic Debt Fund Returns: 1M ~0.48%-0.58% (annualizes to ~6.2%-7.2% p.a.)
+      const base1M = Number((0.48 + ((hash % 11) * 0.01)).toFixed(2));
+      return {
+        '1M': base1M,
+        '3M': Number((base1M * 3.1).toFixed(2)),
+        '6M': Number((base1M * 6.0).toFixed(2)),
+        '1Y': Number((base1M * 12.2).toFixed(2))
+      };
+    } else {
+      // Realistic Equity Fund Returns: 1M ~2.05%-4.60%
+      let base1M = 2.45;
+      const s = schemeName.toLowerCase();
+      if (s.includes('small cap') || s.includes('smallcap') || s.includes('quant')) base1M = 4.60;
+      else if (s.includes('mid cap') || s.includes('midcap') || s.includes('motilal')) base1M = 3.85;
+      else if (s.includes('flexi cap') || s.includes('flexicap') || s.includes('contra')) base1M = 3.15;
+      else if (s.includes('index') || s.includes('nifty') || s.includes('sensex')) base1M = 2.05;
+
+      const val1M = Number((base1M + ((hash % 19) / 10)).toFixed(2));
+      return {
+        '1M': val1M,
+        '3M': Number((val1M * 3.1).toFixed(2)),
+        '6M': Number((val1M * 5.8).toFixed(2)),
+        '1Y': Number((val1M * 9.4).toFixed(2))
+      };
+    }
+  }
+
+  _generateFullPortfolioHoldings(baseFundKey, category, code) {
+    const isDebt = this._isDebtCategory(category, '');
+    const pool = isDebt ? DEBT_INSTRUMENT_POOL : EQUITY_STOCK_POOL;
+
+    let hash = 0;
+    for (let i = 0; i < baseFundKey.length; i++) {
+      hash = (hash * 31 + baseFundKey.charCodeAt(i)) % 100007;
+    }
+
+    return pool.map((stk, i) => {
+      const idx = (hash + i) % pool.length;
+      const targetStk = pool[idx];
+      const baseWeight = 14.5 - i * 0.85;
+      const weight = Number((Math.max(0.80, baseWeight + ((hash + i) % 5) * 0.1)).toFixed(2));
 
       return {
         symbol: targetStk.symbol,
@@ -454,35 +530,18 @@ class MutualFundsService {
     if (s.includes('elss') || s.includes('tax saver')) return 'Equity: ELSS Tax Saver';
     if (s.includes('nifty') || s.includes('index') || s.includes('sensex')) return 'Index Fund / ETF';
     if (s.includes('balanced') || s.includes('hybrid') || s.includes('arbitrage')) return 'Hybrid Scheme';
-    if (s.includes('liquid') || s.includes('money market') || s.includes('debt') || s.includes('bond') || s.includes('gilt')) return 'Debt Scheme';
+    if (s.includes('psu debt') || s.includes('banking & psu')) return 'Debt: Banking & PSU Debt';
+    if (s.includes('liquid')) return 'Debt: Liquid Fund';
+    if (s.includes('money market')) return 'Debt: Money Market';
+    if (s.includes('gilt') || s.includes('gsec')) return 'Debt: Gilt & Sovereign';
+    if (s.includes('liquid') || s.includes('money market') || s.includes('debt') || s.includes('bond') || s.includes('overnight')) return 'Debt Scheme';
     return 'Equity Scheme';
-  }
-
-  _calculateReturn(baseFundKey, schemeName, code, tfKey) {
-    const s = schemeName.toLowerCase();
-    let base = 2.45;
-
-    if (s.includes('small cap') || s.includes('smallcap') || s.includes('quant')) base = 4.60;
-    else if (s.includes('mid cap') || s.includes('midcap') || s.includes('motilal')) base = 3.85;
-    else if (s.includes('flexi cap') || s.includes('flexicap') || s.includes('contra')) base = 3.15;
-    else if (s.includes('index') || s.includes('nifty') || s.includes('sensex')) base = 2.05;
-
-    let hash = 0;
-    for (let i = 0; i < baseFundKey.length; i++) {
-      hash = (hash * 31 + baseFundKey.charCodeAt(i)) % 100007;
-    }
-
-    const isIdcw = s.includes('idcw') || s.includes('dividend');
-    const idcwAdj = isIdcw ? -0.02 : 0;
-
-    const val = Number((base + ((hash % 19) / 10) + idcwAdj).toFixed(2));
-    return val;
   }
 
   _generateBackupSchemeList() {
     const list = [];
     const amcs = ['HDFC', 'SBI', 'ICICI Prudential', 'Nippon India', 'Axis', 'Kotak', 'Aditya Birla', 'Mirae Asset', 'UTI', 'Tata', 'DSP', 'Motilal Oswal', 'Quant', 'PPFAS'];
-    const cats = ['Flexi Cap Fund - Direct Plan - Growth', 'Small Cap Fund - Direct Plan - Growth', 'Mid Cap Fund - Direct Plan - Growth', 'Bluechip Fund - Direct Plan - Growth', 'Contra Fund - Direct Plan - Growth'];
+    const cats = ['Flexi Cap Fund - Direct Plan - Growth', 'Small Cap Fund - Direct Plan - Growth', 'Mid Cap Fund - Direct Plan - Growth', 'Bluechip Fund - Direct Plan - Growth', 'Banking & PSU Debt Fund - Direct Plan - Growth'];
 
     let code = 100000;
     amcs.forEach(amc => {
