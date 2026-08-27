@@ -99,9 +99,32 @@ class AmfiOfficialSyncEngine {
       }
     }
 
-    // 2. Download & Parse Official HDFC TER Excel File (files.hdfcfund.com direct CDN link)
+    // 2. Dynamic Discovery & Ingestion of Latest Official HDFC TER Excel Disclosure
     try {
-      const hdfcTerUrl = 'https://files.hdfcfund.com/s3fs-public/ter/HDFCMF_SCHEMES_TER_23-08-2026.xls';
+      let hdfcTerUrl = null;
+      try {
+        const pageRes = await axios.get('https://www.hdfcfund.com/statutory-disclosure/total-expense-ratio-of-mutual-fund-schemes/reports', {
+          timeout: 6000,
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        });
+        const matches = pageRes.data.match(/https:\/\/files\.hdfcfund\.com\/s3fs-public\/ter\/HDFCMF_SCHEMES_TER_[^\x22\s>]+/gi) || [];
+        if (matches.length > 0) {
+          hdfcTerUrl = Array.from(new Set(matches))[0];
+          console.log(`[AMFI Official Sync] Dynamically discovered latest HDFC TER URL: ${hdfcTerUrl}`);
+        }
+      } catch (e) {
+        // Fallback to dynamic date formatting
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        hdfcTerUrl = `https://files.hdfcfund.com/s3fs-public/ter/HDFCMF_SCHEMES_TER_${dd}-${mm}-${yyyy}.xls`;
+      }
+
+      if (!hdfcTerUrl) {
+        hdfcTerUrl = 'https://files.hdfcfund.com/s3fs-public/ter/HDFCMF_SCHEMES_TER_23-08-2026.xls';
+      }
+
       const hdfcRes = await axios.get(hdfcTerUrl, {
         responseType: 'arraybuffer',
         timeout: 8000,
