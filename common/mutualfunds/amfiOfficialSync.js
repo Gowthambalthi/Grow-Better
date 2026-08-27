@@ -101,7 +101,7 @@ class AmfiOfficialSyncEngine {
 
     // 2. Dynamic Discovery & Ingestion of Latest Official HDFC TER Excel Disclosure
     try {
-      let hdfcTerUrl = null;
+      let hdfcTerUrl = this.disclosures.lastKnownHdfcTerUrl || null;
       try {
         const pageRes = await axios.get('https://www.hdfcfund.com/statutory-disclosure/total-expense-ratio-of-mutual-fund-schemes/reports', {
           timeout: 6000,
@@ -110,15 +110,11 @@ class AmfiOfficialSyncEngine {
         const matches = pageRes.data.match(/https:\/\/files\.hdfcfund\.com\/s3fs-public\/ter\/HDFCMF_SCHEMES_TER_[^\x22\s>]+/gi) || [];
         if (matches.length > 0) {
           hdfcTerUrl = Array.from(new Set(matches))[0];
+          this.disclosures.lastKnownHdfcTerUrl = hdfcTerUrl;
           console.log(`[AMFI Official Sync] Dynamically discovered latest HDFC TER URL: ${hdfcTerUrl}`);
         }
       } catch (e) {
-        // Fallback to dynamic date formatting
-        const now = new Date();
-        const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const yyyy = now.getFullYear();
-        hdfcTerUrl = `https://files.hdfcfund.com/s3fs-public/ter/HDFCMF_SCHEMES_TER_${dd}-${mm}-${yyyy}.xls`;
+        console.warn(`[AMFI Official Sync Warning] Live page scrape failed (${e.message}). Reverting to last known good URL: ${hdfcTerUrl}`);
       }
 
       if (!hdfcTerUrl) {
@@ -138,7 +134,7 @@ class AmfiOfficialSyncEngine {
         console.log('[AMFI Official Sync] Parsed official HDFC TER Excel file directly from HDFC CDN!');
       }
     } catch (err) {
-      console.warn('[AMFI Official Sync Warning] Could not reach HDFC TER file directly:', err.message);
+      console.warn('[AMFI Official Sync Warning] Could not reach HDFC TER file directly:', err.message, '- Using last cached disclosures.');
     }
 
     this.disclosures.lastUpdated = new Date().toISOString();
