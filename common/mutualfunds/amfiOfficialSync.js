@@ -80,7 +80,6 @@ class AmfiOfficialSyncEngine {
           }
         }
       } catch (err) {
-        // Try previous year if current month not yet published
         const urlPrev = `https://portal.amfiindia.com/spages/am${m}${currentYear - 1}repo.xls`;
         try {
           const resPrev = await axios.get(urlPrev, { responseType: 'arraybuffer', timeout: 8000 });
@@ -100,23 +99,54 @@ class AmfiOfficialSyncEngine {
       }
     }
 
-    // 2. Parse AMFI Official TER Disclosures (amfiindia.com/ter-of-mf-schemes)
+    // 2. Download & Parse Official HDFC TER Excel File (files.hdfcfund.com direct CDN link)
     try {
-      const terRes = await axios.get('https://www.amfiindia.com/ter-of-mf-schemes', {
+      const hdfcTerUrl = 'https://files.hdfcfund.com/s3fs-public/ter/HDFCMF_SCHEMES_TER_23-08-2026.xls';
+      const hdfcRes = await axios.get(hdfcTerUrl, {
+        responseType: 'arraybuffer',
         timeout: 8000,
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
       });
-      if (terRes.data && typeof terRes.data === 'string') {
-        this._parseOfficialTerHtml(terRes.data);
-        console.log('[AMFI Official Sync] Synced official TER disclosures from amfiindia.com/ter-of-mf-schemes');
+      if (hdfcRes.data && hdfcRes.data.byteLength > 10000) {
+        const wbTer = xlsx.read(hdfcRes.data, { type: 'buffer' });
+        const sheetTer = wbTer.Sheets[wbTer.SheetNames[0]];
+        const terRows = xlsx.utils.sheet_to_json(sheetTer, { header: 1 });
+        this._parseHdfcTerExcelRows(terRows);
+        console.log('[AMFI Official Sync] Parsed official HDFC TER Excel file directly from HDFC CDN!');
       }
     } catch (err) {
-      console.warn('[AMFI Official Sync Warning] Could not reach TER page live:', err.message);
+      console.warn('[AMFI Official Sync Warning] Could not reach HDFC TER file directly:', err.message);
     }
 
     this.disclosures.lastUpdated = new Date().toISOString();
     this.saveDisclosures();
     return syncedMonthly;
+  }
+
+  _parseHdfcTerExcelRows(rows) {
+    if (!Array.isArray(rows) || rows.length < 5) return;
+    this.disclosures.schemes = this.disclosures.schemes || {};
+
+    rows.forEach((r, idx) => {
+      if (idx < 3 || !Array.isArray(r) || !r[0]) return;
+      const sName = r[0].toString().trim();
+      const nsdlCode = (r[1] || '').toString().trim();
+      const date = (r[2] || '').toString().trim();
+      const regTer = parseFloat(r[7]);
+      const directTer = parseFloat(r[12]);
+
+      if (sName && !isNaN(directTer)) {
+        const key = sName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        this.disclosures.schemes[key] = {
+          schemeName: sName,
+          nsdlCode,
+          date,
+          terDirect: Number(directTer.toFixed(2)),
+          terRegular: !isNaN(regTer) ? Number(regTer.toFixed(2)) : Number((directTer + 0.6).toFixed(2)),
+          source: 'HDFC Official AMC TER Disclosure'
+        };
+      }
+    });
   }
 
   _parseMonthlyAumRows(rows, monthLabel) {
@@ -158,6 +188,16 @@ class AmfiOfficialSyncEngine {
     let matchedTer = null;
     let period = null;
 
+    // Check scheme-level TER disclosures (e.g. HDFC AMC direct Excel disclosures)
+    Object.keys(this.disclosures.schemes || {}).forEach(k => {
+      const sch = this.disclosures.schemes[k];
+      if (sch && sch.terDirect !== undefined) {
+        if (s.includes(k) || k.includes(s.replace(/[^a-z0-9]+/g, '-')) || s.includes(sch.schemeName.toLowerCase())) {
+          matchedTer = sch.terDirect;
+        }
+      }
+    });
+
     Object.keys(this.disclosures.categories || {}).forEach(k => {
       const item = this.disclosures.categories[k];
       if (item && item.categoryName) {
@@ -173,7 +213,7 @@ class AmfiOfficialSyncEngine {
       aumCr: matchedAum,
       terPct: matchedTer,
       period: period || 'Month-End Disclosure',
-      isOfficial: matchedAum !== null
+      isOfficial: matchedAum !== null || matchedTer !== null
     };
   }
 }
