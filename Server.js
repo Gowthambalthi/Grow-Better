@@ -719,6 +719,16 @@ app.get('/api/mutual-funds/scheme-detail/:schemeId', (req, res) => {
   }
 });
 
+app.get('/api/mutual-funds/aggregated-stocks', async (req, res) => {
+  try {
+    const { search } = req.query;
+    const result = await mfService.getAggregatedStockHoldings(search || '');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/institutional/schemes-ranking', (req, res) => {
   try {
     const { timeframe } = req.query;

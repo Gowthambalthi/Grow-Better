@@ -1799,6 +1799,43 @@
         }).join('');
       }
 
+      var stockScannerSearchTimeout = null;
+      function loadStockHoldingsScanner(query) {
+        var tbody = document.getElementById('tbodyInstitutionalScanner');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Loading official MF stock holdings data...</td></tr>';
+
+        fetch('/api/mutual-funds/aggregated-stocks?search=' + encodeURIComponent(query || ''))
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (!data || !data.success || !data.stocks || data.stocks.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted); font-size:13px;">No stock holdings match your search criteria. Data available from verified AMC disclosures: <b>' + (data.verifiedAmcs || ['HDFC Mutual Fund']).join(', ') + '</b>.</td></tr>';
+              return;
+            }
+
+            tbody.innerHTML = data.stocks.map(function(s) {
+              var amcBadge = '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;">HDFC AMC (Verified)</span>';
+              var mktValText = s.combinedMktValCr > 0 ? '₹' + s.combinedMktValCr.toLocaleString('en-IN') + ' Cr' : 'Not available';
+
+              return '<tr style="border-bottom:1px solid var(--line);">' +
+                       '<td style="padding:12px 14px;font-weight:800;color:var(--text-primary);">' +
+                         '<div style="font-size:13px;">' + s.symbol + '</div>' +
+                         '<div style="font-size:11px;color:var(--text-muted);font-weight:500;">' + s.name + ' · ISIN: ' + s.isin + '</div>' +
+                       '</td>' +
+                       '<td style="padding:12px 14px;text-align:center;">' + amcBadge + '</td>' +
+                       '<td style="padding:12px 14px;text-align:center;font-weight:800;color:var(--text-primary);"><span style="background:rgba(0,179,134,0.12);color:#00B386;padding:4px 10px;border-radius:12px;font-size:12px;">' + s.totalSchemesHolding + ' Schemes</span></td>' +
+                       '<td style="padding:12px 14px;text-align:right;font-weight:800;color:#00B386;">' + s.maxAllocationPct.toFixed(2) + '% NAV</td>' +
+                       '<td style="padding:12px 14px;text-align:right;font-weight:800;color:var(--text-primary);">' + mktValText + '</td>' +
+                       '<td style="padding:12px 14px;text-align:center;"><span style="background:rgba(16,185,129,0.12);color:#10B981;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:800;">VERIFIED DISCLOSURE</span></td>' +
+                       '<td style="padding:12px 14px;text-align:center;"><button class="btn btn-sm" style="font-size:11px;padding:4px 10px;font-weight:700;" onclick="alert(\'Holding HDFC Schemes for ' + s.symbol + ':\\n\\n\' + \'' + s.holdingSchemes.map(function(h){ return h.schemeName + ' (' + h.pct + '% NAV)'; }).join('\\n') + '\')">View Schemes (' + s.totalSchemesHolding + ')</button></td>' +
+                     '</tr>';
+            }).join('');
+          })
+          .catch(function(err) {
+            console.warn('[Stock Scanner Warning]:', err.message);
+          });
+      }
+
       var searchTimeout = null;
       document.addEventListener('input', function(e) {
         if (e.target.id === 'mfSearchInput') {
@@ -1806,6 +1843,12 @@
           currentMfSearch = e.target.value;
           searchTimeout = setTimeout(function() {
             fetchMfSchemes(currentMfTimeframe, currentMfSearch);
+          }, 200);
+        } else if (e.target.id === 'stockSearchInput') {
+          clearTimeout(stockScannerSearchTimeout);
+          var q = e.target.value;
+          stockScannerSearchTimeout = setTimeout(function() {
+            loadStockHoldingsScanner(q);
           }, 200);
         } else if (e.target.id === 'modalHoldingSearchInput') {
           var q = e.target.value.trim().toLowerCase();
@@ -1824,9 +1867,10 @@
       });
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { fetchMfSchemes(); });
+        document.addEventListener('DOMContentLoaded', function() { fetchMfSchemes(); loadStockHoldingsScanner(); });
       } else {
         fetchMfSchemes();
+        loadStockHoldingsScanner();
       }
     })();
   </script>

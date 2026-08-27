@@ -301,6 +301,69 @@ class MutualFundsService {
     };
   }
 
+  async getAggregatedStockHoldings(query) {
+    const rawHoldings = amfiSync.disclosures.schemeHoldings || {};
+    const stockMap = new Map();
+
+    Object.keys(rawHoldings).forEach(sKey => {
+      const item = rawHoldings[sKey];
+      if (item && Array.isArray(item.holdings)) {
+        item.holdings.forEach(h => {
+          const symbolKey = (h.symbol || h.name || '').toUpperCase().trim();
+          if (!symbolKey) return;
+
+          if (!stockMap.has(symbolKey)) {
+            stockMap.set(symbolKey, {
+              symbol: symbolKey,
+              name: h.name,
+              isin: h.isin,
+              sector: h.sector,
+              totalSchemesHolding: 0,
+              maxAllocationPct: 0,
+              combinedMktValCr: 0,
+              holdingSchemes: [],
+              verifiedAmcs: ['HDFC Mutual Fund']
+            });
+          }
+
+          const stockObj = stockMap.get(symbolKey);
+          stockObj.totalSchemesHolding += 1;
+          stockObj.combinedMktValCr += (h.mktValCr || 0);
+          if (h.pct > stockObj.maxAllocationPct) stockObj.maxAllocationPct = h.pct;
+
+          stockObj.holdingSchemes.push({
+            schemeName: item.schemeName,
+            schemeKey: sKey,
+            pct: h.pct,
+            mktValCr: h.mktValCr,
+            sourceUrl: item.sourceUrl
+          });
+        });
+      }
+    });
+
+    let result = Array.from(stockMap.values());
+    const q = (query || '').trim().toLowerCase();
+
+    if (q) {
+      result = result.filter(s => 
+        s.symbol.toLowerCase().includes(q) || 
+        s.name.toLowerCase().includes(q) || 
+        s.isin.toLowerCase().includes(q) || 
+        s.sector.toLowerCase().includes(q)
+      );
+    }
+
+    result.sort((a, b) => b.totalSchemesHolding - a.totalSchemesHolding || b.combinedMktValCr - a.combinedMktValCr);
+
+    return {
+      success: true,
+      totalStocks: result.length,
+      verifiedAmcs: ['HDFC Mutual Fund'],
+      stocks: result.slice(0, 100)
+    };
+  }
+
   async getSchemeDetail(schemeId) {
     const codeStr = String(schemeId).replace('mf-group-', '').replace('mf-', '');
     const code = Number(codeStr);
