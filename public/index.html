@@ -1701,24 +1701,29 @@
 
       async function openMfDetailModal(schemeId) {
         var modal = document.getElementById('modalMfDetail');
-        var tbody = document.getElementById('tbodyModalMfHoldings');
-        if (tbody) tbody.innerHTML = '<tr class="empty-row"><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted);">Fetching complete portfolio holdings from Live AMFI API...</td></tr>';
         if (modal) modal.style.display = 'flex';
 
-        try {
-          var res = await fetch('/api/mutual-funds/scheme-detail/' + encodeURIComponent(schemeId));
-          var data = await res.json();
-          if (data && data.success && data.scheme) {
-            renderMfDetailContent(data.scheme);
-            return;
-          }
-        } catch (err) {
-          console.warn('[MF Detail Error] Failed to fetch live scheme detail:', err.message);
+        // 1. Instant local render (0ms delay)
+        var cached = mfCache.find(function(item) { return item.id === schemeId; });
+        if (cached) {
+          renderMfDetailContent(cached);
+        } else {
+          var fallback = getMfFallbackData(currentMfTimeframe, '').find(function(item) { return item.id === schemeId; });
+          if (fallback) renderMfDetailContent(fallback);
         }
 
-        // Fallback local lookup
-        var s = mfCache.find(function(item) { return item.id === schemeId; });
-        if (s) renderMfDetailContent(s);
+        // 2. Async live NAV background refresh
+        try {
+          var res = await fetch('/api/mutual-funds/scheme-detail/' + encodeURIComponent(schemeId));
+          if (res.ok) {
+            var data = await res.json();
+            if (data && data.success && data.scheme) {
+              renderMfDetailContent(data.scheme);
+            }
+          }
+        } catch (err) {
+          console.warn('[MF Detail Warning] Background detail refresh:', err.message);
+        }
       }
 
       function renderMfDetailContent(s) {
