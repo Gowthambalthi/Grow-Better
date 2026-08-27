@@ -1599,14 +1599,23 @@
               var ter = p.isReg ? masterRegTer : masterDirectTer;
               var ret = p.isIdcw ? Number((masterBaseRet - 0.02).toFixed(2)) : (p.isReg ? Number((masterBaseRet - 0.05).toFixed(2)) : masterBaseRet);
 
+              var cTitle = cleanSchemeTitle(schemeName);
               sample.push({
                 id: id,
+                schemeCode: 100000 + count,
                 schemeName: schemeName,
+                cleanTitle: cTitle,
                 parentAmc: amcName,
                 category: catName,
                 aumCr: masterAum,
                 terPct: ter,
                 selectedReturnPct: ret,
+                variantCount: 3,
+                variants: [
+                  { schemeCode: 100000 + count, schemeName: amcs[i] + ' ' + catName + ' - Direct Plan - Growth', planTag: 'Direct Plan', optionTag: 'Growth', currentNav: 145.20, returns: { '1M': ret } },
+                  { schemeCode: 100001 + count, schemeName: amcs[i] + ' ' + catName + ' - Direct Plan - IDCW', planTag: 'Direct Plan', optionTag: 'IDCW', currentNav: 112.50, returns: { '1M': ret } },
+                  { schemeCode: 100002 + count, schemeName: amcs[i] + ' ' + catName + ' - Regular Plan - Growth', planTag: 'Regular Plan', optionTag: 'Growth', currentNav: 138.80, returns: { '1M': ret } }
+                ],
                 topHoldings: [
                   stocks[(i + j) % stocks.length],
                   stocks[(i + j + 2) % stocks.length],

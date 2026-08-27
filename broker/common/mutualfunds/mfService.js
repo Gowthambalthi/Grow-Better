@@ -399,7 +399,7 @@ class MutualFundsService {
     if (/monthly/i.test(name) && /idcw|dcw|dividend/i.test(name)) optionTag = 'Monthly IDCW';
     else if (/quarterly/i.test(name) && /idcw|dcw|dividend/i.test(name)) optionTag = 'Quarterly IDCW';
     else if (/annual/i.test(name) && /idcw|dcw|dividend/i.test(name)) optionTag = 'Annual IDCW';
-    else if (/idcw.*reinvestment|re-investment/i.test(name)) optionTag = 'IDCW Reinvest';
+    else if (/idcw.*reinvestment|re-investment|reinvestment/i.test(name)) optionTag = 'IDCW Reinvest';
     else if (/idcw.*payout|payout/i.test(name)) optionTag = 'IDCW Payout';
     else if (/idcw|dcw/i.test(name)) optionTag = 'IDCW';
     else if (/dividend/i.test(name)) optionTag = 'Dividend';
@@ -409,7 +409,9 @@ class MutualFundsService {
     let cleanTitle = name
       .replace(/(?:-|\s)*(?:direct|regular|retail|institutional)\s*plan\s*/gi, ' ')
       .replace(/(?:-|\s)*(?:monthly|quarterly|annual|weekly|daily)?\s*(?:idcw|dcw|dividend|growth)\s*(?:option|payout|re-investment|reinvestment)?\s*/gi, ' ')
+      .replace(/(?:-|\s)*(?:re-investment|reinvestment|payout|option)\s*/gi, ' ')
       .replace(/(?:-|\s)*plan\s*[a-z0-9]+\s*/gi, ' ')
+      .replace(/-\s*$/g, '')
       .replace(/\s+/g, ' ')
       .trim();
 
