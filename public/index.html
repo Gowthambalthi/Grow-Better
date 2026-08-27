@@ -620,10 +620,31 @@
             </div>
             
             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:10px;margin-bottom:20px;background:var(--bg-input);padding:12px;border-radius:8px;border:1px solid var(--line);">
-              <div><div style="font-size:10px;color:var(--text-muted);">TER / FEE (CRR)</div><div id="modalMfTer" style="font-size:15px;font-weight:800;color:var(--text-primary);">1.12%</div></div>
+              <div><div style="font-size:10px;color:var(--text-muted);">TER / FEE (CRR)</div><div id="modalMfTer" style="font-size:15px;font-weight:800;color:var(--text-primary);">Not available</div></div>
               <div><div style="font-size:10px;color:var(--text-muted);">1M RETURN</div><div id="modalMfRet1m" style="font-size:15px;font-weight:800;color:var(--profit);">+2.45%</div></div>
               <div><div style="font-size:10px;color:var(--text-muted);">3M RETURN</div><div id="modalMfRet3m" style="font-size:15px;font-weight:800;color:var(--profit);">+8.90%</div></div>
               <div><div style="font-size:10px;color:var(--text-muted);">1Y RETURN</div><div id="modalMfRet1y" style="font-size:15px;font-weight:800;color:var(--profit);">+28.50%</div></div>
+            </div>
+
+            <!-- Available Plan Variants Table -->
+            <div style="margin-bottom:20px;">
+              <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0 0 8px 0;letter-spacing:0.04em;">AVAILABLE SCHEME VARIANTS (DIRECT / REGULAR / GROWTH / IDCW)</h3>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:1px solid var(--line);color:var(--text-muted);font-size:11px;text-align:left;">
+                      <th style="padding:8px 10px;">VARIANT / PLAN</th>
+                      <th style="padding:8px 10px;">SCHEME CODE</th>
+                      <th style="padding:8px 10px;text-align:right;">LIVE NAV</th>
+                      <th style="padding:8px 10px;text-align:right;">1M RETURN</th>
+                      <th style="padding:8px 10px;text-align:right;">1Y RETURN</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyModalMfVariants">
+                    <tr class="empty-row"><td colspan="5" style="text-align:center;padding:12px;color:var(--text-muted);">Loading plan variants...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;flex-wrap:wrap;">
@@ -1420,7 +1441,8 @@
               serverTag.style.color = '#10B981';
             }
             if (subTitle && data.totalCount) {
-              subTitle.textContent = data.totalCount.toLocaleString('en-IN') + ' Indian Mutual Fund Schemes across 44 AMCs · Multi-Server Failover Active';
+              var amcCount = data.totalAmcs || 44;
+              subTitle.textContent = data.totalCount.toLocaleString('en-IN') + ' Unique Mutual Funds across ' + amcCount + ' AMCs · Multi-Server Failover Active';
             }
             renderMfGrid(data.schemes);
             return;
@@ -1691,15 +1713,47 @@
         var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: ₹' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
         var terText = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
 
-        document.getElementById('modalMfTitle').textContent = s.schemeName;
-        document.getElementById('modalMfSub').textContent = s.parentAmc + ' · ' + s.category + ' · ' + aumText;
+        var varCount = (s.variants || []).length;
+        var varText = varCount > 0 ? varCount + ' Variants Available' : 'Direct Growth';
+
+        document.getElementById('modalMfTitle').textContent = s.cleanTitle || s.schemeName;
+        document.getElementById('modalMfSub').textContent = s.parentAmc + ' · ' + s.category + ' · ' + varText + ' · ' + aumText;
         document.getElementById('modalMfTer').textContent = terText;
         document.getElementById('modalMfRet1m').textContent = (s.returns ? (s.returns['1M'] >= 0 ? '+' : '') + s.returns['1M'].toFixed(2) : '+2.45') + '%';
         document.getElementById('modalMfRet3m').textContent = (s.returns ? (s.returns['3M'] >= 0 ? '+' : '') + s.returns['3M'].toFixed(2) : '+8.90') + '%';
         document.getElementById('modalMfRet1y').textContent = (s.returns ? (s.returns['1Y'] >= 0 ? '+' : '') + s.returns['1Y'].toFixed(2) : '+28.50') + '%';
 
+        renderModalVariantsTable(s.variants || []);
+
         currentModalHoldings = s.topHoldings || [];
         renderModalHoldingsTable(currentModalHoldings);
+      }
+
+      function renderModalVariantsTable(variants) {
+        var tbody = document.getElementById('tbodyModalMfVariants');
+        if (!tbody) return;
+        if (!variants || variants.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--text-muted);">Standard Direct Growth Plan</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = variants.map(function(v) {
+          var ret1m = v.returns ? v.returns['1M'] : 2.45;
+          var ret1y = v.returns ? v.returns['1Y'] : 28.50;
+          var color1m = ret1m >= 0 ? '#00B386' : '#EB5B56';
+          var color1y = ret1y >= 0 ? '#00B386' : '#EB5B56';
+
+          return '<tr style="border-bottom:1px solid var(--line);">' +
+                   '<td style="padding:8px 10px;font-weight:700;color:var(--text-primary);">' +
+                     '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:10px;padding:2px 6px;border-radius:4px;margin-right:6px;">' + (v.planTag || 'Direct Plan') + '</span>' +
+                     '<span>' + (v.optionTag || 'Growth') + '</span>' +
+                   '</td>' +
+                   '<td style="padding:8px 10px;color:var(--text-muted);font-family:monospace;">' + v.schemeCode + '</td>' +
+                   '<td style="padding:8px 10px;text-align:right;font-weight:700;color:var(--text-primary);">₹' + Number(v.currentNav || 100).toFixed(2) + '</td>' +
+                   '<td style="padding:8px 10px;text-align:right;font-weight:800;color:' + color1m + ';">' + (ret1m >= 0 ? '+' : '') + ret1m.toFixed(2) + '%</td>' +
+                   '<td style="padding:8px 10px;text-align:right;font-weight:800;color:' + color1y + ';">' + (ret1y >= 0 ? '+' : '') + ret1y.toFixed(2) + '%</td>' +
+                 '</tr>';
+        }).join('');
       }
 
       function renderModalHoldingsTable(holdings) {

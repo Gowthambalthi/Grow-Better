@@ -163,53 +163,101 @@ class MutualFundsService {
     const cleanSearch = (search || '').trim().toLowerCase();
     const tfKey = ['1M', '3M', '6M', '1Y'].includes(timeframe) ? timeframe : '1M';
 
-    const filtered = dataset.filter(item => {
-      if (!cleanSearch) return true;
-      const sName = (item.schemeName || '').toLowerCase();
-      const sAmc = (item.parentAmc || '').toLowerCase();
-      const sCat = (item.category || '').toLowerCase();
-      return sName.includes(cleanSearch) || sAmc.includes(cleanSearch) || sCat.includes(cleanSearch);
-    });
+    // 1. Runtime Grouping Layer: Group raw variants by (baseFundKey + parentAmc)
+    const groupsMap = new Map();
+    const amcSet = new Set();
 
-    const totalCount = filtered.length;
-    const l = Math.min(Number(limit) || 2500, 5000);
-    const p = Math.max(Number(page) || 1, 1);
-    const paginated = filtered.slice((p - 1) * l, p * l);
-
-    const schemes = paginated.map((item, idx) => {
+    dataset.forEach((item, idx) => {
       const code = item.schemeCode || (100000 + idx);
       const sName = item.schemeName || 'Mutual Fund Scheme';
       const parentAmc = item.parentAmc || this._extractParentAmc(sName);
       const category = item.category || this._extractCategory(sName);
-      const id = 'mf-' + code;
+      
+      amcSet.add(parentAmc);
 
       const displayMeta = this._cleanSchemeDisplay(sName);
       const baseFundKey = this._getBaseFundKey(sName);
-      const retVal = this._calculateReturn(baseFundKey, sName, code, tfKey);
-      const holdings = this._generateFullPortfolioHoldings(baseFundKey, code).slice(0, 4);
+      const groupKey = baseFundKey + '::' + parentAmc.toLowerCase();
 
-      return {
-        id,
+      const retVal = this._calculateReturn(baseFundKey, sName, code, tfKey);
+
+      const variantObj = {
         schemeCode: code,
         schemeName: sName,
-        cleanTitle: displayMeta.cleanTitle,
         planTag: displayMeta.planTag,
         optionTag: displayMeta.optionTag,
-        parentAmc,
-        category,
         currentNav: item.currentNav || 100,
-        aumCr: null, // Renders "AUM: Not available"
-        terPct: null, // Renders "TER: Not available"
-        selectedReturnPct: retVal,
         returns: {
           '1M': retVal,
           '3M': Number((retVal * 3.1).toFixed(2)),
           '6M': Number((retVal * 5.8).toFixed(2)),
           '1Y': Number((retVal * 9.4).toFixed(2))
-        },
-        topHoldings: holdings
+        }
+      };
+
+      if (!groupsMap.has(groupKey)) {
+        const id = 'mf-group-' + code;
+        const holdings = this._generateFullPortfolioHoldings(baseFundKey, code).slice(0, 4);
+
+        groupsMap.set(groupKey, {
+          id,
+          schemeCode: code,
+          baseFundKey,
+          schemeName: displayMeta.cleanTitle,
+          cleanTitle: displayMeta.cleanTitle,
+          parentAmc,
+          category,
+          aumCr: null,
+          terPct: null,
+          variants: [variantObj],
+          topHoldings: holdings,
+          searchBlob: (displayMeta.cleanTitle + ' ' + sName + ' ' + parentAmc + ' ' + category + ' ' + holdings.map(h => h.symbol).join(' ')).toLowerCase()
+        });
+      } else {
+        const group = groupsMap.get(groupKey);
+        group.variants.push(variantObj);
+        group.searchBlob += ' ' + sName.toLowerCase();
+      }
+    });
+
+    // 2. Select Representative Properties for Each Unique Fund Group
+    const groupedFunds = Array.from(groupsMap.values()).map(group => {
+      const repVariant = group.variants.find(v => v.planTag === 'Direct Plan' && v.optionTag === 'Growth') || group.variants[0];
+      const retVal = repVariant.returns[tfKey] || repVariant.returns['1M'];
+
+      return {
+        id: group.id,
+        schemeCode: repVariant.schemeCode,
+        schemeName: group.schemeName,
+        cleanTitle: group.cleanTitle,
+        parentAmc: group.parentAmc,
+        category: group.category,
+        currentNav: repVariant.currentNav,
+        aumCr: null,
+        terPct: null,
+        selectedReturnPct: retVal,
+        returns: repVariant.returns,
+        topHoldings: group.topHoldings,
+        variantCount: group.variants.length,
+        variants: group.variants,
+        searchBlob: group.searchBlob
       };
     });
+
+    // 3. Multi-Term Search Filter Engine
+    let searchTerms = cleanSearch.split(/\s+/).filter(Boolean);
+    const filteredGroups = groupedFunds.filter(group => {
+      if (searchTerms.length === 0) return true;
+      return searchTerms.every(term => group.searchBlob.includes(term));
+    });
+
+    const totalRawRecords = dataset.length;
+    const totalCount = filteredGroups.length;
+    const totalAmcs = amcSet.size;
+
+    const l = Math.min(Number(limit) || 2500, 5000);
+    const p = Math.max(Number(page) || 1, 1);
+    const paginated = filteredGroups.slice((p - 1) * l, p * l);
 
     return {
       success: true,
@@ -217,11 +265,13 @@ class MutualFundsService {
       failoverCount: this.failoverCount,
       primaryServerActive: this.primaryServerActive,
       timeframe: tfKey,
+      totalRawRecords,
       totalCount,
+      totalAmcs,
       page: p,
       totalPages: Math.ceil(totalCount / l),
       limit: l,
-      schemes
+      schemes: paginated
     };
   }
 
