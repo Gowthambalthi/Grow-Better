@@ -5,6 +5,7 @@
  */
 
 const axios = require('axios');
+const amfiSync = require('./amfiOfficialSync');
 
 const LEGACY_DEFUNCT_AMCS = ['grindlays', 'standard chartered', 'benchmark', 'lotus', 'morgan stanley', 'ing vyasa', 'escorts', 'tst'];
 
@@ -216,6 +217,7 @@ class MutualFundsService {
         const id = 'mf-group-' + code;
         const isDebt = this._isDebtCategory(category, sName);
         const holdings = this._generateFullPortfolioHoldings(baseFundKey, category, code).slice(0, 4);
+        const disc = amfiSync.getDisclosureForScheme(sName, category);
 
         groupsMap.set(groupKey, {
           id,
@@ -226,8 +228,10 @@ class MutualFundsService {
           parentAmc,
           category,
           isDebt,
-          aumCr: null,
-          terPct: null,
+          aumCr: disc.aumCr,
+          terPct: disc.terPct,
+          aumPeriod: disc.period,
+          isOfficialDisclosure: disc.isOfficial,
           variants: [variantObj],
           topHoldings: holdings,
           searchBlob: (displayMeta.cleanTitle + ' ' + sName + ' ' + parentAmc + ' ' + category + ' ' + holdings.map(h => h.symbol).join(' ')).toLowerCase()
@@ -253,8 +257,10 @@ class MutualFundsService {
         category: group.category,
         isDebt: group.isDebt,
         currentNav: repVariant.currentNav,
-        aumCr: null,
-        terPct: null,
+        aumCr: group.aumCr,
+        terPct: group.terPct,
+        aumPeriod: group.aumPeriod,
+        isOfficialDisclosure: group.isOfficialDisclosure,
         selectedReturnPct: retVal,
         returns: repVariant.returns,
         topHoldings: group.topHoldings,
