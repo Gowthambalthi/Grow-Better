@@ -216,7 +216,11 @@ class MutualFundsService {
       if (!groupsMap.has(groupKey)) {
         const id = 'mf-group-' + code;
         const isDebt = this._isDebtCategory(category, sName);
-        const holdings = this._generateFullPortfolioHoldings(baseFundKey, category, code).slice(0, 4);
+        const officialDoc = amfiSync.getOfficialHoldingsForScheme(sName) || amfiSync.getOfficialHoldingsForScheme(displayMeta.cleanTitle);
+        const holdings = (officialDoc && Array.isArray(officialDoc.holdings) && officialDoc.holdings.length > 0)
+          ? officialDoc.holdings.slice(0, 4)
+          : this._generateFullPortfolioHoldings(baseFundKey, category, code).slice(0, 4);
+
         const disc = amfiSync.getDisclosureForScheme(sName, category);
 
         groupsMap.set(groupKey, {
@@ -508,12 +512,13 @@ class MutualFundsService {
     const isDebt = this._isDebtCategory(category, schemeName);
     
     let hash = 0;
-    for (let i = 0; i < baseFundKey.length; i++) {
-      hash = (hash * 31 + baseFundKey.charCodeAt(i)) % 100007;
+    const str = (baseFundKey || schemeName || 'fund').toString();
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash * 31 + str.charCodeAt(i)) % 100007;
     }
 
     if (isDebt) {
-      // Realistic Debt Fund Returns: 1M ~0.48%-0.58% (annualizes to ~6.2%-7.2% p.a.)
+      // Realistic Debt Fund Returns: 1M ~0.48%-0.58%
       const base1M = Number((0.48 + ((hash % 11) * 0.01)).toFixed(2));
       return {
         '1M': base1M,
@@ -521,30 +526,31 @@ class MutualFundsService {
         '6M': Number((base1M * 6.0).toFixed(2)),
         '1Y': Number((base1M * 12.2).toFixed(2))
       };
-      // Realistic Equity Fund Returns calibrated to live Groww / Value Research benchmarks
-      let val1M = 2.45;
-      const s = schemeName.toLowerCase();
-      if (s.includes('hdfc') && (s.includes('mid cap') || s.includes('midcap'))) {
-        val1M = 4.41; // Exact match to HDFC Mid Cap Direct Growth 1M return (+4.41%)
-      } else if (s.includes('small cap') || s.includes('smallcap') || s.includes('quant')) {
-        val1M = Number((4.60 + ((hash % 15) / 10)).toFixed(2));
-      } else if (s.includes('mid cap') || s.includes('midcap') || s.includes('motilal')) {
-        val1M = Number((4.41 + ((hash % 12) / 100)).toFixed(2));
-      } else if (s.includes('flexi cap') || s.includes('flexicap') || s.includes('contra')) {
-        val1M = Number((3.15 + ((hash % 15) / 100)).toFixed(2));
-      } else if (s.includes('index') || s.includes('nifty') || s.includes('sensex')) {
-        val1M = Number((2.05 + ((hash % 10) / 100)).toFixed(2));
-      } else {
-        val1M = Number((2.45 + ((hash % 19) / 100)).toFixed(2));
-      }
-
-      return {
-        '1M': val1M,
-        '3M': Number((val1M * 3.1).toFixed(2)),
-        '6M': Number((val1M * 5.8).toFixed(2)),
-        '1Y': Number((val1M * 9.4).toFixed(2))
-      };
     }
+
+    // Realistic Equity Fund Returns
+    let val1M = 2.45;
+    const s = (schemeName || '').toLowerCase();
+    if (s.includes('hdfc') && (s.includes('mid cap') || s.includes('midcap'))) {
+      val1M = 4.41; // HDFC Mid Cap Direct Growth 1M return (+4.41%)
+    } else if (s.includes('small cap') || s.includes('smallcap') || s.includes('quant')) {
+      val1M = Number((4.60 + ((hash % 15) / 10)).toFixed(2));
+    } else if (s.includes('mid cap') || s.includes('midcap') || s.includes('motilal')) {
+      val1M = Number((4.41 + ((hash % 12) / 100)).toFixed(2));
+    } else if (s.includes('flexi cap') || s.includes('flexicap') || s.includes('contra')) {
+      val1M = Number((3.15 + ((hash % 15) / 100)).toFixed(2));
+    } else if (s.includes('index') || s.includes('nifty') || s.includes('sensex')) {
+      val1M = Number((2.05 + ((hash % 10) / 100)).toFixed(2));
+    } else {
+      val1M = Number((2.45 + ((hash % 19) / 100)).toFixed(2));
+    }
+
+    return {
+      '1M': val1M,
+      '3M': Number((val1M * 3.1).toFixed(2)),
+      '6M': Number((val1M * 5.8).toFixed(2)),
+      '1Y': Number((val1M * 9.4).toFixed(2))
+    };
   }
 
   _generateFullPortfolioHoldings(baseFundKey, category, code) {

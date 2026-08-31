@@ -284,11 +284,19 @@ class AmfiOfficialSyncEngine {
     Object.keys(this.disclosures.schemes || {}).forEach(k => {
       const sch = this.disclosures.schemes[k];
       if (sch && sch.terDirect !== undefined) {
-        if (s.includes(k) || k.includes(s.replace(/[^a-z0-9]+/g, '-')) || s.includes(sch.schemeName.toLowerCase())) {
+        const schClean = (sch.schemeName || '').toLowerCase();
+        if (s.includes(k) || k.includes(s.replace(/[^a-z0-9]+/g, '-')) || s.includes(schClean) || schClean.includes(s)) {
           matchedTer = sch.terDirect;
         }
       }
     });
+
+    if (matchedTer === null) {
+      if (cat.includes('debt') || cat.includes('liquid')) matchedTer = 0.20;
+      else if (cat.includes('index') || cat.includes('etf')) matchedTer = 0.12;
+      else if (cat.includes('hybrid')) matchedTer = 0.75;
+      else matchedTer = 0.76; // Equity category default TER
+    }
 
     Object.keys(this.disclosures.categories || {}).forEach(k => {
       const item = this.disclosures.categories[k];
