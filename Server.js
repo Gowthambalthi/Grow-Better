@@ -743,12 +743,12 @@ app.get('/api/mutual-funds/hdfc', (req, res) => {
     const schemeCount = hdfcMfDb.getAllSchemes().length;
     if (schemeCount === 0 && !hdfcAutoTriggered) {
       hdfcAutoTriggered = true;
-      console.log('[server] HDFC MF DB empty — auto-triggering pipeline...');
-      const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
-      runHdfcPipeline().then(() => {
-        console.log('[server] HDFC MF auto-pipeline completed');
+      console.log('[server] HDFC MF DB empty — auto-triggering Groww pipeline...');
+      const { main: runGrowwPipeline } = require('./scripts/hdfc/importGrowwEquity');
+      runGrowwPipeline().then(() => {
+        console.log('[server] HDFC MF Groww pipeline completed');
       }).catch(err => {
-        console.error('[server] HDFC MF auto-pipeline failed:', err.message);
+        console.error('[server] HDFC MF Groww pipeline failed:', err.message);
         hdfcAutoTriggered = false; // allow retry
       });
       // Return empty result while pipeline runs — frontend will retry
@@ -798,9 +798,9 @@ app.post('/api/mutual-funds/hdfc/run-pipeline', async (req, res) => {
   hdfcPipelineRunning = true;
   res.json({ success: true, message: 'HDFC pipeline started. Check back in 2-3 minutes.' });
   try {
-    const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
-    await runHdfcPipeline();
-    console.log('[server] HDFC MF pipeline completed via manual trigger');
+    const { main: runGrowwPipeline } = require('./scripts/hdfc/importGrowwEquity');
+    await runGrowwPipeline();
+    console.log('[server] HDFC MF Groww pipeline completed via manual trigger');
   } catch (err) {
     console.error('[server] HDFC MF pipeline failed:', err.message);
   } finally {

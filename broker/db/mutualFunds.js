@@ -2,9 +2,9 @@
  * db/mutualFunds.js
  *
  * SQLite schema for HDFC Mutual Fund scheme-level data.
- * Stores: schemes, 1Y returns, AUM, investor counts, monthly portfolios, and complete holdings.
+ * Stores: schemes, returns (all periods), AUM, NAV, monthly portfolios, and complete holdings.
  *
- * Each scheme has its OWN return, AUM, investor count, and monthly portfolio snapshots.
+ * Each scheme has its OWN return, AUM, and monthly portfolio snapshots.
  * Historical monthly portfolios are never overwritten — each is identified by (schemeId, portfolioDate).
  */
 
@@ -44,27 +44,27 @@ try {
 db.exec(`
   -- SCHEMES: Master list of HDFC mutual fund schemes
   CREATE TABLE IF NOT EXISTS mutual_fund_schemes (
-    id TEXT PRIMARY KEY,              -- unique schemeId, e.g. 'HDFC_FLEXI_CAP_DIRECT_GROWTH'
-    schemeCode INTEGER,               -- AMFI scheme code
-    schemeName TEXT NOT NULL,          -- full official name
-    amc TEXT NOT NULL DEFAULT 'HDFC Mutual Fund',
-    category TEXT,                     -- 'Equity: Flexi Cap', 'Equity: Mid Cap', etc.
-    plan TEXT DEFAULT 'Direct',        -- 'Direct' | 'Regular'
-    option TEXT DEFAULT 'Growth',      -- 'Growth' | 'IDCW'
-    isin TEXT,                         -- ISIN if available
-    status TEXT DEFAULT 'active',      -- 'active' | 'inactive' | 'closed'
+    id TEXT PRIMARY KEY,
+    schemeCode TEXT,
+    schemeName TEXT NOT NULL,
+    amc TEXT NOT NULL DEFAULT 'HDFC',
+    category TEXT,
+    plan TEXT DEFAULT 'Direct',
+    option TEXT DEFAULT 'Growth',
+    isin TEXT,
+    status TEXT DEFAULT 'active',
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- RETURNS: 1Y return per scheme (one row per scheme per period)
+  -- RETURNS: Returns per scheme for various periods (1D, 1W, 1M, 3M, 6M, 1Y, 3Y, 5Y)
   CREATE TABLE IF NOT EXISTS mutual_fund_returns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     schemeId TEXT NOT NULL,
-    period TEXT NOT NULL DEFAULT '1Y', -- '1Y' only
-    returnValue REAL,                  -- percentage, e.g. 18.42
-    asOfDate TEXT,                     -- ISO date
-    source TEXT,                       -- 'mfapi.in' | 'HDFC Official'
+    period TEXT NOT NULL DEFAULT '1Y',
+    returnValue REAL,
+    asOfDate TEXT,
+    source TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
     UNIQUE(schemeId, period)
@@ -74,9 +74,21 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS mutual_fund_aum (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     schemeId TEXT NOT NULL,
-    aum REAL,                          -- in Crores
-    aumDate TEXT,                      -- ISO date or month label
-    source TEXT,                       -- 'AMFI Monthly Report' | 'HDFC Official'
+    aum REAL,
+    asOfDate TEXT,
+    source TEXT,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
+    UNIQUE(schemeId)
+  );
+
+  -- NAV: Latest NAV per scheme
+  CREATE TABLE IF NOT EXISTS mutual_fund_nav (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schemeId TEXT NOT NULL,
+    nav REAL,
+    asOfDate TEXT,
+    source TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
     UNIQUE(schemeId)
@@ -86,21 +98,21 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS mutual_fund_investors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     schemeId TEXT NOT NULL,
-    investorCount REAL,                -- in lakhs if from HDFC (e.g. 39.9 means 39.9 lakhs)
-    investorDate TEXT,                 -- ISO date
-    source TEXT,                       -- 'HDFC Official' | 'AMFI'
+    investorCount REAL,
+    investorDate TEXT,
+    source TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
     UNIQUE(schemeId)
   );
 
-  -- PORTFOLIOS: Monthly portfolio snapshots (one per scheme per month)
+  -- PORTFOLIOS: Monthly portfolio snapshots
   CREATE TABLE IF NOT EXISTS mutual_fund_portfolios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     schemeId TEXT NOT NULL,
-    portfolioDate TEXT NOT NULL,       -- ISO date, e.g. '2026-07-31'
-    source TEXT,                       -- 'HDFC Official Monthly Portfolio'
-    sourceUrl TEXT,                    -- URL of the xlsx file
+    portfolioDate TEXT NOT NULL,
+    source TEXT,
+    sourceUrl TEXT,
     totalHoldings INTEGER,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
@@ -113,21 +125,22 @@ db.exec(`
     portfolioId INTEGER NOT NULL,
     securityName TEXT NOT NULL,
     isin TEXT,
-    assetType TEXT DEFAULT 'Equity',   -- 'Equity' | 'Debt' | 'Cash' | 'Other'
+    assetType TEXT DEFAULT 'Equity',
     sector TEXT,
     quantity REAL,
-    marketValue REAL,                  -- in lakhs (from HDFC xlsx)
-    marketValueCr REAL,                -- converted to crores
-    weight REAL,                       -- % to NAV
+    marketValue REAL,
+    marketValueCr REAL,
+    weight REAL,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (portfolioId) REFERENCES mutual_fund_portfolios(id)
   );
 
-  -- Indexes for performance
+  -- Indexes
   CREATE INDEX IF NOT EXISTS idx_mfs_scheme ON mutual_fund_schemes(id);
   CREATE INDEX IF NOT EXISTS idx_mfs_amc ON mutual_fund_schemes(amc);
   CREATE INDEX IF NOT EXISTS idx_mfret_scheme ON mutual_fund_returns(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfaum_scheme ON mutual_fund_aum(schemeId);
+  CREATE INDEX IF NOT EXISTS idx_mfnav_scheme ON mutual_fund_nav(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfinv_scheme ON mutual_fund_investors(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfp_scheme ON mutual_fund_portfolios(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfp_date ON mutual_fund_portfolios(portfolioDate);
@@ -138,8 +151,9 @@ db.exec(`
 // ─── Helper Functions ───────────────────────────────────────────────────────
 
 const helpers = {
+
   /**
-   * Upsert a scheme into mutual_fund_schemes
+   * Upsert a scheme — accepts an object
    */
   upsertScheme(scheme) {
     const stmt = db.prepare(`
@@ -157,16 +171,22 @@ const helpers = {
     `);
     return stmt.run(
       scheme.id, scheme.schemeCode || null, scheme.schemeName,
-      scheme.amc || 'HDFC Mutual Fund', scheme.category || null,
+      scheme.amc || 'HDFC', scheme.category || null,
       scheme.plan || 'Direct', scheme.option || 'Growth',
       scheme.isin || null, scheme.status || 'active'
     );
   },
 
   /**
-   * Upsert a 1Y return for a scheme
+   * Upsert a return — accepts an object { schemeId, period, returnValue, asOfDate, source }
    */
-  upsertReturn(schemeId, period, returnValue, asOfDate, source) {
+  upsertReturn(data) {
+    const schemeId = typeof data === 'string' ? arguments[0] : data.schemeId;
+    const period = typeof data === 'string' ? arguments[1] : (data.period || '1Y');
+    const returnValue = typeof data === 'string' ? arguments[2] : data.returnValue;
+    const asOfDate = typeof data === 'string' ? arguments[3] : data.asOfDate;
+    const source = typeof data === 'string' ? arguments[4] : data.source;
+
     const stmt = db.prepare(`
       INSERT INTO mutual_fund_returns (schemeId, period, returnValue, asOfDate, source)
       VALUES (?, ?, ?, ?, ?)
@@ -175,28 +195,58 @@ const helpers = {
         asOfDate = excluded.asOfDate,
         source = excluded.source
     `);
-    return stmt.run(schemeId, period || '1Y', returnValue, asOfDate, source);
+    return stmt.run(schemeId, period, returnValue, asOfDate || null, source || null);
   },
 
   /**
-   * Upsert AUM for a scheme
+   * Upsert AUM — accepts an object { schemeId, aum, asOfDate, source }
    */
-  upsertAum(schemeId, aum, aumDate, source) {
+  upsertAum(data) {
+    const schemeId = typeof data === 'string' ? arguments[0] : data.schemeId;
+    const aum = typeof data === 'string' ? arguments[1] : data.aum;
+    const asOfDate = typeof data === 'string' ? arguments[2] : (data.asOfDate || data.aumDate);
+    const source = typeof data === 'string' ? arguments[3] : data.source;
+
     const stmt = db.prepare(`
-      INSERT INTO mutual_fund_aum (schemeId, aum, aumDate, source)
+      INSERT INTO mutual_fund_aum (schemeId, aum, asOfDate, source)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(schemeId) DO UPDATE SET
         aum = excluded.aum,
-        aumDate = excluded.aumDate,
+        asOfDate = excluded.asOfDate,
         source = excluded.source
     `);
-    return stmt.run(schemeId, aum, aumDate, source);
+    return stmt.run(schemeId, aum, asOfDate || null, source || null);
   },
 
   /**
-   * Upsert investor count for a scheme
+   * Upsert NAV — accepts an object { schemeId, nav, asOfDate, source }
    */
-  upsertInvestors(schemeId, investorCount, investorDate, source) {
+  upsertNav(data) {
+    const schemeId = typeof data === 'string' ? arguments[0] : data.schemeId;
+    const nav = typeof data === 'string' ? arguments[1] : data.nav;
+    const asOfDate = typeof data === 'string' ? arguments[2] : data.asOfDate;
+    const source = typeof data === 'string' ? arguments[3] : data.source;
+
+    const stmt = db.prepare(`
+      INSERT INTO mutual_fund_nav (schemeId, nav, asOfDate, source)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(schemeId) DO UPDATE SET
+        nav = excluded.nav,
+        asOfDate = excluded.asOfDate,
+        source = excluded.source
+    `);
+    return stmt.run(schemeId, nav, asOfDate || null, source || null);
+  },
+
+  /**
+   * Upsert investor count — accepts an object { schemeId, investorCount, investorDate, source }
+   */
+  upsertInvestors(data) {
+    const schemeId = typeof data === 'string' ? arguments[0] : data.schemeId;
+    const investorCount = typeof data === 'string' ? arguments[1] : data.investorCount;
+    const investorDate = typeof data === 'string' ? arguments[2] : (data.investorDate || data.asOfDate);
+    const source = typeof data === 'string' ? arguments[3] : data.source;
+
     const stmt = db.prepare(`
       INSERT INTO mutual_fund_investors (schemeId, investorCount, investorDate, source)
       VALUES (?, ?, ?, ?)
@@ -205,58 +255,55 @@ const helpers = {
         investorDate = excluded.investorDate,
         source = excluded.source
     `);
-    return stmt.run(schemeId, investorCount, investorDate, source);
+    return stmt.run(schemeId, investorCount, investorDate || null, source || null);
   },
 
   /**
-   * Upsert a portfolio snapshot and its holdings in a transaction.
-   * Returns the portfolioId.
+   * Upsert a portfolio — accepts an object { schemeId, portfolioDate, source }
+   * Returns the portfolio ID.
    */
-  upsertPortfolio(schemeId, portfolioDate, source, sourceUrl, holdings) {
-    const upsertPortfolioStmt = db.prepare(`
-      INSERT INTO mutual_fund_portfolios (schemeId, portfolioDate, source, sourceUrl, totalHoldings)
-      VALUES (?, ?, ?, ?, ?)
+  upsertPortfolio(data) {
+    const schemeId = typeof data === 'string' ? arguments[0] : data.schemeId;
+    const portfolioDate = typeof data === 'string' ? arguments[1] : data.portfolioDate;
+    const source = typeof data === 'string' ? arguments[2] : data.source;
+
+    const stmt = db.prepare(`
+      INSERT INTO mutual_fund_portfolios (schemeId, portfolioDate, source)
+      VALUES (?, ?, ?)
       ON CONFLICT(schemeId, portfolioDate) DO UPDATE SET
-        source = excluded.source,
-        sourceUrl = excluded.sourceUrl,
-        totalHoldings = excluded.totalHoldings
+        source = excluded.source
       RETURNING id
     `);
+    const row = stmt.get(schemeId, portfolioDate, source || null);
+    return row.id;
+  },
 
-    const deleteHoldingsStmt = db.prepare(`
-      DELETE FROM mutual_fund_holdings WHERE portfolioId = ?
-    `);
+  /**
+   * Clear all holdings for a given portfolio
+   */
+  clearHoldings(portfolioId) {
+    return db.prepare('DELETE FROM mutual_fund_holdings WHERE portfolioId = ?').run(portfolioId);
+  },
 
-    const insertHoldingStmt = db.prepare(`
+  /**
+   * Insert a single holding — accepts an object { portfolioId, securityName, isin, assetType, sector, quantity, marketValue, weight }
+   */
+  insertHolding(data) {
+    const stmt = db.prepare(`
       INSERT INTO mutual_fund_holdings (portfolioId, securityName, isin, assetType, sector, quantity, marketValue, marketValueCr, weight)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-
-    const runInTransaction = db.transaction((schemeId, portfolioDate, source, sourceUrl, holdings) => {
-      const row = upsertPortfolioStmt.get(schemeId, portfolioDate, source, sourceUrl, holdings.length);
-      const portfolioId = row.id;
-
-      // Clear old holdings for this portfolio and re-insert
-      deleteHoldingsStmt.run(portfolioId);
-
-      for (const h of holdings) {
-        insertHoldingStmt.run(
-          portfolioId,
-          h.securityName,
-          h.isin || null,
-          h.assetType || 'Equity',
-          h.sector || null,
-          h.quantity || null,
-          h.marketValue || null,
-          h.marketValueCr || null,
-          h.weight || null
-        );
-      }
-
-      return portfolioId;
-    });
-
-    return runInTransaction(schemeId, portfolioDate, source, sourceUrl, holdings);
+    return stmt.run(
+      data.portfolioId,
+      data.securityName,
+      data.isin || null,
+      data.assetType || 'Equity',
+      data.sector || null,
+      data.quantity || null,
+      data.marketValue || null,
+      data.marketValueCr || null,
+      data.weight || null
+    );
   },
 
   /**
@@ -274,10 +321,17 @@ const helpers = {
   },
 
   /**
-   * Get 1Y return for a scheme
+   * Get return for a scheme (default 1Y, but can specify any period)
    */
-  getReturn(schemeId) {
-    return db.prepare('SELECT * FROM mutual_fund_returns WHERE schemeId = ? AND period = ?').get(schemeId, '1Y');
+  getReturn(schemeId, period) {
+    return db.prepare('SELECT * FROM mutual_fund_returns WHERE schemeId = ? AND period = ?').get(schemeId, period || '1Y');
+  },
+
+  /**
+   * Get all returns for a scheme
+   */
+  getAllReturns(schemeId) {
+    return db.prepare('SELECT * FROM mutual_fund_returns WHERE schemeId = ? ORDER BY period').all(schemeId);
   },
 
   /**
@@ -285,6 +339,13 @@ const helpers = {
    */
   getAum(schemeId) {
     return db.prepare('SELECT * FROM mutual_fund_aum WHERE schemeId = ?').get(schemeId);
+  },
+
+  /**
+   * Get NAV for a scheme
+   */
+  getNav(schemeId) {
+    return db.prepare('SELECT * FROM mutual_fund_nav WHERE schemeId = ?').get(schemeId);
   },
 
   /**
@@ -304,7 +365,7 @@ const helpers = {
   },
 
   /**
-   * Get portfolio by schemeId and date (or latest if no date)
+   * Get portfolio by schemeId and date
    */
   getPortfolio(schemeId, portfolioDate) {
     if (portfolioDate) {
@@ -334,6 +395,15 @@ const helpers = {
   },
 
   /**
+   * Get all holdings for a scheme (across all portfolio dates)
+   */
+  getHoldingsForScheme(schemeId) {
+    const portfolio = this.getLatestPortfolio(schemeId);
+    if (!portfolio) return [];
+    return this.getHoldings(portfolio.id);
+  },
+
+  /**
    * Get holdings for a scheme by portfolioDate (convenience)
    */
   getHoldingsByDate(schemeId, portfolioDate) {
@@ -354,7 +424,9 @@ const helpers = {
 
     const ret = this.getReturn(schemeId);
     const aum = this.getAum(schemeId);
+    const nav = this.getNav(schemeId);
     const inv = this.getInvestors(schemeId);
+    const allReturns = this.getAllReturns(schemeId);
     const latestPortfolio = this.getLatestPortfolio(schemeId);
     const portfolioDates = this.getPortfolioDates(schemeId);
 
@@ -368,12 +440,14 @@ const helpers = {
       return1Y: ret ? ret.returnValue : null,
       return1YDate: ret ? ret.asOfDate : null,
       return1YSource: ret ? ret.source : null,
+      returns: allReturns.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),
+      nav: nav ? nav.nav : null,
+      navDate: nav ? nav.asOfDate : null,
       aum: aum ? aum.aum : null,
-      aumDate: aum ? aum.aumDate : null,
+      aumDate: aum ? aum.asOfDate : null,
       aumSource: aum ? aum.source : null,
       investorCount: inv ? inv.investorCount : null,
       investorDate: inv ? inv.investorDate : null,
-      investorSource: inv ? inv.source : null,
       latestPortfolioDate: latestPortfolio ? latestPortfolio.portfolioDate : null,
       totalHoldings: latestPortfolio ? latestPortfolio.totalHoldings : 0,
       availablePortfolioMonths: portfolioDates.length,
@@ -389,7 +463,9 @@ const helpers = {
     return schemes.map(s => {
       const ret = this.getReturn(s.id);
       const aum = this.getAum(s.id);
+      const nav = this.getNav(s.id);
       const inv = this.getInvestors(s.id);
+      const allReturns = this.getAllReturns(s.id);
       const latestPortfolio = this.getLatestPortfolio(s.id);
       let topHoldings = [];
       if (latestPortfolio) {
@@ -409,10 +485,12 @@ const helpers = {
         status: s.status,
         return1Y: ret ? ret.returnValue : null,
         return1YDate: ret ? ret.asOfDate : null,
+        returns: allReturns.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),
+        nav: nav ? nav.nav : null,
+        navDate: nav ? nav.asOfDate : null,
         aum: aum ? aum.aum : null,
-        aumDate: aum ? aum.aumDate : null,
+        aumDate: aum ? aum.asOfDate : null,
         investorCount: inv ? inv.investorCount : null,
-        investorDate: inv ? inv.investorDate : null,
         latestPortfolioDate: latestPortfolio ? latestPortfolio.portfolioDate : null,
         availablePortfolioMonths: this.getPortfolioDates(s.id).length,
         topHoldings: topHoldings.map(h => ({
@@ -427,18 +505,15 @@ const helpers = {
   },
 
   /**
-   * Validate data integrity — check for duplicate holdings across schemes
+   * Validate data integrity
    */
   validateIntegrity() {
     const schemes = this.getAllSchemes();
     const warnings = [];
     let totalPortfolios = 0;
     let totalHoldings = 0;
-    let schemesWith12Months = 0;
-    let schemesWithLess = 0;
 
-    // Check for identical holdings between schemes
-    const holdingsMap = new Map(); // holdingsSignature -> [schemeIds]
+    const holdingsMap = new Map();
 
     for (const scheme of schemes) {
       const portfolios = db.prepare(
@@ -447,16 +522,11 @@ const helpers = {
 
       totalPortfolios += portfolios.length;
 
-      if (portfolios.length >= 12) schemesWith12Months++;
-      else schemesWithLess++;
-
-      // Check latest portfolio for duplicates
       if (portfolios.length > 0) {
         const latest = portfolios[0];
         const holdings = this.getHoldings(latest.id);
         totalHoldings += holdings.length;
 
-        // Create a signature from sorted holdings names+weights
         const sig = holdings
           .map(h => `${h.securityName}:${h.weight}`)
           .sort()
@@ -474,36 +544,16 @@ const helpers = {
       }
     }
 
-    // Check for schemes missing data
-    const missing = [];
-    for (const scheme of schemes) {
-      const ret = this.getReturn(scheme.id);
-      const aum = this.getAum(scheme.id);
-      const inv = this.getInvestors(scheme.id);
-      const portfolio = this.getLatestPortfolio(scheme.id);
-      const issues = [];
-      if (!ret) issues.push('return1Y');
-      if (!aum) issues.push('aum');
-      if (!inv) issues.push('investors');
-      if (!portfolio) issues.push('portfolio');
-      if (issues.length > 0) {
-        missing.push({ scheme: scheme.id, missing: issues });
-      }
-    }
-
     return {
       totalSchemes: schemes.length,
       totalPortfolios,
       totalHoldings,
-      schemesWith12Months,
-      schemesWithLessThan12Months: schemesWithLess,
       duplicateWarnings: warnings,
-      missingData: missing
     };
   },
 
   /**
-   * Get the raw database instance (for advanced queries)
+   * Get the raw database instance
    */
   getDb() {
     return db;
