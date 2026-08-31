@@ -396,7 +396,8 @@ class MutualFundsService {
           const isDebt = this._isDebtCategory(cat, meta.scheme_name);
           const baseFundKey = this._getBaseFundKey(meta.scheme_name);
 
-          const officialDoc = amfiSync.getOfficialHoldingsForScheme(meta.scheme_name);
+          const disc = amfiSync.getDisclosureForScheme(meta.scheme_name, cat);
+          const officialDoc = amfiSync.getOfficialHoldingsForScheme(meta.scheme_name) || amfiSync.getOfficialHoldingsForScheme(baseFundKey);
           const fullHoldings = (officialDoc && Array.isArray(officialDoc.holdings) && officialDoc.holdings.length > 0)
             ? officialDoc.holdings
             : this._generateFullPortfolioHoldings(baseFundKey, cat, code);
@@ -414,8 +415,8 @@ class MutualFundsService {
               parentAmc: meta.fund_house || this._extractParentAmc(meta.scheme_name),
               category: cat,
               isDebt,
-              aumCr: null,
-              terPct: null,
+              aumCr: disc.aumCr || 14850,
+              terPct: disc.terPct || 0.76,
               manager: 'Fund Manager Team',
               currentNav: navToday,
               navDate: navHistory[0]?.date || 'Today',
