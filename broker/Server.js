@@ -842,6 +842,25 @@ app.get('/api/mutual-funds/hdfc/data-status', (req, res) => {
   }
 });
 
+// POST /api/mutual-funds/hdfc/run-pipeline — Trigger HDFC data import
+let hdfcPipelineRunning = false;
+app.post('/api/mutual-funds/hdfc/run-pipeline', async (req, res) => {
+  if (hdfcPipelineRunning) {
+    return res.json({ success: true, message: 'Pipeline already running...' });
+  }
+  hdfcPipelineRunning = true;
+  res.json({ success: true, message: 'HDFC pipeline started. Check back in 2-3 minutes.' });
+  try {
+    const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
+    await runHdfcPipeline();
+    console.log('[server] HDFC MF pipeline completed via manual trigger');
+  } catch (err) {
+    console.error('[server] HDFC MF pipeline failed:', err.message);
+  } finally {
+    hdfcPipelineRunning = false;
+  }
+});
+
 app.get('/api/institutional/schemes-ranking', (req, res) => {
   try {
     const { timeframe } = req.query;
