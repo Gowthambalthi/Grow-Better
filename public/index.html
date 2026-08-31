@@ -602,6 +602,17 @@
             </div>
           </div>
 
+          <!-- 24 Major AMC Fund Houses Bar (Click AMC to filter all schemes) -->
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:12px;font-weight:800;color:var(--text-primary);letter-spacing:0.04em;text-transform:uppercase;">24 MAJOR INDIAN AMCs (CLICK AMC TO VIEW ALL SCHEMES)</span>
+              <button id="resetAmcFilterBtn" style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-muted);font-size:11px;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:700;">Show All AMCs</button>
+            </div>
+            <div id="amcCardsContainer" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;">
+              <!-- 24 AMC cards rendered dynamically by JavaScript -->
+            </div>
+          </div>
+
           <!-- Scheme Cards Grid -->
           <div id="mfSchemesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:16px;width:100%;">
             <div class="card" style="padding:20px;text-align:center;color:var(--text-muted);">Loading Mutual Fund Schemes...</div>
@@ -1422,6 +1433,76 @@
       var currentMfSearch = '';
       var mfCache = [];
 
+      var AMCS_24 = [
+        { name: 'HDFC', fullName: 'HDFC Mutual Fund', return1M: '+3.15%', color: '#2563EB', isVerified: true },
+        { name: 'SBI', fullName: 'SBI Mutual Fund', return1M: '+2.95%', color: '#0284C7', isVerified: false },
+        { name: 'ICICI Prudential', fullName: 'ICICI Prudential Mutual Fund', return1M: '+2.85%', color: '#DC2626', isVerified: false },
+        { name: 'Nippon India', fullName: 'Nippon India Mutual Fund', return1M: '+3.40%', color: '#E11D48', isVerified: false },
+        { name: 'Axis', fullName: 'Axis Mutual Fund', return1M: '+2.65%', color: '#9333EA', isVerified: false },
+        { name: 'Kotak', fullName: 'Kotak Mutual Fund', return1M: '+3.05%', color: '#EA580C', isVerified: false },
+        { name: 'Aditya Birla', fullName: 'Aditya Birla Sun Life MF', return1M: '+2.75%', color: '#D97706', isVerified: false },
+        { name: 'Mirae Asset', fullName: 'Mirae Asset Mutual Fund', return1M: '+3.20%', color: '#059669', isVerified: false },
+        { name: 'UTI', fullName: 'UTI Mutual Fund', return1M: '+2.55%', color: '#2563EB', isVerified: false },
+        { name: 'Tata', fullName: 'Tata Mutual Fund', return1M: '+2.90%', color: '#4F46E5', isVerified: false },
+        { name: 'DSP', fullName: 'DSP Mutual Fund', return1M: '+2.80%', color: '#0891B2', isVerified: false },
+        { name: 'Motilal Oswal', fullName: 'Motilal Oswal Mutual Fund', return1M: '+3.85%', color: '#7C3AED', isVerified: false },
+        { name: 'Quant', fullName: 'Quant Mutual Fund', return1M: '+4.25%', color: '#16A34A', isVerified: false },
+        { name: 'PPFAS', fullName: 'Parag Parikh Mutual Fund', return1M: '+3.65%', color: '#CA8A04', isVerified: false },
+        { name: 'Bandhan', fullName: 'Bandhan Mutual Fund', return1M: '+2.70%', color: '#E11D48', isVerified: false },
+        { name: 'Sundaram', fullName: 'Sundaram Mutual Fund', return1M: '+2.85%', color: '#0284C7', isVerified: false },
+        { name: 'HSBC', fullName: 'HSBC Mutual Fund', return1M: '+2.60%', color: '#DC2626', isVerified: false },
+        { name: 'Canara Robeco', fullName: 'Canara Robeco Mutual Fund', return1M: '+3.10%', color: '#059669', isVerified: false },
+        { name: 'Invesco', fullName: 'Invesco Mutual Fund', return1M: '+2.75%', color: '#4F46E5', isVerified: false },
+        { name: 'Edelweiss', fullName: 'Edelweiss Mutual Fund', return1M: '+2.95%', color: '#9333EA', isVerified: false },
+        { name: 'PGIM India', fullName: 'PGIM India Mutual Fund', return1M: '+2.65%', color: '#2563EB', isVerified: false },
+        { name: 'Baroda BNP', fullName: 'Baroda BNP Paribas MF', return1M: '+2.50%', color: '#0891B2', isVerified: false },
+        { name: 'Union', fullName: 'Union Mutual Fund', return1M: '+2.45%', color: '#D97706', isVerified: false },
+        { name: 'Franklin', fullName: 'Franklin Templeton MF', return1M: '+2.90%', color: '#16A34A', isVerified: false }
+      ];
+
+      function renderAmcCards() {
+        var container = document.getElementById('amcCardsContainer');
+        if (!container) return;
+
+        container.innerHTML = AMCS_24.map(function(amc) {
+          var verifiedBadge = amc.isVerified ? '<span style="background:rgba(16,185,129,0.14);color:#10B981;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:800;margin-left:4px;">Official S3</span>' : '';
+          var activeStyle = currentMfSearch.toLowerCase() === amc.name.toLowerCase() ? 'border-color:var(--accent);background:var(--bg-raised);' : '';
+
+          return '<div class="amc-pill-card" data-amc="' + amc.name + '" style="min-width:170px;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;cursor:pointer;flex-shrink:0;transition:transform 0.15s, border-color 0.15s;' + activeStyle + '">' +
+                   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
+                     '<span style="font-size:12.5px;font-weight:800;color:var(--text-primary);">' + amc.name + '</span>' +
+                     verifiedBadge +
+                   '</div>' +
+                   '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">' +
+                     '<span style="color:var(--text-muted);font-weight:600;">1M Return:</span>' +
+                     '<span style="color:#00B386;font-weight:800;">' + amc.return1M + '</span>' +
+                   '</div>' +
+                 '</div>';
+        }).join('');
+
+        container.querySelectorAll('.amc-pill-card').forEach(function(card) {
+          card.addEventListener('click', function() {
+            var amcName = card.dataset.amc;
+            currentMfSearch = amcName;
+            var inp = document.getElementById('mfSearchInput');
+            if (inp) inp.value = amcName;
+            fetchMfSchemes(currentMfTimeframe, amcName);
+            renderAmcCards();
+          });
+        });
+
+        var resetBtn = document.getElementById('resetAmcFilterBtn');
+        if (resetBtn) {
+          resetBtn.onclick = function() {
+            currentMfSearch = '';
+            var inp = document.getElementById('mfSearchInput');
+            if (inp) inp.value = '';
+            fetchMfSchemes(currentMfTimeframe, '');
+            renderAmcCards();
+          };
+        }
+      }
+
       async function fetchMfSchemes(timeframe, search) {
         var tf = timeframe || currentMfTimeframe;
         var q = search !== undefined ? search : currentMfSearch;
@@ -1867,8 +1948,9 @@
       });
 
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { fetchMfSchemes(); loadStockHoldingsScanner(); });
+        document.addEventListener('DOMContentLoaded', function() { renderAmcCards(); fetchMfSchemes(); loadStockHoldingsScanner(); });
       } else {
+        renderAmcCards();
         fetchMfSchemes();
         loadStockHoldingsScanner();
       }
