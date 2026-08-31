@@ -62,7 +62,7 @@ export function renderHoldingsRow(row) {
           <div class="sym-avatar-sq" style="background:${logoBg};">${firstLetter}</div>
           <div style="display:flex;flex-direction:column;gap:2px;min-width:0;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="font-weight:800;font-size:13px;color:var(--ink);">${rawSymbol}</span>${mtfBadge}
+              <span style="font-weight:800;font-size:13.5px;color:#0F172A !important;">${rawSymbol}</span>${mtfBadge}
             </div>
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
               ${brokerBadge}
@@ -71,15 +71,15 @@ export function renderHoldingsRow(row) {
           </div>
         </div>
       </td>
-      <td>${row.quantity}</td>
-      <td>${money(row.avgPrice)}</td>
-      <td>${money(row.ltp)}</td>
-      <td>${money(row.investedAmount)}</td>
-      <td>${money(row.currentAmount)}</td>
+      <td style="color:#0F172A !important;font-weight:600;">${row.quantity}</td>
+      <td style="color:#0F172A !important;font-weight:600;">${money(row.avgPrice)}</td>
+      <td style="color:#0F172A !important;font-weight:600;">${money(row.ltp)}</td>
+      <td style="color:#0F172A !important;font-weight:600;">${money(row.investedAmount)}</td>
+      <td style="color:#0F172A !important;font-weight:600;">${money(row.currentAmount)}</td>
       <td class="${plClass(rawOverallPL)}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
       <td class="${netPlClass}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:700;">${money(netPL)}</span><br><small>${pct(netPLPercent)}</small></td>
       <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
-      <td style="text-align:right;padding-right:20px !important;">${daysText}</td>
+      <td style="text-align:right;padding-right:20px !important;color:#0F172A !important;font-weight:600;">${daysText}</td>
     </tr>`;
 }
 

@@ -2280,7 +2280,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 .stat-label, .gs-lbl {
   font-size: 13.5px !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   color: #64748B !important;
   margin-bottom: 8px !important;
 }
@@ -2288,9 +2288,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .stat-value, .gs-val {
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 22px !important;
-  font-weight: 500 !important;
+  font-weight: 700 !important;
   line-height: 1.1 !important;
   margin-bottom: 6px !important;
+  color: #0F172A !important; /* Crisp high contrast dark text for white cards */
 }
 
 .stat-subtitle, .gs-sub {
@@ -2306,13 +2307,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-weight: 700 !important;
   text-transform: uppercase !important;
   padding: 12px 16px !important;
-  color: #94A3B8 !important;
+  color: #64748B !important;
   background: #FAFAFA !important;
 }
 
 .holdings-table td {
   font-size: 13px !important;
   padding: 14px 16px !important;
+  color: #0F172A !important; /* Crisp high contrast dark text for table cells */
 }
 
 /* Avatar squares (R, E, C) exact match to target screenshot */
