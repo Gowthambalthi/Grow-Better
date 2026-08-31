@@ -729,6 +729,119 @@ app.get('/api/mutual-funds/aggregated-stocks', async (req, res) => {
   }
 });
 
+// ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
+const hdfcMfDb = require('./db/mutualFunds');
+
+// GET /api/mutual-funds/hdfc — List all HDFC schemes with summary
+app.get('/api/mutual-funds/hdfc', (req, res) => {
+  try {
+    const { search } = req.query;
+    let schemes = hdfcMfDb.getAllSchemesSummary();
+
+    if (search) {
+      const q = search.toLowerCase();
+      schemes = schemes.filter(s =>
+        (s.schemeName || '').toLowerCase().includes(q) ||
+        (s.category || '').toLowerCase().includes(q) ||
+        (s.id || '').toLowerCase().includes(q) ||
+        (s.topHoldings || []).some(h => (h.securityName || '').toLowerCase().includes(q))
+      );
+    }
+
+    res.json({
+      success: true,
+      totalSchemes: schemes.length,
+      source: 'HDFC Official Data (SQLite)',
+      schemes
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/mutual-funds/hdfc/:schemeId — Full scheme profile with latest holdings
+app.get('/api/mutual-funds/hdfc/:schemeId', (req, res) => {
+  try {
+    const { schemeId } = req.params;
+    const profile = hdfcMfDb.getSchemeProfile(schemeId);
+    if (!profile) {
+      return res.status(404).json({ success: false, error: `Scheme '${schemeId}' not found` });
+    }
+    res.json({ success: true, scheme: profile });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/mutual-funds/hdfc/:schemeId/holdings — Full holdings for a specific month
+app.get('/api/mutual-funds/hdfc/:schemeId/holdings', (req, res) => {
+  try {
+    const { schemeId } = req.params;
+    const { month, date } = req.query;
+
+    // Get available portfolio dates
+    const dates = hdfcMfDb.getPortfolioDates(schemeId);
+    if (!dates || dates.length === 0) {
+      return res.status(404).json({ success: false, error: `No portfolio data for '${schemeId}'` });
+    }
+
+    // Determine which date to fetch
+    let targetDate = null;
+    if (date) {
+      targetDate = date; // exact date like 2026-07-31
+    } else if (month) {
+      // month format: 2026-07 or Jul 2026 — find the latest portfolio in that month
+      const monthLower = month.toLowerCase();
+      const match = dates.find(d => d.portfolioDate.startsWith(monthLower) || d.portfolioDate.includes(monthLower));
+      if (match) targetDate = match.portfolioDate;
+    }
+    // If no month/date specified, use latest
+
+    const portfolio = hdfcMfDb.getHoldingsByDate(schemeId, targetDate);
+    if (!portfolio) {
+      return res.status(404).json({ success: false, error: `Portfolio not found for '${schemeId}' at date '${targetDate || 'latest'}'` });
+    }
+
+    res.json({
+      success: true,
+      schemeId,
+      schemeName: (hdfcMfDb.getScheme(schemeId) || {}).schemeName || schemeId,
+      portfolioDate: portfolio.portfolioDate,
+      totalHoldings: portfolio.holdings.length,
+      availableMonths: dates.map(d => ({ date: d.portfolioDate, totalHoldings: d.totalHoldings })),
+      holdings: portfolio.holdings
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/mutual-funds/hdfc/:schemeId/months — List available portfolio months
+app.get('/api/mutual-funds/hdfc/:schemeId/months', (req, res) => {
+  try {
+    const { schemeId } = req.params;
+    const dates = hdfcMfDb.getPortfolioDates(schemeId);
+    res.json({
+      success: true,
+      schemeId,
+      totalMonths: dates.length,
+      months: dates.map(d => ({ date: d.portfolioDate, totalHoldings: d.totalHoldings }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/mutual-funds/hdfc/data-status — Data integrity report
+app.get('/api/mutual-funds/hdfc/data-status', (req, res) => {
+  try {
+    const report = hdfcMfDb.validateIntegrity();
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/institutional/schemes-ranking', (req, res) => {
   try {
     const { timeframe } = req.query;
@@ -945,6 +1058,26 @@ async function start() {
     (s) => console.log('[server] instrument master loaded:', s),
     (err) => console.error('[server] instrument master load failed:', err.message)
   ); // deliberately not awaited — server starts serving immediately, instrument search just 503s until this resolves
+
+  // Auto-run HDFC Mutual Fund pipeline if database is empty (for Render deployment)
+  try {
+    const hdfcDb = require('./db/mutualFunds');
+    const schemeCount = hdfcDb.getAllSchemes().length;
+    if (schemeCount === 0) {
+      console.log('[server] HDFC MF database empty — running import pipeline (background)...');
+      const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
+      runHdfcPipeline().then(() => {
+        console.log('[server] HDFC MF pipeline completed successfully');
+      }).catch(err => {
+        console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
+      });
+    } else {
+      console.log(`[server] HDFC MF database loaded: ${schemeCount} schemes`);
+    }
+  } catch (e) {
+    console.warn('[server] HDFC MF pipeline init warning:', e.message);
+  }
+
   const port = process.env.PORT || env.server.port || 4000;
   const host = '0.0.0.0';
   app.listen(port, host, () => {

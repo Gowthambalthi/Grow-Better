@@ -1058,6 +1058,26 @@ async function start() {
     (s) => console.log('[server] instrument master loaded:', s),
     (err) => console.error('[server] instrument master load failed:', err.message)
   ); // deliberately not awaited — server starts serving immediately, instrument search just 503s until this resolves
+
+  // Auto-run HDFC Mutual Fund pipeline if database is empty (for Render deployment)
+  try {
+    const hdfcDb = require('./db/mutualFunds');
+    const schemeCount = hdfcDb.getAllSchemes().length;
+    if (schemeCount === 0) {
+      console.log('[server] HDFC MF database empty — running import pipeline (background)...');
+      const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
+      runHdfcPipeline().then(() => {
+        console.log('[server] HDFC MF pipeline completed successfully');
+      }).catch(err => {
+        console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
+      });
+    } else {
+      console.log(`[server] HDFC MF database loaded: ${schemeCount} schemes`);
+    }
+  } catch (e) {
+    console.warn('[server] HDFC MF pipeline init warning:', e.message);
+  }
+
   const port = process.env.PORT || env.server.port || 4000;
   const host = '0.0.0.0';
   app.listen(port, host, () => {
