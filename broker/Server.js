@@ -735,9 +735,26 @@ const hdfcMfDb = require('./db/mutualFunds');
 // IMPORTANT: Static routes BEFORE :schemeId to avoid Express param matching
 
 // GET /api/mutual-funds/hdfc — List all HDFC schemes with summary
+// Auto-triggers pipeline if database is empty
+let hdfcAutoTriggered = false;
 app.get('/api/mutual-funds/hdfc', (req, res) => {
   try {
-    const { search } = req.query;
+    // Auto-trigger pipeline if DB is empty (first request on fresh deploy)
+    const schemeCount = hdfcMfDb.getAllSchemes().length;
+    if (schemeCount === 0 && !hdfcAutoTriggered) {
+      hdfcAutoTriggered = true;
+      console.log('[server] HDFC MF DB empty — auto-triggering pipeline...');
+      const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
+      runHdfcPipeline().then(() => {
+        console.log('[server] HDFC MF auto-pipeline completed');
+      }).catch(err => {
+        console.error('[server] HDFC MF auto-pipeline failed:', err.message);
+        hdfcAutoTriggered = false; // allow retry
+      });
+      // Return empty result while pipeline runs — frontend will retry
+      return res.json({ success: true, totalSchemes: 0, source: 'Pipeline running...', schemes: [] });
+    }
+
     let schemes = hdfcMfDb.getAllSchemesSummary();
 
     if (search) {
