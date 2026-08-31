@@ -755,6 +755,7 @@ app.get('/api/mutual-funds/hdfc', (req, res) => {
       return res.json({ success: true, totalSchemes: 0, source: 'Pipeline running...', schemes: [] });
     }
 
+    const { search } = req.query;
     let schemes = hdfcMfDb.getAllSchemesSummary();
 
     if (search) {
