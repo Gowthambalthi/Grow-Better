@@ -135,12 +135,26 @@ db.exec(`
     FOREIGN KEY (portfolioId) REFERENCES mutual_fund_portfolios(id)
   );
 
+  -- NAV_HISTORY: Daily NAV snapshots for charting (last 30+ days)
+  CREATE TABLE IF NOT EXISTS mutual_fund_nav_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schemeId TEXT NOT NULL,
+    navDate TEXT NOT NULL,
+    nav REAL NOT NULL,
+    source TEXT DEFAULT 'groww',
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
+    UNIQUE(schemeId, navDate)
+  );
+
   -- Indexes
   CREATE INDEX IF NOT EXISTS idx_mfs_scheme ON mutual_fund_schemes(id);
   CREATE INDEX IF NOT EXISTS idx_mfs_amc ON mutual_fund_schemes(amc);
   CREATE INDEX IF NOT EXISTS idx_mfret_scheme ON mutual_fund_returns(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfaum_scheme ON mutual_fund_aum(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfnav_scheme ON mutual_fund_nav(schemeId);
+  CREATE INDEX IF NOT EXISTS idx_mfnavhist_scheme ON mutual_fund_nav_history(schemeId);
+  CREATE INDEX IF NOT EXISTS idx_mfnavhist_date ON mutual_fund_nav_history(navDate);
   CREATE INDEX IF NOT EXISTS idx_mfinv_scheme ON mutual_fund_investors(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfp_scheme ON mutual_fund_portfolios(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfp_date ON mutual_fund_portfolios(portfolioDate);
@@ -550,6 +564,65 @@ const helpers = {
       totalHoldings,
       duplicateWarnings: warnings,
     };
+  },  // ─── NAV History Functions ───────────────────────────────────────
+
+  /**
+   * Insert or update a daily NAV snapshot
+   */
+  upsertNavHistory(schemeId, navDate, nav, source) {
+    const stmt = db.prepare(`
+      INSERT INTO mutual_fund_nav_history (schemeId, navDate, nav, source)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(schemeId, navDate) DO UPDATE SET
+        nav = excluded.nav,
+        source = excluded.source
+    `);
+    return stmt.run(schemeId, navDate, nav, source || 'groww');
+  },
+
+  /**
+   * Get NAV history for a scheme (last N days)
+   */
+  getNavHistory(schemeId, days) {
+    let sql = 'SELECT * FROM mutual_fund_nav_history WHERE schemeId = ? ORDER BY navDate DESC';
+    if (days) sql += ' LIMIT ' + parseInt(days);
+    return db.prepare(sql).all(schemeId);
+  },
+
+  /**
+   * Get NAV history for a scheme within a date range
+   */
+  getNavHistoryRange(schemeId, fromDate, toDate) {
+    return db.prepare(
+      'SELECT * FROM mutual_fund_nav_history WHERE schemeId = ? AND navDate >= ? AND navDate <= ? ORDER BY navDate ASC'
+    ).all(schemeId, fromDate, toDate);
+  },
+
+  /**
+   * Get the latest NAV date for a scheme
+   */
+  getLatestNavDate(schemeId) {
+    return db.prepare(
+      'SELECT navDate FROM mutual_fund_nav_history WHERE schemeId = ? ORDER BY navDate DESC LIMIT 1'
+    ).get(schemeId);
+  },
+
+  /**
+   * Check if a specific NAV date already exists
+   */
+  hasNavHistory(schemeId, navDate) {
+    return db.prepare(
+      'SELECT 1 FROM mutual_fund_nav_history WHERE schemeId = ? AND navDate = ?'
+    ).get(schemeId, navDate);
+  },
+
+  /**
+   * Get all schemes that need NAV updates (all active schemes)
+   */
+  getAllActiveSchemeIds() {
+    return db.prepare(
+      "SELECT id, schemeCode FROM mutual_fund_schemes WHERE status = 'active'"
+    ).all();
   },
 
   /**
@@ -558,6 +631,7 @@ const helpers = {
   getDb() {
     return db;
   }
+
 };
 
 module.exports = helpers;

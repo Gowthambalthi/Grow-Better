@@ -881,6 +881,39 @@ app.get('/api/mutual-funds/hdfc/:schemeId/months', (req, res) => {
   }
 });
 
+// GET /api/mutual-funds/hdfc/:schemeId/nav-history — NAV chart data (last 30 days)
+app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', (req, res) => {
+  try {
+    const { schemeId } = req.params;
+    const days = parseInt(req.query.days) || 30;
+    const history = hdfcMfDb.getNavHistory(schemeId, days);
+    if (!history || history.length === 0) {
+      return res.json({ success: true, schemeId, days, data: [], message: 'No NAV history yet. Run daily tracker to populate.' });
+    }
+    res.json({
+      success: true,
+      schemeId,
+      schemeName: (hdfcMfDb.getScheme(schemeId) || {}).schemeName || schemeId,
+      days,
+      dataPoints: history.length,
+      data: history.reverse().map(h => ({ date: h.navDate, nav: h.nav }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/mutual-funds/hdfc/track-nav — Trigger daily NAV tracking
+app.post('/api/mutual-funds/hdfc/track-nav', async (req, res) => {
+  try {
+    const { trackDailyNav } = require('./scripts/hdfc/trackNavHistory');
+    res.json({ success: true, message: 'NAV tracking started...' });
+    trackDailyNav().then(() => console.log('[server] NAV tracking completed')).catch(err => console.error('[server] NAV tracking failed:', err.message));
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/api/institutional/schemes-ranking', (req, res) => {
   try {
     const { timeframe } = req.query;

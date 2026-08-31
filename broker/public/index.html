@@ -637,6 +637,15 @@
               <div><div style="font-size:10px;color:var(--text-muted);">1Y RETURN</div><div id="modalMfRet1y" style="font-size:15px;font-weight:800;color:var(--profit);">+28.50%</div></div>
             </div>
 
+            <!-- NAV History Chart (HDFC schemes only) -->
+            <div id="navChartContainer" style="display:none;margin-bottom:20px;background:var(--bg-input);padding:16px;border-radius:8px;border:1px solid var(--line);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;">NAV TREND (LAST 30 DAYS)</h3>
+                <div id="navChartRange" style="font-size:11px;color:var(--text-muted);"></div>
+              </div>
+              <canvas id="navChartCanvas" width="800" height="200" style="width:100%;height:200px;"></canvas>
+            </div>
+
             <!-- Available Plan Variants Table -->
             <div style="margin-bottom:20px;">
               <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0 0 8px 0;letter-spacing:0.04em;">AVAILABLE SCHEME VARIANTS (DIRECT / REGULAR / GROWTH / IDCW)</h3>
@@ -1896,9 +1905,10 @@
 
         renderModalVariantsTable(s.variants || []);
 
-        // For HDFC official schemes, load full holdings from API and show month selector
+        // For HDFC official schemes, load full holdings from API, month selector, and NAV chart
         if (s.isOfficialHdfc && s.id) {
           loadHdfcHoldingsFromApi(s.id);
+          loadNavChart(s.id);
         } else {
           currentModalHoldings = s.topHoldings || [];
           renderModalHoldingsTable(currentModalHoldings);
@@ -1990,6 +2000,122 @@
         var existingSelector = document.getElementById('hdfcMonthSelectorRow');
         if (existingSelector) existingSelector.remove();
         holdingsContainer.parentNode.insertBefore(monthRow, holdingsContainer);
+      }
+
+      // Load and render NAV chart for HDFC schemes
+      async function loadNavChart(schemeId) {
+        var container = document.getElementById('navChartContainer');
+        var canvas = document.getElementById('navChartCanvas');
+        var rangeEl = document.getElementById('navChartRange');
+        if (!container || !canvas) return;
+
+        try {
+          var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(schemeId) + '/nav-history?days=30');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+          if (!data.success || !data.data || data.data.length < 2) {
+            container.style.display = 'none';
+            return;
+          }
+
+          container.style.display = 'block';
+          var navData = data.data;
+          rangeEl.textContent = navData[0].date + ' → ' + navData[navData.length - 1].date + ' (' + navData.length + ' points)';
+
+          // Draw simple line chart on canvas
+          var ctx = canvas.getContext('2d');
+          var dpr = window.devicePixelRatio || 1;
+          var rect = canvas.getBoundingClientRect();
+          canvas.width = rect.width * dpr;
+          canvas.height = 200 * dpr;
+          ctx.scale(dpr, dpr);
+          var W = rect.width;
+          var H = 200;
+
+          var navs = navData.map(function(d) { return d.nav; });
+          var minNav = Math.min.apply(null, navs);
+          var maxNav = Math.max.apply(null, navs);
+          var range = maxNav - minNav || 1;
+          var pad = 40;
+          var chartW = W - pad * 2;
+          var chartH = H - pad * 2;
+
+          // Background
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg-input').trim() || '#1a1f2e';
+          ctx.fillRect(0, 0, W, H);
+
+          // Grid lines
+          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+          ctx.lineWidth = 0.5;
+          for (var g = 0; g <= 4; g++) {
+            var gy = pad + (chartH * g / 4);
+            ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(W - pad, gy); ctx.stroke();
+            var gNav = maxNav - (range * g / 4);
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText('\u20b9' + gNav.toFixed(2), pad - 4, gy + 3);
+          }
+
+          // Date labels
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'center';
+          var labelStep = Math.max(1, Math.floor(navData.length / 6));
+          for (var li = 0; li < navData.length; li += labelStep) {
+            var lx = pad + (li / (navData.length - 1)) * chartW;
+            ctx.fillText(navData[li].date.substring(5), lx, H - 8);
+          }
+
+          // Determine color based on trend
+          var isUp = navs[navs.length - 1] >= navs[0];
+          var lineColor = isUp ? '#00B386' : '#EB5B56';
+          var fillColor = isUp ? 'rgba(0,179,134,0.12)' : 'rgba(235,91,86,0.12)';
+
+          // Draw filled area
+          ctx.beginPath();
+          ctx.moveTo(pad, pad + chartH - ((navs[0] - minNav) / range) * chartH);
+          for (var i = 1; i < navs.length; i++) {
+            var x = pad + (i / (navs.length - 1)) * chartW;
+            var y = pad + chartH - ((navs[i] - minNav) / range) * chartH;
+            ctx.lineTo(x, y);
+          }
+          ctx.lineTo(pad + chartW, pad + chartH);
+          ctx.lineTo(pad, pad + chartH);
+          ctx.closePath();
+          ctx.fillStyle = fillColor;
+          ctx.fill();
+
+          // Draw line
+          ctx.beginPath();
+          ctx.moveTo(pad, pad + chartH - ((navs[0] - minNav) / range) * chartH);
+          for (var j = 1; j < navs.length; j++) {
+            var x2 = pad + (j / (navs.length - 1)) * chartW;
+            var y2 = pad + chartH - ((navs[j] - minNav) / range) * chartH;
+            ctx.lineTo(x2, y2);
+          }
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Draw end dot
+          var lastX = pad + chartW;
+          var lastY = pad + chartH - ((navs[navs.length - 1] - minNav) / range) * chartH;
+          ctx.beginPath();
+          ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+          ctx.fillStyle = lineColor;
+          ctx.fill();
+
+          // Current NAV label
+          ctx.fillStyle = lineColor;
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'right';
+          ctx.fillText('\u20b9' + navs[navs.length - 1].toFixed(2), lastX - 8, lastY - 8);
+
+        } catch (err) {
+          console.warn('[NAV Chart] Failed:', err.message);
+          container.style.display = 'none';
+        }
       }
 
       function renderModalVariantsTable(variants) {
