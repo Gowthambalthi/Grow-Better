@@ -2,6 +2,7 @@ node_modules/
 data/*
 !data/institutional.db
 !data/hdfc_scheme_master.json
+!data/hdfc_mutual_funds.db
 .env
 .env.*
 !.env.example
