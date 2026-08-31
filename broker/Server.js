@@ -732,6 +732,8 @@ app.get('/api/mutual-funds/aggregated-stocks', async (req, res) => {
 // ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
 const hdfcMfDb = require('./db/mutualFunds');
 
+// IMPORTANT: Static routes BEFORE :schemeId to avoid Express param matching
+
 // GET /api/mutual-funds/hdfc — List all HDFC schemes with summary
 app.get('/api/mutual-funds/hdfc', (req, res) => {
   try {
@@ -758,6 +760,37 @@ app.get('/api/mutual-funds/hdfc', (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// GET /api/mutual-funds/hdfc/data-status — Data integrity report
+app.get('/api/mutual-funds/hdfc/data-status', (req, res) => {
+  try {
+    const report = hdfcMfDb.validateIntegrity();
+    res.json({ success: true, report });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/mutual-funds/hdfc/run-pipeline — Trigger HDFC data import
+let hdfcPipelineRunning = false;
+app.post('/api/mutual-funds/hdfc/run-pipeline', async (req, res) => {
+  if (hdfcPipelineRunning) {
+    return res.json({ success: true, message: 'Pipeline already running...' });
+  }
+  hdfcPipelineRunning = true;
+  res.json({ success: true, message: 'HDFC pipeline started. Check back in 2-3 minutes.' });
+  try {
+    const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
+    await runHdfcPipeline();
+    console.log('[server] HDFC MF pipeline completed via manual trigger');
+  } catch (err) {
+    console.error('[server] HDFC MF pipeline failed:', err.message);
+  } finally {
+    hdfcPipelineRunning = false;
+  }
+});
+
+// NOW the :schemeId routes (after static routes)
 
 // GET /api/mutual-funds/hdfc/:schemeId — Full scheme profile with latest holdings
 app.get('/api/mutual-funds/hdfc/:schemeId', (req, res) => {
@@ -788,14 +821,12 @@ app.get('/api/mutual-funds/hdfc/:schemeId/holdings', (req, res) => {
     // Determine which date to fetch
     let targetDate = null;
     if (date) {
-      targetDate = date; // exact date like 2026-07-31
+      targetDate = date;
     } else if (month) {
-      // month format: 2026-07 or Jul 2026 — find the latest portfolio in that month
       const monthLower = month.toLowerCase();
       const match = dates.find(d => d.portfolioDate.startsWith(monthLower) || d.portfolioDate.includes(monthLower));
       if (match) targetDate = match.portfolioDate;
     }
-    // If no month/date specified, use latest
 
     const portfolio = hdfcMfDb.getHoldingsByDate(schemeId, targetDate);
     if (!portfolio) {
@@ -829,35 +860,6 @@ app.get('/api/mutual-funds/hdfc/:schemeId/months', (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// GET /api/mutual-funds/hdfc/data-status — Data integrity report
-app.get('/api/mutual-funds/hdfc/data-status', (req, res) => {
-  try {
-    const report = hdfcMfDb.validateIntegrity();
-    res.json({ success: true, report });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// POST /api/mutual-funds/hdfc/run-pipeline — Trigger HDFC data import
-let hdfcPipelineRunning = false;
-app.post('/api/mutual-funds/hdfc/run-pipeline', async (req, res) => {
-  if (hdfcPipelineRunning) {
-    return res.json({ success: true, message: 'Pipeline already running...' });
-  }
-  hdfcPipelineRunning = true;
-  res.json({ success: true, message: 'HDFC pipeline started. Check back in 2-3 minutes.' });
-  try {
-    const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
-    await runHdfcPipeline();
-    console.log('[server] HDFC MF pipeline completed via manual trigger');
-  } catch (err) {
-    console.error('[server] HDFC MF pipeline failed:', err.message);
-  } finally {
-    hdfcPipelineRunning = false;
   }
 });
 
