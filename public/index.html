@@ -1510,38 +1510,75 @@
         var serverTag = document.getElementById('mfServerTag');
         var subTitle = document.getElementById('mfSubtitleCount');
 
-        try {
-          var res = await fetch('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000');
-          if (!res.ok) throw new Error('Server 1 HTTP Error ' + res.status);
-          var data = await res.json();
-          if (data && data.success && Array.isArray(data.schemes)) {
-            mfCache = data.schemes;
-            if (serverTag) {
-              serverTag.textContent = data.serverUsed || 'Server 1 (Primary AMFI Engine)';
-              serverTag.style.background = 'rgba(16,185,129,0.15)';
-              serverTag.style.color = '#10B981';
-            }
-            if (subTitle && data.totalCount) {
-              var amcCount = data.totalAmcs || 44;
-              subTitle.textContent = data.totalCount.toLocaleString('en-IN') + ' Unique Mutual Funds across ' + amcCount + ' AMCs · Multi-Server Failover Active';
-            }
-            renderMfGrid(data.schemes);
-            return;
-          }
-          throw new Error('Server 1 Payload Invalid');
-        } catch (err) {
-          console.warn('[MF Failover Alert] Primary Server 1 unreachable/failed. Triggering automatic failover to Server 2 (Backup Mirror)...', err.message);
+        // Fetch both standard MF schemes AND HDFC real data in parallel
+        var schemesPromise = fetch('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000')
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .catch(function() { return null; });
+
+        var hdfcPromise = fetch('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q))
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .catch(function() { return null; });
+
+        var results = await Promise.all([schemesPromise, hdfcPromise]);
+        var standardData = results[0];
+        var hdfcData = results[1];
+
+        var allSchemes = [];
+
+        // Process standard MF data
+        if (standardData && standardData.success && Array.isArray(standardData.schemes)) {
+          var nonHdfc = standardData.schemes.filter(function(s) {
+            var amc = (s.parentAmc || '').toLowerCase();
+            return !amc.includes('hdfc');
+          });
+          allSchemes = allSchemes.concat(nonHdfc);
           if (serverTag) {
-            serverTag.textContent = 'Server 2 (Backup Mirror Active)';
-            serverTag.style.background = 'rgba(245,158,11,0.18)';
-            serverTag.style.color = '#F59E0B';
+            serverTag.textContent = standardData.serverUsed || 'Server 1 (Primary AMFI Engine)';
+            serverTag.style.background = 'rgba(16,185,129,0.15)';
+            serverTag.style.color = '#10B981';
           }
-          var fallback = getMfFallbackData(tf, q);
-          if (subTitle) {
-            subTitle.textContent = fallback.length.toLocaleString('en-IN') + ' Indian Mutual Fund Schemes across 44 AMCs · Multi-Server Failover Active';
-          }
-          renderMfGrid(fallback);
         }
+
+        // Process HDFC real data
+        if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
+          var hdfcSchemes = hdfcData.schemes.map(function(s) {
+            return {
+              id: s.id,
+              schemeCode: s.schemeCode,
+              schemeName: s.schemeName,
+              cleanTitle: s.schemeName,
+              parentAmc: s.amc || 'HDFC Mutual Fund',
+              category: s.category,
+              isDebt: (s.category || '').toLowerCase().indexOf('debt') !== -1 || (s.category || '').toLowerCase().indexOf('liquid') !== -1,
+              currentNav: null,
+              aumCr: s.aum,
+              terPct: null,
+              selectedReturnPct: s.return1Y,
+              returns: { '1Y': s.return1Y },
+              topHoldings: (s.topHoldings || []).map(function(h) {
+                return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
+              }),
+              variantCount: 1,
+              variants: [],
+              investorCount: s.investorCount,
+              latestPortfolioDate: s.latestPortfolioDate,
+              availablePortfolioMonths: s.availablePortfolioMonths,
+              isOfficialHdfc: true,
+              searchBlob: (s.schemeName + ' ' + (s.category || '') + ' hdfc').toLowerCase()
+            };
+          });
+          allSchemes = allSchemes.concat(hdfcSchemes);
+        }
+
+        mfCache = allSchemes;
+
+        if (subTitle) {
+          var total = allSchemes.length;
+          var hdfcCount = hdfcData && hdfcData.totalSchemes ? hdfcData.totalSchemes : 0;
+          subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes (' + hdfcCount + ' HDFC Official Data) · Multi-Server Failover Active';
+        }
+
+        renderMfGrid(allSchemes);
       }
 
       function cleanSchemeTitle(rawName) {
@@ -1576,10 +1613,18 @@
           var retColor = retVal >= 0 ? '#00B386' : '#EB5B56';
           var retSign = retVal >= 0 ? '+' : '';
 
-          var sourceTagHtml = '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">Live AMFI NAV</span>';
+          // Show different tags for HDFC official vs other schemes
+          var sourceTagHtml;
+          if (s.isOfficialHdfc) {
+            sourceTagHtml = '<span style="background:rgba(16,185,129,0.15);color:#10B981;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">✓ HDFC Official Data</span>';
+          } else {
+            sourceTagHtml = '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">Live AMFI NAV</span>';
+          }
 
-          var aumStr = (s.aumCr !== null && s.aumCr !== undefined) ? '₹' + Math.round(s.aumCr).toLocaleString('en-IN') + ' Cr' : 'Not available';
+          var aumStr = (s.aumCr !== null && s.aumCr !== undefined) ? '\u20b9' + Math.round(s.aumCr).toLocaleString('en-IN') + ' Cr' : 'Not available';
           var terStr = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
+          // Investor count for HDFC schemes
+          var investorStr = (s.investorCount !== null && s.investorCount !== undefined) ? s.investorCount.toFixed(1) + 'L' : 'Not available';
 
           var cleanTitle = s.cleanTitle || cleanSchemeTitle(s.schemeName);
           var planTag = s.planTag || (s.schemeName.toLowerCase().includes('regular') ? 'Regular Plan' : 'Direct Plan');
@@ -1606,10 +1651,10 @@
                        '</div>' +
                        '<span style="background:' + (isDebt ? 'rgba(139,92,246,0.12)' : 'rgba(59,130,246,0.12)') + ';color:' + (isDebt ? '#8B5CF6' : '#3B82F6') + ';font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;white-space:nowrap;">' + s.category + '</span>' +
                      '</div>' +
-                     '<div style="display:flex;align-items:center;gap:16px;margin-top:10px;padding:8px;background:var(--bg-input);border-radius:6px;border:1px solid var(--line);">' +
-                       '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + currentMfTimeframe + ' RETURN (LIVE NAV)</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
-                       '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">TER / FEE</div><div style="font-size:14px;font-weight:800;color:var(--text-primary);">' + terStr + '</div></div>' +
+                     '<div style="display:flex;align-items:center;gap:16px;margin-top:10px;padding:8px;background:var(--bg-input);border-radius:6px;border:1px solid var(--line);flex-wrap:wrap;">' +
+                       '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + (s.isOfficialHdfc ? '1Y RETURN' : currentMfTimeframe + ' RETURN (LIVE NAV)') + '</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
                        '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">AUM</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + aumStr + '</div></div>' +
+                       (s.isOfficialHdfc ? '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">INVESTORS</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + investorStr + '</div></div>' : '') +
                      '</div>' +
                    '</div>' +
                    '<div>' +
@@ -1808,23 +1853,133 @@
       }
 
       function renderMfDetailContent(s) {
-        var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: ₹' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
+        var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: \u20b9' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
         var terText = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
+        var investorText = (s.investorCount !== null && s.investorCount !== undefined) ? 'Investors: ' + s.investorCount.toFixed(1) + 'L' : 'Investors: Not available';
 
         var varCount = (s.variants || []).length;
         var varText = varCount > 0 ? varCount + ' Variants Available' : 'Direct Growth';
+        var officialBadge = s.isOfficialHdfc ? ' · \u2713 HDFC Official Data' : '';
 
         document.getElementById('modalMfTitle').textContent = s.cleanTitle || s.schemeName;
-        document.getElementById('modalMfSub').textContent = s.parentAmc + ' · ' + s.category + ' · ' + varText + ' · ' + aumText;
-        document.getElementById('modalMfTer').textContent = terText;
-        document.getElementById('modalMfRet1m').textContent = (s.returns ? (s.returns['1M'] >= 0 ? '+' : '') + s.returns['1M'].toFixed(2) : '+2.45') + '%';
-        document.getElementById('modalMfRet3m').textContent = (s.returns ? (s.returns['3M'] >= 0 ? '+' : '') + s.returns['3M'].toFixed(2) : '+8.90') + '%';
-        document.getElementById('modalMfRet1y').textContent = (s.returns ? (s.returns['1Y'] >= 0 ? '+' : '') + s.returns['1Y'].toFixed(2) : '+28.50') + '%';
+        document.getElementById('modalMfSub').textContent = s.parentAmc + ' \u00b7 ' + s.category + ' \u00b7 ' + varText + ' \u00b7 ' + aumText + officialBadge;
+
+        // Show 1Y return for HDFC official, or 1M/3M/1Y for others
+        if (s.isOfficialHdfc) {
+          var ret1y = s.returns ? s.returns['1Y'] : null;
+          var retColor1y = (ret1y !== null && ret1y !== undefined) ? (ret1y >= 0 ? '#00B386' : '#EB5B56') : 'var(--text-muted)';
+          var retStr1y = (ret1y !== null && ret1y !== undefined) ? ((ret1y >= 0 ? '+' : '') + ret1y.toFixed(2) + '%') : 'Not available';
+          document.getElementById('modalMfRet1m').textContent = 'N/A';
+          document.getElementById('modalMfRet1m').style.color = 'var(--text-muted)';
+          document.getElementById('modalMfRet3m').textContent = 'N/A';
+          document.getElementById('modalMfRet3m').style.color = 'var(--text-muted)';
+          document.getElementById('modalMfRet1y').textContent = retStr1y;
+          document.getElementById('modalMfRet1y').style.color = retColor1y;
+        } else {
+          document.getElementById('modalMfRet1m').textContent = (s.returns ? (s.returns['1M'] >= 0 ? '+' : '') + s.returns['1M'].toFixed(2) : '+2.45') + '%';
+          document.getElementById('modalMfRet1m').style.color = '';
+          document.getElementById('modalMfRet3m').textContent = (s.returns ? (s.returns['3M'] >= 0 ? '+' : '') + s.returns['3M'].toFixed(2) : '+8.90') + '%';
+          document.getElementById('modalMfRet3m').style.color = '';
+          document.getElementById('modalMfRet1y').textContent = (s.returns ? (s.returns['1Y'] >= 0 ? '+' : '') + s.returns['1Y'].toFixed(2) : '+28.50') + '%';
+          document.getElementById('modalMfRet1y').style.color = '';
+        }
 
         renderModalVariantsTable(s.variants || []);
 
-        currentModalHoldings = s.topHoldings || [];
-        renderModalHoldingsTable(currentModalHoldings);
+        // For HDFC official schemes, load full holdings from API and show month selector
+        if (s.isOfficialHdfc && s.id) {
+          loadHdfcHoldingsFromApi(s.id);
+        } else {
+          currentModalHoldings = s.topHoldings || [];
+          renderModalHoldingsTable(currentModalHoldings);
+        }
+      }
+
+      // Load HDFC scheme holdings from the API with month selector
+      async function loadHdfcHoldingsFromApi(schemeId) {
+        try {
+          var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(schemeId) + '/holdings');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+          if (data && data.success) {
+            // Store month data for selector
+            window._hdfcMonths = data.availableMonths || [];
+            window._hdfcSchemeId = schemeId;
+
+            // Render month selector if we have multiple months
+            renderMonthSelector(data.availableMonths, data.portfolioDate);
+
+            // Render holdings
+            currentModalHoldings = (data.holdings || []).map(function(h) {
+              return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
+            });
+            renderModalHoldingsTable(currentModalHoldings);
+          }
+        } catch (err) {
+          console.warn('[HDFC Holdings] Failed to load:', err.message);
+          // Fallback to top holdings from card
+          var cached = mfCache.find(function(item) { return item.id === schemeId; });
+          if (cached && cached.topHoldings) {
+            currentModalHoldings = cached.topHoldings;
+            renderModalHoldingsTable(currentModalHoldings);
+          }
+        }
+      }
+
+      // Render month selector dropdown for HDFC scheme portfolios
+      function renderMonthSelector(months, currentDate) {
+        var holdingsContainer = document.getElementById('tbodyModalMfHoldings');
+        if (!holdingsContainer || !months || months.length <= 1) return;
+
+        // Create month selector row
+        var monthRow = document.createElement('tr');
+        monthRow.id = 'hdfcMonthSelectorRow';
+        var monthCell = document.createElement('td');
+        monthCell.colSpan = 4;
+        monthCell.style.padding = '10px';
+        monthCell.style.background = 'var(--bg-input)';
+        monthCell.style.borderRadius = '6px';
+
+        var label = document.createElement('span');
+        label.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-muted);margin-right:8px;';
+        label.textContent = 'PORTFOLIO MONTH:';
+
+        var select = document.createElement('select');
+        select.style.cssText = 'background:var(--bg-panel);border:1px solid var(--line);color:var(--text-primary);padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;';
+
+        months.forEach(function(m) {
+          var opt = document.createElement('option');
+          opt.value = m.date;
+          opt.textContent = m.date + ' (' + (m.totalHoldings || '?') + ' holdings)';
+          if (m.date === currentDate) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        select.addEventListener('change', async function() {
+          var selectedDate = this.value;
+          try {
+            var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(window._hdfcSchemeId) + '/holdings?date=' + encodeURIComponent(selectedDate));
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            var data = await res.json();
+            if (data && data.success) {
+              currentModalHoldings = (data.holdings || []).map(function(h) {
+                return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
+              });
+              renderModalHoldingsTable(currentModalHoldings);
+            }
+          } catch (err) {
+            console.warn('[HDFC Month Switch] Failed:', err.message);
+          }
+        });
+
+        monthCell.appendChild(label);
+        monthCell.appendChild(select);
+        monthRow.appendChild(monthCell);
+
+        // Insert at top of holdings table
+        var existingSelector = document.getElementById('hdfcMonthSelectorRow');
+        if (existingSelector) existingSelector.remove();
+        holdingsContainer.parentNode.insertBefore(monthRow, holdingsContainer);
       }
 
       function renderModalVariantsTable(variants) {
