@@ -18,29 +18,47 @@ const db = require(path.join(__dirname, '../../db/mutualFunds'));
 
 // ── HDFC Equity Scheme Master (Direct Plan + Growth Option) ──
 const HDFC_EQUITY_SCHEMES = [
-  { schemeCode: '118955', growwSlug: 'hdfc-equity-fund-direct-growth', name: 'HDFC Flexi Cap Fund', category: 'Equity', subCategory: 'Flexi Cap' },
-  { schemeCode: '118950', growwSlug: 'hdfc-focused-fund-direct-growth', name: 'HDFC Focused Fund', category: 'Equity', subCategory: 'Focused' },
-  { schemeCode: '119018', growwSlug: 'hdfc-large-cap-fund-direct-growth', name: 'HDFC Large Cap Fund', category: 'Equity', subCategory: 'Large Cap' },
-  { schemeCode: '118989', growwSlug: 'hdfc-mid-cap-opportunities-fund-direct-growth', name: 'HDFC Mid Cap Fund', category: 'Equity', subCategory: 'Mid Cap' },
-  { schemeCode: '149368', growwSlug: 'hdfc-multi-cap-fund-direct-growth', name: 'HDFC Multi Cap Fund', category: 'Equity', subCategory: 'Multi Cap' },
-  { schemeCode: '148986', growwSlug: 'hdfc-banking-financial-services-fund-direct-growth', name: 'HDFC Banking & Financial Services Fund', category: 'Equity', subCategory: 'Sectoral' },
-  { schemeCode: '118979', growwSlug: 'hdfc-infrastructure-fund-direct-growth', name: 'HDFC Infrastructure Fund', category: 'Equity', subCategory: 'Sectoral' },
-  { schemeCode: '152600', growwSlug: 'hdfc-manufacturing-fund-direct-growth', name: 'HDFC Manufacturing Fund', category: 'Equity', subCategory: 'Sectoral' },
-  { schemeCode: '152059', growwSlug: 'hdfc-technology-fund-direct-growth', name: 'HDFC Technology Fund', category: 'Equity', subCategory: 'Sectoral' },
-  { schemeCode: '151901', growwSlug: 'hdfc-transportation-and-logistics-fund-direct-growth', name: 'HDFC Transportation and Logistics Fund', category: 'Equity', subCategory: 'Sectoral' },
-  { schemeCode: '130503', growwSlug: 'hdfc-small-cap-fund-direct-growth', name: 'HDFC Small Cap Fund', category: 'Equity', subCategory: 'Small Cap' },
-  { schemeCode: '118935', growwSlug: 'hdfc-value-fund-direct-plan-growth', name: 'HDFC Value Fund', category: 'Equity', subCategory: 'Value' },
-  { schemeCode: '130498', growwSlug: 'hdfc-large-mid-cap-fund-direct-growth', name: 'HDFC Large & Mid Cap Fund', category: 'Equity', subCategory: 'Large & Mid Cap' },
-  { schemeCode: '151750', growwSlug: 'hdfc-defence-fund-direct-growth', name: 'HDFC Defence Fund', category: 'Equity', subCategory: 'Sectoral' },
-  { schemeCode: '150805', growwSlug: 'hdfc-business-cycle-fund-direct-growth', name: 'HDFC Business Cycle Fund', category: 'Equity', subCategory: 'Thematic' },
-  { schemeCode: '151313', growwSlug: 'hdfc-long-term-fund-direct-growth', name: 'HDFC Long Term Fund', category: 'Equity', subCategory: 'Thematic' },
-  { schemeCode: '151458', growwSlug: 'hdfc-mnc-fund-direct-growth', name: 'HDFC MNC Fund', category: 'Equity', subCategory: 'Thematic' },
-  { schemeCode: '151804', growwSlug: 'hdfc-consumption-fund-direct-growth', name: 'HDFC Consumption Fund', category: 'Equity', subCategory: 'Thematic' },
-  { schemeCode: '153620', growwSlug: 'hdfc-innovation-fund-direct-growth', name: 'HDFC Innovation Fund', category: 'Equity', subCategory: 'Thematic' },
-  { schemeCode: '141924', growwSlug: 'hdfc-housing-opportunities-fund-direct-growth', name: 'HDFC Housing Opportunities Fund', category: 'Equity', subCategory: 'Thematic' },
-  { schemeCode: '136094', growwSlug: 'hdfc-retirement-fund-equity-plan-direct-growth', name: 'HDFC Retirement Fund - Equity Plan', category: 'Equity', subCategory: 'Retirement' },
-  { schemeCode: '119128', growwSlug: 'hdfc-equity-savings-fund-direct-growth', name: 'HDFC Equity Savings Fund', category: 'Equity', subCategory: 'Equity Savings' },
-  { schemeCode: '119131', growwSlug: 'hdfc-multi-asset-allocation-fund-direct-growth', name: 'HDFC Multi Asset Allocation Fund', category: 'Hybrid', subCategory: 'Multi Asset' },
+  // ── Active Equity Funds ──
+  { schemeCode: '118955', growwSlug: 'hdfc-equity-fund-direct-growth', name: 'HDFC Flexi Cap Fund', category: 'Equity', subCategory: 'Flexi Cap', group: 'Equity Funds' },
+  { schemeCode: '118950', growwSlug: 'hdfc-focused-fund-direct-growth', name: 'HDFC Focused Fund', category: 'Equity', subCategory: 'Focused', group: 'Equity Funds' },
+  { schemeCode: '119018', growwSlug: 'hdfc-large-cap-fund-direct-growth', name: 'HDFC Large Cap Fund', category: 'Equity', subCategory: 'Large Cap', group: 'Equity Funds' },
+  { schemeCode: '118989', growwSlug: 'hdfc-mid-cap-opportunities-fund-direct-growth', name: 'HDFC Mid Cap Fund', category: 'Equity', subCategory: 'Mid Cap', group: 'Equity Funds' },
+  { schemeCode: '149368', growwSlug: 'hdfc-multi-cap-fund-direct-growth', name: 'HDFC Multi Cap Fund', category: 'Equity', subCategory: 'Multi Cap', group: 'Equity Funds' },
+  { schemeCode: '130503', growwSlug: 'hdfc-small-cap-fund-direct-growth', name: 'HDFC Small Cap Fund', category: 'Equity', subCategory: 'Small Cap', group: 'Equity Funds' },
+  { schemeCode: '130498', growwSlug: 'hdfc-large-mid-cap-fund-direct-growth', name: 'HDFC Large & Mid Cap Fund', category: 'Equity', subCategory: 'Large & Mid Cap', group: 'Equity Funds' },
+  { schemeCode: '118935', growwSlug: 'hdfc-value-fund-direct-plan-growth', name: 'HDFC Value Fund', category: 'Equity', subCategory: 'Value Oriented', group: 'Equity Funds' },
+  // ── Sectoral / Thematic Equity Funds ──
+  { schemeCode: '148986', growwSlug: 'hdfc-banking-financial-services-fund-direct-growth', name: 'HDFC Banking & Financial Services Fund', category: 'Equity', subCategory: 'Sectoral', group: 'Equity Funds' },
+  { schemeCode: '118979', growwSlug: 'hdfc-infrastructure-fund-direct-growth', name: 'HDFC Infrastructure Fund', category: 'Equity', subCategory: 'Sectoral', group: 'Equity Funds' },
+  { schemeCode: '152600', growwSlug: 'hdfc-manufacturing-fund-direct-growth', name: 'HDFC Manufacturing Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '152059', growwSlug: 'hdfc-technology-fund-direct-growth', name: 'HDFC Technology Fund', category: 'Equity', subCategory: 'Sectoral', group: 'Equity Funds' },
+  { schemeCode: '151901', growwSlug: 'hdfc-transportation-and-logistics-fund-direct-growth', name: 'HDFC Transportation and Logistics Fund', category: 'Equity', subCategory: 'Sectoral', group: 'Equity Funds' },
+  { schemeCode: '151750', growwSlug: 'hdfc-defence-fund-direct-growth', name: 'HDFC Defence Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '151458', growwSlug: 'hdfc-pharma-and-healthcare-fund-direct-growth', name: 'HDFC Pharma And Healthcare Fund', category: 'Equity', subCategory: 'Sectoral', group: 'Equity Funds' },
+  { schemeCode: '151804', growwSlug: 'hdfc-consumption-fund-direct-growth', name: 'HDFC Consumption Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '150805', growwSlug: 'hdfc-business-cycle-fund-direct-growth', name: 'HDFC Business Cycle Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '153620', growwSlug: 'hdfc-innovation-fund-direct-growth', name: 'HDFC Innovation Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '141924', growwSlug: 'hdfc-housing-opportunities-fund-direct-growth', name: 'HDFC Housing Opportunities Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '151313', growwSlug: 'hdfc-long-term-fund-direct-growth', name: 'HDFC Long Term Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  { schemeCode: '151458b', growwSlug: 'hdfc-mnc-fund-direct-growth', name: 'HDFC MNC Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  // Dividend Yield
+  { schemeCode: '118942', growwSlug: 'hdfc-dividend-yield-fund-direct-growth', name: 'HDFC Dividend Yield Fund', category: 'Equity', subCategory: 'Thematic', group: 'Equity Funds' },
+  // ELSS
+  { schemeCode: '118982', growwSlug: 'hdfc-elss-tax-saver-fund-direct-growth', name: 'HDFC ELSS Tax Saver Fund', category: 'Equity', subCategory: 'ELSS', group: 'Equity Funds' },
+  // ── Index Funds ──
+  { schemeCode: '153097', growwSlug: 'hdfc-nifty-50-index-fund-direct-growth', name: 'HDFC NIFTY 50 Index Fund', category: 'Equity', subCategory: 'Large Cap', group: 'Index Funds' },
+  { schemeCode: '152889', growwSlug: 'hdfc-nifty-next-50-index-fund-direct-growth', name: 'HDFC NIFTY Next 50 Index Fund', category: 'Equity', subCategory: 'Large Cap', group: 'Index Funds' },
+  { schemeCode: '153517', growwSlug: 'hdfc-bse-sensex-index-fund-direct-growth', name: 'HDFC BSE Sensex Index Fund', category: 'Equity', subCategory: 'Large Cap', group: 'Index Funds' },
+  { schemeCode: '153518', growwSlug: 'hdfc-nifty-100-index-fund-direct-growth', name: 'HDFC NIFTY 100 Index Fund', category: 'Equity', subCategory: 'Large Cap', group: 'Index Funds' },
+  { schemeCode: '152778', growwSlug: 'hdfc-nifty-smallcap-250-index-fund-direct-growth', name: 'HDFC Nifty Smallcap 250 Index Fund', category: 'Equity', subCategory: 'Small Cap', group: 'Index Funds' },
+  { schemeCode: '152889b', growwSlug: 'hdfc-nifty-midcap-150-index-fund-direct-growth', name: 'HDFC NIFTY Midcap 150 Index Fund', category: 'Equity', subCategory: 'Mid Cap', group: 'Index Funds' },
+  // ── ETFs (Fund of Fund) ──
+  { schemeCode: '153860', growwSlug: 'hdfc-gold-etf-fund-of-fund-direct-plan-growth', name: 'HDFC Gold ETF Fund of Fund', category: 'Commodities', subCategory: 'Gold', group: 'ETFs' },
+  { schemeCode: '153861', growwSlug: 'hdfc-silver-etf-fof-direct-growth', name: 'HDFC Silver ETF FoF', category: 'Commodities', subCategory: 'Silver', group: 'ETFs' },
+  // ── Equity-Oriented Hybrid / FOF ──
+  { schemeCode: '119128', growwSlug: 'hdfc-equity-savings-fund-direct-growth', name: 'HDFC Equity Savings Fund', category: 'Hybrid', subCategory: 'Equity Savings', group: 'Equity-Oriented' },
+  { schemeCode: '136094', growwSlug: 'hdfc-retirement-fund-equity-plan-direct-growth', name: 'HDFC Retirement Fund - Equity Plan', category: 'Equity', subCategory: 'Flexi Cap', group: 'Equity-Oriented' },
+  { schemeCode: '136464', growwSlug: 'hdfc-retirement-fund-hybrid-equity-plan-direct-growth', name: 'HDFC Retirement Fund - Hybrid Equity Plan', category: 'Hybrid', subCategory: 'Aggressive Hybrid', group: 'Equity-Oriented' },
 ];
 
 const DELAY_MS = 1500; // Delay between requests to be respectful

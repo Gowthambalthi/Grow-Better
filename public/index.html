@@ -1552,14 +1552,18 @@
         if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
           var hdfcSchemes = hdfcData.schemes.filter(function(s) {
             var cat = (s.category || '').toLowerCase();
-            // Only show equity schemes (not debt, hybrid, FoF, etc.)
-            return cat.indexOf('equity') !== -1 || cat.indexOf('flexi') !== -1 ||
-                   cat.indexOf('mid cap') !== -1 || cat.indexOf('small cap') !== -1 ||
-                   cat.indexOf('large cap') !== -1 || cat.indexOf('multi cap') !== -1 ||
-                   cat.indexOf('focused') !== -1 || cat.indexOf('elss') !== -1 ||
-                   cat.indexOf('value') !== -1 || cat.indexOf('contra') !== -1 ||
-                   cat.indexOf('dividend') !== -1 || cat.indexOf('sectoral') !== -1 ||
-                   cat.indexOf('index') !== -1;
+            var sub = (s.subCategory || '').toLowerCase();
+            // Show ALL equity-related: equity, index, commodities (ETFs), equity-oriented hybrid
+            return cat.indexOf('equity') !== -1 || cat.indexOf('commodit') !== -1 ||
+                   cat.indexOf('flexi') !== -1 || cat.indexOf('mid cap') !== -1 ||
+                   cat.indexOf('small cap') !== -1 || cat.indexOf('large cap') !== -1 ||
+                   cat.indexOf('multi cap') !== -1 || cat.indexOf('focused') !== -1 ||
+                   cat.indexOf('elss') !== -1 || cat.indexOf('value') !== -1 ||
+                   cat.indexOf('contra') !== -1 || cat.indexOf('dividend') !== -1 ||
+                   cat.indexOf('sectoral') !== -1 || cat.indexOf('thematic') !== -1 ||
+                   cat.indexOf('index') !== -1 || cat.indexOf('gold') !== -1 ||
+                   cat.indexOf('silver') !== -1 || cat.indexOf('etf') !== -1 ||
+                   (cat.indexOf('hybrid') !== -1 && (sub.indexOf('equity') !== -1 || sub.indexOf('aggressive') !== -1 || sub.indexOf('multi asset') !== -1));
           }).map(function(s) {
             return {
               id: s.id,
@@ -1568,12 +1572,14 @@
               cleanTitle: s.schemeName,
               parentAmc: s.amc || 'HDFC Mutual Fund',
               category: s.category,
-              isDebt: (s.category || '').toLowerCase().indexOf('debt') !== -1 || (s.category || '').toLowerCase().indexOf('liquid') !== -1,
-              currentNav: null,
+              subCategory: s.subCategory || '',
+              group: s.group || 'Equity Funds',
+              isDebt: false,
+              currentNav: s.nav || null,
               aumCr: s.aum,
               terPct: null,
               selectedReturnPct: s.return1Y,
-              returns: { '1Y': s.return1Y },
+              returns: s.returns || { '1Y': s.return1Y },
               topHoldings: (s.topHoldings || []).map(function(h) {
                 return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
               }),
@@ -1628,7 +1634,14 @@
         var displayItems = schemes.slice(0, maxCount);
 
         var html = displayItems.map(function(s) {
-          var retVal = Number(s.selectedReturnPct || 0);
+          // Use timeframe-selected return for ALL schemes (including HDFC)
+          var retVal = 0;
+          if (s.isOfficialHdfc && s.returns) {
+            var tfKey = currentMfTimeframe;
+            retVal = Number(s.returns[tfKey] !== undefined ? s.returns[tfKey] : s.returns['1Y'] || 0);
+          } else {
+            retVal = Number(s.selectedReturnPct || 0);
+          }
           var retColor = retVal >= 0 ? '#00B386' : '#EB5B56';
           var retSign = retVal >= 0 ? '+' : '';
 
@@ -1671,7 +1684,7 @@
                        '<span style="background:' + (isDebt ? 'rgba(139,92,246,0.12)' : 'rgba(59,130,246,0.12)') + ';color:' + (isDebt ? '#8B5CF6' : '#3B82F6') + ';font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;white-space:nowrap;">' + s.category + '</span>' +
                      '</div>' +
                      '<div style="display:flex;align-items:center;gap:16px;margin-top:10px;padding:8px;background:var(--bg-input);border-radius:6px;border:1px solid var(--line);flex-wrap:wrap;">' +
-                       '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + (s.isOfficialHdfc ? '1Y RETURN' : currentMfTimeframe + ' RETURN (LIVE NAV)') + '</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
+                       '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + currentMfTimeframe + ' RETURN' + (s.isOfficialHdfc ? '' : ' (LIVE NAV)') + '</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
                        '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">AUM</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + aumStr + '</div></div>' +
                        (s.isOfficialHdfc ? '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">INVESTORS</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + investorStr + '</div></div>' : '') +
                      '</div>' +
@@ -1883,17 +1896,27 @@
         document.getElementById('modalMfTitle').textContent = s.cleanTitle || s.schemeName;
         document.getElementById('modalMfSub').textContent = s.parentAmc + ' \u00b7 ' + s.category + ' \u00b7 ' + varText + ' \u00b7 ' + aumText + officialBadge;
 
-        // Show 1Y return for HDFC official, or 1M/3M/1Y for others
-        if (s.isOfficialHdfc) {
-          var ret1y = s.returns ? s.returns['1Y'] : null;
-          var retColor1y = (ret1y !== null && ret1y !== undefined) ? (ret1y >= 0 ? '#00B386' : '#EB5B56') : 'var(--text-muted)';
-          var retStr1y = (ret1y !== null && ret1y !== undefined) ? ((ret1y >= 0 ? '+' : '') + ret1y.toFixed(2) + '%') : 'Not available';
-          document.getElementById('modalMfRet1m').textContent = 'N/A';
-          document.getElementById('modalMfRet1m').style.color = 'var(--text-muted)';
-          document.getElementById('modalMfRet3m').textContent = 'N/A';
-          document.getElementById('modalMfRet3m').style.color = 'var(--text-muted)';
-          document.getElementById('modalMfRet1y').textContent = retStr1y;
-          document.getElementById('modalMfRet1y').style.color = retColor1y;
+        // Show returns for HDFC schemes (real multi-period data) or fallback for others
+        if (s.isOfficialHdfc && s.returns) {
+          var periods = [
+            { key: '1M', elId: 'modalMfRet1m' },
+            { key: '3M', elId: 'modalMfRet3m' },
+            { key: '1Y', elId: 'modalMfRet1y' },
+          ];
+          for (var pi = 0; pi < periods.length; pi++) {
+            var p = periods[pi];
+            var val = s.returns[p.key];
+            var el = document.getElementById(p.elId);
+            if (el) {
+              if (val !== null && val !== undefined) {
+                el.textContent = (val >= 0 ? '+' : '') + val.toFixed(2) + '%';
+                el.style.color = val >= 0 ? '#00B386' : '#EB5B56';
+              } else {
+                el.textContent = 'N/A';
+                el.style.color = 'var(--text-muted)';
+              }
+            }
+          }
         } else {
           document.getElementById('modalMfRet1m').textContent = (s.returns ? (s.returns['1M'] >= 0 ? '+' : '') + s.returns['1M'].toFixed(2) : '+2.45') + '%';
           document.getElementById('modalMfRet1m').style.color = '';
