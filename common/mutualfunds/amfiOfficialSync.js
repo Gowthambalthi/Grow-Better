@@ -147,8 +147,8 @@ class AmfiOfficialSyncEngine {
       const uniqueXlsx = Array.from(new Set(xlsxMatches));
       console.log(`[AMFI Official Sync] Discovered ${uniqueXlsx.length} official HDFC scheme portfolio Excel files on HDFC S3!`);
 
-      // Ingest top HDFC schemes (e.g. Liquid, Mid Cap, Corporate Bond, Long Duration...)
-      for (const xlsUrl of uniqueXlsx.slice(0, 10)) {
+      // Ingest ALL official HDFC schemes (Equity, Hybrid, Liquid, Debt...)
+      for (const xlsUrl of uniqueXlsx.slice(0, 60)) {
         try {
           const res = await axios.get(xlsUrl, {
             responseType: 'arraybuffer',
@@ -307,6 +307,19 @@ class AmfiOfficialSyncEngine {
       period: period || 'Month-End Disclosure',
       isOfficial: matchedAum !== null || matchedTer !== null
     };
+  }
+
+  getOfficialHoldingsForScheme(schemeName) {
+    if (!schemeName) return null;
+    const sClean = schemeName.toLowerCase().replace(/\s*\(.*\)/, '').replace(/[^a-z0-9]+/g, '-');
+    const rawHoldings = this.disclosures.schemeHoldings || {};
+
+    for (const key of Object.keys(rawHoldings)) {
+      if (sClean.includes(key) || key.includes(sClean) || (rawHoldings[key].schemeName && sClean.includes(rawHoldings[key].schemeName.toLowerCase()))) {
+        return rawHoldings[key];
+      }
+    }
+    return null;
   }
 }
 

@@ -137,9 +137,82 @@ class AmfiOfficialSyncEngine {
       console.warn('[AMFI Official Sync Warning] Could not reach HDFC TER file directly:', err.message, '- Using last cached disclosures.');
     }
 
+    // 3. Dynamic Discovery & Ingestion of Official HDFC Scheme Portfolio Disclosure Files (.xlsx)
+    try {
+      const pageRes = await axios.get('https://www.hdfcfund.com/statutory-disclosure/portfolio/fortnightly-portfolio', {
+        timeout: 6000,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+      });
+      const xlsxMatches = pageRes.data.match(/https:\/\/files\.hdfcfund\.com\/s3fs-public\/[^\x22\s>]+\.xlsx/gi) || [];
+      const uniqueXlsx = Array.from(new Set(xlsxMatches));
+      console.log(`[AMFI Official Sync] Discovered ${uniqueXlsx.length} official HDFC scheme portfolio Excel files on HDFC S3!`);
+
+      // Ingest ALL official HDFC schemes (Equity, Hybrid, Liquid, Debt...)
+      for (const xlsUrl of uniqueXlsx.slice(0, 60)) {
+        try {
+          const res = await axios.get(xlsUrl, {
+            responseType: 'arraybuffer',
+            timeout: 8000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+          });
+          if (res.data && res.data.byteLength > 5000) {
+            const wb = xlsx.read(res.data, { type: 'buffer' });
+            if (wb.SheetNames && wb.SheetNames.length > 0) {
+              const sheet = wb.Sheets[wb.SheetNames[0]];
+              const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+              this._parseHdfcSchemePortfolioRows(rows, xlsUrl);
+            }
+          }
+        } catch (e) {
+          // Skip individual scheme file error
+        }
+      }
+    } catch (err) {
+      console.warn('[AMFI Official Sync Warning] Could not reach HDFC portfolio disclosure index:', err.message);
+    }
+
     this.disclosures.lastUpdated = new Date().toISOString();
     this.saveDisclosures();
     return syncedMonthly;
+  }
+
+  _parseHdfcSchemePortfolioRows(rows, fileUrl) {
+    if (!Array.isArray(rows) || rows.length < 6) return;
+
+    const schemeName = (rows[0] && rows[0][0]) ? rows[0][0].toString().replace(/\s*\(.*\)/, '').trim() : 'HDFC Scheme';
+    const schemeKey = schemeName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const holdings = [];
+    rows.forEach((r, idx) => {
+      if (idx < 5 || !Array.isArray(r) || r.length < 8) return;
+      const isin = (r[1] || '').toString().trim();
+      const name = (r[3] || '').toString().trim();
+      const rating = (r[4] || '').toString().trim();
+      const mktValLacs = parseFloat(r[6]);
+      const pctNav = parseFloat(r[7]);
+
+      if (name && !isNaN(pctNav) && pctNav > 0 && isin.length > 5) {
+        holdings.push({
+          symbol: name.replace(/\s*\^|\s*\£/g, '').toUpperCase(),
+          name: name.replace(/\s*\^|\s*\£/g, ''),
+          isin,
+          sector: rating || 'Market Instrument',
+          pct: Number(pctNav.toFixed(2)),
+          mktValCr: !isNaN(mktValLacs) ? Number((mktValLacs / 100).toFixed(2)) : null
+        });
+      }
+    });
+
+    if (holdings.length > 0) {
+      this.disclosures.schemeHoldings = this.disclosures.schemeHoldings || {};
+      this.disclosures.schemeHoldings[schemeKey] = {
+        schemeName,
+        sourceUrl: fileUrl,
+        lastUpdated: new Date().toISOString(),
+        holdings: holdings.sort((a, b) => b.pct - a.pct)
+      };
+      console.log(`[AMFI Official Sync] Successfully ingested ${holdings.length} holdings for "${schemeName}"`);
+    }
   }
 
   _parseHdfcTerExcelRows(rows) {
@@ -234,6 +307,19 @@ class AmfiOfficialSyncEngine {
       period: period || 'Month-End Disclosure',
       isOfficial: matchedAum !== null || matchedTer !== null
     };
+  }
+
+  getOfficialHoldingsForScheme(schemeName) {
+    if (!schemeName) return null;
+    const sClean = schemeName.toLowerCase().replace(/\s*\(.*\)/, '').replace(/[^a-z0-9]+/g, '-');
+    const rawHoldings = this.disclosures.schemeHoldings || {};
+
+    for (const key of Object.keys(rawHoldings)) {
+      if (sClean.includes(key) || key.includes(sClean) || (rawHoldings[key].schemeName && sClean.includes(rawHoldings[key].schemeName.toLowerCase()))) {
+        return rawHoldings[key];
+      }
+    }
+    return null;
   }
 }
 

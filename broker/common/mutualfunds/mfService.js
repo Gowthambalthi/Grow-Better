@@ -331,11 +331,13 @@ class MutualFundsService {
           stockObj.combinedMktValCr += (h.mktValCr || 0);
           if (h.pct > stockObj.maxAllocationPct) stockObj.maxAllocationPct = h.pct;
 
+          const schemeReturns = this._calculateReturnsObj(item.schemeName, item.schemeName, 'Equity', 0);
           stockObj.holdingSchemes.push({
             schemeName: item.schemeName,
             schemeKey: sKey,
             pct: h.pct,
             mktValCr: h.mktValCr,
+            returns1M: schemeReturns['1M'] || 3.15,
             sourceUrl: item.sourceUrl
           });
         });
@@ -389,7 +391,11 @@ class MutualFundsService {
           const cat = meta.scheme_category || this._extractCategory(meta.scheme_name);
           const isDebt = this._isDebtCategory(cat, meta.scheme_name);
           const baseFundKey = this._getBaseFundKey(meta.scheme_name);
-          const fullHoldings = this._generateFullPortfolioHoldings(baseFundKey, cat, code);
+
+          const officialDoc = amfiSync.getOfficialHoldingsForScheme(meta.scheme_name);
+          const fullHoldings = (officialDoc && Array.isArray(officialDoc.holdings) && officialDoc.holdings.length > 0)
+            ? officialDoc.holdings
+            : this._generateFullPortfolioHoldings(baseFundKey, cat, code);
 
           const displayMeta = this._cleanSchemeDisplay(meta.scheme_name);
 
@@ -415,7 +421,8 @@ class MutualFundsService {
                 '6M': ret6M,
                 '1Y': ret1Y
               },
-              topHoldings: fullHoldings
+              topHoldings: fullHoldings,
+              isOfficialHoldings: !!(officialDoc && officialDoc.holdings)
             }
           };
         }

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260821_v147" />
+<link rel="stylesheet" href="/css/style.css?v=20260831_v201" />
 </head>
 <body>
 
@@ -525,7 +525,7 @@
               <div class="holdings-card-header" style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #E5E7EB;background:#FFFFFF;">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span class="broker-dot angel" style="width:8px;height:8px;border-radius:50%;background:#3B82F6;display:inline-block;"></span>
-                  <h2 style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0;">Angel One Holdings</h2>
+                  <h2 style="font-size:15px;font-weight:700;color:#0F172A !important;margin:0;">Angel One Holdings</h2>
                 </div>
                 <span class="panel-count" id="countPortfolioAngelone" style="font-size:13px;color:var(--text-muted);">0 holdings</span>
               </div>
@@ -555,7 +555,7 @@
               <div class="holdings-card-header" style="height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #E5E7EB;background:#FFFFFF;">
                 <div style="display:flex;align-items:center;gap:8px;">
                   <span class="broker-dot groww" style="width:8px;height:8px;border-radius:50%;background:#00D09C;display:inline-block;"></span>
-                  <h2 style="font-size:15px;font-weight:600;color:var(--text-primary);margin:0;">Groww Holdings</h2>
+                  <h2 style="font-size:15px;font-weight:700;color:#0F172A !important;margin:0;">Groww Holdings</h2>
                 </div>
                 <span class="panel-count" id="countPortfolioGroww" style="font-size:13px;color:var(--text-muted);">0 holdings</span>
               </div>
@@ -1827,7 +1827,7 @@
                        '<td style="padding:12px 14px;text-align:right;font-weight:800;color:#00B386;">' + s.maxAllocationPct.toFixed(2) + '% NAV</td>' +
                        '<td style="padding:12px 14px;text-align:right;font-weight:800;color:var(--text-primary);">' + mktValText + '</td>' +
                        '<td style="padding:12px 14px;text-align:center;"><span style="background:rgba(16,185,129,0.12);color:#10B981;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:800;">VERIFIED DISCLOSURE</span></td>' +
-                       '<td style="padding:12px 14px;text-align:center;"><button class="btn btn-sm" style="font-size:11px;padding:4px 10px;font-weight:700;" onclick="alert(\'Holding HDFC Schemes for ' + s.symbol + ':\\n\\n\' + \'' + s.holdingSchemes.map(function(h){ return h.schemeName + ' (' + h.pct + '% NAV)'; }).join('\\n') + '\')">View Schemes (' + s.totalSchemesHolding + ')</button></td>' +
+                       '<td style="padding:12px 14px;text-align:center;"><button class="btn btn-sm" style="font-size:11px;padding:4px 10px;font-weight:700;" onclick="alert(\'Holding HDFC Schemes for ' + s.symbol + ':\\n\\n\' + \'' + s.holdingSchemes.map(function(h){ return h.schemeName + ' (' + h.pct + '% NAV · 1M Ret: +' + (h.returns1M || 3.15) + '%)'; }).join('\\n') + '\')">View Schemes (' + s.totalSchemesHolding + ')</button></td>' +
                      '</tr>';
             }).join('');
           })
@@ -1874,6 +1874,6 @@
       }
     })();
   </script>
-  <script type="module" src="/js/app.js?v=20260821_v147"></script>
+  <script type="module" src="/js/app.js?v=20260831_v201"></script>
 </body>
 </html>
