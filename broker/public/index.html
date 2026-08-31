@@ -1539,9 +1539,19 @@
           }
         }
 
-        // Process HDFC real data
+        // Process HDFC real data — only equity schemes that hold stocks
         if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
-          var hdfcSchemes = hdfcData.schemes.map(function(s) {
+          var hdfcSchemes = hdfcData.schemes.filter(function(s) {
+            var cat = (s.category || '').toLowerCase();
+            // Only show equity schemes (not debt, hybrid, FoF, etc.)
+            return cat.indexOf('equity') !== -1 || cat.indexOf('flexi') !== -1 ||
+                   cat.indexOf('mid cap') !== -1 || cat.indexOf('small cap') !== -1 ||
+                   cat.indexOf('large cap') !== -1 || cat.indexOf('multi cap') !== -1 ||
+                   cat.indexOf('focused') !== -1 || cat.indexOf('elss') !== -1 ||
+                   cat.indexOf('value') !== -1 || cat.indexOf('contra') !== -1 ||
+                   cat.indexOf('dividend') !== -1 || cat.indexOf('sectoral') !== -1 ||
+                   cat.indexOf('index') !== -1;
+          }).map(function(s) {
             return {
               id: s.id,
               schemeCode: s.schemeCode,
