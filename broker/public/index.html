@@ -1587,11 +1587,23 @@
             }
           }
 
-          // Add standard AMFI schemes not already covered by multi-AMC data
+          // Add standard AMFI schemes only for AMCs NOT already in multi-AMC data
+          // Also deduplicate by schemeCode to prevent fake data overriding real data
           if (standardData && standardData.success && Array.isArray(standardData.schemes)) {
-            var existingIds = new Set(allSchemes.map(function(s) { return s.id; }));
+            var existingAmcs = new Set(allSchemes.map(function(s) { return (s.parentAmc || '').toLowerCase(); }));
+            var existingCodes = new Set();
+            allSchemes.forEach(function(s) {
+              if (s.schemeCode) existingCodes.add(String(s.schemeCode));
+            });
             var newSchemes = standardData.schemes.filter(function(s) {
-              return !existingIds.has(s.id);
+              // Skip schemes from AMCs we already have real data for
+              var sAmc = (s.parentAmc || '').toLowerCase();
+              for (var amc of existingAmcs) {
+                if (sAmc.includes(amc) || amc.includes(sAmc)) return false;
+              }
+              // Skip if schemeCode already exists
+              if (s.schemeCode && existingCodes.has(String(s.schemeCode))) return false;
+              return true;
             });
             allSchemes = allSchemes.concat(newSchemes);
           }
