@@ -613,6 +613,9 @@
             </div>
           </div>
 
+          <!-- HDFC Table View -->
+          <div id="hdfcTableView" style="display:none;width:100%;"></div>
+
           <!-- Scheme Cards Grid -->
           <div id="mfSchemesGrid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(340px, 1fr));gap:16px;width:100%;">
             <div class="card" style="padding:20px;text-align:center;color:var(--text-muted);">Loading Mutual Fund Schemes...</div>
@@ -1587,6 +1590,7 @@
               variantCount: 1,
               variants: [],
               investorCount: s.investorCount,
+              confidenceScore: s.confidenceScore || 50,
               latestPortfolioDate: s.latestPortfolioDate,
               availablePortfolioMonths: s.availablePortfolioMonths,
               isOfficialHdfc: true,
@@ -1604,6 +1608,8 @@
           subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes (' + hdfcCount + ' HDFC Official Data) · Multi-Server Failover Active';
         }
 
+        // Render HDFC table view
+        renderHdfcTable(hdfcSchemes || []);
         renderMfGrid(allSchemes);
       }
 
@@ -1621,6 +1627,97 @@
           t = t.replace(/\b(Hdfc|Sbi|Icici|Uti|Dsp|Lic|L&t|Ev|Elss|Etf)\b/g, function(m) { return m.toUpperCase(); });
         }
         return t || name;
+      }
+
+      function renderHdfcTable(hdfcSchemes) {
+        var tableContainer = document.getElementById('hdfcTableView');
+        if (!tableContainer || !hdfcSchemes || hdfcSchemes.length === 0) return;
+
+        // Sort by confidence score descending
+        var sorted = hdfcSchemes.slice().sort(function(a, b) { return (b.confidenceScore || 0) - (a.confidenceScore || 0); });
+
+        var rows = sorted.map(function(s, idx) {
+          var name = cleanSchemeTitle(s.schemeName);
+          var ret1m = s.returns && s.returns['1M'] != null ? s.returns['1M'] : null;
+          var ret3m = s.returns && s.returns['3M'] != null ? s.returns['3M'] : null;
+          var ret6m = s.returns && s.returns['6M'] != null ? s.returns['6M'] : null;
+          var ret1y = s.returns && s.returns['1Y'] != null ? s.returns['1Y'] : null;
+          var aum = s.aumCr != null ? '\u20b9' + Number(s.aumCr).toLocaleString('en-IN', {maximumFractionDigits:0}) + ' Cr' : '-';
+          var investors = s.investorCount != null ? (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : '-';
+          var cs = s.confidenceScore || 50;
+          var csColor = cs >= 80 ? '#00B386' : cs >= 60 ? '#F59E0B' : '#EB5B56';
+          var csBg = cs >= 80 ? 'rgba(0,179,134,0.12)' : cs >= 60 ? 'rgba(245,158,11,0.12)' : 'rgba(235,91,86,0.12)';
+
+          function retCell(val) {
+            if (val === null || val === undefined) return '<td style="padding:8px 10px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';
+            var color = val >= 0 ? '#00B386' : '#EB5B56';
+            var sign = val >= 0 ? '+' : '';
+            return '<td style="padding:8px 10px;text-align:right;color:' + color + ';font-weight:700;font-size:12px;">' + sign + val.toFixed(2) + '%</td>';
+          }
+
+          return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" onclick="openMfDetailFromTable(\'' + s.id + '\')">' +
+            '<td style="padding:8px 10px;font-weight:700;font-size:12px;color:var(--text-primary);white-space:nowrap;">' + name + '</td>' +
+            retCell(ret1m) +
+            retCell(ret3m) +
+            retCell(ret6m) +
+            retCell(ret1y) +
+            '<td style="padding:8px 10px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:600;">' + aum + '</td>' +
+            '<td style="padding:8px 10px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:600;">' + investors + '</td>' +
+            '<td style="padding:8px 10px;text-align:center;"><span style="background:' + csBg + ';color:' + csColor + ';font-size:11px;font-weight:800;padding:3px 8px;border-radius:10px;">' + cs + '</span></td>' +
+          '</tr>';
+        }).join('');
+
+        tableContainer.innerHTML = 
+          '<div style="margin-bottom:20px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+' +
+          '<div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">
+' +
+          '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">\ud83d\udcca HDFC Equity Funds Overview</h3>
+' +
+          '<span style="font-size:11px;color:var(--text-muted);">' + sorted.length + ' schemes \u00b7 Sorted by Confidence Score</span>
+' +
+          '</div>
+' +
+          '<div style="overflow-x:auto;">
+' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;">
+' +
+          '<thead>
+' +
+          '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+' +
+          '<th style="padding:10px 10px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Scheme Name</th>
+' +
+          '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1M</th>
+' +
+          '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">3M</th>
+' +
+          '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">6M</th>
+' +
+          '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1Y</th>
+' +
+          '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">AUM</th>
+' +
+          '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">Investors</th>
+' +
+          '<th style="padding:10px 10px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;">Confidence</th>
+' +
+          '</tr>
+' +
+          '</thead>
+' +
+          '<tbody>' + rows + '</tbody>
+' +
+          '</table>
+' +
+          '</div>
+' +
+          '</div>';
+        tableContainer.style.display = 'block';
+      }
+
+      function openMfDetailFromTable(schemeId) {
+        openMfDetailModal(schemeId);
       }
 
       function renderMfGrid(schemes) {

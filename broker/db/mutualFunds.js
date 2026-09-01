@@ -522,7 +522,33 @@ const helpers = {
           assetType: h.assetType,
           sector: h.sector,
           weight: h.weight
-        }))
+        })),
+        // Confidence score: based on returns, AUM, holdings, expense ratio
+        confidenceScore: (() => {
+          let score = 50; // baseline
+          const returns = allReturns.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {});
+          // Positive returns boost score
+          if ((returns['1M'] || 0) > 0) score += 5;
+          if ((returns['3M'] || 0) > 0) score += 5;
+          if ((returns['6M'] || 0) > 0) score += 5;
+          if ((returns['1Y'] || 0) > 0) score += 10;
+          // Strong 1Y return
+          if ((returns['1Y'] || 0) > 15) score += 10;
+          if ((returns['1Y'] || 0) > 30) score += 5;
+          // AUM size
+          const aumVal = aum ? aum.aum : 0;
+          if (aumVal > 5000) score += 5;
+          if (aumVal > 20000) score += 5;
+          if (aumVal > 50000) score += 5;
+          // Holdings count (diversification)
+          if (latestPortfolio && topHoldings.length >= 20) score += 5;
+          // Low expense ratio
+          if (s.expenseRatio && s.expenseRatio < 1.0) score += 5;
+          if (s.expenseRatio && s.expenseRatio < 0.5) score += 5;
+          // Investors count
+          if (inv && inv.investorCount > 1000000) score += 5;
+          return Math.min(score, 100);
+        })()
       };
     });
   },
