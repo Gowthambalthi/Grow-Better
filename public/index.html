@@ -1714,93 +1714,75 @@
       }
 
       function renderMfGrid(schemes) {
-        try {
-        var grid = document.getElementById('mfSchemesGrid');
-        if (!grid) return;
-        console.log('[MF Grid] rendering', schemes.length, 'schemes');
+  try {
+    var grid = document.getElementById("mfSchemesGrid");
+    if (!grid) return;
+    console.log("[MF Grid] rendering", schemes.length, "schemes");
+    if (!schemes || schemes.length === 0) {
+      grid.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);">No mutual fund schemes match your search criteria.</div>';
+      return;
+    }
+    var maxCount = window.mfDisplayCount || 5000;
+    var displayItems = schemes.slice(0, maxCount);
+    function retCell(val) {
+      if (val === null || val === undefined) return '<td style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:11px;">-</td>';
+      var color = val >= 0 ? '#00B386' : '#EB5B56';
+      var sign = val >= 0 ? '+' : '';
+      return '<td style="padding:6px 8px;text-align:right;color:' + color + ';font-weight:700;font-size:11px;">' + sign + val.toFixed(2) + '%</td>';
+    }
+    var rows = displayItems.map(function(s) {
+      var name = cleanSchemeTitle(s.schemeName);
+      var amcTag = s.parentAmc || '';
+      var cat = s.category || '';
+      var r1m = s.returns && s.returns['1M'] != null ? s.returns['1M'] : null;
+      var r3m = s.returns && s.returns['3M'] != null ? s.returns['3M'] : null;
+      var r6m = s.returns && s.returns['6M'] != null ? s.returns['6M'] : null;
+      var r1y = s.returns && s.returns['1Y'] != null ? s.returns['1Y'] : null;
+      var aum = s.aumCr != null ? '\u20b9' + Number(s.aumCr).toLocaleString('en-IN', {maximumFractionDigits:0}) + ' Cr' : '-';
+      var inv = s.investorCount != null ? (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : '-';
+      var cs = s.confidenceScore || 50;
+      var csC = cs >= 80 ? '#00B386' : cs >= 60 ? '#F59E0B' : '#EB5B56';
+      var csB = cs >= 80 ? 'rgba(0,179,134,0.12)' : cs >= 60 ? 'rgba(245,158,11,0.12)' : 'rgba(235,91,86,0.12)';
+      var hd = (s.topHoldings || []).slice(0, 3).map(function(h) { return h.symbol || h.name || ''; }).filter(Boolean).join(', ');
+      var sid = s.id.replace(/'/g, "\\'");
+      return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\'' + sid + '\')">' +
+        '<td style="padding:6px 8px;font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap;">' + amcTag + '</td>' +
+        '<td style="padding:6px 8px;font-weight:700;font-size:11px;color:var(--text-primary);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + name + '</td>' +
+        '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;">' + cat + '</td>' +
+        retCell(r1m) + retCell(r3m) + retCell(r6m) + retCell(r1y) +
+        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + aum + '</td>' +
+        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + inv + '</td>' +
+        '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + hd + '</td>' +
+        '<td style="padding:6px 8px;text-align:center;"><span style="background:' + csB + ';color:' + csC + ';font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;">' + cs + '</span></td>' +
+      '</tr>';
+    }).join('');
+    var htmlOut = '<div style="margin-bottom:16px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">' +
+      '<div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">' +
+        '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">\ud83d\udcca ALL AMCs Mutual Fund Schemes</h3>' +
+        '<span style="font-size:11px;color:var(--text-muted);">' + displayItems.length + ' schemes</span>' +
+      '</div>' +
+      '<div style="overflow-x:auto;">' +
+      '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+      '<thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">' +
+        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">AMC</th>' +
+        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">SCHEME NAME</th>' +
+        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">CATEGORY</th>' +
+        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1M</th>' +
+        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">3M</th>' +
+        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">6M</th>' +
+        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1Y</th>' +
+        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">AUM</th>' +
+        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">INVESTORS</th>' +
+        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">TOP HOLDINGS</th>' +
+        '<th style="padding:8px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;">CS</th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+      '</table></div></div>';
+    grid.innerHTML = htmlOut;
+    grid.style.display = 'block';
+  } catch (gridErr) { console.error("[MF Grid] render error:", gridErr); }
+}
 
-        if (!schemes || schemes.length === 0) {
-          grid.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);grid-column:1/-1;">No mutual fund schemes match your search criteria.</div>';
-          return;
-        }
-
-        var maxCount = window.mfDisplayCount || 5000;
-        var displayItems = schemes.slice(0, maxCount);
-
-        function retCell(val) {
-          if (val === null || val === undefined) return '<td style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:11px;">-</td>';
-          var color = val >= 0 ? '#00B386' : '#EB5B56';
-          var sign = val >= 0 ? '+' : '';
-          return '<td style="padding:6px 8px;text-align:right;color:' + color + ';font-weight:700;font-size:11px;">' + sign + val.toFixed(2) + '%</td>';
-        }
-
-        var rows = displayItems.map(function(s) {
-          var name = cleanSchemeTitle(s.schemeName);
-          var amcTag = s.parentAmc || '';
-          var cat = s.category || '';
-          var ret1m = s.returns && s.returns['1M'] != null ? s.returns['1M'] : null;
-          var ret3m = s.returns && s.returns['3M'] != null ? s.returns['3M'] : null;
-          var ret6m = s.returns && s.returns['6M'] != null ? s.returns['6M'] : null;
-          var ret1y = s.returns && s.returns['1Y'] != null ? s.returns['1Y'] : null;
-          var aum = s.aumCr != null ? '₹' + Number(s.aumCr).toLocaleString('en-IN', {maximumFractionDigits:0}) + ' Cr' : '-';
-          var investors = s.investorCount != null ? (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : '-';
-          var cs = s.confidenceScore || 50;
-          var csColor = cs >= 80 ? '#00B386' : cs >= 60 ? '#F59E0B' : '#EB5B56';
-          var csBg = cs >= 80 ? 'rgba(0,179,134,0.12)' : cs >= 60 ? 'rgba(245,158,11,0.12)' : 'rgba(235,91,86,0.12)';
-          var holdings = (s.topHoldings || []).slice(0, 3).map(function(h) { return h.symbol || h.name || ''; }).filter(Boolean).join(', ');
-
-          return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background=''" onclick="openMfDetailFromTable('' + s.id + '')">' +
-            '<td style="padding:6px 8px;font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap;">' + amcTag + '</td>' +
-            '<td style="padding:6px 8px;font-weight:700;font-size:11px;color:var(--text-primary);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + name + '</td>' +
-            '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;">' + cat + '</td>' +
-            retCell(ret1m) +
-            retCell(ret3m) +
-            retCell(ret6m) +
-            retCell(ret1y) +
-            '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + aum + '</td>' +
-            '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + investors + '</td>' +
-            '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + holdings + '</td>' +
-            '<td style="padding:6px 8px;text-align:center;"><span style="background:' + csBg + ';color:' + csColor + ';font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;">' + cs + '</span></td>' +
-          '</tr>';
-        }).join('');
-
-        var html = '<div style="margin-bottom:16px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">' +
-          '<div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">' +
-            '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">📊 ALL AMCs Mutual Fund Schemes</h3>' +
-            '<span style="font-size:11px;color:var(--text-muted);">' + displayItems.length + ' schemes</span>' +
-          '</div>' +
-          '<div style="overflow-x:auto;">' +
-          '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
-          '<thead>' +
-          '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">' +
-            '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">AMC</th>' +
-            '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">SCHEME NAME</th>' +
-            '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">CATEGORY</th>' +
-            '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1M</th>' +
-            '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">3M</th>' +
-            '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">6M</th>' +
-            '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1Y</th>' +
-            '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">AUM</th>' +
-            '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">INVESTORS</th>' +
-            '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">TOP HOLDINGS</th>' +
-            '<th style="padding:8px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;">CS</th>' +
-          '</tr>' +
-          '</thead>' +
-          '<tbody>' + rows + '</tbody>' +
-          '</table>' +
-          '</div>' +
-          '</div>';
-
-        if (schemes.length > displayItems.length) {
-          html += '<div style="text-align:center;padding:16px;">' +
-                    '<button onclick="window.mfDisplayCount=9999;renderMfGrid(mfCache)" style="background:var(--accent);color:#fff;border:none;padding:10px 24px;border-radius:8px;font-weight:800;font-size:12px;cursor:pointer;">LOAD ALL ' + schemes.length.toLocaleString('en-IN') + ' SCHEMES</button>' +
-                  '</div>';
-        }
-
-        grid.innerHTML = html;
-        grid.style.display = 'block';
-        } catch (gridErr) { console.error('[MF Grid] render error:', gridErr); }
-      }
 
       function getMfFallbackData(tf, q) {
         var cleanQ = (q || '').trim().toLowerCase();
