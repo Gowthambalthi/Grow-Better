@@ -53,6 +53,8 @@ db.exec(`
     option TEXT DEFAULT 'Growth',
     isin TEXT,
     status TEXT DEFAULT 'active',
+    fundManager TEXT,
+    expenseRatio REAL,
     createdAt TEXT NOT NULL DEFAULT (datetime('now')),
     updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -162,17 +164,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_mfh_name ON mutual_fund_holdings(securityName);
 `);
 
+// Add columns if they don't exist (migration)
+try { db.exec("ALTER TABLE mutual_fund_schemes ADD COLUMN fundManager TEXT"); } catch(_){}
+try { db.exec("ALTER TABLE mutual_fund_schemes ADD COLUMN expenseRatio REAL"); } catch(_){}
+
 // ─── Helper Functions ───────────────────────────────────────────────────────
 
 const helpers = {
 
   /**
    * Upsert a scheme — accepts an object
-   */
-  upsertScheme(scheme) {
+   */  upsertScheme(scheme) {
     const stmt = db.prepare(`
-      INSERT INTO mutual_fund_schemes (id, schemeCode, schemeName, amc, category, plan, option, isin, status, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      INSERT INTO mutual_fund_schemes (id, schemeCode, schemeName, amc, category, plan, option, isin, status, fundManager, expenseRatio, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(id) DO UPDATE SET
         schemeCode = excluded.schemeCode,
         schemeName = excluded.schemeName,
@@ -181,13 +186,15 @@ const helpers = {
         option = excluded.option,
         isin = excluded.isin,
         status = excluded.status,
+        fundManager = COALESCE(excluded.fundManager, mutual_fund_schemes.fundManager),
+        expenseRatio = COALESCE(excluded.expenseRatio, mutual_fund_schemes.expenseRatio),
         updatedAt = datetime('now')
     `);
     return stmt.run(
       scheme.id, scheme.schemeCode || null, scheme.schemeName,
       scheme.amc || 'HDFC', scheme.category || null,
-      scheme.plan || 'Direct', scheme.option || 'Growth',
-      scheme.isin || null, scheme.status || 'active'
+      scheme.plan || 'Direct', scheme.option || 'Growth', scheme.isin || null, scheme.status || 'active',
+      scheme.fundManager || null, scheme.expenseRatio || null
     );
   },
 
@@ -497,6 +504,8 @@ const helpers = {
         plan: s.plan,
         option: s.option,
         status: s.status,
+        fundManager: s.fundManager || null,
+        expenseRatio: s.expenseRatio || null,
         return1Y: ret ? ret.returnValue : null,
         return1YDate: ret ? ret.asOfDate : null,
         returns: allReturns.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),

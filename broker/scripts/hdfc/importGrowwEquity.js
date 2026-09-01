@@ -130,6 +130,8 @@ function processGrowwData(master, groww) {
     option: groww.scheme_type || 'Growth',
     isin: groww.isin || null,
     status: 'active',
+    fundManager: groww.fund_manager || null,
+    expenseRatio: groww.expense_ratio || null,
   });
 
   // ── Store returns ──
