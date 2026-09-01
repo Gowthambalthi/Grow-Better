@@ -1286,11 +1286,20 @@ async function start() {
       const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
       runHdfcPipeline().then(() => {
         console.log('[server] HDFC MF pipeline completed successfully');
+        try {
+          const { main: runAmfiFolios } = require('./scripts/importAmfiFolios');
+          runAmfiFolios().then(() => console.log('[server] AMFI folio import completed')).catch(err => console.error('[server] AMFI folio import failed:', err.message));
+        } catch(e) { console.warn('[server] AMFI folio import skipped:', e.message); }
       }).catch(err => {
         console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
       });
     } else {
       console.log(`[server] MF database loaded: ${schemeCount} schemes across ${amcCount} AMCs`);
+      // Auto-import AMFI folio data on every startup (fast, idempotent)
+      try {
+        const { main: runAmfiFolios } = require('./scripts/importAmfiFolios');
+        runAmfiFolios().then(() => console.log('[server] AMFI folio import completed')).catch(err => console.error('[server] AMFI folio import failed (non-fatal):', err.message));
+      } catch(e) { console.warn('[server] AMFI folio import skipped:', e.message); }
       // If only HDFC, trigger background multi-AMC expansion
       if (amcCount <= 1 && schemeCount < 500) {
         console.log('[server] Only ' + amcCount + ' AMC — triggering background multi-AMC expansion...');
@@ -1298,6 +1307,11 @@ async function start() {
         const orch = new MfOrchestrator(mfDb, { perAmcConcurrency: 5, globalConcurrency: 20 });
         orch.runAll().then(() => {
           console.log('[server] Multi-AMC expansion completed');
+          // Auto-import AMFI folio data for investor counts
+          try {
+            const { main: runAmfiFolios } = require('./scripts/importAmfiFolios');
+            runAmfiFolios().then(() => console.log('[server] AMFI folio import completed')).catch(err => console.error('[server] AMFI folio import failed (non-fatal):', err.message));
+          } catch(e) { console.warn('[server] AMFI folio import skipped:', e.message); }
         }).catch(err => {
           console.error('[server] Multi-AMC expansion failed (non-fatal):', err.message);
         });
