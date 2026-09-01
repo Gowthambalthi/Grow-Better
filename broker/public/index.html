@@ -82,7 +82,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902c</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902d</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -1445,7 +1445,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260902c';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);location.replace(location.href);}})();
+    (function(){var v='20260902d';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);location.replace(location.href);}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -1581,26 +1581,30 @@
             }
           }
 
-          // Add standard AMFI schemes only for AMCs NOT already in multi-AMC data
+          // Skip AMFI fallback entirely if multi-AMC DB covers most AMCs
+          if (existingAmcs.size >= 10) { console.log("[MF] Skipping AMFI fallback — multi-AMC data covers " + existingAmcs.size + " AMCs"); } else {// Add standard AMFI schemes only for AMCs NOT already in multi-AMC data
           // Also deduplicate by schemeCode to prevent fake data overriding real data
           if (standardData && standardData.success && Array.isArray(standardData.schemes)) {
-            var existingAmcs = new Set(allSchemes.map(function(s) { return (s.parentAmc || '').toLowerCase(); }));
+            var existingAmcs = new Set(allSchemes.map(function(s) { return (s.parentAmc || s.amc || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }));
             var existingCodes = new Set();
             allSchemes.forEach(function(s) {
               if (s.schemeCode) existingCodes.add(String(s.schemeCode));
             });
             var newSchemes = standardData.schemes.filter(function(s) {
               // Skip schemes from AMCs we already have real data for
-              var sAmc = (s.parentAmc || '').toLowerCase();
+              var sAmc = (s.parentAmc || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              var found = false;
               for (var amc of existingAmcs) {
-                if (sAmc.includes(amc) || amc.includes(sAmc)) return false;
+                var normAmc = amc.toLowerCase().replace(/[^a-z0-9]/g, '');
+                if (sAmc.indexOf(normAmc) >= 0 || normAmc.indexOf(sAmc) >= 0) { found = true; break; }
               }
+              if (found) return false;
               // Skip if schemeCode already exists
               if (s.schemeCode && existingCodes.has(String(s.schemeCode))) return false;
               return true;
             });
             allSchemes = allSchemes.concat(newSchemes);
-          }
+          }}
 
           // Remove all debt/non-equity schemes
           allSchemes = allSchemes.filter(function(s) {
