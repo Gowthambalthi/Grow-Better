@@ -2033,13 +2033,28 @@
           if (fallback) renderMfDetailContent(fallback);
         }
 
-        // 2. Async live NAV background refresh
+        // 2. Async live data background refresh — try profile endpoint (full data) first
         try {
-          var res = await fetch('/api/mutual-funds/scheme-detail/' + encodeURIComponent(schemeId));
+          var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(schemeId));
           if (res.ok) {
             var data = await res.json();
             if (data && data.success && data.scheme) {
-              renderMfDetailContent(data.scheme);
+              var enriched = Object.assign({}, cached || {}, data.scheme, {
+                cleanTitle: (cached || {}).cleanTitle || (data.scheme.schemeName || ''),
+                parentAmc: (cached || {}).parentAmc || data.scheme.amc || '',
+                category: (cached || {}).category || data.scheme.category || '',
+                isOfficialHdfc: true
+              });
+              renderMfDetailContent(enriched);
+            }
+          } else {
+            // Fallback to scheme-detail endpoint
+            var res2 = await fetch('/api/mutual-funds/scheme-detail/' + encodeURIComponent(schemeId));
+            if (res2.ok) {
+              var data2 = await res2.json();
+              if (data2 && data2.success && data2.scheme) {
+                renderMfDetailContent(data2.scheme);
+              }
             }
           }
         } catch (err) {
@@ -2048,51 +2063,43 @@
       }
 
       function renderMfDetailContent(s) {
-        var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: \u20b9' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
+        var aumVal = s.aumCr || s.aum || null;
+        var aumText = (aumVal !== null && aumVal !== undefined) ? 'AUM: \u20b9' + Number(aumVal).toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
         var terText = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
         var investorText = (s.investorCount !== null && s.investorCount !== undefined) ? 'Investors: ' + (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : 'Investors: Not available';
 
         var varCount = (s.variants || []).length;
         var varText = varCount > 0 ? varCount + ' Variants Available' : 'Direct Growth';
-        var officialBadge = s.isOfficialHdfc ? ' · \u2713 ' + (s.parentAmc || 'HDFC') + ' Official Data' : '';
+        var officialBadge = s.isOfficialHdfc ? ' · \u2713 ' + (s.parentAmc || s.amc || '') + ' Official Data' : '';
 
         document.getElementById('modalMfTitle').textContent = s.cleanTitle || s.schemeName;
         document.getElementById('modalMfSub').textContent = s.parentAmc + ' \u00b7 ' + s.category + ' \u00b7 ' + varText + ' \u00b7 ' + aumText + officialBadge;
 
-        // Show returns for HDFC schemes (real multi-period data) or fallback for others
-        if (s.isOfficialHdfc && s.returns) {
-          var periods = [
-            { key: '1M', elId: 'modalMfRet1m' },
-            { key: '3M', elId: 'modalMfRet3m' },
-            { key: '1Y', elId: 'modalMfRet1y' },
-          ];
-          for (var pi = 0; pi < periods.length; pi++) {
-            var p = periods[pi];
-            var val = s.returns[p.key];
-            var el = document.getElementById(p.elId);
-            if (el) {
-              if (val !== null && val !== undefined) {
-                el.textContent = (val >= 0 ? '+' : '') + val.toFixed(2) + '%';
-                el.style.color = val >= 0 ? '#00B386' : '#EB5B56';
-              } else {
-                el.textContent = 'N/A';
-                el.style.color = 'var(--text-muted)';
-              }
+        // Show returns for ALL schemes with real data
+        var periods = [
+          { key: '1M', elId: 'modalMfRet1m' },
+          { key: '3M', elId: 'modalMfRet3m' },
+          { key: '1Y', elId: 'modalMfRet1y' },
+        ];
+        for (var pi = 0; pi < periods.length; pi++) {
+          var p = periods[pi];
+          var val = (s.returns && s.returns[p.key] != null) ? s.returns[p.key] : null;
+          var el = document.getElementById(p.elId);
+          if (el) {
+            if (val !== null && val !== undefined) {
+              el.textContent = (val >= 0 ? '+' : '') + val.toFixed(2) + '%';
+              el.style.color = val >= 0 ? '#00B386' : '#EB5B56';
+            } else {
+              el.textContent = 'N/A';
+              el.style.color = 'var(--text-muted)';
             }
           }
-        } else {
-          document.getElementById('modalMfRet1m').textContent = (s.returns ? (s.returns['1M'] >= 0 ? '+' : '') + s.returns['1M'].toFixed(2) : '+2.45') + '%';
-          document.getElementById('modalMfRet1m').style.color = '';
-          document.getElementById('modalMfRet3m').textContent = (s.returns ? (s.returns['3M'] >= 0 ? '+' : '') + s.returns['3M'].toFixed(2) : '+8.90') + '%';
-          document.getElementById('modalMfRet3m').style.color = '';
-          document.getElementById('modalMfRet1y').textContent = (s.returns ? (s.returns['1Y'] >= 0 ? '+' : '') + s.returns['1Y'].toFixed(2) : '+28.50') + '%';
-          document.getElementById('modalMfRet1y').style.color = '';
         }
 
         renderModalVariantsTable(s.variants || []);
 
-        // For HDFC official schemes, load full holdings from API, month selector, and NAV chart
-        if (s.isOfficialHdfc && s.id) {
+        // Load full holdings from API, month selector, and NAV chart for ALL schemes
+        if (s.id) {
           loadHdfcHoldingsFromApi(s.id);
           loadNavChart(s.id);
         } else {
