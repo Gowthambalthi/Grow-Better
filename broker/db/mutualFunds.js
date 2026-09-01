@@ -122,6 +122,25 @@ db.exec(`
   );
 
   -- HOLDINGS: Individual holdings within a portfolio snapshot
+  
+  CREATE TABLE IF NOT EXISTS aum_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schemeId TEXT NOT NULL,
+    aum REAL,
+    snapshotDate TEXT NOT NULL,
+    source TEXT,
+    createdAt TEXT DEFAULT (datetime('now')),
+    UNIQUE(schemeId, snapshotDate)
+  );
+  CREATE TABLE IF NOT EXISTS investor_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    schemeId TEXT NOT NULL,
+    investorCount REAL,
+    snapshotDate TEXT NOT NULL,
+    source TEXT,
+    createdAt TEXT DEFAULT (datetime('now')),
+    UNIQUE(schemeId, snapshotDate)
+  );
   CREATE TABLE IF NOT EXISTS mutual_fund_holdings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     portfolioId INTEGER NOT NULL,
