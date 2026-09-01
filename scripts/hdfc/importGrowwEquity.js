@@ -301,6 +301,19 @@ async function main() {
     }
   }
 
+  // ── Load folio (investor) data from AMFI ──
+  try {
+    const folioData = require('../../data/hdfc_folio_data.json');
+    let folioCount = 0;
+    for (const [schemeId, info] of Object.entries(folioData.schemes)) {
+      db.upsertInvestors({ schemeId, investorCount: info.folios, asOfDate: folioData._asOfDate, source: 'amfi' });
+      folioCount++;
+    }
+    console.log(`\nLoaded folio data for ${folioCount} schemes from AMFI (${folioData._asOfDate})`);
+  } catch (err) {
+    console.warn('Could not load folio data:', err.message);
+  }
+
   // ── Data integrity check ──
   console.log('\n══════════════════════════════════════════════════════════');
   console.log('DATA INTEGRITY CHECK');

@@ -1611,6 +1611,7 @@
         var name = rawName || '';
         var t = name
           .replace(/-?\s*(direct|regular|retail|institutional)\s*plan\s*/gi, '')
+          .replace(/-?\s*(direct|regular)\s*/gi, '')
           .replace(/-?\s*(growth|idcw|dividend)\s*(option|payout|re-investment|reinvestment)?\s*/gi, '')
           .replace(/-?\s*plan\s*[a-z0-9]+\s*/gi, '')
           .replace(/\s+/g, ' ')
@@ -1657,7 +1658,7 @@
           var aumStr = (s.aumCr !== null && s.aumCr !== undefined) ? '\u20b9' + Math.round(s.aumCr).toLocaleString('en-IN') + ' Cr' : 'Not available';
           var terStr = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
           // Investor count for HDFC schemes
-          var investorStr = (s.investorCount !== null && s.investorCount !== undefined) ? s.investorCount.toFixed(1) + 'L' : (s.fundManager || 'Not available');
+          var investorStr = (s.investorCount !== null && s.investorCount !== undefined) ? (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : 'Not available';
 
           var cleanTitle = s.cleanTitle || cleanSchemeTitle(s.schemeName);
           var planTag = s.planTag || (s.schemeName.toLowerCase().includes('regular') ? 'Regular Plan' : 'Direct Plan');
@@ -1687,7 +1688,7 @@
                      '<div style="display:flex;align-items:center;gap:16px;margin-top:10px;padding:8px;background:var(--bg-input);border-radius:6px;border:1px solid var(--line);flex-wrap:wrap;">' +
                        '<div><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + currentMfTimeframe + ' RETURN' + (s.isOfficialHdfc ? '' : ' (LIVE NAV)') + '</div><div style="font-size:14px;font-weight:800;color:' + retColor + ';">' + retSign + retVal.toFixed(2) + '%</div></div>' +
                        '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">AUM</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + aumStr + '</div></div>' +
-                       (s.isOfficialHdfc ? '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">' + (s.investorCount ? 'INVESTORS' : 'FUND MANAGER') + '</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + investorStr + '</div></div>' : '') +
+                       (s.isOfficialHdfc ? '<div style="border-left:1px solid var(--line);padding-left:12px;"><div style="font-size:9px;color:var(--text-muted);font-weight:700;">INVESTORS</div><div style="font-size:13px;font-weight:800;color:var(--text-primary);">' + investorStr + '</div></div>' : '') +
                      '</div>' +
                    '</div>' +
                    '<div>' +
@@ -1888,7 +1889,7 @@
       function renderMfDetailContent(s) {
         var aumText = (s.aumCr !== null && s.aumCr !== undefined) ? 'AUM: \u20b9' + s.aumCr.toLocaleString('en-IN') + ' Cr' : 'AUM: Not available';
         var terText = (s.terPct !== null && s.terPct !== undefined) ? s.terPct.toFixed(2) + '%' : 'Not available';
-        var investorText = (s.investorCount !== null && s.investorCount !== undefined) ? 'Investors: ' + s.investorCount.toFixed(1) + 'L' : 'Investors: Not available';
+        var investorText = (s.investorCount !== null && s.investorCount !== undefined) ? 'Investors: ' + (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : 'Investors: Not available';
 
         var varCount = (s.variants || []).length;
         var varText = varCount > 0 ? varCount + ' Variants Available' : 'Direct Growth';
