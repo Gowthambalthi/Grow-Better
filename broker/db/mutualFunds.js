@@ -521,10 +521,17 @@ const helpers = {
     const targetDate = new Date();
     targetDate.setMonth(targetDate.getMonth() - monthsBack);
     const targetStr = targetDate.toISOString().slice(0, 10);
-    const latest = db.prepare('SELECT aum, snapshotDate FROM aum_snapshots WHERE schemeId = ? ORDER BY snapshotDate DESC LIMIT 1').get(schemeId);
-    if (!latest) return null;
-    const historical = db.prepare('SELECT aum FROM aum_snapshots WHERE schemeId = ? AND snapshotDate <= ? ORDER BY snapshotDate DESC LIMIT 1').get(schemeId, targetStr);
-    if (!historical) return null;
+    function normDate(d) { try { return new Date(d).toISOString().slice(0,10); } catch(e) { return d; } }
+    const all = db.prepare('SELECT aum, snapshotDate FROM aum_snapshots WHERE schemeId = ? ORDER BY snapshotDate DESC').all(schemeId);
+    if (all.length < 2) return null;
+    const latest = all[0];
+    const latestNorm = normDate(latest.snapshotDate);
+    let historical = null;
+    for (let i = 1; i < all.length; i++) {
+      const d = normDate(all[i].snapshotDate);
+      if (d <= targetStr) { historical = all[i]; break; }
+    }
+    if (!historical) historical = all[all.length - 1];
     const change = latest.aum - historical.aum;
     const changePct = historical.aum > 0 ? ((change / historical.aum) * 100) : null;
     return { current: latest.aum, previous: historical.aum, change, changePct, latestDate: latest.snapshotDate, historicalDate: historical.snapshotDate };
@@ -534,10 +541,16 @@ const helpers = {
     const targetDate = new Date();
     targetDate.setMonth(targetDate.getMonth() - monthsBack);
     const targetStr = targetDate.toISOString().slice(0, 10);
-    const latest = db.prepare('SELECT investorCount, snapshotDate FROM investor_snapshots WHERE schemeId = ? ORDER BY snapshotDate DESC LIMIT 1').get(schemeId);
-    if (!latest) return null;
-    const historical = db.prepare('SELECT investorCount FROM investor_snapshots WHERE schemeId = ? AND snapshotDate <= ? ORDER BY snapshotDate DESC LIMIT 1').get(schemeId, targetStr);
-    if (!historical) return null;
+    function normDate(d) { try { return new Date(d).toISOString().slice(0,10); } catch(e) { return d; } }
+    const all = db.prepare('SELECT investorCount, snapshotDate FROM investor_snapshots WHERE schemeId = ? ORDER BY snapshotDate DESC').all(schemeId);
+    if (all.length < 2) return null;
+    const latest = all[0];
+    let historical = null;
+    for (let i = 1; i < all.length; i++) {
+      const d = normDate(all[i].snapshotDate);
+      if (d <= targetStr) { historical = all[i]; break; }
+    }
+    if (!historical) historical = all[all.length - 1];
     const change = latest.investorCount - historical.investorCount;
     const changePct = historical.investorCount > 0 ? ((change / historical.investorCount) * 100) : null;
     return { current: latest.investorCount, previous: historical.investorCount, change, changePct, latestDate: latest.snapshotDate, historicalDate: historical.snapshotDate };
