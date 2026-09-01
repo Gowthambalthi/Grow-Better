@@ -1538,8 +1538,10 @@
           // FALLBACK: Standard AMFI schemes (for any AMCs not yet in multi-AMC DB)
           var schemesPromise = fetchWithTimeout('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000', 15000);
 
-          var allAmcData = await allAmcPromise;
-          var standardData = await schemesPromise;
+          // Fetch both in parallel
+          var allResults = await Promise.all([allAmcPromise, schemesPromise]);
+          var allAmcData = allResults[0];
+          var standardData = allResults[1];
           console.log('[MF] multi-amc:', allAmcData ? allAmcData.totalSchemes : 'null', 'primary:', standardData ? standardData.totalCount : 'null');
 
           var allSchemes = [];
@@ -1574,6 +1576,7 @@
                 latestPortfolioDate: s.latestPortfolioDate,
                 availablePortfolioMonths: s.availablePortfolioMonths,
                 isOfficialHdfc: true,
+                isOfficialData: true,
                 searchBlob: (s.schemeName + ' ' + (s.amc || '') + ' ' + (s.category || '')).toLowerCase()
               };
             });
@@ -1715,7 +1718,7 @@
           // Show different tags for HDFC official vs other schemes
           var sourceTagHtml;
           if (s.isOfficialHdfc) {
-            sourceTagHtml = '<span style="background:rgba(16,185,129,0.15);color:#10B981;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">✓ HDFC Official Data</span>';
+            sourceTagHtml = '<span style="background:rgba(16,185,129,0.15);color:#10B981;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">✓ ' + (s.parentAmc || 'HDFC') + ' Official Data</span>';
           } else {
             sourceTagHtml = '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">Live AMFI NAV</span>';
           }
@@ -1954,7 +1957,7 @@
 
         var varCount = (s.variants || []).length;
         var varText = varCount > 0 ? varCount + ' Variants Available' : 'Direct Growth';
-        var officialBadge = s.isOfficialHdfc ? ' · \u2713 HDFC Official Data' : '';
+        var officialBadge = s.isOfficialHdfc ? ' · \u2713 ' + (s.parentAmc || 'HDFC') + ' Official Data' : '';
 
         document.getElementById('modalMfTitle').textContent = s.cleanTitle || s.schemeName;
         document.getElementById('modalMfSub').textContent = s.parentAmc + ' \u00b7 ' + s.category + ' \u00b7 ' + varText + ' \u00b7 ' + aumText + officialBadge;
