@@ -12,6 +12,7 @@ const axios = require('axios');
 
 // Top 24 AMCs to support
 const TARGET_AMCS = [
+  // Top 24 (original)
   'HDFC Mutual Fund',
   'SBI Mutual Fund',
   'ICICI Prudential Mutual Fund',
@@ -36,6 +37,36 @@ const TARGET_AMCS = [
   'Franklin Templeton Mutual Fund',
   'Sundaram Mutual Fund',
   'Invesco Mutual Fund',
+  // Additional AMCs
+  'Shriram Mutual Fund',
+  'Navi Mutual Fund',
+  'LIC Mutual Fund',
+  'JM Financial Mutual Fund',
+  'WhiteOak Capital Mutual Fund',
+  'Mahindra Manulife Mutual Fund',
+  'Samco Mutual Fund',
+  'ITI Mutual Fund',
+  'Bajaj Finserv Mutual Fund',
+  'Trust Mutual Fund',
+  'Groww Mutual Fund',
+  'Zerodha Mutual Fund',
+  'Taurus Mutual Fund',
+  'Bank of India Mutual Fund',
+  'Indiabulls Mutual Fund',
+  'IIFL Mutual Fund',
+  'Helios Mutual Fund',
+  'Old Bridge Mutual Fund',
+  'Capitalmind Mutual Fund',
+  'Jio BlackRock Mutual Fund',
+  '360 ONE Mutual Fund',
+  'Abakkus Mutual Fund',
+  'AlphaGrep Mutual Fund',
+  'ASK Mutual Fund',
+  'Monarch Mutual Fund',
+  'NJ Mutual Fund',
+  'Choice Mutual Fund',
+  'Angel One Mutual Fund',
+  'UNIFI Mutual Fund',
 ];
 
 // AMC name normalization mapping
