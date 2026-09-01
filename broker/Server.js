@@ -1277,7 +1277,22 @@ async function start() {
         console.log('[server] HDFC MF pipeline completed successfully');
         try {
           const { main: runAmfiFolios } = require('./scripts/importAmfiFolios');
-          runAmfiFolios().then(() => console.log('[server] AMFI folio import completed')).catch(err => console.error('[server] AMFI folio import failed:', err.message));
+          runAmfiFolios().then(() => {
+          console.log('[server] AMFI folio import completed');
+          // Auto-snapshot AUM and investor data for historical tracking
+          try {
+            const today = new Date().toISOString().slice(0, 10);
+            const aumRows = hdfcMfDb.getDb().prepare('SELECT schemeId, aum, asOfDate FROM mutual_fund_aum WHERE aum > 0').all();
+            const invRows = hdfcMfDb.getDb().prepare('SELECT schemeId, investorCount, investorDate FROM mutual_fund_investors WHERE investorCount > 0').all();
+            const insAum = hdfcMfDb.getDb().prepare('INSERT OR REPLACE INTO aum_snapshots (schemeId, aum, snapshotDate, source) VALUES (?, ?, ?, ?)');
+            const insInv = hdfcMfDb.getDb().prepare('INSERT OR REPLACE INTO investor_snapshots (schemeId, investorCount, snapshotDate, source) VALUES (?, ?, ?, ?)');
+            const tx = hdfcMfDb.getDb().transaction(() => {
+              for (const r of aumRows) insAum.run(r.schemeId, r.aum, r.asOfDate || today, 'startup-snapshot');
+              for (const r of invRows) insInv.run(r.schemeId, r.investorCount, r.investorDate || today, 'startup-snapshot');
+            });
+            tx();
+            console.log('[server] Snapshot stored:', aumRows.length, 'AUM,', invRows.length, 'investors');
+          } catch(e) { console.warn('[server] Snapshot failed (non-fatal):', e.message); }.catch(err => console.error('[server] AMFI folio import failed:', err.message));
         } catch(e) { console.warn('[server] AMFI folio import skipped:', e.message); }
       }).catch(err => {
         console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
