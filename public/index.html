@@ -5,12 +5,14 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
+<meta name="version" content="v20260901b" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260831_v201" />
+<link rel="stylesheet" href="/css/style.css?v=20260901b" />
 </head>
 <body>
 
@@ -1443,6 +1445,8 @@
   </div>
 
   <script>
+    // Force reload if stale cached version
+    (function(){var v='20260901b';var s=localStorage.getItem('_appV');if(s&&s!==v){location.reload(true);}localStorage.setItem('_appV',v);})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
