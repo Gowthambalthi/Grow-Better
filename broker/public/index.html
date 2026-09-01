@@ -1606,10 +1606,10 @@
             subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
           }
 
-          // Render AMC overview table (for multi-AMC data)
+          // Render AMC overview table (for ALL multi-AMC data)
           try {
-            var hdfcOnly = allSchemes.filter(function(s) { return s.parentAmc === 'HDFC'; });
-            renderHdfcTable(hdfcOnly);
+            var officialSchemes = allSchemes.filter(function(s) { return s.isOfficialHdfc; });
+            renderHdfcTable(officialSchemes);
           } catch (e) {
             console.warn('[HDFC Table] render error:', e.message);
           }
@@ -1643,15 +1643,25 @@
         return t || name;
       }
 
-      function renderHdfcTable(hdfcSchemes) {
+      function renderHdfcTable(schemes) {
         var tableContainer = document.getElementById('hdfcTableView');
-        if (!tableContainer || !hdfcSchemes || hdfcSchemes.length === 0) return;
+        if (!tableContainer || !schemes || schemes.length === 0) return;
 
         // Sort by confidence score descending
-        var sorted = hdfcSchemes.slice().sort(function(a, b) { return (b.confidenceScore || 0) - (a.confidenceScore || 0); });
+        var sorted = schemes.slice().sort(function(a, b) { return (b.confidenceScore || 0) - (a.confidenceScore || 0); });
+
+        // Group by AMC
+        var byAmc = {};
+        for (var i = 0; i < sorted.length; i++) {
+          var amc = sorted[i].parentAmc || 'Other';
+          if (!byAmc[amc]) byAmc[amc] = [];
+          byAmc[amc].push(sorted[i]);
+        }
+        var amcNames = Object.keys(byAmc).sort(function(a,b) { return byAmc[b].length - byAmc[a].length; });
 
         var rows = sorted.map(function(s, idx) {
           var name = cleanSchemeTitle(s.schemeName);
+          var amcTag = s.parentAmc || '';
           var ret1m = s.returns && s.returns['1M'] != null ? s.returns['1M'] : null;
           var ret3m = s.returns && s.returns['3M'] != null ? s.returns['3M'] : null;
           var ret6m = s.returns && s.returns['6M'] != null ? s.returns['6M'] : null;
@@ -1670,6 +1680,7 @@
           }
 
           return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" onclick="openMfDetailFromTable(\'' + s.id + '\')">' +
+            '<td style="padding:8px 6px;font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap;">' + amcTag + '</td>' +
             '<td style="padding:8px 10px;font-weight:700;font-size:12px;color:var(--text-primary);white-space:nowrap;">' + name + '</td>' +
             retCell(ret1m) +
             retCell(ret3m) +
@@ -1681,7 +1692,8 @@
           '</tr>';
         }).join('');
 
-        tableContainer.innerHTML = '<div style="margin-bottom:20px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">' + '<div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">' + '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">\ud83d\udcca HDFC Equity Funds Overview</h3>' + '<span style="font-size:11px;color:var(--text-muted);">' + sorted.length + ' schemes \u00b7 Sorted by Confidence Score</span>' + '</div>' + '<div style="overflow-x:auto;">' + '<table style="width:100%;border-collapse:collapse;font-size:12px;">' + '<thead>' + '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">' + '<th style="padding:10px 10px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Scheme Name</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1M</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">3M</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">6M</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1Y</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">AUM</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">Investors</th>' + '<th style="padding:10px 10px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;">Confidence</th>' + '</tr>' + '</thead>' + '<tbody>' + rows + '</tbody>' + '</table>' + '</div>' + '</div>';
+        var amcSummary = amcNames.map(function(a) { return a + ' (' + byAmc[a].length + ')'; }).join(' \u00b7 ');
+        tableContainer.innerHTML = '<div style="margin-bottom:20px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">' + '<div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">' + '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">\ud83d\udcca ALL AMCs Equity Funds Overview</h3>' + '<span style="font-size:11px;color:var(--text-muted);">' + sorted.length + ' schemes \u00b7 ' + amcNames.length + ' AMCs</span>' + '</div>' + '<div style="padding:8px 16px;font-size:10px;color:var(--text-muted);border-bottom:1px solid var(--line);">' + amcSummary + '</div>' + '<div style="overflow-x:auto;">' + '<table style="width:100%;border-collapse:collapse;font-size:12px;">' + '<thead>' + '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">' + '<th style="padding:10px 6px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">AMC</th>' + '<th style="padding:10px 10px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Scheme Name</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1M</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">3M</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">6M</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1Y</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">AUM</th>' + '<th style="padding:10px 10px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">Investors</th>' + '<th style="padding:10px 10px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;">Confidence</th>' + '</tr>' + '</thead>' + '<tbody>' + rows + '</tbody>' + '</table>' + '</div>' + '</div>';
         tableContainer.style.display = 'block';
       }
 
