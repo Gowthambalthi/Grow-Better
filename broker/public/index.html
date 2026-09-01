@@ -1517,120 +1517,135 @@
       }
 
       async function fetchMfSchemes(timeframe, search) {
-        var tf = timeframe || currentMfTimeframe;
-        var q = search !== undefined ? search : currentMfSearch;
-        var grid = document.getElementById('mfSchemesGrid');
-        var serverTag = document.getElementById('mfServerTag');
-        var subTitle = document.getElementById('mfSubtitleCount');
-
-        // Fetch both standard MF schemes AND HDFC real data in parallel (with 15s timeout)
-        function fetchWithTimeout(url, ms) {
-          var controller = new AbortController();
-          var timer = setTimeout(function() { controller.abort(); }, ms);
-          return fetch(url, { signal: controller.signal })
-            .then(function(r) { clearTimeout(timer); return r.ok ? r.json() : null; })
-            .catch(function() { clearTimeout(timer); return null; });
-        }
-
-        var schemesPromise = fetchWithTimeout('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000', 15000);
-        var hdfcPromise = fetchWithTimeout('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q), 10000);
-
-        // Render HDFC table immediately when HDFC data arrives (don't wait for primary API)
-        hdfcPromise.then(function(hdfcData) {
-          if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
-            var hdfcForTable = hdfcData.schemes.filter(function(s) {
-              var cat = (s.category || '').toLowerCase();
-              return cat.indexOf('equity') !== -1 || cat.indexOf('commodit') !== -1 || cat.indexOf('index') !== -1 || cat.indexOf('gold') !== -1 || cat.indexOf('silver') !== -1 || cat.indexOf('hybrid') !== -1;
-            }).map(function(s) {
-              return { id: s.id, schemeName: s.schemeName, returns: s.returns || {}, aumCr: s.aum, investorCount: s.investorCount, confidenceScore: s.confidenceScore || 50 };
-            });
-            try { renderHdfcTable(hdfcForTable); } catch(e) { console.warn('[HDFC Table]', e.message); }
-          }
-        });
-
-        var results = await Promise.all([schemesPromise, hdfcPromise]);
-        var standardData = results[0];
-        var hdfcData = results[1];
-
-        var allSchemes = [];
-
-        // Process standard MF data
-        if (standardData && standardData.success && Array.isArray(standardData.schemes)) {
-          var nonHdfc = standardData.schemes.filter(function(s) {
-            var amc = (s.parentAmc || '').toLowerCase();
-            return !amc.includes('hdfc');
-          });
-          allSchemes = allSchemes.concat(nonHdfc);
-          if (serverTag) {
-            serverTag.textContent = standardData.serverUsed || 'Server 1 (Primary AMFI Engine)';
-            serverTag.style.background = 'rgba(16,185,129,0.15)';
-            serverTag.style.color = '#10B981';
-          }
-        }
-
-        // Process HDFC real data — only equity schemes that hold stocks
-        if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
-          var hdfcSchemes = hdfcData.schemes.filter(function(s) {
-            var cat = (s.category || '').toLowerCase();
-            var sub = (s.subCategory || '').toLowerCase();
-            // Show ALL equity-related: equity, index, commodities (ETFs), equity-oriented hybrid
-            return cat.indexOf('equity') !== -1 || cat.indexOf('commodit') !== -1 ||
-                   cat.indexOf('flexi') !== -1 || cat.indexOf('mid cap') !== -1 ||
-                   cat.indexOf('small cap') !== -1 || cat.indexOf('large cap') !== -1 ||
-                   cat.indexOf('multi cap') !== -1 || cat.indexOf('focused') !== -1 ||
-                   cat.indexOf('elss') !== -1 || cat.indexOf('value') !== -1 ||
-                   cat.indexOf('contra') !== -1 || cat.indexOf('dividend') !== -1 ||
-                   cat.indexOf('sectoral') !== -1 || cat.indexOf('thematic') !== -1 ||
-                   cat.indexOf('index') !== -1 || cat.indexOf('gold') !== -1 ||
-                   cat.indexOf('silver') !== -1 || cat.indexOf('etf') !== -1 ||
-                   (cat.indexOf('hybrid') !== -1 && (sub.indexOf('equity') !== -1 || sub.indexOf('aggressive') !== -1 || sub.indexOf('multi asset') !== -1));
-          }).map(function(s) {
-            return {
-              id: s.id,
-              schemeCode: s.schemeCode,
-              schemeName: s.schemeName,
-              cleanTitle: s.schemeName,
-              parentAmc: s.amc || 'HDFC Mutual Fund',
-              category: s.category,
-              subCategory: s.subCategory || '',
-              group: s.group || 'Equity Funds',
-              isDebt: false,
-              currentNav: s.nav || null,
-              aumCr: s.aum,
-              terPct: null,
-              selectedReturnPct: s.return1Y,
-              returns: s.returns || { '1Y': s.return1Y },
-              topHoldings: (s.topHoldings || []).map(function(h) {
-                return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
-              }),
-              variantCount: 1,
-              variants: [],
-              investorCount: s.investorCount,
-              confidenceScore: s.confidenceScore || 50,
-              latestPortfolioDate: s.latestPortfolioDate,
-              availablePortfolioMonths: s.availablePortfolioMonths,
-              isOfficialHdfc: true,
-              searchBlob: (s.schemeName + ' ' + (s.category || '') + ' hdfc').toLowerCase()
-            };
-          });
-          allSchemes = allSchemes.concat(hdfcSchemes);
-        }
-
-        mfCache = allSchemes;
-
-        if (subTitle) {
-          var total = allSchemes.length;
-          var hdfcCount = hdfcData && hdfcData.totalSchemes ? hdfcData.totalSchemes : 0;
-          subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes (' + hdfcCount + ' HDFC Official Data) · Multi-Server Failover Active';
-        }
-
-        // Render HDFC table view (wrapped in try-catch so it never blocks the grid)
         try {
-          renderHdfcTable(hdfcSchemes || []);
-        } catch (e) {
-          console.warn('[HDFC Table] render error:', e.message);
+          var tf = timeframe || currentMfTimeframe;
+          var q = search !== undefined ? search : currentMfSearch;
+          var grid = document.getElementById('mfSchemesGrid');
+          var serverTag = document.getElementById('mfServerTag');
+          var subTitle = document.getElementById('mfSubtitleCount');
+          console.log('[MF] fetchMfSchemes called, tf=' + tf + ' q=' + q);
+
+          // Fetch both standard MF schemes AND HDFC real data in parallel (with 15s timeout)
+          function fetchWithTimeout(url, ms) {
+            var controller = new AbortController();
+            var timer = setTimeout(function() { controller.abort(); }, ms);
+            return fetch(url, { signal: controller.signal })
+              .then(function(r) { clearTimeout(timer); return r.ok ? r.json() : null; })
+              .catch(function() { clearTimeout(timer); return null; });
+          }
+
+          var schemesPromise = fetchWithTimeout('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000', 15000);
+          var hdfcPromise = fetchWithTimeout('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q), 10000);
+
+          // Render HDFC table immediately when HDFC data arrives (don't wait for primary API)
+          hdfcPromise.then(function(hdfcData) {
+            if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
+              var hdfcForTable = hdfcData.schemes.filter(function(s) {
+                var cat = (s.category || '').toLowerCase();
+                return cat.indexOf('equity') !== -1 || cat.indexOf('commodit') !== -1 || cat.indexOf('index') !== -1 || cat.indexOf('gold') !== -1 || cat.indexOf('silver') !== -1 || cat.indexOf('hybrid') !== -1;
+              }).map(function(s) {
+                return { id: s.id, schemeName: s.schemeName, returns: s.returns || {}, aumCr: s.aum, investorCount: s.investorCount, confidenceScore: s.confidenceScore || 50 };
+              });
+              try { renderHdfcTable(hdfcForTable); } catch(e) { console.warn('[HDFC Table]', e.message); }
+            }
+          }).catch(function(e) { console.warn('[HDFC Table pre-render]', e.message); });
+
+          var results = await Promise.all([schemesPromise, hdfcPromise]);
+          var standardData = results[0];
+          var hdfcData = results[1];
+          console.log('[MF] primary:', standardData ? standardData.totalCount : 'null', 'hdfc:', hdfcData ? hdfcData.totalSchemes : 'null');
+
+          var allSchemes = [];
+
+          // Process standard MF data
+          if (standardData && standardData.success && Array.isArray(standardData.schemes)) {
+            var nonHdfc = standardData.schemes.filter(function(s) {
+              var amc = (s.parentAmc || '').toLowerCase();
+              return !amc.includes('hdfc');
+            });
+            allSchemes = allSchemes.concat(nonHdfc);
+            if (serverTag) {
+              serverTag.textContent = standardData.serverUsed || 'Server 1 (Primary AMFI Engine)';
+              serverTag.style.background = 'rgba(16,185,129,0.15)';
+              serverTag.style.color = '#10B981';
+            }
+          }
+
+          // Process HDFC real data
+          var hdfcSchemes = [];
+          if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
+            hdfcSchemes = hdfcData.schemes.filter(function(s) {
+              var cat = (s.category || '').toLowerCase();
+              var sub = (s.subCategory || '').toLowerCase();
+              return cat.indexOf('equity') !== -1 || cat.indexOf('commodit') !== -1 ||
+                     cat.indexOf('flexi') !== -1 || cat.indexOf('mid cap') !== -1 ||
+                     cat.indexOf('small cap') !== -1 || cat.indexOf('large cap') !== -1 ||
+                     cat.indexOf('multi cap') !== -1 || cat.indexOf('focused') !== -1 ||
+                     cat.indexOf('elss') !== -1 || cat.indexOf('value') !== -1 ||
+                     cat.indexOf('contra') !== -1 || cat.indexOf('dividend') !== -1 ||
+                     cat.indexOf('sectoral') !== -1 || cat.indexOf('thematic') !== -1 ||
+                     cat.indexOf('index') !== -1 || cat.indexOf('gold') !== -1 ||
+                     cat.indexOf('silver') !== -1 || cat.indexOf('etf') !== -1 ||
+                     (cat.indexOf('hybrid') !== -1 && (sub.indexOf('equity') !== -1 || sub.indexOf('aggressive') !== -1 || sub.indexOf('multi asset') !== -1));
+            }).map(function(s) {
+              return {
+                id: s.id,
+                schemeCode: s.schemeCode,
+                schemeName: s.schemeName,
+                cleanTitle: s.schemeName,
+                parentAmc: s.amc || 'HDFC Mutual Fund',
+                category: s.category,
+                subCategory: s.subCategory || '',
+                group: s.group || 'Equity Funds',
+                isDebt: false,
+                currentNav: s.nav || null,
+                aumCr: s.aum,
+                terPct: null,
+                selectedReturnPct: s.return1Y,
+                returns: s.returns || { '1Y': s.return1Y },
+                topHoldings: (s.topHoldings || []).map(function(h) {
+                  return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
+                }),
+                variantCount: 1,
+                variants: [],
+                investorCount: s.investorCount,
+                confidenceScore: s.confidenceScore || 50,
+                latestPortfolioDate: s.latestPortfolioDate,
+                availablePortfolioMonths: s.availablePortfolioMonths,
+                isOfficialHdfc: true,
+                searchBlob: (s.schemeName + ' ' + (s.category || '') + ' hdfc').toLowerCase()
+              };
+            });
+            allSchemes = allSchemes.concat(hdfcSchemes);
+          }
+          console.log('[MF] allSchemes:', allSchemes.length, 'hdfcFiltered:', hdfcSchemes.length);
+
+          mfCache = allSchemes;
+
+          if (subTitle) {
+            var total = allSchemes.length;
+            var hdfcCount = hdfcData && hdfcData.totalSchemes ? hdfcData.totalSchemes : 0;
+            subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes (' + hdfcCount + ' HDFC Official Data)';
+          }
+
+          // Render HDFC table view (wrapped in try-catch so it never blocks the grid)
+          try {
+            renderHdfcTable(hdfcSchemes);
+          } catch (e) {
+            console.warn('[HDFC Table] render error:', e.message);
+          }
+          renderMfGrid(allSchemes);
+          console.log('[MF] renderMfGrid called with', allSchemes.length, 'schemes');
+        } catch (err) {
+          console.error('[MF] fetchMfSchemes CRITICAL ERROR:', err);
+          // Always render SOMETHING so the page isn't stuck on Loading...
+          try {
+            var fallbackGrid = document.getElementById('mfSchemesGrid');
+            if (fallbackGrid) {
+              fallbackGrid.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);grid-column:1/-1;">Error loading schemes: ' + (err.message || 'Unknown error') + '<br><br><button onclick="fetchMfSchemes()" style="background:var(--accent);color:#fff;border:none;padding:8px 20px;border-radius:8px;cursor:pointer;font-weight:700;">Retry</button></div>';
+            }
+          } catch (_) {}
         }
-        renderMfGrid(allSchemes);
       }
 
       function cleanSchemeTitle(rawName) {
@@ -1741,8 +1756,10 @@
       }
 
       function renderMfGrid(schemes) {
+        try {
         var grid = document.getElementById('mfSchemesGrid');
         if (!grid) return;
+        console.log('[MF Grid] rendering', schemes.length, 'schemes');
 
         if (!schemes || schemes.length === 0) {
           grid.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);grid-column:1/-1;">No mutual fund schemes match your search criteria.</div>';
@@ -1819,6 +1836,7 @@
         }
 
         grid.innerHTML = html;
+        } catch (gridErr) { console.error('[MF Grid] render error:', gridErr); }
       }
 
       function getMfFallbackData(tf, q) {
