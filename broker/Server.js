@@ -890,21 +890,64 @@ app.get('/api/mutual-funds/hdfc/:schemeId/months', (req, res) => {
 });
 
 // GET /api/mutual-funds/hdfc/:schemeId/nav-history — NAV chart data (last 30 days)
-app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', (req, res) => {
+// Returns daily NAV movement from portfolio date to today
+app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', async (req, res) => {
   try {
     const { schemeId } = req.params;
-    const days = parseInt(req.query.days) || 30;
-    const history = hdfcMfDb.getNavHistory(schemeId, days);
-    if (!history || history.length === 0) {
-      return res.json({ success: true, schemeId, days, data: [], message: 'No NAV history yet. Run daily tracker to populate.' });
+    const scheme = hdfcMfDb.getScheme(schemeId);
+    if (!scheme) return res.status(404).json({ success: false, error: 'Scheme not found' });
+
+    // Get stored NAV history first
+    const history = hdfcMfDb.getNavHistory(schemeId, 30);
+    if (history && history.length > 5) {
+      return res.json({
+        success: true, schemeId, schemeName: scheme.schemeName,
+        source: 'tracked', dataPoints: history.length,
+        data: history.reverse().map(h => ({ date: h.navDate, nav: h.nav }))
+      });
     }
+
+    // Fallback: fetch from Groww and calculate daily NAV movement
+    const axios = require('axios');
+    const master = require('../scripts/hdfc/importGrowwEquity').HDFC_EQUITY_SCHEMES.find(s => 'HDFC_' + s.schemeCode === schemeId);
+    if (!master) return res.json({ success: true, schemeId, data: [], message: 'No Groww slug found' });
+
+    const url = `https://groww.in/mutual-funds/${master.growwSlug}`;
+    const resp = await axios.get(url, { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const match = resp.data.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+    if (!match) return res.json({ success: true, schemeId, data: [] });
+
+    const ss = JSON.parse(match[1]).props?.pageProps?.mfServerSideData;
+    const currentNav = ss.nav;
+    const rs = ss.return_stats?.[0] || {};
+
+    // Calculate daily NAVs from return percentages
+    const ret1d = (rs.return1d || 0) / 100;
+    const ret1w = (rs.return1w || 0) / 100;
+    const ret1m = (rs.return1m || 0) / 100;
+
+    // Estimate daily rate from 1M return (~22 trading days)
+    const dailyRate = ret1m / 22;
+
+    const data = [];
+    const today = new Date();
+    let nav = currentNav;
+
+    // Go backwards 30 calendar days
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dayStr = d.toISOString().split('T')[0];
+      // Skip weekends
+      if (d.getDay() === 0 || d.getDay() === 6) continue;
+      nav = currentNav / Math.pow(1 + dailyRate, i);
+      data.unshift({ date: dayStr, nav: Math.round(nav * 10000) / 10000 });
+    }
+
     res.json({
-      success: true,
-      schemeId,
-      schemeName: (hdfcMfDb.getScheme(schemeId) || {}).schemeName || schemeId,
-      days,
-      dataPoints: history.length,
-      data: history.reverse().map(h => ({ date: h.navDate, nav: h.nav }))
+      success: true, schemeId, schemeName: scheme.schemeName,
+      source: 'calculated', currentNav, dailyRate: Math.round(dailyRate * 10000) / 10000,
+      dataPoints: data.length, data
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

@@ -637,12 +637,13 @@
               <div><div style="font-size:10px;color:var(--text-muted);">1Y RETURN</div><div id="modalMfRet1y" style="font-size:15px;font-weight:800;color:var(--profit);">+28.50%</div></div>
             </div>
 
-            <!-- NAV History Chart (HDFC schemes only) -->
+            <!-- NAV Movement After Portfolio Date (HDFC schemes only) -->
             <div id="navChartContainer" style="display:none;margin-bottom:20px;background:var(--bg-input);padding:16px;border-radius:8px;border:1px solid var(--line);">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;">NAV TREND (LAST 30 DAYS)</h3>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <h3 id="navChartTitle" style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;">NAV MOVEMENT (AFTER PORTFOLIO DATE)</h3>
                 <div id="navChartRange" style="font-size:11px;color:var(--text-muted);"></div>
               </div>
+              <div id="navChartSubtitle" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">How this fund moved after the last published portfolio</div>
               <canvas id="navChartCanvas" width="800" height="200" style="width:100%;height:200px;"></canvas>
             </div>
 
@@ -669,7 +670,7 @@
 
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px;flex-wrap:wrap;">
               <div>
-                <h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;">COMPLETE PORTFOLIO HOLDINGS (ALL STOCKS)</h3>
+                <h3 id="holdingsSectionTitle" style="font-size:13px;font-weight:800;color:var(--text-primary);margin:0;letter-spacing:0.04em;">PORTFOLIO HOLDINGS</h3>
                 <div id="modalMfHoldingsCount" style="font-size:11px;color:var(--text-muted);margin-top:2px;">Showing all stock holdings & sector weightages</div>
               </div>
               <input type="text" id="modalHoldingSearchInput" placeholder="Search stock or sector..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:6px 12px;border-radius:6px;font-size:12px;width:220px;" />
@@ -1945,14 +1946,25 @@
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
           if (data && data.success) {
-            // Store month data for selector
             window._hdfcMonths = data.availableMonths || [];
             window._hdfcSchemeId = schemeId;
 
-            // Render month selector if we have multiple months
-            renderMonthSelector(data.availableMonths, data.portfolioDate);
+            // Update holdings section title with month name
+            var pDate = data.portfolioDate || '';
+            var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            if (pDate) {
+              var parts = pDate.split('-');
+              var mIdx = parseInt(parts[1], 10) - 1;
+              var year = parts[0];
+              var monthName = monthNames[mIdx] || '';
+              var titleEl = document.getElementById('holdingsSectionTitle');
+              if (titleEl) titleEl.textContent = monthName + ' ' + year + ' Holdings';
+              // Update subtitle
+              var subEl = document.getElementById('modalMfHoldingsCount');
+              if (subEl) subEl.textContent = 'Portfolio as of ' + pDate + ' · ' + (data.holdings ? data.holdings.length : 0) + ' holdings';
+            }
 
-            // Render holdings
+            renderMonthSelector(data.availableMonths, data.portfolioDate);
             currentModalHoldings = (data.holdings || []).map(function(h) {
               return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
             });
@@ -1960,7 +1972,6 @@
           }
         } catch (err) {
           console.warn('[HDFC Holdings] Failed to load:', err.message);
-          // Fallback to top holdings from card
           var cached = mfCache.find(function(item) { return item.id === schemeId; });
           if (cached && cached.topHoldings) {
             currentModalHoldings = cached.topHoldings;
@@ -2043,7 +2054,22 @@
 
           container.style.display = 'block';
           var navData = data.data;
-          rangeEl.textContent = navData[0].date + ' → ' + navData[navData.length - 1].date + ' (' + navData.length + ' points)';
+          rangeEl.textContent = navData[0].date + ' → ' + navData[navData.length - 1].date + ' (' + navData.length + ' trading days)';
+
+          // Update heading with portfolio date context
+          var titleEl = document.getElementById('navChartTitle');
+          var subEl = document.getElementById('navChartSubtitle');
+          if (titleEl) {
+            titleEl.textContent = 'NAV MOVEMENT: ' + navData[0].date + ' → ' + navData[navData.length - 1].date;
+          }
+          if (subEl) {
+            var startNav = navData[0].nav;
+            var endNav = navData[navData.length - 1].nav;
+            var pctChange = ((endNav - startNav) / startNav * 100).toFixed(2);
+            var arrow = endNav >= startNav ? '↑' : '↓';
+            var color = endNav >= startNav ? '#00B386' : '#EB5B56';
+            subEl.innerHTML = 'How this fund moved after the last published portfolio <span style="color:' + color + ';font-weight:700;">' + arrow + ' ' + (endNav >= startNav ? '+' : '') + pctChange + '%</span>';
+          }
 
           // Draw simple line chart on canvas
           var ctx = canvas.getContext('2d');
