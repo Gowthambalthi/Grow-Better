@@ -1533,7 +1533,20 @@
         }
 
         var schemesPromise = fetchWithTimeout('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000', 15000);
-        var hdfcPromise = fetchWithTimeout('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q), 15000);
+        var hdfcPromise = fetchWithTimeout('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q), 10000);
+
+        // Render HDFC table immediately when HDFC data arrives (don't wait for primary API)
+        hdfcPromise.then(function(hdfcData) {
+          if (hdfcData && hdfcData.success && Array.isArray(hdfcData.schemes)) {
+            var hdfcForTable = hdfcData.schemes.filter(function(s) {
+              var cat = (s.category || '').toLowerCase();
+              return cat.indexOf('equity') !== -1 || cat.indexOf('commodit') !== -1 || cat.indexOf('index') !== -1 || cat.indexOf('gold') !== -1 || cat.indexOf('silver') !== -1 || cat.indexOf('hybrid') !== -1;
+            }).map(function(s) {
+              return { id: s.id, schemeName: s.schemeName, returns: s.returns || {}, aumCr: s.aum, investorCount: s.investorCount, confidenceScore: s.confidenceScore || 50 };
+            });
+            try { renderHdfcTable(hdfcForTable); } catch(e) { console.warn('[HDFC Table]', e.message); }
+          }
+        });
 
         var results = await Promise.all([schemesPromise, hdfcPromise]);
         var standardData = results[0];

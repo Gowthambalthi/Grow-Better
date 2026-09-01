@@ -245,28 +245,46 @@ async function main() {
   const startTime = Date.now();
   const results = [];
   const errors = [];
+  const BATCH_SIZE = 5; // Parallel threads per batch
 
-  console.log(`Processing ${HDFC_EQUITY_SCHEMES.length} HDFC equity schemes...\n`);
+  console.log(`Processing ${HDFC_EQUITY_SCHEMES.length} HDFC equity schemes (${BATCH_SIZE} parallel batches)...\n`);
 
-  for (let i = 0; i < HDFC_EQUITY_SCHEMES.length; i++) {
-    const master = HDFC_EQUITY_SCHEMES[i];
-    const progress = `[${i + 1}/${HDFC_EQUITY_SCHEMES.length}]`;
+  // Process in parallel batches of BATCH_SIZE
+  for (let i = 0; i < HDFC_EQUITY_SCHEMES.length; i += BATCH_SIZE) {
+    const batch = HDFC_EQUITY_SCHEMES.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(HDFC_EQUITY_SCHEMES.length / BATCH_SIZE);
+    console.log(`[Batch ${batchNum}/${totalBatches}] Fetching ${batch.length} schemes in parallel...`);
 
-    console.log(`${progress} ${master.name} (${master.growwSlug})`);
+    // Fetch all schemes in this batch simultaneously
+    const batchResults = await Promise.allSettled(
+      batch.map((master, idx) => {
+        const globalIdx = i + idx + 1;
+        console.log(`  [${globalIdx}/${HDFC_EQUITY_SCHEMES.length}] Starting: ${master.name}`);
+        return importScheme(master).then(result => {
+          if (result.success) {
+            console.log(`  [${globalIdx}] ✓ ${master.name}: 1Y=${result.return1Y}% | AUM=₹${result.aum?.toFixed(0)} Cr | Holdings=${result.holdingsCount}`);
+          } else {
+            console.log(`  [${globalIdx}] ✗ ${master.name}: ${result.error}`);
+          }
+          return result;
+        });
+      })
+    );
 
-    const result = await importScheme(master);
-
-    if (result.success) {
-      console.log(`  ✓ 1Y Return: ${result.return1Y}% | AUM: ₹${result.aum?.toFixed(1)} Cr | Holdings: ${result.holdingsCount} | NAV: ${result.fundManager || 'N/A'}`);
-      results.push(result);
-    } else {
-      console.log(`  ✗ Error: ${result.error}`);
-      errors.push({ scheme: master.name, error: result.error });
+    // Collect results from this batch
+    for (const r of batchResults) {
+      if (r.status === 'fulfilled' && r.value && r.value.success) {
+        results.push(r.value);
+      } else {
+        const err = r.status === 'rejected' ? r.reason?.message : (r.value?.error || 'Unknown error');
+        errors.push({ scheme: 'batch', error: err });
+      }
     }
 
-    // Rate limiting
-    if (i < HDFC_EQUITY_SCHEMES.length - 1) {
-      await sleep(DELAY_MS);
+    // Small delay between batches to avoid rate limiting
+    if (i + BATCH_SIZE < HDFC_EQUITY_SCHEMES.length) {
+      await sleep(1000);
     }
   }
 
