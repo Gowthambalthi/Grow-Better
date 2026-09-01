@@ -85,7 +85,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902g</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902h</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -1448,7 +1448,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260902g';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});}location.reload(true);}})();
+    (function(){var v='20260902h';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});}location.reload(true);}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -1569,6 +1569,14 @@
                 variantCount: 1,
                 variants: [],
                 investorCount: s.investorCount,
+                aumChange1M: s.aumChange1M || null,
+                aumChange3M: s.aumChange3M || null,
+                aumChange6M: s.aumChange6M || null,
+                aumChange1Y: s.aumChange1Y || null,
+                investorChange1M: s.investorChange1M || null,
+                investorChange3M: s.investorChange3M || null,
+                investorChange6M: s.investorChange6M || null,
+                investorChange1Y: s.investorChange1Y || null,
                 confidenceScore: s.confidenceScore || 50,
                 latestPortfolioDate: s.latestPortfolioDate,
                 availablePortfolioMonths: s.availablePortfolioMonths,
@@ -1770,6 +1778,30 @@
         _renderMfGridBody(grid, schemes);
       }
 
+      
+      // Format change values with arrows
+      function formatChange(changeObj, suffix) {
+        if (!changeObj || changeObj.changePct == null) return '';
+        var pct = changeObj.changePct;
+        var color = pct >= 0 ? '#00B386' : '#EB5B56';
+        var arrow = pct >= 0 ? '\u25B2' : '\u25BC';
+        var sign = pct >= 0 ? '+' : '';
+        return '<div style="font-size:9px;color:' + color + ';font-weight:700;white-space:nowrap;">' + arrow + ' ' + sign + pct.toFixed(1) + '%' + (suffix || '') + '</div>';
+      }
+      
+      function formatInvChange(changeObj) {
+        if (!changeObj || changeObj.change == null) return '';
+        var change = changeObj.change;
+        var color = change >= 0 ? '#00B386' : '#EB5B56';
+        var arrow = change >= 0 ? '\u25B2' : '\u25BC';
+        var sign = change >= 0 ? '+' : '';
+        var formatted;
+        if (Math.abs(change) >= 100000) formatted = (change / 100000).toFixed(1) + 'L';
+        else if (Math.abs(change) >= 1000) formatted = (change / 1000).toFixed(1) + 'K';
+        else formatted = change.toFixed(0);
+        return '<div style="font-size:9px;color:' + color + ';font-weight:700;white-space:nowrap;">' + arrow + ' ' + sign + formatted + '</div>';
+      }
+
       function _renderMfGridBody(grid, schemes) {
   try {
     console.log("[MF Grid] rendering", schemes.length, "schemes");
@@ -1806,8 +1838,8 @@
         '<td style="padding:6px 8px;font-weight:700;font-size:11px;color:var(--text-primary);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + name + '</td>' +
         '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;">' + cat + '</td>' +
         retCell(r1m) + retCell(r3m) + retCell(r6m) + retCell(r1y) +
-        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + aum + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + inv + '</td>' +
+        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + aum + formatChange(s.aumChange1M, ' 1M') + '</td>' +
+        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + inv + formatInvChange(s.investorChange1M) + '</td>' +
         '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + hd + '</td>' +
         '<td style="padding:6px 8px;text-align:center;"><span style="background:' + csB + ';color:' + csC + ';font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;">' + cs + '</span></td>' +
       '</tr>';

@@ -236,8 +236,13 @@ const helpers = {
         asOfDate = excluded.asOfDate,
         source = excluded.source
     `);
-    return stmt.run(schemeId, aum, asOfDate || null, source || null);
-  },
+    const result = stmt.run(schemeId, aum, asOfDate || null, source || null);
+      // Also store historical snapshot
+      if (aum > 0 && asOfDate) {
+        try { db.prepare('INSERT OR REPLACE INTO aum_snapshots (schemeId, aum, snapshotDate, source) VALUES (?, ?, ?, ?)').run(schemeId, aum, asOfDate, source || null); } catch(e) {}
+      }
+      return result;
+    },
 
   /**
    * Upsert NAV — accepts an object { schemeId, nav, asOfDate, source }
@@ -276,8 +281,13 @@ const helpers = {
         investorDate = excluded.investorDate,
         source = excluded.source
     `);
-    return stmt.run(schemeId, investorCount, investorDate || null, source || null);
-  },
+    const result2 = stmt.run(schemeId, investorCount, investorDate || null, source || null);
+      // Also store historical snapshot
+      if (investorCount > 0 && investorDate) {
+        try { db.prepare('INSERT OR REPLACE INTO investor_snapshots (schemeId, investorCount, snapshotDate, source) VALUES (?, ?, ?, ?)').run(schemeId, investorCount, investorDate, source || null); } catch(e) {}
+      }
+      return result2;
+    },
 
   /**
    * Upsert a portfolio — accepts an object { schemeId, portfolioDate, source }
@@ -514,6 +524,14 @@ const helpers = {
         aum: aum ? aum.aum : null,
         aumDate: aum ? aum.asOfDate : null,
         investorCount: inv ? inv.investorCount : null,
+        aumChange1M: this.getAumChange(s.id, 1),
+        aumChange3M: this.getAumChange(s.id, 3),
+        aumChange6M: this.getAumChange(s.id, 6),
+        aumChange1Y: this.getAumChange(s.id, 12),
+        investorChange1M: this.getInvestorChange(s.id, 1),
+        investorChange3M: this.getInvestorChange(s.id, 3),
+        investorChange6M: this.getInvestorChange(s.id, 6),
+        investorChange1Y: this.getInvestorChange(s.id, 12),
         latestPortfolioDate: latestPortfolio ? latestPortfolio.portfolioDate : null,
         availablePortfolioMonths: this.getPortfolioDates(s.id).length,
         topHoldings: topHoldings.map(h => ({
