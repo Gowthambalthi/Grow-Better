@@ -739,20 +739,28 @@ const hdfcMfDb = require('./db/mutualFunds');
 let hdfcAutoTriggered = false;
 app.get('/api/mutual-funds/hdfc', (req, res) => {
   try {
-    // Auto-trigger pipeline if DB is empty (first request on fresh deploy)
+    // Auto-trigger pipeline if DB is empty or data is stale (>1 day old)
     const schemeCount = hdfcMfDb.getAllSchemes().length;
-    if (schemeCount === 0 && !hdfcAutoTriggered) {
+    const shouldRefresh = schemeCount === 0 || (() => {
+      try {
+        const latest = hdfcMfDb.getDb().prepare('SELECT MAX(asOfDate) as d FROM mutual_fund_returns').get();
+        if (!latest || !latest.d) return true;
+        const ageMs = Date.now() - new Date(latest.d).getTime();
+        return ageMs > 24 * 60 * 60 * 1000;
+      } catch (_) { return true; }
+    })();
+    if (shouldRefresh && !hdfcAutoTriggered) {
       hdfcAutoTriggered = true;
-      console.log('[server] HDFC MF DB empty — auto-triggering Groww pipeline...');
+      const reason = schemeCount === 0 ? 'empty' : 'stale (>1 day old)';
+      console.log('[server] HDFC MF DB ' + reason + ' — auto-refreshing from Groww...');
       const { main: runGrowwPipeline } = require('./scripts/hdfc/importGrowwEquity');
       runGrowwPipeline().then(() => {
-        console.log('[server] HDFC MF Groww pipeline completed');
+        console.log('[server] HDFC MF Groww refresh completed');
+        hdfcAutoTriggered = false;
       }).catch(err => {
-        console.error('[server] HDFC MF Groww pipeline failed:', err.message);
+        console.error('[server] HDFC MF Groww refresh failed:', err.message);
         hdfcAutoTriggered = false; // allow retry
       });
-      // Return empty result while pipeline runs — frontend will retry
-      return res.json({ success: true, totalSchemes: 0, source: 'Pipeline running...', schemes: [] });
     }
 
     const { search } = req.query;
