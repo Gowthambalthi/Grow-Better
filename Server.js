@@ -734,6 +734,100 @@ const hdfcMfDb = require('./db/mutualFunds');
 
 // IMPORTANT: Static routes BEFORE :schemeId to avoid Express param matching
 
+// GET /api/mutual-funds/all — List ALL AMC schemes with summary (multi-AMC endpoint)
+app.get('/api/mutual-funds/all', (req, res) => {
+  try {
+    const { search, amc, category, limit } = req.query;
+    let schemes = hdfcMfDb.getAllSchemesSummary();
+
+    // Filter by AMC
+    if (amc) {
+      const amcLower = amc.toLowerCase();
+      schemes = schemes.filter(s => (s.amc || '').toLowerCase().includes(amcLower));
+    }
+
+    // Filter by category
+    if (category) {
+      const catLower = category.toLowerCase();
+      schemes = schemes.filter(s => (s.category || '').toLowerCase().includes(catLower));
+    }
+
+    // Search filter
+    if (search) {
+      const q = search.toLowerCase();
+      schemes = schemes.filter(s =>
+        (s.schemeName || '').toLowerCase().includes(q) ||
+        (s.amc || '').toLowerCase().includes(q) ||
+        (s.category || '').toLowerCase().includes(q) ||
+        (s.id || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Limit
+    const lim = limit ? parseInt(limit) : 5000;
+    schemes = schemes.slice(0, lim);
+
+    // Group by AMC for summary
+    const byAmc = {};
+    for (const s of schemes) {
+      const a = s.amc || 'Unknown';
+      if (!byAmc[a]) byAmc[a] = { count: 0, schemes: [] };
+      byAmc[a].count++;
+    }
+
+    res.json({
+      success: true,
+      totalSchemes: schemes.length,
+      totalAmcs: Object.keys(byAmc).length,
+      amcSummary: Object.entries(byAmc).map(([name, d]) => ({ name, count: d.count })),
+      source: 'Multi-AMC Official Data (SQLite)',
+      schemes
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/mutual-funds/amcs — List all AMCs with scheme counts
+app.get('/api/mutual-funds/amcs', (req, res) => {
+  try {
+    const schemes = hdfcMfDb.getAllSchemesSummary();
+    const byAmc = {};
+    for (const s of schemes) {
+      const a = s.amc || 'Unknown';
+      if (!byAmc[a]) byAmc[a] = { name: a, count: 0, categories: new Set() };
+      byAmc[a].count++;
+      if (s.category) byAmc[a].categories.add(s.category);
+    }
+    const amcs = Object.values(byAmc)
+      .map(a => ({ ...a, categories: Array.from(a.categories) }))
+      .sort((a, b) => b.count - a.count);
+    res.json({ success: true, totalAmcs: amcs.length, totalSchemes: schemes.length, amcs });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/mutual-funds/run-all — Trigger multi-AMC import pipeline
+let allAmcPipelineRunning = false;
+app.post('/api/mutual-funds/run-all', async (req, res) => {
+  if (allAmcPipelineRunning) {
+    return res.json({ success: true, message: 'Multi-AMC pipeline already running...' });
+  }
+  allAmcPipelineRunning = true;
+  res.json({ success: true, message: 'Multi-AMC pipeline started. Check back in 3-5 minutes.' });
+  try {
+    const MfOrchestrator = require('./common/mf-engine/orchestrator');
+    const orch = new MfOrchestrator(hdfcMfDb, { perAmcConcurrency: 5 });
+    await orch.runAll();
+    console.log('[server] Multi-AMC pipeline completed via manual trigger');
+  } catch (err) {
+    console.error('[server] Multi-AMC pipeline failed:', err.message);
+  } finally {
+    allAmcPipelineRunning = false;
+  }
+});
+
 // GET /api/mutual-funds/hdfc — List all HDFC schemes with summary
 // Auto-triggers pipeline if database is empty
 let hdfcAutoTriggered = false;
@@ -1182,12 +1276,13 @@ async function start() {
     (err) => console.error('[server] instrument master load failed:', err.message)
   ); // deliberately not awaited — server starts serving immediately, instrument search just 503s until this resolves
 
-  // Auto-run HDFC Mutual Fund pipeline if database is empty (for Render deployment)
+  // Auto-run Mutual Fund pipeline if database is empty (for Render deployment)
   try {
-    const hdfcDb = require('./db/mutualFunds');
-    const schemeCount = hdfcDb.getAllSchemes().length;
+    const mfDb = require('./db/mutualFunds');
+    const schemeCount = mfDb.getAllSchemes().length;
+    const amcCount = new Set(mfDb.getAllSchemes().map(s => s.amc)).size;
     if (schemeCount === 0) {
-      console.log('[server] HDFC MF database empty — running import pipeline (background)...');
+      console.log('[server] MF database empty — running HDFC import pipeline (background)...');
       const { main: runHdfcPipeline } = require('./scripts/hdfc/importHdfcPipeline');
       runHdfcPipeline().then(() => {
         console.log('[server] HDFC MF pipeline completed successfully');
@@ -1195,10 +1290,21 @@ async function start() {
         console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
       });
     } else {
-      console.log(`[server] HDFC MF database loaded: ${schemeCount} schemes`);
+      console.log(`[server] MF database loaded: ${schemeCount} schemes across ${amcCount} AMCs`);
+      // If only HDFC, trigger background multi-AMC expansion
+      if (amcCount <= 1 && schemeCount < 500) {
+        console.log('[server] Only ' + amcCount + ' AMC — triggering background multi-AMC expansion...');
+        const MfOrchestrator = require('./common/mf-engine/orchestrator');
+        const orch = new MfOrchestrator(mfDb, { perAmcConcurrency: 5, globalConcurrency: 20 });
+        orch.runAll().then(() => {
+          console.log('[server] Multi-AMC expansion completed');
+        }).catch(err => {
+          console.error('[server] Multi-AMC expansion failed (non-fatal):', err.message);
+        });
+      }
     }
   } catch (e) {
-    console.warn('[server] HDFC MF pipeline init warning:', e.message);
+    console.warn('[server] MF pipeline init warning:', e.message);
   }
 
   const port = process.env.PORT || env.server.port || 4000;
