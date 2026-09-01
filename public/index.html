@@ -1716,10 +1716,81 @@
         openMfDetailModal(schemeId);
       }
 
+            // Current sort state for MF table
+      var mfSortKey = '';
+      var mfSortDir = 'desc'; // 'asc' or 'desc'
+      var mfSortedSchemes = [];
+
+      function getMfSortVal(scheme, key) {
+        switch (key) {
+          case 'amc': return (scheme.parentAmc || '').toLowerCase();
+          case 'name': return (scheme.schemeName || '').toLowerCase();
+          case 'category': return (scheme.category || '').toLowerCase();
+          case '1M': return (scheme.returns && scheme.returns['1M'] != null) ? Number(scheme.returns['1M']) : -9999;
+          case '3M': return (scheme.returns && scheme.returns['3M'] != null) ? Number(scheme.returns['3M']) : -9999;
+          case '6M': return (scheme.returns && scheme.returns['6M'] != null) ? Number(scheme.returns['6M']) : -9999;
+          case '1Y': return (scheme.returns && scheme.returns['1Y'] != null) ? Number(scheme.returns['1Y']) : -9999;
+          case 'aum': return Number(scheme.aumCr) || 0;
+          case 'inv': return Number(scheme.investorCount) || 0;
+          case 'cs': return Number(scheme.confidenceScore) || 0;
+          default: return 0;
+        }
+      }
+
+      function sortMfSchemes(schemes, key) {
+        if (mfSortKey === key) {
+          mfSortDir = mfSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          mfSortKey = key;
+          mfSortDir = (key === 'name' || key === 'amc' || key === 'category') ? 'asc' : 'desc';
+        }
+        var sorted = schemes.slice();
+        sorted.sort(function(a, b) {
+          var va = getMfSortVal(a, key);
+          var vb = getMfSortVal(b, key);
+          if (typeof va === 'string') {
+            var cmp = va.localeCompare(vb);
+            return mfSortDir === 'asc' ? cmp : -cmp;
+          }
+          return mfSortDir === 'asc' ? va - vb : vb - va;
+        });
+        return sorted;
+      }
+
+      function mfSortArrow(key) {
+        var isActive = mfSortKey === key;
+        var upColor = isActive && mfSortDir === 'asc' ? '#00B386' : 'var(--text-muted)';
+        var downColor = isActive && mfSortDir === 'desc' ? '#00B386' : 'var(--text-muted)';
+        return '<span style="display:inline-flex;flex-direction:column;margin-left:3px;cursor:pointer;line-height:1;" onclick="event.stopPropagation();window._mfSort(\'' + key + '\')">' +
+          '<span style="font-size:8px;color:' + upColor + ';">&#9650;</span>' +
+          '<span style="font-size:8px;color:' + downColor + ';margin-top:-2px;">&#9660;</span>' +
+        '</span>';
+      }
+
+      window._mfSort = function(key) {
+        if (!window._mfLastSchemes) return;
+        var sorted = sortMfSchemes(window._mfLastSchemes, key);
+        renderMfGridFromSorted(sorted);
+      };
+
+      function renderMfGridFromSorted(schemes) {
+        var grid = document.getElementById("mfSchemesGrid");
+        if (!grid) return;
+        _renderMfGridBody(grid, schemes);
+      }
+
       function renderMfGrid(schemes) {
+        window._mfLastSchemes = schemes;
+        if (mfSortKey) {
+          schemes = sortMfSchemes(schemes, mfSortKey);
+        }
+        var grid = document.getElementById("mfSchemesGrid");
+        if (!grid) return;
+        _renderMfGridBody(grid, schemes);
+      }
+
+      function _renderMfGridBody(grid, schemes) {
   try {
-    var grid = document.getElementById("mfSchemesGrid");
-    if (!grid) return;
     console.log("[MF Grid] rendering", schemes.length, "schemes");
     if (!schemes || schemes.length === 0) {
       grid.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);">No mutual fund schemes match your search criteria.</div>';
@@ -1733,6 +1804,7 @@
       var sign = val >= 0 ? '+' : '';
       return '<td style="padding:6px 8px;text-align:right;color:' + color + ';font-weight:700;font-size:11px;">' + sign + val.toFixed(2) + '%</td>';
     }
+    var thStyle = 'padding:8px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;';
     var rows = displayItems.map(function(s) {
       var name = cleanSchemeTitle(s.schemeName);
       var amcTag = s.parentAmc || '';
@@ -1767,24 +1839,24 @@
       '<div style="overflow-x:auto;">' +
       '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
       '<thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">' +
-        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">AMC</th>' +
-        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">SCHEME NAME</th>' +
-        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">CATEGORY</th>' +
-        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1M</th>' +
-        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">3M</th>' +
-        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">6M</th>' +
-        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">1Y</th>' +
-        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">AUM</th>' +
-        '<th style="padding:8px;text-align:right;font-size:10px;color:var(--text-muted);font-weight:700;">INVESTORS</th>' +
-        '<th style="padding:8px;text-align:left;font-size:10px;color:var(--text-muted);font-weight:700;">TOP HOLDINGS</th>' +
-        '<th style="padding:8px;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;">CS</th>' +
+        '<th style="' + thStyle + 'text-align:left;">AMC' + mfSortArrow('amc') + '</th>' +
+        '<th style="' + thStyle + 'text-align:left;">SCHEME NAME' + mfSortArrow('name') + '</th>' +
+        '<th style="' + thStyle + 'text-align:left;">CATEGORY' + mfSortArrow('category') + '</th>' +
+        '<th style="' + thStyle + 'text-align:right;">1M' + mfSortArrow('1M') + '</th>' +
+        '<th style="' + thStyle + 'text-align:right;">3M' + mfSortArrow('3M') + '</th>' +
+        '<th style="' + thStyle + 'text-align:right;">6M' + mfSortArrow('6M') + '</th>' +
+        '<th style="' + thStyle + 'text-align:right;">1Y' + mfSortArrow('1Y') + '</th>' +
+        '<th style="' + thStyle + 'text-align:right;">AUM' + mfSortArrow('aum') + '</th>' +
+        '<th style="' + thStyle + 'text-align:right;">INVESTORS' + mfSortArrow('inv') + '</th>' +
+        '<th style="' + thStyle + 'text-align:left;">TOP HOLDINGS</th>' +
+        '<th style="' + thStyle + 'text-align:center;">CS' + mfSortArrow('cs') + '</th>' +
       '</tr></thead>' +
       '<tbody>' + rows + '</tbody>' +
       '</table></div></div>';
     grid.innerHTML = htmlOut;
     grid.style.display = 'block';
   } catch (gridErr) { console.error("[MF Grid] render error:", gridErr); }
-}
+      }
 
 
       function getMfFallbackData(tf, q) {
