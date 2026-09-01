@@ -1523,14 +1523,17 @@
         var serverTag = document.getElementById('mfServerTag');
         var subTitle = document.getElementById('mfSubtitleCount');
 
-        // Fetch both standard MF schemes AND HDFC real data in parallel
-        var schemesPromise = fetch('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000')
-          .then(function(r) { return r.ok ? r.json() : null; })
-          .catch(function() { return null; });
+        // Fetch both standard MF schemes AND HDFC real data in parallel (with 15s timeout)
+        function fetchWithTimeout(url, ms) {
+          var controller = new AbortController();
+          var timer = setTimeout(function() { controller.abort(); }, ms);
+          return fetch(url, { signal: controller.signal })
+            .then(function(r) { clearTimeout(timer); return r.ok ? r.json() : null; })
+            .catch(function() { clearTimeout(timer); return null; });
+        }
 
-        var hdfcPromise = fetch('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q))
-          .then(function(r) { return r.ok ? r.json() : null; })
-          .catch(function() { return null; });
+        var schemesPromise = fetchWithTimeout('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000', 15000);
+        var hdfcPromise = fetchWithTimeout('/api/mutual-funds/hdfc?search=' + encodeURIComponent(q), 15000);
 
         var results = await Promise.all([schemesPromise, hdfcPromise]);
         var standardData = results[0];
@@ -1608,8 +1611,12 @@
           subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes (' + hdfcCount + ' HDFC Official Data) · Multi-Server Failover Active';
         }
 
-        // Render HDFC table view
-        renderHdfcTable(hdfcSchemes || []);
+        // Render HDFC table view (wrapped in try-catch so it never blocks the grid)
+        try {
+          renderHdfcTable(hdfcSchemes || []);
+        } catch (e) {
+          console.warn('[HDFC Table] render error:', e.message);
+        }
         renderMfGrid(allSchemes);
       }
 
