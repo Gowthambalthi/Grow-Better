@@ -1331,7 +1331,40 @@ async function start() {
     console.warn('[server] MF pipeline init warning:', e.message);
   }
 
-  const port = process.env.PORT || env.server.port || 4000;
+  
+// Debug endpoint for change tracking
+app.get('/api/debug/changes/:schemeId', (req, res) => {
+  try {
+    const { schemeId } = req.params;
+    const db = hdfcMfDb.getDb();
+    
+    // Check tables exist
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name);
+    
+    // Check returns
+    const returns = db.prepare('SELECT period, returnValue FROM mutual_fund_returns WHERE schemeId = ?').all(schemeId);
+    
+    // Check AUM
+    const aum = db.prepare('SELECT aum, asOfDate FROM mutual_fund_aum WHERE schemeId = ?').get(schemeId);
+    
+    // Check snapshots
+    const aumSnaps = db.prepare('SELECT aum, snapshotDate FROM aum_snapshots WHERE schemeId = ? ORDER BY snapshotDate').all(schemeId);
+    const invSnaps = db.prepare('SELECT investorCount, snapshotDate FROM investor_snapshots WHERE schemeId = ? ORDER BY snapshotDate').all(schemeId);
+    
+    // Test getAumChange
+    let aumChange = null;
+    try { aumChange = hdfcMfDb.getAumChange(schemeId, 1); } catch(e) { aumChange = { error: e.message }; }
+    
+    let invChange = null;
+    try { invChange = hdfcMfDb.getInvestorChange(schemeId, 1); } catch(e) { invChange = { error: e.message }; }
+    
+    res.json({ tables, returns, aum, aumSnaps, invSnaps, aumChange, invChange });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+
+const port = process.env.PORT || env.server.port || 4000;
   const host = '0.0.0.0';
   app.listen(port, host, () => {
     console.log(`[server] listening on http://${host}:${port}`);
