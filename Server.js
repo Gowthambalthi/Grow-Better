@@ -1001,48 +1001,37 @@ app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', async (req, res) => {
       });
     }
 
-    // Fallback: fetch from Groww and calculate daily NAV movement
+    // Fallback: fetch real NAV history from mfapi.in (works for ALL schemes)
     const axios = require('axios');
-    const master = require('../scripts/hdfc/importGrowwEquity').HDFC_EQUITY_SCHEMES.find(s => 'HDFC_' + s.schemeCode === schemeId);
-    if (!master) return res.json({ success: true, schemeId, data: [], message: 'No Groww slug found' });
+    const schemeCode = scheme.schemeCode;
+    if (!schemeCode) return res.json({ success: true, schemeId, data: [] });
 
-    const url = `https://groww.in/mutual-funds/${master.growwSlug}`;
-    const resp = await axios.get(url, { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const match = resp.data.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
-    if (!match) return res.json({ success: true, schemeId, data: [] });
+    try {
+      const resp = await axios.get(`https://api.mfapi.in/mf/${schemeCode}`, { timeout: 15000 });
+      const mfData = resp.data;
+      if (mfData && mfData.data && mfData.data.length > 0) {
+        // mfapi.in returns most recent first, reverse to chronological
+        const raw = mfData.data.slice(0, 35).reverse(); // last ~35 entries (~30 trading days)
+        const data = raw.map(d => ({
+          date: d.date.split('-').reverse().join('-'), // DD-MM-YYYY -> YYYY-MM-DD
+          nav: parseFloat(d.nav)
+        })).filter(d => !isNaN(d.nav));
 
-    const ss = JSON.parse(match[1]).props?.pageProps?.mfServerSideData;
-    const currentNav = ss.nav;
-    const rs = ss.return_stats?.[0] || {};
+        if (data.length > 0) {
+          const currentNav = data[data.length - 1].nav;
+          const startNav = data[0].nav;
+          const pctChange = ((currentNav - startNav) / startNav * 100).toFixed(2);
+          return res.json({
+            success: true, schemeId, schemeName: scheme.schemeName,
+            source: 'mfapi.in', currentNav, pctChange: parseFloat(pctChange),
+            dataPoints: data.length, data
+          });
+        }
+      }
+    } catch (e) { /* mfapi.in failed, try Groww fallback */ }
 
-    // Calculate daily NAVs from return percentages
-    const ret1d = (rs.return1d || 0) / 100;
-    const ret1w = (rs.return1w || 0) / 100;
-    const ret1m = (rs.return1m || 0) / 100;
-
-    // Estimate daily rate from 1M return (~22 trading days)
-    const dailyRate = ret1m / 22;
-
-    const data = [];
-    const today = new Date();
-    let nav = currentNav;
-
-    // Go backwards 30 calendar days
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dayStr = d.toISOString().split('T')[0];
-      // Skip weekends
-      if (d.getDay() === 0 || d.getDay() === 6) continue;
-      nav = currentNav / Math.pow(1 + dailyRate, i);
-      data.unshift({ date: dayStr, nav: Math.round(nav * 10000) / 10000 });
-    }
-
-    res.json({
-      success: true, schemeId, schemeName: scheme.schemeName,
-      source: 'calculated', currentNav, dailyRate: Math.round(dailyRate * 10000) / 10000,
-      dataPoints: data.length, data
-    });
+    // Final fallback: return empty data
+    res.json({ success: true, schemeId, data: [], message: 'No NAV data available' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
