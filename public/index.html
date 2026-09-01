@@ -2457,6 +2457,29 @@
       });
 
       if (document.readyState === 'loading') {
+        // Sidebar: collapsed by default, expands on hover
+        (function() {
+          var sidebar = document.getElementById('sidebar');
+          var mainCol = document.querySelector('.main-col');
+          if (!sidebar) return;
+          // Start collapsed
+          sidebar.classList.add('collapsed');
+          if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w-collapsed)';
+          // Expand on mouse enter
+          sidebar.addEventListener('mouseenter', function() {
+            sidebar.classList.remove('collapsed');
+            if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w)';
+          });
+          // Collapse on mouse leave
+          sidebar.addEventListener('mouseleave', function() {
+            sidebar.classList.add('collapsed');
+            if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w-collapsed)';
+          });
+          // Hide the collapse toggle button (hover replaces it)
+          var toggleBtn = document.getElementById('collapseToggle');
+          if (toggleBtn) toggleBtn.style.display = 'none';
+        })();
+
         document.addEventListener('DOMContentLoaded', function() { renderAmcCards(); fetchMfSchemes(); loadStockHoldingsScanner(); });
       } else {
         renderAmcCards();
