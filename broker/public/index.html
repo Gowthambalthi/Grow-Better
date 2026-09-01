@@ -85,7 +85,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902f</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902g</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -1448,7 +1448,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260902f';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});}location.reload(true);}})();
+    (function(){var v='20260902g';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});}location.reload(true);}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -1695,6 +1695,7 @@
       function openMfDetailFromTable(schemeId) {
         openMfDetailModal(schemeId);
       }
+      window.openMfDetailFromTable = openMfDetailFromTable;
 
             // Current sort state for MF table
       var mfSortKey = '';
@@ -1835,6 +1836,17 @@
       '</table></div></div>';
     grid.innerHTML = htmlOut;
     grid.style.display = 'block';
+    // // Event delegation for table row clicks
+    grid.addEventListener('click', function(e) {
+      var tr = e.target.closest('tr');
+      if (tr && tr.style.cursor === 'pointer') {
+        var onclick = tr.getAttribute('onclick');
+        if (onclick) {
+          var match = onclick.match(/openMfDetailFromTable\('([^']+)'\)/);
+          if (match) { e.preventDefault(); openMfDetailFromTable(match[1]); return; }
+        }
+      }
+    });
   } catch (gridErr) { console.error("[MF Grid] render error:", gridErr); }
       }
 
