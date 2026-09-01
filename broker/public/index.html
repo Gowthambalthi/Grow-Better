@@ -1661,9 +1661,6 @@
           var investorStr = (s.investorCount !== null && s.investorCount !== undefined) ? (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : 'Not available';
 
           var cleanTitle = s.cleanTitle || cleanSchemeTitle(s.schemeName);
-          var planTag = s.planTag || (s.schemeName.toLowerCase().includes('regular') ? 'Regular Plan' : 'Direct Plan');
-          var optionTag = s.optionTag || (s.schemeName.toLowerCase().includes('idcw') ? 'IDCW' : 'Growth');
-          var planPillHtml = '<span style="background:rgba(59,130,246,0.08);color:#3B82F6;font-size:9px;padding:2px 6px;border-radius:4px;font-weight:700;margin-left:6px;">' + planTag + ' · ' + optionTag + '</span>';
 
           var isDebt = s.isDebt || (s.category || '').toLowerCase().includes('debt') || (s.category || '').toLowerCase().includes('liquid') || (s.category || '').toLowerCase().includes('money market') || (s.category || '').toLowerCase().includes('gilt');
           var holdingsTitle = isDebt ? 'TOP DEBT & SOVEREIGN INSTRUMENTS' : 'TOP EQUITY HOLDINGS';
@@ -1678,8 +1675,6 @@
                        '<div>' +
                          '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;line-height:1.35;">' + cleanTitle + '</h3>' +
                          '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;">' +
-                           '<span style="font-size:11px;font-weight:700;color:#3B82F6;">' + s.parentAmc + '</span>' +
-                           planPillHtml +
                            sourceTagHtml +
                          '</div>' +
                        '</div>' +
