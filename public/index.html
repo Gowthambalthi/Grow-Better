@@ -82,7 +82,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902b</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902c</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -1445,81 +1445,69 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260902b';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);location.replace(location.href);}})();
+    (function(){var v='20260902c';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);location.replace(location.href);}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
       var currentMfSearch = '';
       var mfCache = [];
 
-      var AMCS_24 = [
-        { name: 'HDFC', fullName: 'HDFC Mutual Fund', return1M: '+3.15%', color: '#2563EB', isVerified: true },
-        { name: 'SBI', fullName: 'SBI Mutual Fund', return1M: '+2.95%', color: '#0284C7', isVerified: false },
-        { name: 'ICICI Prudential', fullName: 'ICICI Prudential Mutual Fund', return1M: '+2.85%', color: '#DC2626', isVerified: false },
-        { name: 'Nippon India', fullName: 'Nippon India Mutual Fund', return1M: '+3.40%', color: '#E11D48', isVerified: false },
-        { name: 'Axis', fullName: 'Axis Mutual Fund', return1M: '+2.65%', color: '#9333EA', isVerified: false },
-        { name: 'Kotak', fullName: 'Kotak Mutual Fund', return1M: '+3.05%', color: '#EA580C', isVerified: false },
-        { name: 'Aditya Birla', fullName: 'Aditya Birla Sun Life MF', return1M: '+2.75%', color: '#D97706', isVerified: false },
-        { name: 'Mirae Asset', fullName: 'Mirae Asset Mutual Fund', return1M: '+3.20%', color: '#059669', isVerified: false },
-        { name: 'UTI', fullName: 'UTI Mutual Fund', return1M: '+2.55%', color: '#2563EB', isVerified: false },
-        { name: 'Tata', fullName: 'Tata Mutual Fund', return1M: '+2.90%', color: '#4F46E5', isVerified: false },
-        { name: 'DSP', fullName: 'DSP Mutual Fund', return1M: '+2.80%', color: '#0891B2', isVerified: false },
-        { name: 'Motilal Oswal', fullName: 'Motilal Oswal Mutual Fund', return1M: '+3.85%', color: '#7C3AED', isVerified: false },
-        { name: 'Quant', fullName: 'Quant Mutual Fund', return1M: '+4.25%', color: '#16A34A', isVerified: false },
-        { name: 'PPFAS', fullName: 'Parag Parikh Mutual Fund', return1M: '+3.65%', color: '#CA8A04', isVerified: false },
-        { name: 'Bandhan', fullName: 'Bandhan Mutual Fund', return1M: '+2.70%', color: '#E11D48', isVerified: false },
-        { name: 'Sundaram', fullName: 'Sundaram Mutual Fund', return1M: '+2.85%', color: '#0284C7', isVerified: false },
-        { name: 'HSBC', fullName: 'HSBC Mutual Fund', return1M: '+2.60%', color: '#DC2626', isVerified: false },
-        { name: 'Canara Robeco', fullName: 'Canara Robeco Mutual Fund', return1M: '+3.10%', color: '#059669', isVerified: false },
-        { name: 'Invesco', fullName: 'Invesco Mutual Fund', return1M: '+2.75%', color: '#4F46E5', isVerified: false },
-        { name: 'Edelweiss', fullName: 'Edelweiss Mutual Fund', return1M: '+2.95%', color: '#9333EA', isVerified: false },
-        { name: 'PGIM India', fullName: 'PGIM India Mutual Fund', return1M: '+2.65%', color: '#2563EB', isVerified: false },
-        { name: 'Baroda BNP', fullName: 'Baroda BNP Paribas MF', return1M: '+2.50%', color: '#0891B2', isVerified: false },
-        { name: 'Union', fullName: 'Union Mutual Fund', return1M: '+2.45%', color: '#D97706', isVerified: false },
-        { name: 'Franklin', fullName: 'Franklin Templeton MF', return1M: '+2.90%', color: '#16A34A', isVerified: false }
-      ];
+            // AMC data loaded dynamically from API
+      var AMCS_24 = [];
+      var amcDataLoaded = false;
 
       function renderAmcCards() {
         var container = document.getElementById('amcCardsContainer');
         if (!container) return;
-
-        container.innerHTML = AMCS_24.map(function(amc) {
-          var verifiedBadge = amc.isVerified ? '<span style="background:rgba(16,185,129,0.14);color:#10B981;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:800;margin-left:4px;">Official S3</span>' : '';
-          var activeStyle = currentMfSearch.toLowerCase() === amc.name.toLowerCase() ? 'border-color:var(--accent);background:var(--bg-raised);' : '';
-
-          return '<div class="amc-pill-card" data-amc="' + amc.name + '" style="min-width:170px;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;cursor:pointer;flex-shrink:0;transition:transform 0.15s, border-color 0.15s;' + activeStyle + '">' +
-                   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
-                     '<span style="font-size:12.5px;font-weight:800;color:var(--text-primary);">' + amc.name + '</span>' +
-                     verifiedBadge +
-                   '</div>' +
-                   '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">' +
-                     '<span style="color:var(--text-muted);font-weight:600;">1M Return:</span>' +
-                     '<span style="color:#00B386;font-weight:800;">' + amc.return1M + '</span>' +
-                   '</div>' +
-                 '</div>';
-        }).join('');
-
-        container.querySelectorAll('.amc-pill-card').forEach(function(card) {
-          card.addEventListener('click', function() {
-            var amcName = card.dataset.amc;
-            currentMfSearch = amcName;
-            var inp = document.getElementById('mfSearchInput');
-            if (inp) inp.value = amcName;
-            fetchMfSchemes(currentMfTimeframe, amcName);
-            renderAmcCards();
+        
+        // If we have cached AMC data from the API, use it
+        if (AMCS_24.length > 0 && amcDataLoaded) {
+          container.innerHTML = AMCS_24.map(function(amc) {
+            var activeStyle = currentMfSearch.toLowerCase() === amc.name.toLowerCase() ? 'border-color:var(--accent);background:var(--bg-raised);' : '';
+            return '<div class="amc-pill-card" data-amc="' + amc.name + '" style="min-width:170px;padding:10px 14px;background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;cursor:pointer;flex-shrink:0;transition:transform 0.15s, border-color 0.15s;' + activeStyle + '">' +
+                     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
+                       '<span style="font-size:12.5px;font-weight:800;color:var(--text-primary);">' + amc.name + '</span>' +
+                     '</div>' +
+                     '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;">' +
+                       '<span style="color:var(--text-muted);font-weight:600;">' + amc.schemeCount + ' schemes</span>' +
+                       '<span style="color:#00B386;font-weight:800;">' + amc.schemesWithReturn + ' with returns</span>' +
+                     '</div>' +
+                   '</div>';
+          }).join('');
+          // Re-attach click handlers
+          container.querySelectorAll('.amc-pill-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+              var amc = card.dataset.amc;
+              currentMfSearch = amc;
+              fetchMfSchemes(currentMfTimeframe, amc);
+            });
           });
-        });
-
-        var resetBtn = document.getElementById('resetAmcFilterBtn');
-        if (resetBtn) {
-          resetBtn.onclick = function() {
-            currentMfSearch = '';
-            var inp = document.getElementById('mfSearchInput');
-            if (inp) inp.value = '';
-            fetchMfSchemes(currentMfTimeframe, '');
-            renderAmcCards();
-          };
+          return;
         }
+        
+        // Otherwise show loading
+        container.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">Loading AMCs...</div>';
+      }
+      
+      // Build AMC cards from real API data after schemes load
+      function buildAmcCardsFromSchemes(schemes) {
+        var amcMap = {};
+        schemes.forEach(function(s) {
+          var amc = s.parentAmc || s.amc || 'Unknown';
+          if (!amcMap[amc]) amcMap[amc] = { name: amc, schemeCount: 0, schemesWithReturn: 0, totalReturn1m: 0, returnCount: 0 };
+          amcMap[amc].schemeCount++;
+          if (s.returns && s.returns['1M'] != null) {
+            amcMap[amc].schemesWithReturn++;
+            amcMap[amc].totalReturn1m += s.returns['1M'];
+            amcMap[amc].returnCount++;
+          }
+        });
+        AMCS_24 = Object.values(amcMap).map(function(a) {
+          a.avgReturn1m = a.returnCount > 0 ? (a.totalReturn1m / a.returnCount).toFixed(2) : null;
+          return a;
+        }).sort(function(a, b) { return b.schemeCount - a.schemeCount; });
+        amcDataLoaded = true;
+        renderAmcCards();
       }
 
       async function fetchMfSchemes(timeframe, search) {
@@ -1636,6 +1624,7 @@
           }
 
           renderMfGrid(allSchemes);
+          buildAmcCardsFromSchemes(allSchemes);
           console.log('[MF] renderMfGrid called with', allSchemes.length, 'schemes');
         } catch (err) {
           console.error('[MF] fetchMfSchemes CRITICAL ERROR:', err);
@@ -1866,92 +1855,7 @@
       }
 
 
-      function getMfFallbackData(tf, q) {
-        var cleanQ = (q || '').trim().toLowerCase();
-        var benchmarks = {
-          'hdfcflexicap': { aum: 54120.80, directTer: 0.89, regTer: 1.54, ret: 3.10 },
-          'hdfcmidcap': { aum: 62400.00, directTer: 0.78, regTer: 1.48, ret: 4.41 },
-          'hdfclargecap': { aum: 34850.20, directTer: 1.12, regTer: 1.68, ret: 2.45 },
-          'sbibluechip': { aum: 46210.50, directTer: 0.95, regTer: 1.56, ret: 1.85 },
-          'sbicontra': { aum: 31450.00, directTer: 0.72, regTer: 1.55, ret: 4.20 },
-          'sbismallcap': { aum: 28400.00, directTer: 0.67, regTer: 1.62, ret: 3.90 },
-          'iciciprudentiallargecap': { aum: 55890.30, directTer: 0.92, regTer: 1.52, ret: 2.65 },
-          'nipponindiasmallcap': { aum: 51200.00, directTer: 0.68, regTer: 1.51, ret: 4.80 },
-          'ppfasflexicap': { aum: 68900.00, directTer: 0.58, regTer: 1.33, ret: 3.65 },
-          'kotakmidcap': { aum: 41200.40, directTer: 0.82, regTer: 1.61, ret: 3.45 }
-        };
-
-        var amcs = ['HDFC', 'SBI', 'ICICI Prudential', 'Nippon India', 'Axis', 'Kotak', 'Aditya Birla', 'Mirae Asset', 'UTI', 'Tata', 'DSP', 'Motilal Oswal', 'Quant', 'PPFAS', 'Bandhan', 'Sundaram', 'HSBC', 'Canara Robeco', 'Invesco', 'Edelweiss', 'PGIM India', 'Baroda BNP Paribas', 'Union', 'Navi', 'Franklin Templeton', 'LIC', 'JM Financial', 'WhiteOak Capital', 'Mahindra Manulife', 'Samco', 'ITI', 'Bajaj Finserv', 'Trust', 'Groww', 'Zerodha', 'Quantum', 'Taurus', 'Shriram', 'BOI', 'Indiabulls', 'Escorts', 'IIFL', 'Helios', 'Old Bridge'];
-        var cats = ['Equity: Large Cap', 'Equity: Mid Cap', 'Equity: Small Cap', 'Equity: Flexi Cap', 'Equity: Multi Cap', 'Equity: Large & MidCap', 'Equity: Focused', 'Equity: Value', 'Equity: Contra', 'Equity: ELSS Tax Saver', 'Sectoral: Technology', 'Sectoral: Healthcare / Pharma', 'Sectoral: Banking & Financial Services', 'Sectoral: Infrastructure / Power', 'Sectoral: Consumption / Retail', 'Hybrid: Balanced Advantage', 'Hybrid: Aggressive Hybrid', 'Index: Nifty 50 Plan', 'Index: Sensex 30 Plan', 'Debt: Liquid Fund'];
-        var stocks = [{symbol:'RELIANCE',name:'Reliance Industries Ltd.'},{symbol:'HDFCBANK',name:'HDFC Bank Ltd.'},{symbol:'ICICIBANK',name:'ICICI Bank Ltd.'},{symbol:'INFY',name:'Infosys Ltd.'},{symbol:'TCS',name:'Tata Consultancy Services'},{symbol:'CUPID',name:'Cupid Ltd.'},{symbol:'EMMVEE',name:'Emmvee Photovoltaic'}];
-        var plans = [
-          { suffix: 'Direct Plan - Growth', isReg: false, isIdcw: false },
-          { suffix: 'Direct Plan - IDCW', isReg: false, isIdcw: true },
-          { suffix: 'Regular Plan - Growth', isReg: true, isIdcw: false }
-        ];
-
-        var sample = [];
-        var count = 0;
-        for (var i = 0; i < amcs.length; i++) {
-          for (var j = 0; j < cats.length; j++) {
-            var amcClean = amcs[i].replace(/[^a-zA-Z]/g, '').toLowerCase();
-            var catClean = cats[j].replace(/[^a-zA-Z]/g, '').toLowerCase();
-            var bmKey = amcClean + catClean;
-            var bm = benchmarks[bmKey];
-
-            var masterAum = bm ? bm.aum : (14000 + ((i * 1493 + j * 983) % 42000));
-            var isIndex = cats[j].indexOf('Index') === 0;
-            var masterDirectTer = bm ? bm.directTer : (isIndex ? 0.08 : Number((0.65 + ((i + j) % 40) * 0.01).toFixed(2)));
-            var masterRegTer = bm ? bm.regTer : (isIndex ? 0.24 : Number((masterDirectTer + 0.70).toFixed(2)));
-            var masterBaseRet = bm ? bm.ret : Number((((i * 7 + j * 3) % 25) / 5 - 0.5).toFixed(2));
-
-            for (var k = 0; k < plans.length; k++) {
-              count++;
-              var p = plans[k];
-              var amcName = amcs[i] + ' Mutual Fund';
-              var catName = cats[j];
-              var schemeName = amcs[i] + ' ' + catName.replace(/[^a-zA-Z0-9 ]/g, '') + ' - ' + p.suffix;
-              var id = (amcs[i] + '-' + catName + '-' + p.suffix).toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-              var ter = p.isReg ? masterRegTer : masterDirectTer;
-              var ret = p.isIdcw ? Number((masterBaseRet - 0.02).toFixed(2)) : (p.isReg ? Number((masterBaseRet - 0.05).toFixed(2)) : masterBaseRet);
-
-              var cTitle = cleanSchemeTitle(schemeName);
-              sample.push({
-                id: id,
-                schemeCode: 100000 + count,
-                schemeName: schemeName,
-                cleanTitle: cTitle,
-                parentAmc: amcName,
-                category: catName,
-                aumCr: masterAum,
-                terPct: ter,
-                selectedReturnPct: ret,
-                variantCount: 3,
-                variants: [
-                  { schemeCode: 100000 + count, schemeName: amcs[i] + ' ' + catName + ' - Direct Plan - Growth', planTag: 'Direct Plan', optionTag: 'Growth', currentNav: 145.20, returns: { '1M': ret } },
-                  { schemeCode: 100001 + count, schemeName: amcs[i] + ' ' + catName + ' - Direct Plan - IDCW', planTag: 'Direct Plan', optionTag: 'IDCW', currentNav: 112.50, returns: { '1M': ret } },
-                  { schemeCode: 100002 + count, schemeName: amcs[i] + ' ' + catName + ' - Regular Plan - Growth', planTag: 'Regular Plan', optionTag: 'Growth', currentNav: 138.80, returns: { '1M': ret } }
-                ],
-                topHoldings: [
-                  stocks[(i + j) % stocks.length],
-                  stocks[(i + j + 2) % stocks.length],
-                  stocks[(i + j + 4) % stocks.length]
-                ]
-              });
-            }
-          }
-        }
-
-        if (!cleanQ) return sample;
-        return sample.filter(function(s) {
-          var inName = s.schemeName.toLowerCase().indexOf(cleanQ) !== -1;
-          var inAmc = s.parentAmc.toLowerCase().indexOf(cleanQ) !== -1;
-          var inCat = s.category.toLowerCase().indexOf(cleanQ) !== -1;
-          var inStock = s.topHoldings.some(function(h) { return h.symbol.toLowerCase().indexOf(cleanQ) !== -1; });
-          return inName || inAmc || inCat || inStock;
-        });
-      }
+      function getMfFallbackData() { return []; }
 
       // Event Listeners
       document.addEventListener('click', function(e) {
@@ -2025,8 +1929,7 @@
         if (cached) {
           renderMfDetailContent(cached);
         } else {
-          var fallback = getMfFallbackData(currentMfTimeframe, '').find(function(item) { return item.id === schemeId; });
-          if (fallback) renderMfDetailContent(fallback);
+        // No fallback — only use real API data
         }
 
         // 2. Async live data background refresh — try profile endpoint (full data) first
