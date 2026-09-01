@@ -1611,6 +1611,17 @@
             allSchemes = allSchemes.concat(newSchemes);
           }
 
+          // Remove all debt/non-equity schemes
+          allSchemes = allSchemes.filter(function(s) {
+            var nm = (s.schemeName || '').toLowerCase();
+            var cat = (s.category || '').toLowerCase();
+            // Debt keywords
+            if (cat.indexOf('debt') !== -1 || cat.indexOf('liquid') !== -1 || cat.indexOf('overnight') !== -1 || cat.indexOf('gilt') !== -1 || cat.indexOf('floater') !== -1 || cat.indexOf('money market') !== -1 || cat.indexOf('corporate bond') !== -1 || cat.indexOf('credit risk') !== -1 || cat.indexOf('banking & psu') !== -1 || cat.indexOf('ultra short') !== -1 || cat.indexOf('low duration') !== -1 || cat.indexOf('short duration') !== -1 || cat.indexOf('medium duration') !== -1 || cat.indexOf('long duration') !== -1 || cat.indexOf('dynamic bond') !== -1 || cat.indexOf('fixed term') !== -1) return false;
+            // Scheme name debt keywords
+            if (nm.indexOf('liquid fund') !== -1 || nm.indexOf('overnight fund') !== -1 || nm.indexOf('gilt fund') !== -1 || nm.indexOf('floater fund') !== -1 || nm.indexOf('money market') !== -1 || nm.indexOf('corporate bond') !== -1 || nm.indexOf('credit risk') !== -1 || nm.indexOf('banking & psu') !== -1 || nm.indexOf('banking and psu') !== -1 || nm.indexOf('ultra short') !== -1 || nm.indexOf('low duration') !== -1 || nm.indexOf('short duration') !== -1 || nm.indexOf('medium duration') !== -1 || nm.indexOf('long duration') !== -1 || nm.indexOf('dynamic bond') !== -1 || nm.indexOf('fixed maturity') !== -1 || nm.indexOf('fixed term plan') !== -1 || nm.indexOf('interval fund') !== -1) return false;
+            return true;
+          });
+
           console.log('[MF] allSchemes:', allSchemes.length, 'amcs:', amcSet.size);
 
           mfCache = allSchemes;
