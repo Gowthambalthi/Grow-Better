@@ -618,8 +618,6 @@
             </div>
           </div>
 
-          <!-- HDFC Table View -->
-          <div id="hdfcTableView" style="display:none;width:100%;"></div>
 
           <!-- Scheme Table -->
           <div id="mfSchemesGrid" style="display:block;width:100%;">
@@ -1636,13 +1634,6 @@
             subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
           }
 
-          // Render AMC overview table (for ALL multi-AMC data)
-          try {
-            var officialSchemes = allSchemes.filter(function(s) { return s.isOfficialHdfc; });
-            renderHdfcTable(officialSchemes);
-          } catch (e) {
-            console.warn('[HDFC Table] render error:', e.message);
-          }
           renderMfGrid(allSchemes);
           console.log('[MF] renderMfGrid called with', allSchemes.length, 'schemes');
         } catch (err) {
