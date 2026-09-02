@@ -1515,16 +1515,9 @@
               .catch(function() { clearTimeout(timer); return null; });
           }
 
-          // PRIMARY SOURCE: Multi-AMC API (all real scheme-level data)
-          var allAmcPromise = fetchWithTimeout('/api/mutual-funds/all?search=' + encodeURIComponent(q) + '&limit=5000', 20000);
-          // FALLBACK: Standard AMFI schemes (for any AMCs not yet in multi-AMC DB)
-          var schemesPromise = fetchWithTimeout('/api/mutual-funds/schemes?timeframe=' + encodeURIComponent(tf) + '&search=' + encodeURIComponent(q) + '&limit=2000', 15000);
-
-          // Fetch both in parallel
-          var allResults = await Promise.all([allAmcPromise, schemesPromise]);
-          var allAmcData = allResults[0];
-          var standardData = allResults[1];
-          console.log('[MF] multi-amc:', allAmcData ? allAmcData.totalSchemes : 'null', 'primary:', standardData ? standardData.totalCount : 'null');
+          // SINGLE SOURCE: Multi-AMC API (all real scheme-level data)
+          var allAmcData = await fetchWithTimeout('/api/mutual-funds/all?limit=5000', 25000);
+          console.log('[MF] multi-amc:', allAmcData ? allAmcData.totalSchemes : 'null');
 
           var allSchemes = [];
           var amcSet = new Set();
@@ -1580,17 +1573,7 @@
           }
 
           // AMFI fallback disabled — multi-AMC DB has all 47 AMCs with real data
-          // (AMFI fallback only contains fake/generated data, never use it)
-          // Remove all debt/non-equity schemes
-          allSchemes = allSchemes.filter(function(s) {
-            var nm = (s.schemeName || '').toLowerCase();
-            var cat = (s.category || '').toLowerCase();
-            // Debt keywords
-            if (cat.indexOf('debt') !== -1 || cat.indexOf('liquid') !== -1 || cat.indexOf('overnight') !== -1 || cat.indexOf('gilt') !== -1 || cat.indexOf('floater') !== -1 || cat.indexOf('money market') !== -1 || cat.indexOf('corporate bond') !== -1 || cat.indexOf('credit risk') !== -1 || cat.indexOf('banking & psu') !== -1 || cat.indexOf('ultra short') !== -1 || cat.indexOf('low duration') !== -1 || cat.indexOf('short duration') !== -1 || cat.indexOf('medium duration') !== -1 || cat.indexOf('long duration') !== -1 || cat.indexOf('dynamic bond') !== -1 || cat.indexOf('fixed term') !== -1) return false;
-            // Scheme name debt keywords
-            if (nm.indexOf('liquid fund') !== -1 || nm.indexOf('overnight fund') !== -1 || nm.indexOf('gilt fund') !== -1 || nm.indexOf('floater fund') !== -1 || nm.indexOf('money market') !== -1 || nm.indexOf('corporate bond') !== -1 || nm.indexOf('credit risk') !== -1 || nm.indexOf('banking & psu') !== -1 || nm.indexOf('banking and psu') !== -1 || nm.indexOf('ultra short') !== -1 || nm.indexOf('low duration') !== -1 || nm.indexOf('short duration') !== -1 || nm.indexOf('medium duration') !== -1 || nm.indexOf('long duration') !== -1 || nm.indexOf('dynamic bond') !== -1 || nm.indexOf('fixed maturity') !== -1 || nm.indexOf('fixed term plan') !== -1 || nm.indexOf('interval fund') !== -1) return false;
-            return true;
-          });
+          // Category tabs (Equity/Hybrid/Debt/Index) handle filtering in the UI
 
           amcSet = amcSet || new Set();
           console.log('[MF] allSchemes:', allSchemes.length, 'amcs:', amcSet ? amcSet.size : 0);
@@ -1809,13 +1792,14 @@
           var amc = rows[r].getAttribute('data-amc') || '';
           var cat = rows[r].getAttribute('data-cat') || '';
           var nameEl = rows[r].querySelector('td:nth-child(2)');
-          var name = nameEl ? nameEl.textContent.toLowerCase() : '';
+          var schemeNameDiv = nameEl ? nameEl.querySelector('div:first-child') : null;
+          var name = schemeNameDiv ? schemeNameDiv.textContent.toLowerCase() : (nameEl ? nameEl.textContent.toLowerCase() : '');
           var showAmc = _mfActiveAmc === 'all' || amc === _mfActiveAmc;
           var showCat = _mfActiveCategory === 'all' || cat === _mfActiveCategory;
           var showSearch = q === '' || name.indexOf(q) !== -1;
           rows[r].style.display = (showAmc && showCat && showSearch) ? '' : 'none';
           if (showAmc && showCat && showSearch && q.length >= 1 && suggestions.length < 8) {
-            suggestions.push(nameEl ? nameEl.textContent.trim() : '');
+            suggestions.push(schemeNameDiv ? schemeNameDiv.textContent.trim() : (nameEl ? nameEl.textContent.trim() : ''));
           }
         }
         // Show suggestions dropdown when typing
