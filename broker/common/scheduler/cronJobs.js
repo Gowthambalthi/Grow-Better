@@ -182,6 +182,18 @@ async function runDailyNavTracking() {
       await new Promise(r => setTimeout(r, DELAY_MS));
     }
     
+    // Also snapshot AUM and investor counts for historical tracking
+    try {
+      const aumSnap = hdfcMfDb.getDb().prepare('INSERT OR REPLACE INTO aum_snapshots (schemeId, aum, snapshotDate, source) SELECT schemeId, aum, ?, ? FROM mutual_fund_aum WHERE aum > 0');
+      const invSnap = hdfcMfDb.getDb().prepare('INSERT OR REPLACE INTO investor_snapshots (schemeId, investorCount, snapshotDate, source) SELECT schemeId, investorCount, ?, ? FROM mutual_fund_investors WHERE investorCount > 0');
+      const snapResult = hdfcMfDb.getDb().transaction(() => {
+        const aumR = aumSnap.run(today, 'daily-snapshot');
+        const invR = invSnap.run(today, 'daily-snapshot');
+        return { aum: aumR.changes, inv: invR.changes };
+      })();
+      console.log(`[Daily NAV] Snapshots stored: ${snapResult.aum} AUM, ${snapResult.inv} investors for ${today}`);
+    } catch (e) { console.warn('[Daily NAV] Snapshot store failed (non-fatal):', e.message); }
+    
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[Daily NAV] Completed in ${elapsed}s — tracked: ${tracked}, skipped: ${skipped}, failed: ${failed}`);
   } catch (err) {
