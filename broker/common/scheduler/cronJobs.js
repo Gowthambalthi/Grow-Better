@@ -59,7 +59,12 @@ function initScheduler() {
       runWeeklyAmcDataRefresh();
     }, { timezone: 'Asia/Kolkata' });
 
-    console.log('[Cron Scheduler] Scheduled daily pipeline (7 PM IST), Sunday Institutes (2 AM IST) & Sunday AMC Refresh (2 PM IST).');
+        // Daily 10:00 PM IST: Track NAV for all schemes after AMFI publishes (0 22 * * *)
+    cron.schedule('0 22 * * *', () => {
+      runDailyNavTracking();
+    }, { timezone: 'Asia/Kolkata' });
+
+    console.log('[Cron Scheduler] Scheduled: Daily pipeline (7 PM), Daily NAV (10 PM), Sunday Institutes (2 AM), Sunday AMC Refresh (2 PM).');
   } else {
     // Fallback: Check pipeline run every 4 hours
     setInterval(() => {
@@ -118,6 +123,74 @@ async function runWeeklyInstitutesPipeline() {
 
 
 /**
+ * Daily NAV Tracking — fetches today's NAV for ALL schemes from mfapi.in
+ * Runs every day at 10:00 PM IST after AMFI publishes NAV
+ */
+let lastNavTrackDate = '';
+
+async function runDailyNavTracking() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (lastNavTrackDate === today) return;
+  lastNavTrackDate = today;
+  
+  console.log('[Daily NAV] Starting NAV tracking for all schemes...');
+  const startTime = Date.now();
+
+  try {
+    const hdfcMfDb = require('../../db/mutualFunds');
+    const axios = require('axios');
+    
+    const schemes = hdfcMfDb.getAllSchemes();
+    let tracked = 0, skipped = 0, failed = 0;
+    
+    // Process in batches of 10 with delay
+    const BATCH_SIZE = 10;
+    const DELAY_MS = 500;
+    
+    for (let i = 0; i < schemes.length; i += BATCH_SIZE) {
+      const batch = schemes.slice(i, i + BATCH_SIZE);
+      const promises = batch.map(async (scheme) => {
+        if (!scheme.schemeCode) { skipped++; return; }
+        try {
+          const resp = await axios.get(`https://api.mfapi.in/mf/${scheme.schemeCode}`, { timeout: 10000 });
+          const mfData = resp.data;
+          if (mfData && mfData.data && mfData.data.length > 0) {
+            const latest = mfData.data[0];
+            const navDate = latest.date.split('-').reverse().join('-');
+            const nav = parseFloat(latest.nav);
+            if (!isNaN(nav) && navDate === today) {
+              hdfcMfDb.upsertNavHistory(scheme.id, navDate, nav, 'mfapi.in');
+              tracked++;
+            } else {
+              skipped++;
+            }
+          } else {
+            skipped++;
+          }
+        } catch (e) {
+          failed++;
+        }
+      });
+      await Promise.all(promises);
+      
+      // Progress log every 100 schemes
+      if (i % 100 === 0 && i > 0) {
+        console.log(`[Daily NAV] Progress: ${i}/${schemes.length} schemes processed`);
+      }
+      
+      // Delay between batches
+      await new Promise(r => setTimeout(r, DELAY_MS));
+    }
+    
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Daily NAV] Completed in ${elapsed}s — tracked: ${tracked}, skipped: ${skipped}, failed: ${failed}`);
+  } catch (err) {
+    console.error('[Daily NAV Error]', err.message);
+  }
+}
+
+
+/**
  * Weekly AMC Mutual Fund Data Refresh
  * Runs every Sunday at 2:00 PM IST
  * Re-imports all AMC scheme data, NAV, AUM, investors, and holdings
@@ -152,5 +225,6 @@ module.exports = {
   runDailyConvictionPipeline,
   runWeeklyInstitutesPipeline,
   runWeeklyAmcDataRefresh,
+  runDailyNavTracking,
   initScheduler
 };
