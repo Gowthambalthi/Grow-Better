@@ -1910,11 +1910,16 @@ function _renderMfGridBody(grid, schemes) {
     var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
     var searchBox='<div style="margin-left:auto;"><input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
     grid.innerHTML=sum+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
-      + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;">Scheme name</th>'
-      + '<th style="'+tH+'text-align:right;">1M</th><th style="'+tH+'text-align:right;">3M</th><th style="'+tH+'text-align:right;">6M</th><th style="'+tH+'text-align:right;">1Y</th>'
-      + '<th style="'+tH+'text-align:right;">AUM</th><th style="'+tH+'text-align:right;">Change in AUM</th>'
-      + '<th style="'+tH+'text-align:right;">Investors</th><th style="'+tH+'text-align:right;">Change in investors</th>'
-      + '<th style="'+tH+'text-align:center;">Rating</th>'
+      + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;cursor:pointer;" onclick="window._mfSort(\x27name\x27)">Scheme name'+mfSortArrow('name')+'</th>'
+      + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x271M\x27)">1M'+mfSortArrow('1M')+'</th>'
+      + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x273M\x27)">3M'+mfSortArrow('3M')+'</th>'
+      + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x276M\x27)">6M'+mfSortArrow('6M')+'</th>'
+      + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x271Y\x27)">1Y'+mfSortArrow('1Y')+'</th>'
+      + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x27aum\x27)">AUM'+mfSortArrow('aum')+'</th>'
+      + '<th style="'+tH+'text-align:right;">Change in AUM</th>'
+      + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x27inv\x27)">Investors'+mfSortArrow('inv')+'</th>'
+      + '<th style="'+tH+'text-align:right;">Change in investors</th>'
+      + '<th style="'+tH+'text-align:center;cursor:pointer;" onclick="window._mfSort(\x27cs\x27)">Rating'+mfSortArrow('cs')+'</th>'
       + "</tr></thead><tbody>"+rows+"</tbody></table></div></div>";
   } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
 }
