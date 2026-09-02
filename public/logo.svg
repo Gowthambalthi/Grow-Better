@@ -1,17 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00D4AA"/>
-      <stop offset="100%" stop-color="#00B386"/>
+    <linearGradient id="grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2E9E82"/>
+      <stop offset="50%" stop-color="#3CB5A0"/>
+      <stop offset="100%" stop-color="#4DC9A8"/>
     </linearGradient>
   </defs>
-  <!-- Diamond shape -->
-  <path d="M60 8 L112 60 L60 112 L8 60 Z" fill="url(#g1)" rx="8"/>
-  <!-- G letter -->
-  <text x="28" y="72" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="48" fill="white">G</text>
-  <!-- B letter -->
-  <text x="58" y="72" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="48" fill="white">B</text>
-  <!-- Upward arrow -->
-  <path d="M90 30 L100 18 L110 30" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="100" y1="18" x2="100" y2="38" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <g fill="none" stroke="url(#grad)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Diamond outline -->
+    <path d="M256 40 L472 256 L256 472 L40 256 Z"/>
+    
+    <!-- G letter (left side) -->
+    <path d="M140 160 C100 190, 80 240, 80 256 C80 340, 140 400, 220 400 C260 400, 290 385, 310 360"/>
+    <path d="M310 360 L310 280"/>
+    <path d="M260 280 L310 280"/>
+    
+    <!-- B letter (right side) -->
+    <path d="M350 160 L350 400"/>
+    <path d="M350 160 C400 160, 430 200, 430 230 C430 260, 400 280, 350 280"/>
+    <path d="M350 280 C410 280, 450 310, 450 340 C450 380, 410 400, 350 400"/>
+    
+    <!-- Upward arrow -->
+    <path d="M340 90 L400 40"/>
+    <path d="M400 40 L460 90"/>
+  </g>
 </svg>
