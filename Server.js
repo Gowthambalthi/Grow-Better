@@ -1387,7 +1387,41 @@ app.get('/api/debug/changes/:schemeId', (req, res) => {
 
 const port = process.env.PORT || env.server.port || 4000;
   const host = '0.0.0.0';
-  app.listen(port, host, () => {
+  
+// TEMP: Dump Groww SSR keys for debugging folio data
+app.get('/api/debug/groww', async (req, res) => {
+  try {
+    var slug = req.query.slug || 'hdfc-flexi-cap-fund-direct-growth';
+    var url = 'https://groww.in/mutual-funds/' + slug;
+    var response = await axios.get(url, { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+    var pat = /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/;
+    var match = response.data.match(pat);
+    if (!match) return res.json({ error: 'no next data' });
+    var nd = JSON.parse(match[1]);
+    var ss = nd.props && nd.props.pageProps && nd.props.pageProps.mfServerSideData;
+    if (!ss) return res.json({ error: 'no ssd' });
+    var result = {};
+    var keys = Object.keys(ss);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var v = ss[k];
+      if (v === null || v === undefined || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+        result[k] = v;
+      } else if (Array.isArray(v)) {
+        result[k] = 'Array(' + v.length + ')';
+      } else {
+        result[k] = 'Object(' + Object.keys(v).join(',') + ')';
+      }
+    }
+    var found = {};
+    function s(o, p) { if (!o || typeof o !== 'object') return; var ok = Object.keys(o); for (var j = 0; j < ok.length; j++) { var fk = ok[j]; var fv = o[fk]; var fp = p ? p+'.'+fk : fk; if (/folio|investor|holder|subscriber|account/i.test(fk)) { found[fp] = typeof fv === 'object' ? JSON.stringify(fv).substring(0, 200) : fv; } if (typeof fv === 'object' && fv !== null && !Array.isArray(fv)) s(fv, fp); } }
+    s(ss, '');
+    result._folioFields = found;
+    res.json({ success: true, data: result });
+  } catch (err) { res.json({ error: err.message }); }
+});
+
+app.listen(port, host, () => {
     console.log(`[server] listening on http://${host}:${port}`);
     console.log(`[server] active brokers: ${Object.keys(brokers).join(', ') || '(none — check ANGEL_ENABLED/GROWW_ENABLED)'}`);
   });
