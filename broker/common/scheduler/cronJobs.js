@@ -217,7 +217,7 @@ async function runDailyNavTracking() {
  * Runs every Sunday at 2:00 PM IST
  * Re-imports all AMC scheme data, NAV, AUM, investors, and holdings
  */
-async function runWeeklyAmcDataRefresh() {
+async function runSmartAmcRefresh() {
   // Use process.nextTick to not block main event loop
   console.log('[Weekly AMC Refresh] Starting multi-AMC data pipeline (background)...');
   const startTime = Date.now();
@@ -241,7 +241,7 @@ let lastAmcRefreshDate = '';
   if (lastAmcRefreshDate !== today && new Date().getDay() === 0) {
     lastAmcRefreshDate = today;
     console.log('[Auto-Run] Sunday detected. Running AMC data refresh...');
-    runWeeklyAmcDataRefresh();
+    runSmartAmcRefresh();
   }
 
 module.exports = {
