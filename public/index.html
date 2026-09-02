@@ -597,14 +597,14 @@
         <section class="view" id="view-mutual-funds">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
             <div>
-              <h1 class="view-title" style="font-size:18px;font-weight:800;letter-spacing:-0.01em;color:var(--text-primary);">MUTUAL FUNDS PLATFORM</h1>
-              <div class="view-subtitle" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:8px;">
-                <span id="mfSubtitleCount">2,048 Indian Mutual Fund Schemes across 44 AMCs · Multi-Server Failover Active</span>
-                <span id="mfServerTag" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;">Server 1 (Primary AMFI Engine)</span>
+              <h1 style="font-size:20px;font-weight:800;color:var(--text-primary);margin:0;">All AMC mutual fund schemes</h1>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                <span id="mfSubtitleCount" style="font-size:12px;color:var(--text-muted);">684 schemes &middot; 47 AMCs</span>
+                <span id="mfServerTag" style="background:rgba(0,179,134,0.15);color:#00B386;border:1px solid rgba(0,179,134,0.3);font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;">47 AMCs &middot; 739 Official Data</span>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <input type="text" id="mfSearchInput" placeholder="Search 2,000+ schemes, AMCs, stocks..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:7px 12px;border-radius:6px;font-size:12px;width:260px;">
+              <input type="text" id="mfSearchInput" placeholder="Search schemes, AMCs, stocks..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:7px 12px;border-radius:6px;font-size:12px;width:240px;">
               <div class="timeframe-selector" style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:6px;border:1px solid var(--line);">
                 <button class="mf-tf-btn active" data-tf="1M" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">1M</button>
                 <button class="mf-tf-btn" data-tf="3M" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">3M</button>
@@ -613,18 +613,6 @@
               </div>
             </div>
           </div>
-
-          <!-- 24 Major AMC Fund Houses Bar (Click AMC to filter all schemes) -->
-          <div style="margin-bottom:20px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-              <span style="font-size:12px;font-weight:800;color:var(--text-primary);letter-spacing:0.04em;text-transform:uppercase;">24 MAJOR INDIAN AMCs (CLICK AMC TO VIEW ALL SCHEMES)</span>
-              <button id="resetAmcFilterBtn" style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-muted);font-size:11px;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:700;">Show All AMCs</button>
-            </div>
-            <div id="amcCardsContainer" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;">
-              <!-- 24 AMC cards rendered dynamically by JavaScript -->
-            </div>
-          </div>
-
 
           <!-- Scheme Table -->
           <div id="mfSchemesGrid" style="display:block;width:100%;">
