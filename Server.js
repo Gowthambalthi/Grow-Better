@@ -25,6 +25,9 @@ const portfolioService = require('./common/portfolio/portfolioService');
 const notificationService = require('./common/notifications/notificationService');
 
 const app = express();
+const { registerDebugRoute } = require("./scripts/debugGrowwKeys");
+
+
 app.use(cors());
 app.use(express.json());
 
@@ -731,6 +734,8 @@ app.get('/api/mutual-funds/aggregated-stocks', async (req, res) => {
 
 // ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
 const hdfcMfDb = require('./db/mutualFunds');
+
+registerDebugRoute(app);
 
 // IMPORTANT: Static routes BEFORE :schemeId to avoid Express param matching
 
