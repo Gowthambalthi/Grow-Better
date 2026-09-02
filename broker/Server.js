@@ -983,22 +983,29 @@ app.get('/api/mutual-funds/hdfc/:schemeId/months', (req, res) => {
   }
 });
 
-// GET /api/mutual-funds/hdfc/:schemeId/nav-history — NAV chart data (last 30 days)
-// Returns daily NAV movement from portfolio date to today
+// GET /api/mutual-funds/hdfc/:schemeId/nav-history — NAV chart from portfolio date to today
 app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', async (req, res) => {
   try {
     const { schemeId } = req.params;
+    const portfolioDate = req.query.from || null; // e.g. ?from=2026-07-30
     const scheme = hdfcMfDb.getScheme(schemeId);
     if (!scheme) return res.status(404).json({ success: false, error: 'Scheme not found' });
 
     // Get stored NAV history first
-    const history = hdfcMfDb.getNavHistory(schemeId, 30);
+    const history = hdfcMfDb.getNavHistory(schemeId, 90);
     if (history && history.length > 5) {
-      return res.json({
-        success: true, schemeId, schemeName: scheme.schemeName,
-        source: 'tracked', dataPoints: history.length,
-        data: history.reverse().map(h => ({ date: h.navDate, nav: h.nav }))
-      });
+      let filtered = history;
+      if (portfolioDate) {
+        filtered = history.filter(h => h.navDate >= portfolioDate);
+      }
+      if (filtered.length >= 2) {
+        return res.json({
+          success: true, schemeId, schemeName: scheme.schemeName,
+          portfolioDate: portfolioDate || filtered[0].navDate,
+          source: 'tracked', dataPoints: filtered.length,
+          data: filtered.reverse().map(h => ({ date: h.navDate, nav: h.nav }))
+        });
+      }
     }
 
     // Fallback: fetch real NAV history from mfapi.in (works for ALL schemes)
@@ -1011,11 +1018,19 @@ app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', async (req, res) => {
       const mfData = resp.data;
       if (mfData && mfData.data && mfData.data.length > 0) {
         // mfapi.in returns most recent first, reverse to chronological
-        const raw = mfData.data.slice(0, 35).reverse(); // last ~35 entries (~30 trading days)
-        const data = raw.map(d => ({
+        const raw = mfData.data.slice(0, 120).reverse(); // ~6 months of data
+        var allNav = raw.map(d => ({
           date: d.date.split('-').reverse().join('-'), // DD-MM-YYYY -> YYYY-MM-DD
           nav: parseFloat(d.nav)
         })).filter(d => !isNaN(d.nav));
+
+        // Filter from portfolio date if provided
+        let data = allNav;
+        if (portfolioDate) {
+          data = allNav.filter(d => d.date >= portfolioDate);
+        }
+        // If too few points, use all available
+        if (data.length < 5) data = allNav;
 
         if (data.length > 0) {
           const currentNav = data[data.length - 1].nav;
@@ -1023,14 +1038,14 @@ app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', async (req, res) => {
           const pctChange = ((currentNav - startNav) / startNav * 100).toFixed(2);
           return res.json({
             success: true, schemeId, schemeName: scheme.schemeName,
+            portfolioDate: portfolioDate || data[0].date,
             source: 'mfapi.in', currentNav, pctChange: parseFloat(pctChange),
             dataPoints: data.length, data
           });
         }
       }
-    } catch (e) { /* mfapi.in failed, try Groww fallback */ }
+    } catch (e) { /* mfapi.in failed */ }
 
-    // Final fallback: return empty data
     res.json({ success: true, schemeId, data: [], message: 'No NAV data available' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

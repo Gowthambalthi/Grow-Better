@@ -54,7 +54,12 @@ function initScheduler() {
       runWeeklyInstitutesPipeline();
     }, { timezone: 'Asia/Kolkata' });
 
-    console.log('[Cron Scheduler] Scheduled daily pipeline (7 PM IST) & Sunday weekly Institutes pipeline (2 AM IST).');
+        // Sunday 2:00 PM IST weekly: Refresh all AMC mutual fund data (0 14 * * 0)
+    cron.schedule('0 14 * * 0', () => {
+      runWeeklyAmcDataRefresh();
+    }, { timezone: 'Asia/Kolkata' });
+
+    console.log('[Cron Scheduler] Scheduled daily pipeline (7 PM IST), Sunday Institutes (2 AM IST) & Sunday AMC Refresh (2 PM IST).');
   } else {
     // Fallback: Check pipeline run every 4 hours
     setInterval(() => {
@@ -64,6 +69,17 @@ function initScheduler() {
         runDailyConvictionPipeline();
       }
     }, 4 * 60 * 60 * 1000);
+    // Fallback: Sunday 2 PM IST AMC refresh via interval check
+    setInterval(() => {
+      const now = new Date();
+      const istHours = (now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60)) % 24;
+      const istDay = (now.getUTCDay() + 5) % 7; // IST day (0=Sun adjusted)
+      const today = now.toISOString().slice(0, 10);
+      if (istDay === 0 && istHours >= 14 && istHours <= 15 && lastAmcRefreshDate !== today) {
+        lastAmcRefreshDate = today;
+        runWeeklyAmcDataRefresh();
+      }
+    }, 60 * 60 * 1000);
     console.log('[Cron Scheduler] Interval fallback active for institutional pipeline.');
   }
 
@@ -100,8 +116,41 @@ async function runWeeklyInstitutesPipeline() {
   }
 }
 
+
+/**
+ * Weekly AMC Mutual Fund Data Refresh
+ * Runs every Sunday at 2:00 PM IST
+ * Re-imports all AMC scheme data, NAV, AUM, investors, and holdings
+ */
+async function runWeeklyAmcDataRefresh() {
+  console.log('[Weekly AMC Refresh] Starting multi-AMC data pipeline...');
+  const startTime = Date.now();
+
+  try {
+    const MfOrchestrator = require('../mf-engine/orchestrator');
+    const hdfcMfDb = require('../../db/mutualFunds');
+    const orch = new MfOrchestrator(hdfcMfDb, { perAmcConcurrency: 5, globalConcurrency: 20 });
+    await orch.runAll();
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Weekly AMC Refresh] Completed in ${elapsed}s — all AMCs refreshed.`);
+  } catch (err) {
+    console.error('[Weekly AMC Refresh Error]', err.message);
+  }
+}
+
+let lastAmcRefreshDate = '';
+
+// Auto-run AMC refresh if not done today
+  const today = new Date().toISOString().slice(0, 10);
+  if (lastAmcRefreshDate !== today && new Date().getDay() === 0) {
+    lastAmcRefreshDate = today;
+    console.log('[Auto-Run] Sunday detected. Running AMC data refresh...');
+    runWeeklyAmcDataRefresh();
+  }
+
 module.exports = {
   runDailyConvictionPipeline,
   runWeeklyInstitutesPipeline,
+  runWeeklyAmcDataRefresh,
   initScheduler
 };

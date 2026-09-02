@@ -85,7 +85,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902i</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902j</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -2031,7 +2031,7 @@
         // Load full holdings from API, month selector, and NAV chart for ALL schemes
         if (s.id) {
           loadHdfcHoldingsFromApi(s.id);
-          loadNavChart(s.id);
+          loadNavChart(s.id, s.latestPortfolioDate || null);
         } else {
           currentModalHoldings = s.topHoldings || [];
           renderModalHoldingsTable(currentModalHoldings);
@@ -2136,14 +2136,15 @@
       }
 
       // Load and render NAV chart for HDFC schemes
-      async function loadNavChart(schemeId) {
+      async function loadNavChart(schemeId, portfolioDate) {
         var container = document.getElementById('navChartContainer');
         var canvas = document.getElementById('navChartCanvas');
         var rangeEl = document.getElementById('navChartRange');
         if (!container || !canvas) return;
 
         try {
-          var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(schemeId) + '/nav-history?days=30');
+          var fromParam = portfolioDate ? '?from=' + encodeURIComponent(portfolioDate) : '?days=30';
+          var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(schemeId) + '/nav-history' + fromParam);
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
           if (!data.success || !data.data || data.data.length < 2) {
@@ -2153,13 +2154,15 @@
 
           container.style.display = 'block';
           var navData = data.data;
-          rangeEl.textContent = navData[0].date + ' → ' + navData[navData.length - 1].date + ' (' + navData.length + ' trading days)';
+          var chartStartDate = data.portfolioDate || navData[0].date;
+          rangeEl.textContent = chartStartDate + ' → ' + navData[navData.length - 1].date + ' (' + navData.length + ' trading days)';
 
           // Update heading with portfolio date context
           var titleEl = document.getElementById('navChartTitle');
           var subEl = document.getElementById('navChartSubtitle');
           if (titleEl) {
-            titleEl.textContent = 'NAV MOVEMENT: ' + navData[0].date + ' → ' + navData[navData.length - 1].date;
+            var pDate = data.portfolioDate || navData[0].date;
+            titleEl.textContent = 'NAV MOVEMENT: ' + pDate + ' → ' + navData[navData.length - 1].date;
           }
           if (subEl) {
             var startNav = navData[0].nav;
