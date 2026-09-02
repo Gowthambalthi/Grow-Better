@@ -85,7 +85,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902h</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902i</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -1448,7 +1448,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260902h';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});});}location.reload(true);}})();
+    (function(){var v='20260902i';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -1543,6 +1543,8 @@
 
           var allSchemes = [];
           var amcSet = new Set();
+          // Ensure amcSet is always defined
+          if (typeof amcSet === 'undefined' || amcSet === null) amcSet = new Set();
 
           // Process multi-AMC real data (PRIMARY)
           if (allAmcData && allAmcData.success && Array.isArray(allAmcData.schemes)) {
@@ -1605,13 +1607,14 @@
             return true;
           });
 
-          console.log('[MF] allSchemes:', allSchemes.length, 'amcs:', amcSet.size);
+          amcSet = amcSet || new Set();
+          console.log('[MF] allSchemes:', allSchemes.length, 'amcs:', amcSet ? amcSet.size : 0);
 
           mfCache = allSchemes;
 
           if (subTitle) {
             var total = allSchemes.length;
-            var amcCount = amcSet.size || 0;
+            var amcCount = (amcSet && amcSet.size != null) ? amcSet.size : 0;
             subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
           }
 
