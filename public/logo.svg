@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D4AA"/>
+      <stop offset="100%" stop-color="#00B386"/>
+    </linearGradient>
+  </defs>
+  <!-- Diamond shape -->
+  <path d="M60 8 L112 60 L60 112 L8 60 Z" fill="url(#g1)" rx="8"/>
+  <!-- G letter -->
+  <text x="28" y="72" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="48" fill="white">G</text>
+  <!-- B letter -->
+  <text x="58" y="72" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="48" fill="white">B</text>
+  <!-- Upward arrow -->
+  <path d="M90 30 L100 18 L110 30" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="100" y1="18" x2="100" y2="38" stroke="white" stroke-width="3" stroke-linecap="round"/>
+</svg>
