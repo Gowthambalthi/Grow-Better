@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260902o" />
+<meta name="version" content="v20260902l" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -24,8 +24,8 @@
     <!-- ============ SIDEBAR ============ -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand" data-nav="dashboard">
-        <div class="brand-logo-icon" style="background:transparent;box-shadow:none;border:none;padding:0;">
-          <img src="/logo.png" alt="Grow Better" style="width:52px;height:52px;object-fit:contain;border-radius:10px;">
+        <div class="brand-logo-icon" style="background:transparent;box-shadow:none;border:none;padding:0;width:44px;height:44px;">
+          <img src="/logo.png" alt="Grow Better" style="width:44px;height:44px;object-fit:contain;border-radius:8px;">
         </div>
         <div class="brand-text-wrap">
           <span class="brand-title" style="font-size:16px;font-weight:800;color:#FFFFFF;">GROW</span>
@@ -1867,23 +1867,6 @@
         return '<div style="font-size:9px;color:' + color + ';font-weight:700;white-space:nowrap;">' + arrow + ' ' + sign + formatted + '</div>';
       }
 
-      function filterMfCategory(cat) {
-  window._mfActiveCategory = cat || "all";
-  var tabs = document.querySelectorAll(".mf-cat-tab");
-  for (var t = 0; t < tabs.length; t++) {
-    var isActive = tabs[t].getAttribute("data-cat") === (cat || "all");
-    tabs[t].style.background = isActive ? "var(--accent)" : "var(--bg-input)";
-    tabs[t].style.color = isActive ? "#fff" : "var(--text-muted)";
-    tabs[t].style.boxShadow = isActive ? "0 3px 0 0 #00B386" : "none";
-  }
-  }
-  var rows = document.querySelectorAll(".mf-table-row");
-  for (var r = 0; r < rows.length; r++) {
-    var show = cat === "all" || rows[r].getAttribute("data-cat") === cat;
-    rows[r].style.display = show ? "" : "none";
-  }
-}
-
 function _renderMfGridBody(grid, schemes) {
   try {
     if (!schemes || schemes.length === 0) {
@@ -2453,30 +2436,31 @@ function _renderMfGridBody(grid, schemes) {
         }
       });
 
-      if (document.readyState === 'loading') {
-        // Sidebar: collapsed by default, expands on hover
-        (function() {
-          var sidebar = document.getElementById('sidebar');
-          var mainCol = document.querySelector('.main-col');
-          if (!sidebar) return;
-          // Start collapsed
+      // Sidebar: collapsed by default, expands on hover
+      (function() {
+        var sidebar = document.getElementById('sidebar');
+        var mainCol = document.querySelector('.main-col');
+        if (!sidebar) return;
+        // Start collapsed
+        sidebar.classList.add('collapsed');
+        if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w-collapsed)';
+        // Expand on mouse enter
+        sidebar.addEventListener('mouseenter', function() {
+          sidebar.classList.remove('collapsed');
+          if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w)';
+        });
+        // Collapse on mouse leave
+        sidebar.addEventListener('mouseleave', function() {
           sidebar.classList.add('collapsed');
           if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w-collapsed)';
-          // Expand on mouse enter
-          sidebar.addEventListener('mouseenter', function() {
-            sidebar.classList.remove('collapsed');
-            if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w)';
-          });
-          // Collapse on mouse leave
-          sidebar.addEventListener('mouseleave', function() {
-            sidebar.classList.add('collapsed');
-            if (mainCol) mainCol.style.marginLeft = 'var(--sidebar-w-collapsed)';
-          });
-          // Hide the collapse toggle button (hover replaces it)
-          var toggleBtn = document.getElementById('collapseToggle');
-          if (toggleBtn) toggleBtn.style.display = 'none';
-        })();
+        });
+        // Hide the collapse toggle button (hover replaces it)
+        var toggleBtn = document.getElementById('collapseToggle');
+        if (toggleBtn) toggleBtn.style.display = 'none';
+      })();
 
+      // Init page
+      if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function() { renderAmcCards(); fetchMfSchemes(); loadStockHoldingsScanner(); });
       } else {
         renderAmcCards();
