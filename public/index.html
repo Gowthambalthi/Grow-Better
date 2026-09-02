@@ -1841,7 +1841,7 @@
           }
         }
       }
-      function searchMfSchemes(query) {
+      var _mfSearchTimer = null; function searchMfSchemes(query) { clearTimeout(_mfSearchTimer); _mfSearchTimer = setTimeout(function() { _doSearch(query); }, 150); } function _doSearch(query) {
         _mfSearchText = query || '';
         applyMfFilters();
       }
