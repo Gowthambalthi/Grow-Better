@@ -1781,6 +1781,58 @@
         _renderMfGridBody(grid, schemes);
       }
 
+      // AMC dropdown + search + combined filter
+      var _mfActiveAmc = 'all';
+      var _mfActiveCategory = 'all';
+      function filterMfAmc(amc) {
+        _mfActiveAmc = amc || 'all';
+        var btn = document.getElementById('mfAmcBtn');
+        if (btn) btn.innerHTML = (amc === 'all' ? 'All AMCs' : amc) + ' <span style="font-size:8px;">\u25BC</span>';
+        var dd = document.getElementById('mfAmcDropdown');
+        if (dd) dd.style.display = 'none';
+        applyMfFilters();
+      }
+      function toggleAmcDropdown() {
+        var dd = document.getElementById('mfAmcDropdown');
+        if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+      }
+      function searchAmcFilter(query) {
+        var items = document.querySelectorAll('.mf-amc-item');
+        var q = (query || '').toLowerCase();
+        for (var i = 0; i < items.length; i++) {
+          var name = items[i].getAttribute('data-amc') || '';
+          items[i].style.display = (q === '' || name.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+        }
+      }
+      function filterMfCategory(cat) {
+        _mfActiveCategory = cat || 'all';
+        var tabs = document.querySelectorAll('.mf-cat-tab');
+        for (var t = 0; t < tabs.length; t++) {
+          var isActive = tabs[t].getAttribute('data-cat') === (cat || 'all');
+          tabs[t].style.background = isActive ? 'var(--accent)' : 'var(--bg-input)';
+          tabs[t].style.color = isActive ? '#fff' : 'var(--text-muted)';
+        }
+        applyMfFilters();
+      }
+      function applyMfFilters() {
+        var rows = document.querySelectorAll('.mf-table-row');
+        for (var r = 0; r < rows.length; r++) {
+          var amc = rows[r].getAttribute('data-amc') || '';
+          var cat = rows[r].getAttribute('data-cat') || '';
+          var showAmc = _mfActiveAmc === 'all' || amc === _mfActiveAmc;
+          var showCat = _mfActiveCategory === 'all' || cat === _mfActiveCategory;
+          rows[r].style.display = (showAmc && showCat) ? '' : 'none';
+        }
+      }
+      function searchMfSchemes(query) {
+        var q = (query || '').toLowerCase();
+        var rows = document.querySelectorAll('.mf-table-row');
+        for (var r = 0; r < rows.length; r++) {
+          var text = rows[r].textContent.toLowerCase();
+          rows[r].style.display = (q === '' || text.indexOf(q) !== -1) ? '' : 'none';
+        }
+      }
+
       
       // Format change values with arrows
       function formatChange(changeObj, suffix) {
@@ -1855,7 +1907,7 @@ function _renderMfGridBody(grid, schemes) {
     function rn2(sc){var bg=sc>=80?"rgba(0,179,134,0.2)":sc>=60?"rgba(245,158,11,0.2)":"rgba(235,91,86,0.2)",fg=sc>=80?"#00B386":sc>=60?"#F59E0B":"#EB5B56";return '<td style="padding:10px 12px;text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:'+bg+';color:'+fg+';font-size:11px;font-weight:800;">'+sc+"</span></td>";}
 
     var rows=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct3=s.category||"",sid=s.id.replace(/'/g,"\\");
-      return '<tr class="mf-table-row" data-cat="'+ct3+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\x27'+sid+'\x27)" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+      return '<tr class="mf-table-row" data-cat="'+ct3+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\x27'+sid+'\x27)" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
       + '<td style="padding:10px 8px;width:28px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
       + '<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);max-width:320px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nm+'</div><div style="font-size:10px;color:var(--text-muted);font-weight:400;margin-top:2px;">'+ct3+"</div></td>"
       + rc2(s.returns&&s.returns["1M"]!=null?s.returns["1M"]:null)
@@ -1868,7 +1920,14 @@ function _renderMfGridBody(grid, schemes) {
       + ic2(s.investorChange1M)+rn2(s.confidenceScore||50)+"</tr>";}).join("");
 
     var tH="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
-    grid.innerHTML=sum+catTabs+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    // Build AMC dropdown
+    var amcC={};for(var ai=0;ai<di.length;ai++){var an=di[ai].parentAmc||di[ai].amc||'Other';amcC[an]=(amcC[an]||0)+1;}
+    var amcS=Object.entries(amcC).sort(function(a,b){return b[1]-a[1];});
+    var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
+    for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
+    var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
+    var searchBox='<div style="margin-left:auto;"><input type="text" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
+    grid.innerHTML=sum+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;">Scheme name</th>'
       + '<th style="'+tH+'text-align:right;">1M</th><th style="'+tH+'text-align:right;">3M</th><th style="'+tH+'text-align:right;">6M</th><th style="'+tH+'text-align:right;">1Y</th>'
       + '<th style="'+tH+'text-align:right;">AUM</th><th style="'+tH+'text-align:right;">Change in AUM</th>'
