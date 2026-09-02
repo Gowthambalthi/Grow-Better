@@ -85,7 +85,7 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902j</span></div>
+          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW <span style="background:#00B386;color:#fff;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:800;margin-left:8px;">v20260902k</span></div>
           <span id="appVersionBadge" style="font-size:9px;color:var(--text-muted);background:var(--bg-raised);padding:2px 6px;border-radius:4px;margin-left:8px;">v20260902a</span>
         </div>
 
@@ -1805,85 +1805,78 @@
         return '<div style="font-size:9px;color:' + color + ';font-weight:700;white-space:nowrap;">' + arrow + ' ' + sign + formatted + '</div>';
       }
 
-      function _renderMfGridBody(grid, schemes) {
+      function filterMfCategory(cat) {
+  window._mfActiveCategory = cat || "all";
+  var tabs = document.querySelectorAll(".mf-cat-tab");
+  for (var t = 0; t < tabs.length; t++) {
+    var isActive = tabs[t].getAttribute("data-cat") === (cat || "all");
+    tabs[t].style.background = isActive ? "var(--accent)" : "var(--bg-input)";
+    tabs[t].style.color = isActive ? "#fff" : "var(--text-muted)";
+  }
+  var rows = document.querySelectorAll(".mf-table-row");
+  for (var r = 0; r < rows.length; r++) {
+    var show = cat === "all" || rows[r].getAttribute("data-cat") === cat;
+    rows[r].style.display = show ? "" : "none";
+  }
+}
+
+function _renderMfGridBody(grid, schemes) {
   try {
-    console.log("[MF Grid] rendering", schemes.length, "schemes");
     if (!schemes || schemes.length === 0) {
-      grid.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);">No mutual fund schemes match your search criteria.</div>';
+      grid.innerHTML = "<div style=\"padding:24px;text-align:center;color:var(--text-muted);\">No mutual fund schemes match your search.</div>";
       return;
     }
-    var maxCount = window.mfDisplayCount || 5000;
-    var displayItems = schemes.slice(0, maxCount);
-    function retCell(val) {
-      if (val === null || val === undefined) return '<td style="padding:6px 8px;text-align:right;color:var(--text-muted);font-size:11px;">-</td>';
-      var color = val >= 0 ? '#00B386' : '#EB5B56';
-      var sign = val >= 0 ? '+' : '';
-      return '<td style="padding:6px 8px;text-align:right;color:' + color + ';font-weight:700;font-size:11px;">' + sign + val.toFixed(2) + '%</td>';
+    var di = schemes, tf = currentMfTimeframe || "1M";
+
+    // Summary stats
+    var tR=0,rC=0,tG=null,tL=null,tI=null;
+    for(var i=0;i<di.length;i++){
+      var s=di[i],rv=s.returns&&s.returns[tf]!=null?s.returns[tf]:null;
+      if(rv!==null){tR+=rv;rC++;if(!tG||rv>tG.r)tG={n:cleanSchemeTitle(s.schemeName),r:rv};if(!tL||rv<tL.r)tL={n:cleanSchemeTitle(s.schemeName),r:rv};}
+      var iv=s.investorChange1M;if(iv&&iv.change!=null){if(!tI||iv.change>tI.c)tI={n:cleanSchemeTitle(s.schemeName),c:iv.change};}
     }
-    var thStyle = 'padding:8px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;';
-    var rows = displayItems.map(function(s) {
-      var name = cleanSchemeTitle(s.schemeName);
-      var amcTag = s.parentAmc || '';
-      var cat = s.category || '';
-      var r1m = s.returns && s.returns['1M'] != null ? s.returns['1M'] : null;
-      var r3m = s.returns && s.returns['3M'] != null ? s.returns['3M'] : null;
-      var r6m = s.returns && s.returns['6M'] != null ? s.returns['6M'] : null;
-      var r1y = s.returns && s.returns['1Y'] != null ? s.returns['1Y'] : null;
-      var aum = s.aumCr != null ? '\u20b9' + Number(s.aumCr).toLocaleString('en-IN', {maximumFractionDigits:0}) + ' Cr' : '-';
-      var inv = s.investorCount != null ? (s.investorCount > 10000 ? (s.investorCount / 100000).toFixed(2) + 'L' : s.investorCount.toLocaleString('en-IN')) : '-';
-      var cs = s.confidenceScore || 50;
-      var csC = cs >= 80 ? '#00B386' : cs >= 60 ? '#F59E0B' : '#EB5B56';
-      var csB = cs >= 80 ? 'rgba(0,179,134,0.12)' : cs >= 60 ? 'rgba(245,158,11,0.12)' : 'rgba(235,91,86,0.12)';
-      var hd = (s.topHoldings || []).slice(0, 3).map(function(h) { return h.symbol || h.name || ''; }).filter(Boolean).join(', ');
-      var sid = s.id.replace(/'/g, "\\'");
-      return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\'' + sid + '\')">' +
-        '<td style="padding:6px 8px;font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap;">' + amcTag + '</td>' +
-        '<td style="padding:6px 8px;font-weight:700;font-size:11px;color:var(--text-primary);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + name + '</td>' +
-        '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;">' + cat + '</td>' +
-        retCell(r1m) + retCell(r3m) + retCell(r6m) + retCell(r1y) +
-        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + aum + formatChange(s.aumChange1M, ' 1M') + '</td>' +
-        '<td style="padding:6px 8px;text-align:right;font-size:11px;color:var(--text-primary);font-weight:600;">' + inv + formatInvChange(s.investorChange1M) + '</td>' +
-        '<td style="padding:6px 8px;font-size:10px;color:var(--text-muted);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + hd + '</td>' +
-        '<td style="padding:6px 8px;text-align:center;"><span style="background:' + csB + ';color:' + csC + ';font-size:10px;font-weight:800;padding:2px 6px;border-radius:8px;">' + cs + '</span></td>' +
-      '</tr>';
-    }).join('');
-    var htmlOut = '<div style="margin-bottom:16px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">' +
-      '<div style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);">' +
-        '<h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">\ud83d\udcca ALL AMCs Mutual Fund Schemes</h3>' +
-        '<span style="font-size:11px;color:var(--text-muted);">' + displayItems.length + ' schemes</span>' +
-      '</div>' +
-      '<div style="overflow-x:auto;">' +
-      '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
-      '<thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">' +
-        '<th style="' + thStyle + 'text-align:left;">AMC' + mfSortArrow('amc') + '</th>' +
-        '<th style="' + thStyle + 'text-align:left;">SCHEME NAME' + mfSortArrow('name') + '</th>' +
-        '<th style="' + thStyle + 'text-align:left;">CATEGORY' + mfSortArrow('category') + '</th>' +
-        '<th style="' + thStyle + 'text-align:right;">1M' + mfSortArrow('1M') + '</th>' +
-        '<th style="' + thStyle + 'text-align:right;">3M' + mfSortArrow('3M') + '</th>' +
-        '<th style="' + thStyle + 'text-align:right;">6M' + mfSortArrow('6M') + '</th>' +
-        '<th style="' + thStyle + 'text-align:right;">1Y' + mfSortArrow('1Y') + '</th>' +
-        '<th style="' + thStyle + 'text-align:right;">AUM' + mfSortArrow('aum') + '</th>' +
-        '<th style="' + thStyle + 'text-align:right;">INVESTORS' + mfSortArrow('inv') + '</th>' +
-        '<th style="' + thStyle + 'text-align:left;">TOP HOLDINGS</th>' +
-        '<th style="' + thStyle + 'text-align:center;">CS' + mfSortArrow('cs') + '</th>' +
-      '</tr></thead>' +
-      '<tbody>' + rows + '</tbody>' +
-      '</table></div></div>';
-    grid.innerHTML = htmlOut;
-    grid.style.display = 'block';
-    // // Event delegation for table row clicks
-    grid.addEventListener('click', function(e) {
-      var tr = e.target.closest('tr');
-      if (tr && tr.style.cursor === 'pointer') {
-        var onclick = tr.getAttribute('onclick');
-        if (onclick) {
-          var match = onclick.match(/openMfDetailFromTable\('([^']+)'\)/);
-          if (match) { e.preventDefault(); openMfDetailFromTable(match[1]); return; }
-        }
-      }
-    });
-  } catch (gridErr) { console.error("[MF Grid] render error:", gridErr); }
-      }
+    var aR=rC>0?(tR/rC):0;
+    function fp(v){return(v>=0?"+":"")+v.toFixed(2)+"%";}
+    function fi(v){if(Math.abs(v)>=100000)return(v/100000).toFixed(1)+"L";if(Math.abs(v)>=1000)return(v/1000).toFixed(1)+"K";return v.toFixed(0);}
+
+    var c = "var(--bg-panel)", b = "var(--line)", m = "var(--text-muted)";
+    var sum = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;"><div style="font-size:11px;color:' + m + ';">Avg ' + tf + ' return</div><div style="font-size:22px;font-weight:800;color:' + (aR>=0?"#00B386":"#EB5B56") + ';margin:4px 0;">' + fp(aR) + '</div><div style="font-size:10px;color:' + m + ';">across shown schemes</div></div>'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;"><div style="font-size:11px;color:' + m + ';">Top gainer (' + tf + ')</div><div style="font-size:22px;font-weight:800;color:#00B386;margin:4px 0;">' + (tG?fp(tG.r):"-") + '</div><div style="font-size:10px;color:' + m + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tG?tG.n:"-") + '</div></div>'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;"><div style="font-size:11px;color:' + m + ';">Top loser (' + tf + ')</div><div style="font-size:22px;font-weight:800;color:#EB5B56;margin:4px 0;">' + (tL?fp(tL.r):"-") + '</div><div style="font-size:10px;color:' + m + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tL?tL.n:"-") + '</div></div>'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;"><div style="font-size:11px;color:' + m + ';">Investor spike (' + tf + ')</div><div style="font-size:22px;font-weight:800;color:#4A9EFF;margin:4px 0;">' + (tI?"\u25B2 "+fi(tI.c):"-") + '</div><div style="font-size:10px;color:' + m + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tI?tI.n:"-") + '</div></div></div>';
+
+    // Category tabs
+    var cc={};for(var i=0;i<di.length;i++){var ct2=di[i].category||"Other";cc[ct2]=(cc[ct2]||0)+1;}
+    var catTabs = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'      + '<button class="mf-cat-tab" data-cat="all" onclick="filterMfCategory(\x27all\x27)" style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;">All categories</button>';
+    ["Equity","Hybrid","Debt","Index","Other"].forEach(function(k){if(cc[k])catTabs+='<button class="mf-cat-tab" data-cat="'+k+'" onclick="filterMfCategory(\x27'+k+'\x27)" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">'+k+'</button>';});
+    catTabs += '</div>';
+
+    // Table rows
+    function rc2(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
+    function ac2(ch){if(!ch||ch.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var p=ch.changePct,v=Math.abs(ch.change),cl=p>=0?"#00B386":"#EB5B56",a=p>=0?"\u25B2":"\u25BC",vs=v>=10000?"\u20b9"+(v/10000).toFixed(1)+"K Cr":"\u20b9"+v.toFixed(0)+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+cl+';font-weight:700;">'+a+" "+vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(p>=0?"+":"")+p.toFixed(1)+"%)</span></td>";}
+    function ic2(ch){if(!ch||ch.change==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var p=ch.changePct||0,v=Math.abs(ch.change),cl=ch.change>=0?"#00B386":"#EB5B56",a=ch.change>=0?"\u25B2":"\u25BC",vs=fi(v);return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+cl+';font-weight:700;">'+a+" "+vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(p>=0?"+":"")+p.toFixed(1)+"%)</span></td>";}
+    function rn2(sc){var bg=sc>=80?"rgba(0,179,134,0.2)":sc>=60?"rgba(245,158,11,0.2)":"rgba(235,91,86,0.2)",fg=sc>=80?"#00B386":sc>=60?"#F59E0B":"#EB5B56";return '<td style="padding:10px 12px;text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:'+bg+';color:'+fg+';font-size:11px;font-weight:800;">'+sc+"</span></td>";}
+
+    var rows=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct3=s.category||"",sid=s.id.replace(/'/g,"\\");
+      return '<tr class="mf-table-row" data-cat="'+ct3+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\x27'+sid+'\x27)" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+      + '<td style="padding:10px 8px;width:28px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+      + '<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);max-width:320px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nm+'</div><div style="font-size:10px;color:var(--text-muted);font-weight:400;margin-top:2px;">'+ct3+"</div></td>"
+      + rc2(s.returns&&s.returns["1M"]!=null?s.returns["1M"]:null)
+      + rc2(s.returns&&s.returns["3M"]!=null?s.returns["3M"]:null)
+      + rc2(s.returns&&s.returns["6M"]!=null?s.returns["6M"]:null)
+      + rc2(s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null)
+      + '<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>"
+      + ac2(s.aumChange1M)
+      + '<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:600;white-space:nowrap;">'+(s.investorCount!=null?(s.investorCount>10000?(s.investorCount/100000).toFixed(2)+"L":s.investorCount.toLocaleString("en-IN")):"-")+"</td>"
+      + ic2(s.investorChange1M)+rn2(s.confidenceScore||50)+"</tr>";}).join("");
+
+    var tH="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
+    grid.innerHTML=sum+catTabs+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+      + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;">Scheme name</th>'
+      + '<th style="'+tH+'text-align:right;">1M</th><th style="'+tH+'text-align:right;">3M</th><th style="'+tH+'text-align:right;">6M</th><th style="'+tH+'text-align:right;">1Y</th>'
+      + '<th style="'+tH+'text-align:right;">AUM</th><th style="'+tH+'text-align:right;">Change in AUM</th>'
+      + '<th style="'+tH+'text-align:right;">Investors</th><th style="'+tH+'text-align:right;">Change in investors</th>'
+      + '<th style="'+tH+'text-align:center;">Rating</th>'
+      + "</tr></thead><tbody>"+rows+"</tbody></table></div></div>";
+  } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
+}
 
 
       function getMfFallbackData() { return []; }
