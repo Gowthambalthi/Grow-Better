@@ -54,9 +54,9 @@ function initScheduler() {
       runWeeklyInstitutesPipeline();
     }, { timezone: 'Asia/Kolkata' });
 
-        // Sunday 2:00 PM IST weekly: Refresh all AMC mutual fund data (0 14 * * 0)
-    cron.schedule('0 14 * * 0', () => {
-      runWeeklyAmcDataRefresh();
+        // Daily 7:30 PM IST: Smart AMC refresh — only re-fetches stale schemes (30 19 * * *)
+    cron.schedule('30 19 * * *', () => {
+      runSmartAmcRefresh();
     }, { timezone: 'Asia/Kolkata' });
 
         // Daily 10:00 PM IST: Track NAV for all schemes after AMFI publishes (0 22 * * *)
@@ -64,7 +64,7 @@ function initScheduler() {
       runDailyNavTracking();
     }, { timezone: 'Asia/Kolkata' });
 
-    console.log('[Cron Scheduler] Scheduled: Daily pipeline (7 PM), Daily NAV (10 PM), Sunday Institutes (2 AM), Sunday AMC Refresh (2 PM).');
+    console.log('[Cron Scheduler] Scheduled: Daily pipeline (7 PM), Smart AMC Refresh (7:30 PM), Daily NAV (10 PM), Sunday Institutes (2 AM).');
   } else {
     // Fallback: Check pipeline run every 4 hours
     setInterval(() => {
@@ -82,7 +82,7 @@ function initScheduler() {
       const today = now.toISOString().slice(0, 10);
       if (istDay === 0 && istHours >= 14 && istHours <= 15 && lastAmcRefreshDate !== today) {
         lastAmcRefreshDate = today;
-        runWeeklyAmcDataRefresh();
+        runSmartAmcRefresh();
       }
     }, 60 * 60 * 1000);
     console.log('[Cron Scheduler] Interval fallback active for institutional pipeline.');
@@ -247,7 +247,7 @@ let lastAmcRefreshDate = '';
 module.exports = {
   runDailyConvictionPipeline,
   runWeeklyInstitutesPipeline,
-  runWeeklyAmcDataRefresh,
+  runSmartAmcRefresh,
   runDailyNavTracking,
   initScheduler
 };
