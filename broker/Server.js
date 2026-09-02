@@ -1313,11 +1313,12 @@ async function start() {
             });
             tx();
             console.log('[server] Snapshot stored:', aumRows.length, 'AUM,', invRows.length, 'investors');
-          } catch(e) { console.warn('[server] Snapshot failed (non-fatal):', e.message); }.catch(err => console.error('[server] AMFI folio import failed:', err.message));
-        } catch(e) { console.warn('[server] AMFI folio import skipped:', e.message); }
-      }).catch(err => {
-        console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
-      });
+          } catch(e) { console.warn('[server] Snapshot failed (non-fatal):', e.message); }
+        }).catch(err => { console.warn('[server] AMFI folio import failed (non-fatal):', err.message); });
+      } catch(e) { console.warn('[server] AMFI folio import skipped:', e.message); }
+    }).catch(err => {
+      console.error('[server] HDFC MF pipeline failed (non-fatal):', err.message);
+    });
     } else {
       console.log(`[server] MF database loaded: ${schemeCount} schemes across ${amcCount} AMCs`);
       // Auto-import AMFI folio data on every startup (fast, idempotent)
