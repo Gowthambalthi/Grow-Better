@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260902n" />
+<meta name="version" content="v20260902o" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand" data-nav="dashboard">
         <div class="brand-logo-icon" style="background:transparent;box-shadow:none;border:none;padding:0;">
-          <img src="/logo.png" alt="Grow Better" style="width:36px;height:36px;object-fit:contain;border-radius:8px;">
+          <img src="/logo.png" alt="Grow Better" style="width:52px;height:52px;object-fit:contain;border-radius:10px;">
         </div>
         <div class="brand-text-wrap">
           <span class="brand-title" style="font-size:16px;font-weight:800;color:#FFFFFF;">GROW</span>
@@ -1825,7 +1825,7 @@
         var existing = document.getElementById('mfSearchSuggestions');
         if (existing) existing.remove();
         if (q.length >= 2 && suggestions.length > 0) {
-          var input = document.getElementById('mfSearchInput');
+          var input = document.getElementById('mfGridSearchInput') || document.getElementById('mfSearchInput');
           var dd = document.createElement('div');
           dd.id = 'mfSearchSuggestions';
           dd.style.cssText = 'position:absolute;top:100%;left:0;right:0;z-index:200;background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.3);max-height:280px;overflow-y:auto;margin-top:4px;';
@@ -1938,7 +1938,7 @@ function _renderMfGridBody(grid, schemes) {
     var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
     var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
-    var searchBox='<div style="margin-left:auto;"><input type="text" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
+    var searchBox='<div style="margin-left:auto;"><input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
     grid.innerHTML=sum+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;">Scheme name</th>'
       + '<th style="'+tH+'text-align:right;">1M</th><th style="'+tH+'text-align:right;">3M</th><th style="'+tH+'text-align:right;">6M</th><th style="'+tH+'text-align:right;">1Y</th>'
