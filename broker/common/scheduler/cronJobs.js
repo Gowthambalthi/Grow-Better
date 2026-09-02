@@ -131,7 +131,17 @@ let lastNavTrackDate = '';
 async function runDailyNavTracking() {
   const today = new Date().toISOString().slice(0, 10);
   if (lastNavTrackDate === today) return;
+  
+  // Only run after market close (6 PM IST) — AMFI publishes NAV by 6-7 PM
+  const now = new Date();
+  const istHour = (now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60)) % 24;
+  if (istHour < 18) {
+    console.log('[Daily NAV] Skipping — market data not yet published (IST hour:', istHour + ')');
+    return;
+  }
+  
   lastNavTrackDate = today;
+  console.log('[Daily NAV] Starting after-market tracking (background, non-blocking)...');
   
   console.log('[Daily NAV] Starting NAV tracking for all schemes...');
   const startTime = Date.now();
@@ -208,13 +218,14 @@ async function runDailyNavTracking() {
  * Re-imports all AMC scheme data, NAV, AUM, investors, and holdings
  */
 async function runWeeklyAmcDataRefresh() {
-  console.log('[Weekly AMC Refresh] Starting multi-AMC data pipeline...');
+  // Use process.nextTick to not block main event loop
+  console.log('[Weekly AMC Refresh] Starting multi-AMC data pipeline (background)...');
   const startTime = Date.now();
 
   try {
     const MfOrchestrator = require('../mf-engine/orchestrator');
     const hdfcMfDb = require('../../db/mutualFunds');
-    const orch = new MfOrchestrator(hdfcMfDb, { perAmcConcurrency: 5, globalConcurrency: 20 });
+    const orch = new MfOrchestrator(hdfcMfDb, { perAmcConcurrency: 3, globalConcurrency: 10 });
     await orch.runAll();
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[Weekly AMC Refresh] Completed in ${elapsed}s — all AMCs refreshed.`);
