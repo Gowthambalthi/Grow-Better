@@ -1,10 +1,11 @@
 node_modules/
-data/*
-!data/institutional.db
-!data/hdfc_scheme_master.json
-!data/hdfc_mutual_funds.db
+broker/
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
 .env
 .env.*
 !.env.example
-!data/stock_holdings.db
-!data/fii_investors.db
+*.log
+.DS_Store
