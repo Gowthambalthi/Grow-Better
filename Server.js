@@ -839,8 +839,9 @@ try {
     // Auto-build if missing
     console.log('[server] fii_investors.db missing — building...');
     try {
+      if (!fs.existsSync(path.join(__dirname, 'data'))) fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
       const { execSync } = require('child_process');
-      execSync('node scripts/buildFiiInvestorDb.js', { cwd: __dirname, timeout: 60000 });
+      execSync('node scripts/buildFiiInvestorDb.js', { cwd: __dirname, timeout: 120000 });
       fiiDb = new Database(fiiDbPath, { readonly: true });
       console.log('[server] fii_investors.db built and loaded');
     } catch (buildErr) {

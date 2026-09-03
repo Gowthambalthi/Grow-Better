@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903c" />
+<meta name="version" content="v20260903d" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2947,36 +2947,42 @@ function _renderMfGridBody(grid, schemes) {
         if (!tbody) return;
         tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);">Loading individual & family investor data...</td></tr>';
         
-        // Use stock_holdings.db data — discover investors from fund holdings
-        fetch('/api/stock-holdings?limit=100')
+        // Fetch real individual/family investors from FII investor database
+        fetch('/api/fii-dii/investors')
           .then(function(r) { return r.json(); })
           .then(function(data) {
-            if (!data || !data.stocks || data.stocks.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);">No individual/family investor data available yet. Data will be populated from NSE shareholding patterns.</td></tr>';
+            var investors = (data && data.investors) ? data.investors : [];
+            if (investors.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">📊 Individual / Family Data</div><div style="font-size:11px;">Investor shareholding data will be populated from NSE quarterly shareholding disclosures.<br>Seed data for 15 top Indian investors is available after the next database rebuild.</div></td></tr>';
               return;
             }
-            // For now, show top stocks as a proxy for institutional interest
-            tbody.innerHTML = data.stocks.slice(0, 50).map(function(s, i) {
-              return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="showSmStockDetail(\'' + s.id + '\', \'' + (s.stockName || '').replace(/'/g, "\\'") + '\')">' +
-                '<td style="padding:10px 12px;font-weight:700;color:var(--text-primary);">' + (i + 1) + '. ' + (s.stockName || 'N/A') + '</td>' +
-                '<td style="padding:10px 12px;">Stock</td>' +
-                '<td style="padding:10px 12px;">India</td>' +
-                '<td style="padding:10px 12px;text-align:right;">' + (s.totalFundsHolding || 0) + ' funds</td>' +
-                '<td style="padding:10px 12px;text-align:right;">' + (s.totalFundsHolding || 0) + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;">100%</td>' +
-                '<td style="padding:10px 12px;text-align:right;">₹' + (s.totalMarketValue ? (s.totalMarketValue / 100).toFixed(0) + ' Cr' : 'N/A') + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;color:var(--profit);">—</td>' +
+            // Summary row
+            var totalValue = investors.reduce(function(s, inv) { return s + (inv.totalPortfolioValue || 0); }, 0);
+            var summaryRow = '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);"><td colspan="9" style="padding:10px 12px;font-size:11px;"><span style="color:var(--text-muted);">' + investors.length + ' investors tracked</span> <span style="margin-left:12px;color:var(--accent);font-weight:700;">Total disclosed: ₹' + (totalValue >= 100000 ? (totalValue / 100000).toFixed(1) + 'L Cr' : totalValue.toLocaleString('en-IN') + ' Cr') + '</span></td></tr>';
+            tbody.innerHTML = summaryRow + investors.map(function(inv, i) {
+              var typeColor = inv.investorType === 'PROMOTER' ? '#F59E0B' : inv.investorType === 'FAMILY' ? '#3B82F6' : '#00B386';
+              var ratio = inv.indianRatio != null ? inv.indianRatio : 100;
+              var ratioColor = ratio >= 80 ? '#00B386' : ratio >= 50 ? '#F59E0B' : '#EB5B56';
+              return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="showSmInvestorDetail(' + inv.id + ', \'' + (inv.investorName || '').replace(/'/g, "\\'") + '\')" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">' +
+                '<td style="padding:10px 12px;font-weight:700;color:var(--text-primary);"><span style="color:var(--text-muted);font-size:10px;margin-right:6px;">' + (i + 1) + '.</span>' + (inv.investorName || 'N/A') + '</td>' +
+                '<td style="padding:10px 12px;"><span style="background:' + typeColor + '22;color:' + typeColor + ';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">' + (inv.investorType || 'INDIVIDUAL') + '</span></td>' +
+                '<td style="padding:10px 12px;">' + (inv.country || 'India') + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;">' + (inv.holdingsCount || 0) + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;">' + (inv.indianHoldings != null ? inv.indianHoldings : inv.holdingsCount || 0) + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;color:' + ratioColor + ';">' + ratio + '%</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--text-primary);">₹' + (inv.totalPortfolioValue ? (inv.totalPortfolioValue >= 1000 ? (inv.totalPortfolioValue / 1000).toFixed(1) + 'K Cr' : inv.totalPortfolioValue.toLocaleString('en-IN') + ' Cr') : '—') + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);">—</td>' +
                 '<td style="padding:10px 12px;text-align:center;"><button style="background:rgba(0,179,134,0.12);color:#00B386;border:1px solid rgba(0,179,134,0.3);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">View</button></td>' +
                 '</tr>';
             }).join('');
           })
           .catch(function(e) {
-            tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);">Error loading data: ' + e.message + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">📊 Individual / Family Data</div><div style="font-size:11px;">Data will be available after the FII investor database is built on the server.</div><div style="font-size:10px;color:var(--text-muted);margin-top:6px;">' + e.message + '</div></td></tr>';
           });
       }
 
       // ── Foreign Funds Tab ──
-            function loadSmForeignData() {
+      function loadSmForeignData() {
         var tbody = document.getElementById('smForeignTableBody');
         if (!tbody) return;
         tbody.innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--text-muted);">Loading international funds & AMCs...</td></tr>';
@@ -2986,30 +2992,85 @@ function _renderMfGridBody(grid, schemes) {
           .then(function(data) {
             var amcs = (data && data.amcs) ? data.amcs : [];
             if (amcs.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--text-muted);">No international fund data available yet. Data will be populated from fund factsheets and SEC filings.</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--text-muted);"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🌐 International AMCs</div><div style="font-size:11px;">20 global asset managers tracked. Data will be enriched from fund factsheets.</div></td></tr>';
               return;
             }
-            tbody.innerHTML = amcs.map(function(a) {
-              return '<tr style="border-bottom:1px solid var(--line);">' +
+            var totalAum = amcs.reduce(function(s, a) { return s + (a.aumUsdBn || 0); }, 0);
+            var totalIndian = amcs.reduce(function(s, a) { return s + (a.indianHoldings || 0); }, 0);
+            var summaryRow = '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);"><td colspan="10" style="padding:10px 12px;font-size:11px;"><span style="color:var(--text-muted);">' + amcs.length + ' International AMCs tracked</span> <span style="margin-left:12px;color:#3B82F6;font-weight:700;">Combined AUM: $' + totalAum.toLocaleString('en-IN') + ' Bn</span> <span style="margin-left:12px;color:var(--accent);font-weight:700;">' + totalIndian + ' Indian stock holdings</span></td></tr>';
+            tbody.innerHTML = summaryRow + amcs.map(function(a) {
+              return '<tr style="border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">' +
                 '<td style="padding:10px 12px;font-weight:700;color:var(--text-primary);">' + (a.name || 'N/A') + '</td>' +
                 '<td style="padding:10px 12px;">' + (a.name || 'N/A') + '</td>' +
-                '<td style="padding:10px 12px;">International AMC</td>' +
+                '<td style="padding:10px 12px;"><span style="background:rgba(59,130,246,0.15);color:#3B82F6;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">International AMC</span></td>' +
                 '<td style="padding:10px 12px;">' + (a.country || 'N/A') + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;">$' + (a.aumUsdBn || 0) + ' Bn</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;">$' + Number(a.aumUsdBn || 0).toLocaleString('en-IN') + ' Bn</td>' +
                 '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);">Coming Soon</td>' +
                 '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);">—</td>' +
                 '<td style="padding:10px 12px;text-align:right;">' + (a.totalFunds || 0) + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);">—</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--accent);">' + (a.indianHoldings || 0) + '</td>' +
                 '<td style="padding:10px 12px;text-align:center;"><a href="' + (a.website || '#') + '" target="_blank" style="color:var(--accent);font-size:11px;font-weight:700;text-decoration:none;">Visit →</a></td>' +
                 '</tr>';
             }).join('');
           })
           .catch(function(e) {
-            tbody.innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--text-muted);">Error: ' + e.message + '</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="padding:24px;text-align:center;color:var(--text-muted);"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🌐 International AMCs</div><div style="font-size:11px;">Data will be available after the FII database is rebuilt on the server.</div><div style="font-size:10px;color:var(--text-muted);margin-top:6px;">' + e.message + '</div></td></tr>';
           });
       }
 
       // ── Stock Detail Modal (used by Individual/Family tab) ──
+      // ── Investor Detail Modal (for Individual / Family tab) ──
+      function showSmInvestorDetail(investorId, investorName) {
+        var modal = document.getElementById('smDetailModal');
+        var titleEl = document.getElementById('smModalTitle');
+        var subtitleEl = document.getElementById('smModalSubtitle');
+        var summaryEl = document.getElementById('smModalSummary');
+        var bodyEl = document.getElementById('smModalBody');
+        if (!modal) return;
+        
+        titleEl.textContent = investorName;
+        subtitleEl.textContent = 'Portfolio holdings — from public shareholding disclosures';
+        summaryEl.innerHTML = '<div style="background:var(--bg-input);padding:10px;border-radius:8px;text-align:center;"><div style="font-size:10px;color:var(--text-muted);">LOADING</div><div style="font-size:14px;font-weight:800;color:var(--accent);">...</div></div>';
+        bodyEl.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading holdings...</td></tr>';
+        modal.style.display = 'flex';
+
+        fetch('/api/fii-dii/investors/' + investorId + '/holdings')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data || !data.investor) {
+              // Fallback: try stock-holdings API
+              bodyEl.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">No holdings data available yet for this investor.</td></tr>';
+              summaryEl.innerHTML = '';
+              return;
+            }
+            var inv = data.investor;
+            var holdings = data.holdings || [];
+            var totalValue = holdings.reduce(function(s, h) { return s + (h.marketValue || 0); }, 0);
+            
+            summaryEl.innerHTML = '<div style="background:var(--bg-input);padding:10px;border-radius:8px;text-align:center;"><div style="font-size:10px;color:var(--text-muted);">PORTFOLIO VALUE</div><div style="font-size:14px;font-weight:800;color:var(--accent);">₹' + (inv.totalPortfolioValue ? (inv.totalPortfolioValue >= 1000 ? (inv.totalPortfolioValue / 1000).toFixed(1) + 'K Cr' : inv.totalPortfolioValue.toLocaleString('en-IN') + ' Cr') : 'N/A') + '</div></div>' +
+              '<div style="background:var(--bg-input);padding:10px;border-radius:8px;text-align:center;"><div style="font-size:10px;color:var(--text-muted);">HOLDINGS</div><div style="font-size:14px;font-weight:800;color:var(--profit);">' + (inv.holdingsCount || holdings.length) + '</div></div>' +
+              '<div style="background:var(--bg-input);padding:10px;border-radius:8px;text-align:center;"><div style="font-size:10px;color:var(--text-muted);">TYPE</div><div style="font-size:14px;font-weight:800;color:#F59E0B;">' + (inv.investorType || 'INDIVIDUAL') + '</div></div>';
+            
+            if (holdings.length === 0) {
+              bodyEl.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">No individual holdings disclosed yet.</td></tr>';
+              return;
+            }
+            bodyEl.innerHTML = holdings.map(function(h) {
+              return '<tr style="border-bottom:1px solid var(--line);">' +
+                '<td style="padding:10px 12px;font-weight:600;color:var(--text-primary);">' + (h.companyName || 'N/A') + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;">' + (h.shares ? Number(h.shares).toLocaleString('en-IN') : '—') + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--accent);">' + (h.holdingPct ? h.holdingPct.toFixed(2) + '%' : '—') + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;">₹' + (h.marketValue ? (h.marketValue >= 1000 ? (h.marketValue / 1000).toFixed(1) + 'K Cr' : h.marketValue.toFixed(0) + ' Cr') : '—') + '</td>' +
+                '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);">' + (h.reportDate || 'N/A') + '</td>' +
+                '<td style="padding:10px 12px;color:var(--text-muted);font-size:10px;">' + (h.source || 'public-disclosure') + '</td>' +
+                '</tr>';
+            }).join('');
+          })
+          .catch(function(e) {
+            bodyEl.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Error: ' + e.message + '</td></tr>';
+          });
+      }
+
       function showSmStockDetail(stockId, stockName) {
         var modal = document.getElementById('smDetailModal');
         var titleEl = document.getElementById('smModalTitle');
