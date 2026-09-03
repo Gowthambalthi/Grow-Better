@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903d" />
+<meta name="version" content="v20260903e" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -54,8 +54,14 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 17l3 3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
           <span>Smart Money</span>
         </button>
-        
-        
+        <button class="nav-item" data-nav="individual-family">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="9" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 21v-2a5 5 0 0110 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M14 21v-1a4 4 0 014-4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span>Individual / Family</span>
+        </button>
+        <button class="nav-item" data-nav="foreign-funds">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span>Foreign Funds</span>
+        </button>
         <button class="nav-item" data-nav="terminal">
           <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 9 3 3-3 3M13 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Terminal</span>
@@ -848,7 +854,7 @@
           </div>
         </section>
 
-        <!-- ---- FII & Individual Investors ---- -->
+        <!-- ---- Smart Money: Mutual Funds ---- -->
         <section class="view" id="view-smart-money">
 
           <!-- Smart Money Header -->
@@ -860,14 +866,7 @@
           <!-- Summary Cards -->
           <div id="smartMoneySummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
 
-          <!-- Main Tabs: Mutual Funds | Individual / Family | Foreign Funds -->
-          <div id="smartMoneyMainTabs" style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:0;">
-            <button onclick="switchSmartMoneyTab('mf')" id="smTabMf" class="sm-main-tab active" style="background:transparent;border:none;border-bottom:3px solid var(--accent);color:var(--accent);padding:10px 24px;font-size:13px;font-weight:800;cursor:pointer;transition:all 0.15s;">Mutual Funds</button>
-            <button onclick="switchSmartMoneyTab('individual')" id="smTabIndividual" class="sm-main-tab" style="background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text-muted);padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;">Individual / Family</button>
-            <button onclick="switchSmartMoneyTab('foreign')" id="smTabForeign" class="sm-main-tab" style="background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text-muted);padding:10px 24px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;">Foreign Funds</button>
-          </div>
-
-          <!-- ═══ TAB: MUTUAL FUNDS ═══ -->
+          <!-- Mutual Funds Content -->
           <div id="smContentMf" style="display:block;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
               <div>
@@ -2246,16 +2245,38 @@ function _renderMfGridBody(grid, schemes) {
               orders: 'ORDERS',
               positions: 'OPEN MTF POSITIONS',
               'stock-holdings': 'STOCK HOLDINGS & ACCUMULATION',
-              'smart-money': 'SMART MONEY',
+              'smart-money': 'MUTUAL FUNDS',
+              'individual-family': 'INDIVIDUAL / FAMILY INVESTORS',
+              'foreign-funds': 'FOREIGN FUNDS & INTERNATIONAL AMCs',
               terminal: 'TRADING TERMINAL',
               alerts: 'PRICE ALERTS',
               settings: 'SYSTEM SETTINGS & FUNDS'
             };
             if (titleEl && titles[target]) titleEl.textContent = titles[target];
           }
-          if (target === 'smart-money') {
-            loadSmartMoneySummary();
-            fetchMfSchemes();
+          // All three smart-money sub-pages share the same view-smart-money section
+          if (target === 'smart-money' || target === 'individual-family' || target === 'foreign-funds') {
+            // Always show the smart-money section
+            var smView = document.getElementById('view-smart-money');
+            if (smView) smView.classList.add('active');
+            // Switch sub-content
+            var mfEl = document.getElementById('smContentMf');
+            var indivEl = document.getElementById('smContentIndividual');
+            var foreignEl = document.getElementById('smContentForeign');
+            if (mfEl) mfEl.style.display = 'none';
+            if (indivEl) indivEl.style.display = 'none';
+            if (foreignEl) foreignEl.style.display = 'none';
+            if (target === 'smart-money') {
+              if (mfEl) mfEl.style.display = 'block';
+              loadSmartMoneySummary();
+              fetchMfSchemes();
+            } else if (target === 'individual-family') {
+              if (indivEl) indivEl.style.display = 'block';
+              loadSmIndividualData();
+            } else if (target === 'foreign-funds') {
+              if (foreignEl) foreignEl.style.display = 'block';
+              loadSmForeignData();
+            }
           }
         }
 
