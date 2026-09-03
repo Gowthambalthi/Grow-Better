@@ -50,6 +50,10 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 6l4 14M12 6l-4 14M8 10l8 0M4 14l16 0" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Stock Holdings</span>
         </button>
+        <button class="nav-item" data-nav="fii-investors">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 3l3 3-3 3" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>FII & Investors</span>
+        </button>
         <button class="nav-item" data-nav="mutual-funds">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Mutual Funds</span>
@@ -872,7 +876,126 @@
           </div>
         </section>
 
+        <!-- ---- FII & Individual Investors ---- -->
+        <section class="view" id="view-fii-investors">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:14px;">
+            <div>
+              <h1 class="view-title" style="margin:0;">FII & Individual Investors</h1>
+              <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Foreign Institutional Investors, DII activity, company shareholding patterns, and significant individual investors</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <input id="fiiSearchInput" type="text" placeholder="Search company, investor..." oninput="searchFiiData(this.value)" style="width:240px;font-size:12px;padding:8px 12px;border-radius:8px;background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);outline:none;" />
+            </div>
+          </div>
 
+          <!-- Tab Navigation -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button onclick="switchFiiTab('fii-dii')" id="fiiTabFii" style="background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">FII/DII Activity</button>
+            <button onclick="switchFiiTab('shareholding')" id="fiiTabShareholding" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Company Shareholding</button>
+            <button onclick="switchFiiTab('investors')" id="fiiTabInvestors" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Individual Investors</button>
+          </div>
+
+          <!-- Summary Cards -->
+          <div id="fiiSummaryCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
+n          <!-- FII/DII Activity Tab -->
+          <div id="fiiTabContentFii">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Date</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Category</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Buy (₹ Cr)</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Sell (₹ Cr)</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Net (₹ Cr)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fiiDiiTableBody">
+                    <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading FII/DII data...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Company Shareholding Tab -->
+          <div id="fiiTabContentShareholding" style="display:none;">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Company</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Symbol</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Promoter %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">FII %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">DII %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Public %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Report Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="shareholdingTableBody">
+                    <tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">Loading shareholding data...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Individual Investors Tab -->
+          <div id="fiiTabContentInvestors" style="display:none;">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Investor</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Type</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Portfolio Value</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;"># Holdings</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="investorsTableBody">
+                    <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading investor data...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Investor Detail Modal -->
+          <div id="fiiInvestorModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
+            <div style="max-width:900px;width:92%;background:var(--bg-panel);border:1px solid var(--accent);border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.8);z-index:100000;max-height:85vh;overflow-y:auto;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;">
+                <div>
+                  <h3 id="fiiModalTitle" style="margin:0;color:var(--accent);font-size:16px;font-weight:800;"></h3>
+                  <p id="fiiModalSubtitle" style="margin:2px 0 0 0;font-size:11px;color:var(--text-muted);"></p>
+                </div>
+                <button onclick="closeFiiModal()" style="background:none;border:none;color:var(--text-muted);font-size:18px;font-weight:800;cursor:pointer;">\u2715</button>
+              </div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Company</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Symbol</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Shares</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Holding %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Value</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fiiModalBody">
+                    <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- ---- Terminal ---- -->
         <section class="view" id="view-terminal">
@@ -1934,6 +2057,7 @@ function _renderMfGridBody(grid, schemes) {
               orders: 'ORDERS',
               positions: 'OPEN MTF POSITIONS',
               'stock-holdings': 'STOCK HOLDINGS & ACCUMULATION',
+              'fii-investors': 'FII & INVESTORS',
               'mutual-funds': 'MUTUAL FUNDS PLATFORM',
               terminal: 'TRADING TERMINAL',
               alerts: 'PRICE ALERTS',
@@ -2544,6 +2668,168 @@ function _renderMfGridBody(grid, schemes) {
         if (m) m.style.display = 'none';
       }
 
+      // ─── FII & Investors Page ─────────────────────────────────────
+      var _fiiTab = 'fii-dii';
+      var _fiiSearch = '';
+      var _fiiData = { daily: [], shareholding: [], investors: [] };
+
+      function switchFiiTab(tab) {
+        _fiiTab = tab;
+        document.getElementById('fiiTabContentFii').style.display = tab === 'fii-dii' ? '' : 'none';
+        document.getElementById('fiiTabContentShareholding').style.display = tab === 'shareholding' ? '' : 'none';
+        document.getElementById('fiiTabContentInvestors').style.display = tab === 'investors' ? '' : 'none';
+        var btnMap = { 'fii-dii': 'fiiTabFii', 'shareholding': 'fiiTabShareholding', 'investors': 'fiiTabInvestors' };
+        Object.keys(btnMap).forEach(function(k) {
+          var b = document.getElementById(btnMap[k]);
+          if (b) {
+            b.style.background = k === tab ? 'var(--accent)' : 'var(--bg-input)';
+            b.style.color = k === tab ? '#fff' : 'var(--text-muted)';
+            b.style.border = k === tab ? '2px solid #00B386' : '1px solid var(--line)';
+          }
+        });
+      }
+
+      function loadFiiData() {
+        fetch('/api/fii-dii/daily?days=60')
+          .then(function(r) { return r.json(); })
+          .then(function(data) { if (data && data.success) { _fiiData.daily = data.data || []; renderFiiDiiTable(); buildFiiSummaryCards(); } })
+          .catch(function(e) { console.error('[FII] daily:', e); });
+
+        fetch('/api/fii-dii/shareholding')
+          .then(function(r) { return r.json(); })
+          .then(function(data) { if (data && data.success) { _fiiData.shareholding = data.data || []; renderShareholdingTable(); } })
+          .catch(function(e) { console.error('[FII] shareholding:', e); });
+
+        fetch('/api/fii-dii/investors')
+          .then(function(r) { return r.json(); })
+          .then(function(data) { if (data && data.success) { _fiiData.investors = data.investors || []; renderInvestorsTable(); } })
+          .catch(function(e) { console.error('[FII] investors:', e); });
+      }
+
+      function buildFiiSummaryCards() {
+        var el = document.getElementById('fiiSummaryCards');
+        if (!el) return;
+        var daily = _fiiData.daily;
+        var fiiNet = 0, diiNet = 0, lastDate = '';
+        daily.forEach(function(d) {
+          if (d.category && d.category.indexOf('FII') !== -1) fiiNet += (d.netValue || 0);
+          if (d.category && d.category.indexOf('DII') !== -1) diiNet += (d.netValue || 0);
+          if (!lastDate && d.date) lastDate = d.date;
+        });
+        var shCount = _fiiData.shareholding.length;
+        var invCount = _fiiData.investors.length;
+        el.innerHTML =
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">FII Net (30D)</div><div style="font-size:22px;font-weight:800;color:' + (fiiNet>=0?'#00B386':'#EB5B56') + ';margin:2px 0;">' + (fiiNet>=0?'+':'') + '\u20b9' + Math.abs(fiiNet).toFixed(0) + ' Cr</div><div style="font-size:10px;color:var(--text-muted);">foreign inflow/outflow</div></div>' +
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">DII Net (30D)</div><div style="font-size:22px;font-weight:800;color:' + (diiNet>=0?'#00B386':'#EB5B56') + ';margin:2px 0;">' + (diiNet>=0?'+':'') + '\u20b9' + Math.abs(diiNet).toFixed(0) + ' Cr</div><div style="font-size:10px;color:var(--text-muted);">domestic institutional flow</div></div>' +
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">Companies Tracked</div><div style="font-size:22px;font-weight:800;color:#F59E0B;margin:2px 0;">' + shCount + '</div><div style="font-size:10px;color:var(--text-muted);">with shareholding data</div></div>' +
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">Last Updated</div><div style="font-size:22px;font-weight:800;color:#4A9EFF;margin:2px 0;">' + (lastDate || 'N/A') + '</div><div style="font-size:10px;color:var(--text-muted);">from NSE source</div></div>';
+      }
+
+      function renderFiiDiiTable() {
+        var tbody = document.getElementById('fiiDiiTableBody');
+        if (!tbody) return;
+        var data = _fiiData.daily;
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">No FII/DII data yet. Will be fetched from NSE after deploy.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(function(d) {
+          var catColor = (d.category||'').indexOf('FII') !== -1 ? '#8B5CF6' : '#3B82F6';
+          var nc = (d.netValue||0) >= 0 ? '#00B386' : '#EB5B56';
+          var arrow = (d.netValue||0) >= 0 ? '\u25B2' : '\u25BC';
+          return '<tr style="border-bottom:1px solid var(--line);">'
+            + '<td style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--text-primary);">' + (d.date||'-') + '</td>'
+            + '<td style="padding:10px 12px;"><span style="background:rgba(99,102,241,0.12);color:' + catColor + ';font-size:10px;padding:3px 10px;border-radius:10px;font-weight:700;">' + (d.category||'-') + '</span></td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:#00B386;">\u20b9' + (d.buyValue||0).toFixed(1) + ' Cr</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:#EB5B56;">\u20b9' + (d.sellValue||0).toFixed(1) + ' Cr</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:800;color:' + nc + ';">' + arrow + ' \u20b9' + Math.abs(d.netValue||0).toFixed(1) + ' Cr</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      function renderShareholdingTable() {
+        var tbody = document.getElementById('shareholdingTableBody');
+        if (!tbody) return;
+        var data = _fiiData.shareholding;
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">No shareholding data yet. Will be fetched from NSE after deploy.</td></tr>';
+          return;
+        }
+        function pc(v) { return v == null ? 'var(--text-muted)' : v > 20 ? '#00B386' : v > 5 ? '#F59E0B' : 'var(--text-primary)'; }
+        tbody.innerHTML = data.map(function(s) {
+          return '<tr style="border-bottom:1px solid var(--line);">'
+            + '<td style="padding:10px 12px;font-size:12px;font-weight:700;color:var(--text-primary);">' + (s.companyName||'-') + '</td>'
+            + '<td style="padding:10px 12px;font-size:11px;color:var(--text-muted);">' + (s.symbol||'-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:' + pc(s.promoterPct) + ';">' + (s.promoterPct!=null ? s.promoterPct.toFixed(1)+'%' : '-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:' + pc(s.fiiPct) + ';">' + (s.fiiPct!=null ? s.fiiPct.toFixed(1)+'%' : '-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:' + pc(s.diiPct) + ';">' + (s.diiPct!=null ? s.diiPct.toFixed(1)+'%' : '-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:var(--text-primary);">' + (s.publicPct!=null ? s.publicPct.toFixed(1)+'%' : '-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:11px;color:var(--text-muted);">' + (s.reportDate||'-') + '</td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      function renderInvestorsTable() {
+        var tbody = document.getElementById('investorsTableBody');
+        if (!tbody) return;
+        var data = _fiiData.investors;
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">No individual investors discovered yet. Will be discovered from NSE shareholding patterns.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(function(inv) {
+          return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openInvestorDetail(' + inv.id + ')" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+            + '<td style="padding:10px 12px;font-size:12px;font-weight:700;color:var(--text-primary);">' + (inv.investorName||'-') + '</td>'
+            + '<td style="padding:10px 12px;"><span style="background:rgba(99,102,241,0.12);color:#6366F1;font-size:10px;padding:3px 10px;border-radius:10px;font-weight:700;">' + (inv.investorType||'INDIVIDUAL') + '</span></td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:var(--text-primary);">' + (inv.totalPortfolioValue ? '\u20b9' + Number(inv.totalPortfolioValue).toLocaleString('en-IN') + ' Cr' : '-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:var(--accent);">' + (inv.holdingsCount||0) + '</td>'
+            + '<td style="padding:10px 12px;text-align:center;"><button style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View</button></td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      function openInvestorDetail(investorId) {
+        var modal = document.getElementById('fiiInvestorModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.getElementById('fiiModalTitle').textContent = 'Loading...';
+        document.getElementById('fiiModalSubtitle').textContent = '';
+        document.getElementById('fiiModalBody').innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading...</td></tr>';
+        fetch('/api/fii-dii/investors/' + investorId + '/holdings')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data || !data.success) { document.getElementById('fiiModalTitle').textContent = 'Error'; return; }
+            var inv = data.investor;
+            var h = data.holdings || [];
+            document.getElementById('fiiModalTitle').textContent = inv.investorName;
+            document.getElementById('fiiModalSubtitle').textContent = (inv.investorType||'Individual') + ' | ' + h.length + ' holdings';
+            document.getElementById('fiiModalBody').innerHTML = h.map(function(x, i) {
+              var pc = (x.holdingPct||0) > 5 ? '#00B386' : (x.holdingPct||0) > 1 ? '#F59E0B' : 'var(--text-primary)';
+              return '<tr style="border-bottom:1px solid var(--line);">'
+                + '<td style="padding:8px 12px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="color:var(--text-muted);font-size:10px;">' + (i+1) + '.</span> ' + (x.companyName||'-') + '</td>'
+                + '<td style="padding:8px 12px;font-size:11px;color:var(--text-muted);">' + (x.symbol||'-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (x.shares ? Number(x.shares).toLocaleString('en-IN') : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:800;color:' + pc + ';">' + (x.holdingPct!=null ? x.holdingPct.toFixed(2)+'%' : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (x.marketValue ? '\u20b9' + Number(x.marketValue).toLocaleString('en-IN') + ' Cr' : '-') + '</td>'
+                + '<td style="padding:8px 12px;font-size:11px;color:var(--text-muted);">' + (x.reportDate||'-') + '</td>'
+                + '</tr>';
+            }).join('');
+          })
+          .catch(function(err) { document.getElementById('fiiModalTitle').textContent = 'Error: ' + err.message; });
+      }
+
+      function closeFiiModal() {
+        var m = document.getElementById('fiiInvestorModal');
+        if (m) m.style.display = 'none';
+      }
+
+      function searchFiiData(q) {
+        var query = (q || '').toLowerCase();
+        document.querySelectorAll('#shareholdingTableBody tr, #investorsTableBody tr').forEach(function(r) {
+          r.style.display = query === '' || r.textContent.toLowerCase().indexOf(query) !== -1 ? '' : 'none';
+        });
+      }
+
             var searchTimeout = null;
       document.addEventListener('input', function(e) {
         if (e.target.id === 'mfSearchInput') {
@@ -2593,11 +2879,12 @@ function _renderMfGridBody(grid, schemes) {
 
       // Init page
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { renderAmcCards(); fetchMfSchemes(); loadStockHoldingsScanner(); });
+        document.addEventListener('DOMContentLoaded', function() { renderAmcCards(); fetchMfSchemes(); loadStockHoldingsScanner(); loadFiiData(); });
       } else {
         renderAmcCards();
         fetchMfSchemes();
         loadStockHoldingsScanner();
+        loadFiiData();
       }
     })();
   </script>

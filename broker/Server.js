@@ -815,6 +815,103 @@ app.get('/api/stock-holdings/sectors/list', (req, res) => {
   }
 });
 
+// ---- FII / Individual Investor Data (fii_investors.db) ----
+const fiiDbPath = path.join(__dirname, 'data', 'fii_investors.db');
+let fiiDb = null;
+try {
+  if (fs.existsSync(fiiDbPath)) {
+    fiiDb = new Database(fiiDbPath, { readonly: true });
+    console.log('[server] fii_investors.db loaded');
+  }
+} catch (e) {
+  console.warn('[server] fii_investors.db not available:', e.message);
+}
+
+// GET /api/fii-dii/daily — FII/DII daily trading activity
+app.get('/api/fii-dii/daily', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, data: [] });
+  try {
+    const { days } = req.query;
+    const limit = days ? Number(days) : 30;
+    const data = fiiDb.prepare(`
+      SELECT * FROM fii_dii_daily ORDER BY date DESC LIMIT ?
+    `).all(limit);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/fii-dii/shareholding — Company shareholding patterns
+app.get('/api/fii-dii/shareholding', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, data: [], totalCompanies: 0 });
+  try {
+    const { search, sort } = req.query;
+    let query = 'SELECT * FROM company_shareholding';
+    const params = [];
+    if (search) {
+      query += ' WHERE companyName LIKE ? OR symbol LIKE ?';
+      params.push('%' + search + '%', '%' + search.toUpperCase() + '%');
+    }
+    if (sort === 'fii') query += ' ORDER BY fiiPct DESC';
+    else if (sort === 'dii') query += ' ORDER BY diiPct DESC';
+    else if (sort === 'promoter') query += ' ORDER BY promoterPct DESC';
+    else query += ' ORDER BY fiiPct DESC';
+    query += ' LIMIT 200';
+    const data = fiiDb.prepare(query).all(...params);
+    const total = fiiDb.prepare('SELECT COUNT(DISTINCT companyName) as c FROM company_shareholding').get().c;
+    res.json({ success: true, data, totalCompanies: total });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/fii-dii/investors — Individual significant investors
+app.get('/api/fii-dii/investors', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, investors: [] });
+  try {
+    const { search, sort } = req.query;
+    let query = 'SELECT * FROM individual_investors';
+    const params = [];
+    if (search) {
+      query += ' WHERE investorName LIKE ?';
+      params.push('%' + search + '%');
+    }
+    if (sort === 'value') query += ' ORDER BY totalPortfolioValue DESC';
+    else query += ' ORDER BY holdingsCount DESC';
+    query += ' LIMIT 100';
+    const investors = fiiDb.prepare(query).all(...params);
+    res.json({ success: true, investors });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/fii-dii/investors/:investorId/holdings — Holdings of a specific investor
+app.get('/api/fii-dii/investors/:investorId/holdings', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, holdings: [] });
+  try {
+    const { investorId } = req.params;
+    const investor = fiiDb.prepare('SELECT * FROM individual_investors WHERE id = ?').get(investorId);
+    if (!investor) return res.status(404).json({ success: false, error: 'Investor not found' });
+    const holdings = fiiDb.prepare('SELECT * FROM investor_holdings WHERE investorId = ? ORDER BY holdingPct DESC').all(investorId);
+    res.json({ success: true, investor, holdings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/fii-dii/status — Source status for monitoring
+app.get('/api/fii-dii/status', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, sources: [] });
+  try {
+    const sources = fiiDb.prepare('SELECT * FROM source_status ORDER BY lastAttempt DESC').all();
+    res.json({ success: true, sources });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
 const hdfcMfDb = require('./db/mutualFunds');
 
