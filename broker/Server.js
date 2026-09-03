@@ -25,6 +25,9 @@ const portfolioService = require('./common/portfolio/portfolioService');
 const notificationService = require('./common/notifications/notificationService');
 
 const app = express();
+const { registerDebugRoute } = require("./scripts/debugGrowwKeys");
+
+
 app.use(cors());
 app.use(express.json());
 
@@ -729,8 +732,93 @@ app.get('/api/mutual-funds/aggregated-stocks', async (req, res) => {
   }
 });
 
+// ---- Stock Holdings Reverse Index (stock_holdings.db) ----
+const stockHoldingsDbPath = path.join(__dirname, 'data', 'stock_holdings.db');
+let stockHoldingsDb = null;
+try {
+  if (fs.existsSync(stockHoldingsDbPath)) {
+    stockHoldingsDb = new Database(stockHoldingsDbPath, { readonly: true });
+    console.log('[server] stock_holdings.db loaded');
+  }
+} catch (e) {
+  console.warn('[server] stock_holdings.db not available:', e.message);
+}
+
+// GET /api/stock-holdings — All stocks with fund counts
+app.get('/api/stock-holdings', (req, res) => {
+  if (!stockHoldingsDb) return res.json({ success: true, stocks: [], totalStocks: 0 });
+  try {
+    const { search, sector, sort, limit } = req.query;
+    let query = 'SELECT * FROM stocks';
+    const params = [];
+    const conditions = [];
+
+    if (search) {
+      conditions.push('(stockName LIKE ? OR normalizedName LIKE ?)');
+      params.push('%' + search + '%', '%' + search.toUpperCase() + '%');
+    }
+    if (sector) {
+      conditions.push('sector = ?');
+      params.push(sector);
+    }
+
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+    if (sort === 'weight') query += ' ORDER BY totalWeight DESC';
+    else if (sort === 'value') query += ' ORDER BY totalMarketValue DESC';
+    else query += ' ORDER BY totalFundsHolding DESC';
+    query += ' LIMIT ?';
+    params.push(limit ? Number(limit) : 200);
+
+    const stocks = stockHoldingsDb.prepare(query).all(...params);
+    const total = stockHoldingsDb.prepare('SELECT COUNT(*) as c FROM stocks').get().c;
+    res.json({ success: true, totalStocks: total, stocks });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/stock-holdings/:stockId — Which funds hold this stock
+app.get('/api/stock-holdings/:stockId', (req, res) => {
+  if (!stockHoldingsDb) return res.json({ success: true, funds: [] });
+  try {
+    const { stockId } = req.params;
+    const stock = stockHoldingsDb.prepare('SELECT * FROM stocks WHERE id = ?').get(stockId);
+    if (!stock) return res.status(404).json({ success: false, error: 'Stock not found' });
+
+    const funds = stockHoldingsDb.prepare(`
+      SELECT sfm.fundId, f.schemeName, f.amc, f.category, f.aum, f.aumDate,
+             sfm.weight, sfm.marketValue, sfm.portfolioDate
+      FROM stock_fund_map sfm
+      JOIN funds f ON sfm.fundId = f.id
+      WHERE sfm.stockId = ?
+      ORDER BY sfm.weight DESC
+    `).all(stockId);
+
+    res.json({ success: true, stock, funds, totalFunds: funds.length });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/stock-holdings/sectors — List all sectors with counts
+app.get('/api/stock-holdings/sectors/list', (req, res) => {
+  if (!stockHoldingsDb) return res.json({ success: true, sectors: [] });
+  try {
+    const sectors = stockHoldingsDb.prepare(`
+      SELECT sector, COUNT(*) as stockCount, ROUND(SUM(totalWeight),2) as totalWeight
+      FROM stocks WHERE sector IS NOT NULL AND sector != ''
+      GROUP BY sector ORDER BY stockCount DESC
+    `).all();
+    res.json({ success: true, sectors });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
 const hdfcMfDb = require('./db/mutualFunds');
+
+registerDebugRoute(app);
 
 // IMPORTANT: Static routes BEFORE :schemeId to avoid Express param matching
 
@@ -1382,7 +1470,41 @@ app.get('/api/debug/changes/:schemeId', (req, res) => {
 
 const port = process.env.PORT || env.server.port || 4000;
   const host = '0.0.0.0';
-  app.listen(port, host, () => {
+  
+// TEMP: Dump Groww SSR keys for debugging folio data
+app.get('/api/debug/groww', async (req, res) => {
+  try {
+    var slug = req.query.slug || 'hdfc-flexi-cap-fund-direct-growth';
+    var url = 'https://groww.in/mutual-funds/' + slug;
+    var response = await axios.get(url, { timeout: 20000, headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } });
+    var pat = /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/;
+    var match = response.data.match(pat);
+    if (!match) return res.json({ error: 'no next data' });
+    var nd = JSON.parse(match[1]);
+    var ss = nd.props && nd.props.pageProps && nd.props.pageProps.mfServerSideData;
+    if (!ss) return res.json({ error: 'no ssd' });
+    var result = {};
+    var keys = Object.keys(ss);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      var v = ss[k];
+      if (v === null || v === undefined || typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+        result[k] = v;
+      } else if (Array.isArray(v)) {
+        result[k] = 'Array(' + v.length + ')';
+      } else {
+        result[k] = 'Object(' + Object.keys(v).join(',') + ')';
+      }
+    }
+    var found = {};
+    function s(o, p) { if (!o || typeof o !== 'object') return; var ok = Object.keys(o); for (var j = 0; j < ok.length; j++) { var fk = ok[j]; var fv = o[fk]; var fp = p ? p+'.'+fk : fk; if (/folio|investor|holder|subscriber|account/i.test(fk)) { found[fp] = typeof fv === 'object' ? JSON.stringify(fv).substring(0, 200) : fv; } if (typeof fv === 'object' && fv !== null && !Array.isArray(fv)) s(fv, fp); } }
+    s(ss, '');
+    result._folioFields = found;
+    res.json({ success: true, data: result });
+  } catch (err) { res.json({ error: err.message }); }
+});
+
+app.listen(port, host, () => {
     console.log(`[server] listening on http://${host}:${port}`);
     console.log(`[server] active brokers: ${Object.keys(brokers).join(', ') || '(none — check ANGEL_ENABLED/GROWW_ENABLED)'}`);
   });

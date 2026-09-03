@@ -6,3 +6,4 @@ data/*
 .env
 .env.*
 !.env.example
+!data/stock_holdings.db

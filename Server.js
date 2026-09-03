@@ -732,6 +732,89 @@ app.get('/api/mutual-funds/aggregated-stocks', async (req, res) => {
   }
 });
 
+// ---- Stock Holdings Reverse Index (stock_holdings.db) ----
+const stockHoldingsDbPath = path.join(__dirname, 'data', 'stock_holdings.db');
+let stockHoldingsDb = null;
+try {
+  if (fs.existsSync(stockHoldingsDbPath)) {
+    stockHoldingsDb = new Database(stockHoldingsDbPath, { readonly: true });
+    console.log('[server] stock_holdings.db loaded');
+  }
+} catch (e) {
+  console.warn('[server] stock_holdings.db not available:', e.message);
+}
+
+// GET /api/stock-holdings — All stocks with fund counts
+app.get('/api/stock-holdings', (req, res) => {
+  if (!stockHoldingsDb) return res.json({ success: true, stocks: [], totalStocks: 0 });
+  try {
+    const { search, sector, sort, limit } = req.query;
+    let query = 'SELECT * FROM stocks';
+    const params = [];
+    const conditions = [];
+
+    if (search) {
+      conditions.push('(stockName LIKE ? OR normalizedName LIKE ?)');
+      params.push('%' + search + '%', '%' + search.toUpperCase() + '%');
+    }
+    if (sector) {
+      conditions.push('sector = ?');
+      params.push(sector);
+    }
+
+    if (conditions.length) query += ' WHERE ' + conditions.join(' AND ');
+    if (sort === 'weight') query += ' ORDER BY totalWeight DESC';
+    else if (sort === 'value') query += ' ORDER BY totalMarketValue DESC';
+    else query += ' ORDER BY totalFundsHolding DESC';
+    query += ' LIMIT ?';
+    params.push(limit ? Number(limit) : 200);
+
+    const stocks = stockHoldingsDb.prepare(query).all(...params);
+    const total = stockHoldingsDb.prepare('SELECT COUNT(*) as c FROM stocks').get().c;
+    res.json({ success: true, totalStocks: total, stocks });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/stock-holdings/:stockId — Which funds hold this stock
+app.get('/api/stock-holdings/:stockId', (req, res) => {
+  if (!stockHoldingsDb) return res.json({ success: true, funds: [] });
+  try {
+    const { stockId } = req.params;
+    const stock = stockHoldingsDb.prepare('SELECT * FROM stocks WHERE id = ?').get(stockId);
+    if (!stock) return res.status(404).json({ success: false, error: 'Stock not found' });
+
+    const funds = stockHoldingsDb.prepare(`
+      SELECT sfm.fundId, f.schemeName, f.amc, f.category, f.aum, f.aumDate,
+             sfm.weight, sfm.marketValue, sfm.portfolioDate
+      FROM stock_fund_map sfm
+      JOIN funds f ON sfm.fundId = f.id
+      WHERE sfm.stockId = ?
+      ORDER BY sfm.weight DESC
+    `).all(stockId);
+
+    res.json({ success: true, stock, funds, totalFunds: funds.length });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/stock-holdings/sectors — List all sectors with counts
+app.get('/api/stock-holdings/sectors/list', (req, res) => {
+  if (!stockHoldingsDb) return res.json({ success: true, sectors: [] });
+  try {
+    const sectors = stockHoldingsDb.prepare(`
+      SELECT sector, COUNT(*) as stockCount, ROUND(SUM(totalWeight),2) as totalWeight
+      FROM stocks WHERE sector IS NOT NULL AND sector != ''
+      GROUP BY sector ORDER BY stockCount DESC
+    `).all();
+    res.json({ success: true, sectors });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
 const hdfcMfDb = require('./db/mutualFunds');
 
