@@ -4,6 +4,10 @@ data/*.db
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
+!data/hdfc_mutual_funds.db
+data/ledger.db
+data/june_2026_verification.db
+data/sbi_*.db
 .env
 .env.*
 !.env.example
