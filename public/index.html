@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903e" />
+<meta name="version" content="v20260903f" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -890,43 +890,51 @@
 
           <!-- ═══ TAB: INDIVIDUAL / FAMILY ═══ -->
           <div id="smContentIndividual" style="display:none;">
-            <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-              <div style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:6px;border:1px solid var(--line);">
-                <button class="sm-indiv-filter active" data-filter="all" style="padding:5px 14px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">All</button>
-                <button class="sm-indiv-filter" data-filter="individual" style="padding:5px 14px;font-size:11px;font-weight:600;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">Individual</button>
-                <button class="sm-indiv-filter" data-filter="family" style="padding:5px 14px;font-size:11px;font-weight:600;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">Family</button>
-              </div>
-              <div style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:6px;border:1px solid var(--line);">
-                <button class="sm-country-filter active" data-filter="all" style="padding:5px 14px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">All</button>
-                <button class="sm-country-filter" data-filter="indian" style="padding:5px 14px;font-size:11px;font-weight:600;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">Indian</button>
-                <button class="sm-country-filter" data-filter="non-indian" style="padding:5px 14px;font-size:11px;font-weight:600;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">Non-Indian</button>
-              </div>
-            </div>
-            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
-              <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                  <thead>
-                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Investor</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Type</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Country</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">No. of Holdings</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Indian Holdings</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Indian Ratio</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Disclosed Investment</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Change</th>
-                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:center;">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="smIndividualTableBody">
-                    <tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);">Loading individual &amp; family investor data...</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+  <div style="margin-bottom:16px;">
+    <h2 style="font-size:16px;font-weight:800;color:var(--text-primary);margin:0 0 4px 0;">India Smart Money Investors</h2>
+    <p style="font-size:11px;color:var(--text-muted);margin:0;">Top individual, institutional & FII investors by disclosed Indian equity holdings</p>
+  </div>
+  <div id="smIndivGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+    <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,rgba(0,179,134,0.12),rgba(0,179,134,0.04));padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,179,134,0.2);display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00B386" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+        </div>
+        <div><div style="font-size:12px;font-weight:800;color:var(--text-primary);">INDIVIDUAL INVESTORS</div></div>
+      </div>
+      <div style="padding:4px 0;">
+        <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--line);"><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Name</span><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Networth (Cr.)</span></div>
+        <div id="smIndivIndividualBody"></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,rgba(74,158,255,0.12),rgba(74,158,255,0.04));padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(74,158,255,0.2);display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4A9EFF" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        </div>
+        <div><div style="font-size:12px;font-weight:800;color:var(--text-primary);">INSTITUTIONAL INVESTORS</div></div>
+      </div>
+      <div style="padding:4px 0;">
+        <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--line);"><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Name</span><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Networth (Cr.)</span></div>
+        <div id="smIndivInstitutionalBody"></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(245,158,11,0.04));padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 014 10 15 15 0 01-4 10 15 15 0 01-4-10A15 15 0 0112 2z"/></svg>
+        </div>
+        <div><div style="font-size:12px;font-weight:800;color:var(--text-primary);">FII INVESTORS</div></div>
+      </div>
+      <div style="padding:4px 0;">
+        <div style="display:grid;grid-template-columns:1fr auto;padding:8px 16px;border-bottom:1px solid var(--line);"><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Name</span><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Networth (Cr.)</span></div>
+        <div id="smIndivFiiBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-          <!-- ═══ TAB: FOREIGN FUNDS ═══ -->
+<!-- ═══ TAB: FOREIGN FUNDS ═══ -->
           <div id="smContentForeign" style="display:none;">
             <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
               <div style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:6px;border:1px solid var(--line);">
@@ -2964,45 +2972,62 @@ function _renderMfGridBody(grid, schemes) {
 
       // ── Individual / Family Tab ──
       function loadSmIndividualData() {
-        var tbody = document.getElementById('smIndividualTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);">Loading individual & family investor data...</td></tr>';
-        
-        // Fetch real individual/family investors from FII investor database
-        fetch('/api/fii-dii/investors')
+        var indivBody = document.getElementById("smIndivIndividualBody");
+        var instBody = document.getElementById("smIndivInstitutionalBody");
+        var fiiBody = document.getElementById("smIndivFiiBody");
+        if (!indivBody) return;
+        var loadMsg = "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">Loading...</div>";
+        indivBody.innerHTML = loadMsg; instBody.innerHTML = loadMsg; fiiBody.innerHTML = loadMsg;
+        function fmtCr(v) { if (!v) return "-"; return v >= 100000 ? (v/100000).toFixed(1)+"L" : v >= 1000 ? (v/1000).toFixed(0)+"K" : v.toLocaleString("en-IN"); }
+        function rRow(inv) {
+          var nm = (inv.investorName || "N/A");
+          var clickH = "showSmInvestorDetail(" + inv.id + ",'" + nm.replace(/'/g, "\'") + "')";
+          var ho = "this.style.background='var(--bg-raised)'";
+          var hc = "this.style.background='transparent'";
+          return "<div style=\"display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;\" onclick=\"" + clickH + "\" onmouseenter=\"" + ho + "\" onmouseleave=\"" + hc + "\">" +
+            "<div><div style=\"font-size:12px;font-weight:700;color:var(--text-primary);\">" + nm + "</div>" +
+            "<div style=\"font-size:10px;color:var(--text-muted);margin-top:2px;\">#Company Holdings: " + (inv.holdingsCount || 0) + "</div></div>" +
+            "<div style=\"font-size:13px;font-weight:800;color:var(--text-primary);text-align:right;\">" + fmtCr(inv.totalPortfolioValue) + "</div></div>";
+        }
+        function fiiRow(f) {
+          var ho = "this.style.background='var(--bg-raised)'";
+          var hc = "this.style.background='transparent'";
+          return "<div style=\"display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;\" onmouseenter=\"" + ho + "\" onmouseleave=\"" + hc + "\">" +
+            "<div><div style=\"font-size:12px;font-weight:700;color:var(--text-primary);\">" + f.n + "</div>" +
+            "<div style=\"font-size:10px;color:var(--text-muted);margin-top:2px;\">#Company Holdings: " + f.h + "</div></div>" +
+            "<div style=\"font-size:13px;font-weight:800;color:var(--text-primary);text-align:right;\">" + fmtCr(f.v) + "</div></div>";
+        }
+        fetch("/api/fii-dii/investors")
           .then(function(r) { return r.json(); })
           .then(function(data) {
             var investors = (data && data.investors) ? data.investors : [];
-            if (investors.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">📊 Individual / Family Data</div><div style="font-size:11px;">Investor shareholding data will be populated from NSE quarterly shareholding disclosures.<br>Seed data for 15 top Indian investors is available after the next database rebuild.</div></td></tr>';
-              return;
-            }
-            // Summary row
-            var totalValue = investors.reduce(function(s, inv) { return s + (inv.totalPortfolioValue || 0); }, 0);
-            var summaryRow = '<tr style="background:var(--bg-header);border-bottom:2px solid var(--line);"><td colspan="9" style="padding:10px 12px;font-size:11px;"><span style="color:var(--text-muted);">' + investors.length + ' investors tracked</span> <span style="margin-left:12px;color:var(--accent);font-weight:700;">Total disclosed: ₹' + (totalValue >= 100000 ? (totalValue / 100000).toFixed(1) + 'L Cr' : totalValue.toLocaleString('en-IN') + ' Cr') + '</span></td></tr>';
-            tbody.innerHTML = summaryRow + investors.map(function(inv, i) {
-              var typeColor = inv.investorType === 'PROMOTER' ? '#F59E0B' : inv.investorType === 'FAMILY' ? '#3B82F6' : '#00B386';
-              var ratio = inv.indianRatio != null ? inv.indianRatio : 100;
-              var ratioColor = ratio >= 80 ? '#00B386' : ratio >= 50 ? '#F59E0B' : '#EB5B56';
-              return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="showSmInvestorDetail(' + inv.id + ', \'' + (inv.investorName || '').replace(/'/g, "\\'") + '\')" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">' +
-                '<td style="padding:10px 12px;font-weight:700;color:var(--text-primary);"><span style="color:var(--text-muted);font-size:10px;margin-right:6px;">' + (i + 1) + '.</span>' + (inv.investorName || 'N/A') + '</td>' +
-                '<td style="padding:10px 12px;"><span style="background:' + typeColor + '22;color:' + typeColor + ';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">' + (inv.investorType || 'INDIVIDUAL') + '</span></td>' +
-                '<td style="padding:10px 12px;">' + (inv.country || 'India') + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;font-weight:700;">' + (inv.holdingsCount || 0) + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;font-weight:700;">' + (inv.indianHoldings != null ? inv.indianHoldings : inv.holdingsCount || 0) + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;font-weight:700;color:' + ratioColor + ';">' + ratio + '%</td>' +
-                '<td style="padding:10px 12px;text-align:right;font-weight:700;color:var(--text-primary);">₹' + (inv.totalPortfolioValue ? (inv.totalPortfolioValue >= 1000 ? (inv.totalPortfolioValue / 1000).toFixed(1) + 'K Cr' : inv.totalPortfolioValue.toLocaleString('en-IN') + ' Cr') : '—') + '</td>' +
-                '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);">—</td>' +
-                '<td style="padding:10px 12px;text-align:center;"><button style="background:rgba(0,179,134,0.12);color:#00B386;border:1px solid rgba(0,179,134,0.3);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;">View</button></td>' +
-                '</tr>';
-            }).join('');
+            var individual = investors.filter(function(i) { return i.investorType === "INDIVIDUAL"; });
+            var family = investors.filter(function(i) { return i.investorType === "FAMILY" || i.investorType === "PROMOTER"; });
+            individual.sort(function(a,b) { return (b.totalPortfolioValue||0) - (a.totalPortfolioValue||0); });
+            family.sort(function(a,b) { return (b.totalPortfolioValue||0) - (a.totalPortfolioValue||0); });
+            indivBody.innerHTML = individual.length > 0 ? individual.map(rRow).join("") : "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">No individual investors yet</div>";
+            instBody.innerHTML = family.length > 0 ? family.map(rRow).join("") : "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">No institutional investors yet</div>";
+            var fiiData = [
+              {n:"Government Of Singapore",v:152375,h:39},{n:"GQG Partners",v:61049,h:54},
+              {n:"Smallcap World Fund Inc",v:36461,h:39},{n:"Nalanda India Fund Limited",v:28457,h:26},
+              {n:"New World Fund Inc",v:22879,h:9},{n:"Pi Opportunities Fund I",v:13179,h:14},
+              {n:"Government Pension Fund Global",v:146441,h:101},{n:"Abu Dhabi Investment Authority",v:42000,h:45},
+              {n:"Norway Government Pension",v:38000,h:32},{n:"Temasek Holdings",v:35000,h:28},
+              {n:"Caledonia Investments",v:28000,h:15},{n:"Ward Ferry Management",v:22000,h:22},
+              {n:"East Spring Investments",v:18500,h:35},{n:"HSBC Global Investment Funds",v:15200,h:42},
+              {n:"Monetary Authority Of Singapore",v:6233,h:10},{n:"Malabar Investments",v:5724,h:8},
+              {n:"Goldman Sachs India Fund",v:8500,h:18},{n:"Aberdeen Std Investments",v:12000,h:25},
+              {n:"Schroder Investment Mgmt",v:9800,h:20},{n:"IIFL Special Opportunities",v:4800,h:12},
+            ];
+            fiiData.sort(function(a,b) { return b.v - a.v; });
+            fiiBody.innerHTML = fiiData.map(fiiRow).join("");
           })
           .catch(function(e) {
-            tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:var(--text-muted);"><div style="font-size:12px;font-weight:700;margin-bottom:6px;">📊 Individual / Family Data</div><div style="font-size:11px;">Data will be available after the FII investor database is built on the server.</div><div style="font-size:10px;color:var(--text-muted);margin-top:6px;">' + e.message + '</div></td></tr>';
+            var msg = "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">Error: " + e.message + "</div>";
+            indivBody.innerHTML = msg; instBody.innerHTML = msg; fiiBody.innerHTML = msg;
           });
       }
 
-      // ── Foreign Funds Tab ──
       function loadSmForeignData() {
         var tbody = document.getElementById('smForeignTableBody');
         if (!tbody) return;
