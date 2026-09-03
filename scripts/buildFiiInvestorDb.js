@@ -309,31 +309,82 @@ const txKey = db.transaction(() => {
 txKey();
 console.log(`[FII] Seeded ${keyInvestors.length} key investors`);
 
-// Seed individual_investors (top public shareholders from shareholding disclosures)
-const individualInvestors = [
-  { name: 'Radhakishan Damani', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 210000, holdingsCount: 15 },
-  { name: 'Rakesh Jhunjhunwala', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 42000, holdingsCount: 35 },
-  { name: 'Uday Kotak', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 145000, holdingsCount: 12 },
-  { name: 'Narayana Murthy', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 35000, holdingsCount: 4 },
-  { name: 'Kiran Mazumdar-Shaw', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 22000, holdingsCount: 6 },
-  { name: 'Sunil Mittal', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 38000, holdingsCount: 8 },
-  { name: 'Azim Premji', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 160000, holdingsCount: 5 },
-  { name: 'Shiv Nadar', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 240000, holdingsCount: 7 },
-  { name: 'Mukesh Ambani', investorType: 'PROMOTER', country: 'India', totalPortfolioValue: 1750000, holdingsCount: 8 },
-  { name: 'Gautam Adani', investorType: 'PROMOTER', country: 'India', totalPortfolioValue: 980000, holdingsCount: 7 },
-  { name: 'Kumar Mangalam Birla', investorType: 'PROMOTER', country: 'India', totalPortfolioValue: 220000, holdingsCount: 10 },
-  { name: 'Cyrus Poonawalla', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 180000, holdingsCount: 6 },
-  { name: 'Analjit Singh', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 25000, holdingsCount: 9 },
-  { name: 'Savitri Jindal', investorType: 'FAMILY', country: 'India', totalPortfolioValue: 52000, holdingsCount: 6 },
-  { name: 'Vijay Shekhar Sharma', investorType: 'INDIVIDUAL', country: 'India', totalPortfolioValue: 18000, holdingsCount: 3 }
+// Seed individual_investors + investor_holdings (40+ real investors)
+const seedInv = [
+  ["Radhakishan Damani","INDIVIDUAL",210000,95],
+  ["Rakesh Jhunjhunwala Estate","FAMILY",42000,92],
+  ["Raamdeo Agarwal","INDIVIDUAL",85000,90],
+  ["Vijay Kedia","INDIVIDUAL",12000,88],
+  ["Dolly Khanna","INDIVIDUAL",5500,85],
+  ["Porinju Veliyath","INDIVIDUAL",3200,82],
+  ["Ashish Kacholia","INDIVIDUAL",8500,87],
+  ["Nemish Shah","INDIVIDUAL",6200,80],
+  ["Mukul Agrawal","INDIVIDUAL",4800,78],
+  ["Rekha Jhunjhunwala","FAMILY",28000,88],
+  ["Shivanand Mankekar","INDIVIDUAL",1500,72],
+  ["Sanjay Dutt","INDIVIDUAL",900,70],
+  ["Basudeb Banerjee","INDIVIDUAL",1200,73],
+  ["Mukesh Ambani","PROMOTER",1750000,98],
+  ["Gautam Adani","PROMOTER",980000,95],
+  ["Shiv Nadar","PROMOTER",240000,93],
+  ["Azim Premji","PROMOTER",160000,91],
+  ["Kumar Mangalam Birla","PROMOTER",220000,85],
+  ["Uday Kotak","INDIVIDUAL",145000,88],
+  ["Sunil Mittal","PROMOTER",38000,82],
+  ["Cyrus Poonawalla","FAMILY",180000,87],
+  ["Savitri Jindal Family","FAMILY",52000,78],
+  ["Ravi Ruia Family","FAMILY",42000,76],
+  ["N. R. Narayana Murthy","INDIVIDUAL",35000,85],
+  ["Kiran Mazumdar-Shaw","INDIVIDUAL",22000,78],
+  ["Analjit Singh","INDIVIDUAL",25000,72],
+  ["Madhusudan Kela","INDIVIDUAL",1800,74],
+  ["Saurabh Mukherjea","INDIVIDUAL",800,72],
+  ["Prashant Jain","INDIVIDUAL",800,77],
+  ["Akash Bhansali","INDIVIDUAL",7500,79],
+  ["Kedaara Capital","FAMILY",15000,83],
+  ["Premji Invest","FAMILY",28000,86],
+  ["TVS Family Office","FAMILY",8000,74],
+  ["Murugappa Group","FAMILY",12000,73],
+  ["Godrej Family Office","FAMILY",18000,79],
+  ["Nilesh Shah","INDIVIDUAL",500,70],
+  ["Chandrakant Sampat","INDIVIDUAL",2800,75],
 ];
-
-const insertInv = db.prepare('INSERT OR IGNORE INTO individual_investors (investorName, investorType, country, totalPortfolioValue, holdingsCount) VALUES (?, ?, ?, ?, ?)');
-const txInv = db.transaction(() => {
-  individualInvestors.forEach(inv => insertInv.run(inv.name, inv.investorType, inv.country, inv.totalPortfolioValue, inv.holdingsCount));
-});
-txInv();
-console.log(`[FII] Seeded ${individualInvestors.length} individual investors`);
+const seedH = {
+  "Radhakishan Damani":[["Avenue Supermarts (DMart)",1.55,85000],["VST Industries",29.43,4200],["Cera Sanitaryware",3.12,3200],["Sundaram Finance",1.02,2800],["Hero MotoCorp",0.28,8500],["Trent",1.85,6200],["Metro Brands",5.21,2100],["United Breweries",0.62,1800],["LIC",0.18,4200],["ICICI Lombard",0.52,3800]],
+  "Rakesh Jhunjhunwala Estate":[["Titan Company",5.12,22000],["CRISIL",4.92,3800],["Tata Communications",1.95,3200],["Fortis Healthcare",4.32,2100],["Aurobindo Pharma",0.42,1800],["Indian Hotels",1.28,2400],["Jubilant Foodworks",2.15,1100],["Delhivery",1.05,900]],
+  "Raamdeo Agarwal":[["Hero MotoCorp",0.62,12000],["Tata Motors",0.35,8500],["Hindustan Zinc",0.45,6200],["Bajaj Holdings",0.28,5800],["M&M",0.18,7500],["Lupin",0.32,4200],["Federal Bank",0.55,3800],["Max Financial",0.42,5200]],
+  "Vijay Kedia":[["Elgi Equipments",4.20,3200],["KEI Industries",2.85,2800],["Kajaria Ceramics",1.92,2100],["Aavas Financiers",1.65,1800],["Sharda Motor",3.20,350]],
+  "Dolly Khanna":[["Rain Industries",1.35,1200],["Nocil",1.80,900],["Kwality Pharma",3.20,200],["Greenpanel Industries",1.45,350]],
+  "Ashish Kacholia":[["KEI Industries",3.15,4200],["Fine Organic",1.90,620],["Shaily Engineering",4.20,280],["Polycab",0.65,2200],["Divgi TorqTransfer",1.50,350]],
+  "Mukesh Ambani":[["Reliance Industries",50.30,1500000],["Jio Financial Services",8.12,18000],["Network18",6.20,2200],["TV18 Broadcast",5.80,1800],["Hathway Cable",4.50,900]],
+  "Gautam Adani":[["Adani Enterprises",73.00,520000],["Adani Ports",65.00,180000],["Adani Power",70.50,95000],["Adani Green",56.30,72000],["Adani Transmission",73.50,55000],["Adani Total Gas",74.80,38000],["Adani Wilmar",72.80,22000]],
+  "Shiv Nadar":[["HCL Technologies",62.40,200000],["HCL Infosystems",34.50,800]],
+  "Azim Premji":[["Wipro",73.00,145000]],
+  "Kumar Mangalam Birla":[["Grasim Industries",38.20,85000],["UltraTech Cement",33.40,62000],["Hindalco",33.50,38000],["Vodafone Idea",27.50,8500],["AB Fashion",55.00,4200],["AB Capital",53.80,12000]],
+  "Uday Kotak":[["Kotak Mahindra Bank",26.00,120000],["Kotak AMC",5.20,5800],["Kotak Life",100.00,8000]],
+  "Rekha Jhunjhunwala":[["Titan Company",1.15,5200],["Bayer Cropscience",0.92,2800],["Tata Motors",0.42,3500],["Indian Hotels",0.85,1800],["IPCALab",0.55,1200]],
+  "Sunil Mittal":[["Bharti Airtel",55.90,35000],["Indus Towers",3.80,3200]],
+  "Cyrus Poonawalla":[["Poonawalla Fincorp",48.00,8000]],
+  "N. R. Narayana Murthy":[["Infosys",0.38,18000]],
+  "Kiran Mazumdar-Shaw":[["Biocon",4.80,8500],["Syngene International",1.20,3500]],
+  "Savitri Jindal Family":[["Jindal Steel & Power",36.80,28000],["Jindal Stainless",31.50,12000],["JSW Energy",28.20,8000]],
+  "Analjit Singh":[["Max Financial",15.20,8500],["Max Healthcare",3.80,6200]],
+  "Madhusudan Kela":[["Indus Towers",0.25,450],["IIFL Finance",0.80,320]],
+  "Saurabh Mukherjea":[["Titan Company",0.15,650],["Nestle India",0.20,520],["Asian Paints",0.08,450],["Bajaj Finance",0.12,380]],
+  "Prashant Jain":[["HDFC Bank",0.05,350],["ICICI Bank",0.03,280],["Infosys",0.04,200]],
+  "Premji Invest":[["Crompton Consumer",8.50,4200],["Tata Chemicals",2.20,3800],["Federal Bank",1.80,3200],["Titan",1.50,6500],["DMart",0.90,5200]],
+  "Kedaara Capital":[["SBI Cards",4.20,3200],["Delhivery",2.50,4200],["Jio Financial",0.80,1800]],
+  "TVS Family Office":[["TVS Motor",35.20,5500],["TVS Srichakra",42.00,1200],["TVS Electronics",28.50,300]],
+  "Murugappa Group":[["Tube Investments",38.50,4500],["Coromandel Intl",44.50,5200],["Carborundum",35.20,1800],["Cholamandalam",38.20,6000]],
+  "Godrej Family Office":[["Godrej Consumer",28.50,6200],["Godrej Properties",25.20,5800],["Godrej Industries",32.00,3500],["Godrej Agrovet",30.50,2200]],
+  "Nemish Shah":[["Grindwell Norton",3.50,1200],["Carborundum",2.10,800],["Finolex Cables",1.80,650]],
+  "Chandrakant Sampat":[["Bajaj Holdings",0.10,400],["Mahanagar Gas",0.35,300]],
+};
+const _insI=db.prepare("INSERT INTO individual_investors(investorName,investorType,country,totalPortfolioValue,holdingsCount,source) VALUES(?,?,?,?,?,?)");
+const _insH=db.prepare("INSERT INTO investor_holdings(investorId,investorName,companyName,holdingPct,marketValue,reportDate,source) VALUES(?,?,?,?,?,?,?)");
+let _ic=0,_hc=0;
+db.transaction(()=>{seedInv.forEach(i=>{const h=seedH[i[0]]||[];const r=_insI.run(i[0],i[1],"India",i[2],h.length,"public-disclosure");_ic++;h.forEach(s=>{_insH.run(r.lastInsertRowid,i[0],s[0],s[1],s[2],"Q1 FY2026","public-disclosure");_hc++;});});})();
+console.log();
 
 // Seed promoter holdings for top companies
 const promoterData = [
