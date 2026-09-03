@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903a" />
+<meta name="version" content="v20260903c" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2247,7 +2247,6 @@ function _renderMfGridBody(grid, schemes) {
               positions: 'OPEN MTF POSITIONS',
               'stock-holdings': 'STOCK HOLDINGS & ACCUMULATION',
               'smart-money': 'SMART MONEY',
-              ,
               terminal: 'TRADING TERMINAL',
               alerts: 'PRICE ALERTS',
               settings: 'SYSTEM SETTINGS & FUNDS'
@@ -2299,28 +2298,50 @@ function _renderMfGridBody(grid, schemes) {
         // No fallback — only use real API data
         }
 
-        // 2. Async live data background refresh — try profile endpoint (full data) first
+        // 2. Async live data background refresh — try universal all-schemes-summary first, then HDFC, then mfapi
         try {
+          // Try universal endpoint first (works for ALL AMCs)
+          var allRes = await fetch('/api/mutual-funds/all-schemes-summary?limit=5000');
+          if (allRes.ok) {
+            var allData = await allRes.json();
+            var allSchemes = (allData && allData.schemes) ? allData.schemes : [];
+            var matched = allSchemes.find(function(s) { return s.id === schemeId; });
+            if (matched) {
+              var enriched = Object.assign({}, cached || {}, matched, {
+                cleanTitle: (cached || {}).cleanTitle || matched.schemeName || '',
+                parentAmc: (cached || {}).parentAmc || matched.amc || '',
+                category: (cached || {}).category || matched.category || '',
+                aumCr: matched.aumCr || matched.aum || null,
+                returns: matched.returns || {},
+                topHoldings: matched.topHoldings || [],
+                confidenceScore: matched.confidenceScore || 50,
+                isOfficialHdfc: true
+              });
+              renderMfDetailContent(enriched);
+              return;
+            }
+          }
+          // Fallback: try HDFC profile endpoint
           var res = await fetch('/api/mutual-funds/hdfc/' + encodeURIComponent(schemeId));
           if (res.ok) {
             var data = await res.json();
             if (data && data.success && data.scheme) {
-              var enriched = Object.assign({}, cached || {}, data.scheme, {
+              var enriched2 = Object.assign({}, cached || {}, data.scheme, {
                 cleanTitle: (cached || {}).cleanTitle || (data.scheme.schemeName || ''),
                 parentAmc: (cached || {}).parentAmc || data.scheme.amc || '',
                 category: (cached || {}).category || data.scheme.category || '',
                 isOfficialHdfc: true
               });
-              renderMfDetailContent(enriched);
+              renderMfDetailContent(enriched2);
+              return;
             }
-          } else {
-            // Fallback to scheme-detail endpoint
-            var res2 = await fetch('/api/mutual-funds/scheme-detail/' + encodeURIComponent(schemeId));
-            if (res2.ok) {
-              var data2 = await res2.json();
-              if (data2 && data2.success && data2.scheme) {
-                renderMfDetailContent(data2.scheme);
-              }
+          }
+          // Fallback: try mfapi.in scheme detail
+          var res2 = await fetch('/api/mutual-funds/scheme-detail/' + encodeURIComponent(schemeId));
+          if (res2.ok) {
+            var data2 = await res2.json();
+            if (data2 && data2.success && data2.scheme) {
+              renderMfDetailContent(data2.scheme);
             }
           }
         } catch (err) {
