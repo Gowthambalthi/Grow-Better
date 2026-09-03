@@ -852,6 +852,22 @@ try {
   console.warn('[server] fii_investors.db not available:', e.message);
 }
 
+// GET /api/admin/rebuild-investors — Rebuild FII investor DB with latest seed data
+app.get('/api/admin/rebuild-investors', async (req, res) => {
+  try {
+    const { execSync } = require('child_process');
+    execSync('node scripts/buildFiiInvestorDb.js', { cwd: __dirname, timeout: 120000 });
+    // Reload the FII database
+    if (fiiDb) { try { fiiDb.close(); } catch(e) {} }
+    fiiDb = new Database(fiiDbPath, { readonly: true });
+    console.log('[admin] FII investor DB rebuilt successfully');
+    res.json({ success: true, message: 'FII investor database rebuilt', timestamp: new Date().toISOString() });
+  } catch (err) {
+    console.error('[admin] FII rebuild failed:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/fii-dii/daily — FII/DII daily trading activity
 app.get('/api/fii-dii/daily', (req, res) => {
   if (!fiiDb) return res.json({ success: true, data: [] });
