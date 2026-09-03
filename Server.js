@@ -912,6 +912,142 @@ app.get('/api/fii-dii/status', (req, res) => {
   }
 });
 
+// ─── Section 4: International AMCs ───────────────────────────────
+app.get('/api/fii-dii/international-amcs', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, amcs: [] });
+  try {
+    const { search, sort } = req.query;
+    let q = 'SELECT * FROM international_amcs';
+    const params = [];
+    if (search) { q += ' WHERE name LIKE ?'; params.push('%' + search + '%'); }
+    if (sort === 'aum') q += ' ORDER BY aumUsdBn DESC';
+    else q += ' ORDER BY name ASC';
+    q += ' LIMIT 100';
+    const amcs = fiiDb.prepare(q).all(...params);
+    res.json({ success: true, amcs, totalAmcs: amcs.length });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ─── Section 5: International Funds / ETFs ───────────────────────
+app.get('/api/fii-dii/international-funds', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, funds: [] });
+  try {
+    const { amcId, search, sort } = req.query;
+    let q = 'SELECT * FROM international_funds';
+    const params = [];
+    const conds = [];
+    if (amcId) { conds.push('amcId = ?'); params.push(Number(amcId)); }
+    if (search) { conds.push('(fundName LIKE ? OR amcName LIKE ?)'); params.push('%' + search + '%', '%' + search + '%'); }
+    if (conds.length) q += ' WHERE ' + conds.join(' AND ');
+    if (sort === 'aum') q += ' ORDER BY aumUsd DESC';
+    else q += ' ORDER BY fundName ASC';
+    q += ' LIMIT 200';
+    const funds = fiiDb.prepare(q).all(...params);
+    res.json({ success: true, funds, totalFunds: funds.length });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/fii-dii/international-funds/:fundId/holdings', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, holdings: [] });
+  try {
+    const fund = fiiDb.prepare('SELECT * FROM international_funds WHERE id = ?').get(req.params.fundId);
+    if (!fund) return res.status(404).json({ success: false, error: 'Fund not found' });
+    const holdings = fiiDb.prepare('SELECT * FROM international_fund_holdings WHERE fundId = ? ORDER BY holdingPct DESC').all(req.params.fundId);
+    res.json({ success: true, fund, holdings });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ─── Section 6: Key Investors ────────────────────────────────────
+app.get('/api/fii-dii/key-investors', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, investors: [] });
+  try {
+    const { type, search, sort } = req.query;
+    let q = 'SELECT * FROM key_investors';
+    const params = [];
+    const conds = [];
+    if (type) { conds.push('investorType = ?'); params.push(type); }
+    if (search) { conds.push('name LIKE ?'); params.push('%' + search + '%'); }
+    if (conds.length) q += ' WHERE ' + conds.join(' AND ');
+    if (sort === 'value') q += ' ORDER BY totalPortfolioValueInr DESC';
+    else if (sort === 'holdings') q += ' ORDER BY holdingsCount DESC';
+    else q += ' ORDER BY name ASC';
+    q += ' LIMIT 200';
+    const investors = fiiDb.prepare(q).all(...params);
+    res.json({ success: true, investors, totalInvestors: investors.length });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/fii-dii/key-investors/:investorId/holdings', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, holdings: [] });
+  try {
+    const investor = fiiDb.prepare('SELECT * FROM key_investors WHERE id = ?').get(req.params.investorId);
+    if (!investor) return res.status(404).json({ success: false, error: 'Investor not found' });
+    const holdings = fiiDb.prepare('SELECT * FROM key_investor_holdings WHERE investorId = ? ORDER BY holdingPct DESC').all(req.params.investorId);
+    res.json({ success: true, investor, holdings });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ─── Section 7: Promoters / Strategic Holders ─────────────────────
+app.get('/api/fii-dii/promoters', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, promoters: [] });
+  try {
+    const { type, search, sort } = req.query;
+    let q = 'SELECT * FROM promoters';
+    const params = [];
+    const conds = [];
+    if (type) { conds.push('promoterType = ?'); params.push(type); }
+    if (search) { conds.push('name LIKE ?'); params.push('%' + search + '%'); }
+    if (conds.length) q += ' WHERE ' + conds.join(' AND ');
+    if (sort === 'value') q += ' ORDER BY totalValueInr DESC';
+    else if (sort === 'shares') q += ' ORDER BY totalShares DESC';
+    else q += ' ORDER BY name ASC';
+    q += ' LIMIT 200';
+    const promoters = fiiDb.prepare(q).all(...params);
+    res.json({ success: true, promoters, totalPromoters: promoters.length });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/fii-dii/promoters/:promoterId/holdings', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, holdings: [] });
+  try {
+    const promoter = fiiDb.prepare('SELECT * FROM promoters WHERE id = ?').get(req.params.promoterId);
+    if (!promoter) return res.status(404).json({ success: false, error: 'Promoter not found' });
+    const holdings = fiiDb.prepare('SELECT * FROM promoter_holdings WHERE promoterId = ? ORDER BY holdingPct DESC').all(req.params.promoterId);
+    res.json({ success: true, promoter, holdings });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+// ─── Company Master ──────────────────────────────────────────────
+app.get('/api/fii-dii/companies', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, companies: [] });
+  try {
+    const { search, sector } = req.query;
+    let q = 'SELECT * FROM companies';
+    const params = [];
+    const conds = [];
+    if (search) { conds.push('(name LIKE ? OR isin LIKE ? OR ticker LIKE ?)'); params.push('%' + search + '%', '%' + search + '%', '%' + search.toUpperCase() + '%'); }
+    if (sector) { conds.push('sector = ?'); params.push(sector); }
+    if (conds.length) q += ' WHERE ' + conds.join(' AND ');
+    q += ' ORDER BY name ASC LIMIT 200';
+    const companies = fiiDb.prepare(q).all(...params);
+    res.json({ success: true, companies, totalCompanies: companies.length });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
+app.get('/api/fii-dii/companies/:companyId/all-holders', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, holders: {} });
+  try {
+    const cid = Number(req.params.companyId);
+    const company = fiiDb.prepare('SELECT * FROM companies WHERE id = ?').get(cid);
+    if (!company) return res.status(404).json({ success: false, error: 'Company not found' });
+    const promoters = fiiDb.prepare('SELECT * FROM promoter_holdings WHERE companyId = ?').all(cid);
+    const intlHoldings = fiiDb.prepare('SELECT ih.*, f.fundName, f.amcName FROM international_fund_holdings ih JOIN international_funds f ON ih.fundId = f.id WHERE ih.companyId = ?').all(cid);
+    const keyHoldings = fiiDb.prepare('SELECT kh.*, ki.name as investorName, ki.investorType FROM key_investor_holdings kh JOIN key_investors ki ON kh.investorId = ki.id WHERE kh.companyId = ?').all(cid);
+    const shareholding = fiiDb.prepare('SELECT * FROM company_shareholding WHERE companyName LIKE ?').all(company.name);
+    res.json({ success: true, company, promoters, internationalHoldings: intlHoldings, keyInvestorHoldings: keyHoldings, shareholdingPatterns: shareholding });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 // ---- HDFC Mutual Fund Scheme Data (from SQLite — real scheme-level data) ----
 const hdfcMfDb = require('./db/mutualFunds');
 

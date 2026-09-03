@@ -894,6 +894,10 @@
             <button onclick="switchFiiTab('fii-dii')" id="fiiTabFii" style="background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">FII/DII Activity</button>
             <button onclick="switchFiiTab('shareholding')" id="fiiTabShareholding" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Company Shareholding</button>
             <button onclick="switchFiiTab('investors')" id="fiiTabInvestors" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Individual Investors</button>
+            <button onclick="switchFiiTab('intl-amcs')" id="fiiTabIntlAmcs" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">International AMCs</button>
+            <button onclick="switchFiiTab('intl-funds')" id="fiiTabIntlFunds" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Intl Funds / ETFs</button>
+            <button onclick="switchFiiTab('key-investors')" id="fiiTabKeyInvestors" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Key Investors</button>
+            <button onclick="switchFiiTab('promoters')" id="fiiTabPromoters" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;">Promoters</button>
           </div>
 
           <!-- Summary Cards -->
@@ -966,7 +970,95 @@
             </div>
           </div>
 
-          <!-- Investor Detail Modal -->
+          <!-- International AMCs Tab -->
+          <div id="fiiTabContentIntlAmcs" style="display:none;">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">AMC Name</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Country</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">AUM (USD Bn)</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Website</th>
+                    </tr>
+                  </thead>
+                  <tbody id="intlAmcsTableBody">
+                    <tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">Loading international AMCs...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- International Funds / ETFs Tab -->
+          <div id="fiiTabContentIntlFunds" style="display:none;">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Fund Name</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">AMC</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Type</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">AUM (USD)</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">India %</th>
+                    </tr>
+                  </thead>
+                  <tbody id="intlFundsTableBody">
+                    <tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">Loading international funds...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key Investors Tab -->
+          <div id="fiiTabContentKeyInvestors" style="display:none;">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Investor</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Type</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Portfolio Value</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;"># Holdings</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Avg Holding %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="keyInvestorsTableBody">
+                    <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">Loading key investors...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Promoters Tab -->
+          <div id="fiiTabContentPromoters" style="display:none;">
+            <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                  <thead>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Promoter / Group</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Type</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;"># Companies</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Total Shares</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Total Value</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:center;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="promotersTableBody">
+                    <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">Loading promoters...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+n          <!-- Investor Detail Modal -->
           <div id="fiiInvestorModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
             <div style="max-width:900px;width:92%;background:var(--bg-panel);border:1px solid var(--accent);border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.8);z-index:100000;max-height:85vh;overflow-y:auto;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;">
@@ -2675,18 +2767,24 @@ function _renderMfGridBody(grid, schemes) {
 
       function switchFiiTab(tab) {
         _fiiTab = tab;
-        document.getElementById('fiiTabContentFii').style.display = tab === 'fii-dii' ? '' : 'none';
-        document.getElementById('fiiTabContentShareholding').style.display = tab === 'shareholding' ? '' : 'none';
-        document.getElementById('fiiTabContentInvestors').style.display = tab === 'investors' ? '' : 'none';
-        var btnMap = { 'fii-dii': 'fiiTabFii', 'shareholding': 'fiiTabShareholding', 'investors': 'fiiTabInvestors' };
-        Object.keys(btnMap).forEach(function(k) {
-          var b = document.getElementById(btnMap[k]);
+        var tabIds = ['fii-dii','shareholding','investors','intl-amcs','intl-funds','key-investors','promoters'];
+        var contentMap = { 'fii-dii': 'fiiTabContentFii', 'shareholding': 'fiiTabContentShareholding', 'investors': 'fiiTabContentInvestors', 'intl-amcs': 'fiiTabContentIntlAmcs', 'intl-funds': 'fiiTabContentIntlFunds', 'key-investors': 'fiiTabContentKeyInvestors', 'promoters': 'fiiTabContentPromoters' };
+        var btnMap = { 'fii-dii': 'fiiTabFii', 'shareholding': 'fiiTabShareholding', 'investors': 'fiiTabInvestors', 'intl-amcs': 'fiiTabIntlAmcs', 'intl-funds': 'fiiTabIntlFunds', 'key-investors': 'fiiTabKeyInvestors', 'promoters': 'fiiTabPromoters' };
+        tabIds.forEach(function(t) {
+          var el = document.getElementById(contentMap[t]);
+          if (el) el.style.display = t === tab ? '' : 'none';
+          var b = document.getElementById(btnMap[t]);
           if (b) {
-            b.style.background = k === tab ? 'var(--accent)' : 'var(--bg-input)';
-            b.style.color = k === tab ? '#fff' : 'var(--text-muted)';
-            b.style.border = k === tab ? '2px solid #00B386' : '1px solid var(--line)';
+            b.style.background = t === tab ? 'var(--accent)' : 'var(--bg-input)';
+            b.style.color = t === tab ? '#fff' : 'var(--text-muted)';
+            b.style.border = t === tab ? '2px solid #00B386' : '1px solid var(--line)';
           }
         });
+        // Load data for the new tabs on first view
+        if (tab === 'intl-amcs' && !_fiiData.amcsLoaded) loadIntlAmcs();
+        if (tab === 'intl-funds' && !_fiiData.fundsLoaded) loadIntlFunds();
+        if (tab === 'key-investors' && !_fiiData.keyInvestorsLoaded) loadKeyInvestors();
+        if (tab === 'promoters' && !_fiiData.promotersLoaded) loadPromoters();
       }
 
       function loadFiiData() {
@@ -2823,9 +2921,180 @@ function _renderMfGridBody(grid, schemes) {
         if (m) m.style.display = 'none';
       }
 
+      // ─── Section 4: International AMCs ───────────────────────────
+      _fiiData.amcsLoaded = false;
+      function loadIntlAmcs() {
+        fetch('/api/fii-dii/international-amcs?sort=aum')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.success) {
+              _fiiData.amcsLoaded = true;
+              var tbody = document.getElementById('intlAmcsTableBody');
+              if (!tbody) return;
+              var amcs = data.amcs || [];
+              if (amcs.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">No international AMC data yet.</td></tr>'; return; }
+              var flagMap = { 'USA': '\uD83C\uDDFA\uD83C\uDDF8', 'UK': '\uD83C\uDDEC\uD83C\uDDE7', 'France': '\uD83C\uDDEB\uD83C\uDDF7', 'Japan': '\uD83C\uDDEF\uD83C\uDDF5', 'South Korea': '\uD83C\uDDF0\uD83C\uDDF7', 'South Africa': '\uD83C\uDDFF\uD83C\uDDE6' };
+              tbody.innerHTML = amcs.map(function(a) {
+                var flag = flagMap[a.country] || '';
+                return '<tr style="border-bottom:1px solid var(--line);">'
+                  + '<td style="padding:10px 12px;font-size:12px;font-weight:700;color:var(--text-primary);">' + a.name + '</td>'
+                  + '<td style="padding:10px 12px;font-size:12px;color:var(--text-muted);">' + flag + ' ' + (a.country || '-') + '</td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:var(--accent);">' + (a.aumUsdBn ? '$' + Number(a.aumUsdBn).toLocaleString('en-IN') + ' Bn' : '-') + '</td>'
+                  + '<td style="padding:10px 12px;font-size:11px;"><a href="' + (a.website || '#') + '" target="_blank" style="color:var(--accent);text-decoration:none;">' + (a.website || '-') + '</a></td>'
+                  + '</tr>';
+              }).join('');
+            }
+          })
+          .catch(function(e) { console.error('[FII] intl amcs:', e); });
+      }
+
+      // ─── Section 5: International Funds ──────────────────────────
+      _fiiData.fundsLoaded = false;
+      function loadIntlFunds() {
+        fetch('/api/fii-dii/international-funds')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.success) {
+              _fiiData.fundsLoaded = true;
+              var tbody = document.getElementById('intlFundsTableBody');
+              if (!tbody) return;
+              var funds = data.funds || [];
+              if (funds.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:var(--text-muted);">No international fund data yet. Funds will be discovered after deploy.</td></tr>'; return; }
+              tbody.innerHTML = funds.map(function(f) {
+                return '<tr style="border-bottom:1px solid var(--line);">'
+                  + '<td style="padding:10px 12px;font-size:12px;font-weight:700;color:var(--text-primary);">' + (f.fundName || '-') + '</td>'
+                  + '<td style="padding:10px 12px;font-size:11px;color:var(--text-muted);">' + (f.amcName || '-') + '</td>'
+                  + '<td style="padding:10px 12px;"><span style="background:rgba(99,102,241,0.12);color:#6366F1;font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;">' + (f.fundType || '-') + '</span></td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:var(--text-primary);">' + (f.aumUsd ? '$' + Number(f.aumUsd).toLocaleString('en-IN') : '-') + '</td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:' + ((f.indiaAllocationPct||0) > 10 ? '#00B386' : 'var(--text-primary)') + ';">' + (f.indiaAllocationPct != null ? f.indiaAllocationPct.toFixed(1) + '%' : '-') + '</td>'
+                  + '</tr>';
+              }).join('');
+            }
+          })
+          .catch(function(e) { console.error('[FII] intl funds:', e); });
+      }
+
+      // ─── Section 6: Key Investors ────────────────────────────────
+      _fiiData.keyInvestorsLoaded = false;
+      function loadKeyInvestors() {
+        fetch('/api/fii-dii/key-investors')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.success) {
+              _fiiData.keyInvestorsLoaded = true;
+              var tbody = document.getElementById('keyInvestorsTableBody');
+              if (!tbody) return;
+              var investors = data.investors || [];
+              if (investors.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">No key investors discovered yet. Investors will be discovered from NSE shareholding patterns.</td></tr>'; return; }
+              tbody.innerHTML = investors.map(function(inv) {
+                var typeColor = inv.investorType === 'FAMILY_OFFICE' ? '#EC4899' : inv.investorType === 'INVESTMENT_VEHICLE' ? '#F59E0B' : '#6366F1';
+                return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openKeyInvestorDetail(' + inv.id + ')" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+                  + '<td style="padding:10px 12px;font-size:12px;font-weight:700;color:var(--text-primary);">' + (inv.name || '-') + '</td>'
+                  + '<td style="padding:10px 12px;"><span style="background:rgba(99,102,241,0.12);color:' + typeColor + ';font-size:10px;padding:3px 10px;border-radius:10px;font-weight:700;">' + (inv.investorType || 'INDIVIDUAL') + '</span></td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:var(--text-primary);">' + (inv.totalPortfolioValueInr ? '\u20b9' + Number(inv.totalPortfolioValueInr).toLocaleString('en-IN') + ' Cr' : '-') + '</td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:var(--accent);">' + (inv.holdingsCount || 0) + '</td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:' + ((inv.avgHoldingPct||0) > 3 ? '#00B386' : 'var(--text-muted)') + ';">' + (inv.avgHoldingPct ? inv.avgHoldingPct.toFixed(1) + '%' : '-') + '</td>'
+                  + '<td style="padding:10px 12px;text-align:center;"><button style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View</button></td>'
+                  + '</tr>';
+              }).join('');
+            }
+          })
+          .catch(function(e) { console.error('[FII] key investors:', e); });
+      }
+
+      function openKeyInvestorDetail(id) {
+        var modal = document.getElementById('fiiInvestorModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.getElementById('fiiModalTitle').textContent = 'Loading...';
+        document.getElementById('fiiModalSubtitle').textContent = '';
+        document.getElementById('fiiModalBody').innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading...</td></tr>';
+        fetch('/api/fii-dii/key-investors/' + id + '/holdings')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data || !data.success) { document.getElementById('fiiModalTitle').textContent = 'Error'; return; }
+            var inv = data.investor;
+            var h = data.holdings || [];
+            document.getElementById('fiiModalTitle').textContent = inv.name;
+            document.getElementById('fiiModalSubtitle').textContent = (inv.investorType||'Individual') + ' | ' + h.length + ' holdings';
+            document.getElementById('fiiModalBody').innerHTML = h.map(function(x, i) {
+              var pc = (x.holdingPct||0) > 5 ? '#00B386' : (x.holdingPct||0) > 1 ? '#F59E0B' : 'var(--text-primary)';
+              return '<tr style="border-bottom:1px solid var(--line);">'
+                + '<td style="padding:8px 12px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="color:var(--text-muted);font-size:10px;">' + (i+1) + '.</span> ' + (x.companyName||'-') + '</td>'
+                + '<td style="padding:8px 12px;font-size:11px;color:var(--text-muted);">' + (x.isin||'-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (x.shares ? Number(x.shares).toLocaleString('en-IN') : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:800;color:' + pc + ';">' + (x.holdingPct!=null ? x.holdingPct.toFixed(2)+'%' : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (x.marketValueInr ? '\u20b9' + Number(x.marketValueInr).toLocaleString('en-IN') + ' Cr' : '-') + '</td>'
+                + '<td style="padding:8px 12px;font-size:11px;color:var(--text-muted);">' + (x.reportDate||'-') + '</td>'
+                + '</tr>';
+            }).join('');
+          })
+          .catch(function(err) { document.getElementById('fiiModalTitle').textContent = 'Error: ' + err.message; });
+      }
+
+      // ─── Section 7: Promoters ────────────────────────────────────
+      _fiiData.promotersLoaded = false;
+      function loadPromoters() {
+        fetch('/api/fii-dii/promoters')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.success) {
+              _fiiData.promotersLoaded = true;
+              var tbody = document.getElementById('promotersTableBody');
+              if (!tbody) return;
+              var promoters = data.promoters || [];
+              if (promoters.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">No promoter data yet.</td></tr>'; return; }
+              tbody.innerHTML = promoters.map(function(p) {
+                var typeColor = p.promoterType === 'PROMOTER' ? '#00B386' : '#F59E0B';
+                return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openPromoterDetail(' + p.id + ')" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+                  + '<td style="padding:10px 12px;font-size:12px;font-weight:700;color:var(--text-primary);">' + (p.name || '-') + '</td>'
+                  + '<td style="padding:10px 12px;"><span style="background:rgba(0,179,134,0.12);color:' + typeColor + ';font-size:10px;padding:3px 10px;border-radius:10px;font-weight:700;">' + (p.promoterType || 'PROMOTER') + '</span></td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:600;color:var(--accent);">' + (p.companiesHolding || 0) + '</td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:var(--text-primary);">' + (p.totalShares ? Number(p.totalShares).toLocaleString('en-IN') : '-') + '</td>'
+                  + '<td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:var(--text-primary);">' + (p.totalValueInr ? '\u20b9' + Number(p.totalValueInr).toLocaleString('en-IN') + ' Cr' : '-') + '</td>'
+                  + '<td style="padding:10px 12px;text-align:center;"><button style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View</button></td>'
+                  + '</tr>';
+              }).join('');
+            }
+          })
+          .catch(function(e) { console.error('[FII] promoters:', e); });
+      }
+
+      function openPromoterDetail(id) {
+        var modal = document.getElementById('fiiInvestorModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.getElementById('fiiModalTitle').textContent = 'Loading...';
+        document.getElementById('fiiModalSubtitle').textContent = '';
+        document.getElementById('fiiModalBody').innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading...</td></tr>';
+        fetch('/api/fii-dii/promoters/' + id + '/holdings')
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data || !data.success) { document.getElementById('fiiModalTitle').textContent = 'Error'; return; }
+            var p = data.promoter;
+            var h = data.holdings || [];
+            document.getElementById('fiiModalTitle').textContent = p.name;
+            document.getElementById('fiiModalSubtitle').textContent = (p.promoterType||'Promoter') + ' | ' + h.length + ' companies';
+            document.getElementById('fiiModalBody').innerHTML = h.map(function(x, i) {
+              var change = x.changePct;
+              var changeColor = change > 0 ? '#00B386' : change < 0 ? '#EB5B56' : 'var(--text-muted)';
+              var changeArrow = change > 0 ? '\u25B2' : change < 0 ? '\u25BC' : '=';
+              return '<tr style="border-bottom:1px solid var(--line);">'
+                + '<td style="padding:8px 12px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="color:var(--text-muted);font-size:10px;">' + (i+1) + '.</span> ' + (x.companyName||'-') + '</td>'
+                + '<td style="padding:8px 12px;font-size:11px;color:var(--text-muted);">' + (x.holdingType||'-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (x.shares ? Number(x.shares).toLocaleString('en-IN') : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:800;color:var(--text-primary);">' + (x.holdingPct!=null ? x.holdingPct.toFixed(2)+'%' : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:' + changeColor + ';">' + changeArrow + ' ' + (change != null ? change.toFixed(2) + '%' : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (x.marketValueInr ? '\u20b9' + Number(x.marketValueInr).toLocaleString('en-IN') + ' Cr' : '-') + '</td>'
+                + '</tr>';
+            }).join('');
+          })
+          .catch(function(err) { document.getElementById('fiiModalTitle').textContent = 'Error: ' + err.message; });
+      }
+
       function searchFiiData(q) {
         var query = (q || '').toLowerCase();
-        document.querySelectorAll('#shareholdingTableBody tr, #investorsTableBody tr').forEach(function(r) {
+        document.querySelectorAll('#shareholdingTableBody tr, #investorsTableBody tr, #intlAmcsTableBody tr, #intlFundsTableBody tr, #keyInvestorsTableBody tr, #promotersTableBody tr').forEach(function(r) {
           r.style.display = query === '' || r.textContent.toLowerCase().indexOf(query) !== -1 ? '' : 'none';
         });
       }
