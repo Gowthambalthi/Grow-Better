@@ -8,6 +8,14 @@ data/*.db-shm
 data/ledger.db
 data/june_2026_verification.db
 data/sbi_*.db
+data/institutional/raw/
+data/backups/
+data/*.xlsx
+data/*.xls
+data/*.json
+!data/hdfc_scheme_master.json
+data/amfi_*.xls
+data/amfi_*.json
 .env
 .env.*
 !.env.example
