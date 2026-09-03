@@ -93,6 +93,7 @@ db.exec(`
   );
 
   -- Individual significant investors (discovered from shareholding data)
+  DROP TABLE IF EXISTS individual_investors;
   CREATE TABLE IF NOT EXISTS individual_investors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     investorName TEXT NOT NULL,
@@ -107,6 +108,7 @@ db.exec(`
   );
 
   -- Individual investor holdings
+  DROP TABLE IF EXISTS investor_holdings;
   CREATE TABLE IF NOT EXISTS investor_holdings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     investorId INTEGER,
@@ -145,6 +147,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_investor_holdings_name ON investor_holdings(investorName);
 
   -- International AMCs
+  DROP TABLE IF EXISTS international_amcs;
   CREATE TABLE IF NOT EXISTS international_amcs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -159,6 +162,7 @@ db.exec(`
   );
 
   -- International funds that invest in India
+  DROP TABLE IF EXISTS international_funds;
   CREATE TABLE IF NOT EXISTS international_funds (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     amcId INTEGER,
@@ -178,6 +182,7 @@ db.exec(`
   );
 
   -- International fund Indian holdings
+  DROP TABLE IF EXISTS international_fund_holdings;
   CREATE TABLE IF NOT EXISTS international_fund_holdings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fundId INTEGER,
@@ -191,6 +196,7 @@ db.exec(`
   );
 
   -- Key individual / family investors
+  DROP TABLE IF EXISTS key_investors;
   CREATE TABLE IF NOT EXISTS key_investors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -207,6 +213,7 @@ db.exec(`
   );
 
   -- Key investor holdings
+  DROP TABLE IF EXISTS key_investor_holdings;
   CREATE TABLE IF NOT EXISTS key_investor_holdings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     investorId INTEGER,
@@ -221,6 +228,7 @@ db.exec(`
   );
 
   -- Promoters / strategic holders
+  DROP TABLE IF EXISTS promoters;
   CREATE TABLE IF NOT EXISTS promoters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     companyName TEXT NOT NULL,
