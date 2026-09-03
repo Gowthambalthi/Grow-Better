@@ -799,89 +799,72 @@
 
         <!-- ---- Stock Holdings & Accumulation View ---- -->
         <section class="view" id="view-stock-holdings">
+          <!-- Header -->
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:14px;">
             <div>
-              <h1 class="view-title" style="margin:0;">Stock Holdings &amp; Accumulation</h1>
-              <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">AMFI Database — Tracking MF Scheme Holdings &amp; Net Additions across 1M, 3M, 6M &amp; 1Y Timeframes for Every Listed Stock</p>
+              <h1 class="view-title" style="margin:0;">Stock Holdings Across All MFs</h1>
+              <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0 0;">Which stocks do Indian mutual funds hold? Aggregated from <span id="shTotalFunds">0</span> funds across <span id="shTotalStocks">0</span> unique stocks</p>
             </div>
-            
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <!-- Live Stock Search Bar -->
-              <div style="position:relative;width:240px;">
-                <input id="stockSearchInput" type="text" placeholder="Search symbol or company..." class="form-input" style="width:100%;font-size:12px;padding:6px 12px 6px 30px;border-radius:6px;font-family:var(--font-sans);" />
+              <div style="position:relative;width:260px;">
+                <input id="stockSearchInput" type="text" placeholder="Search stock name, ISIN, sector..." oninput="searchStockHoldings(this.value)" style="width:100%;font-size:12px;padding:8px 12px 8px 32px;border-radius:8px;background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);outline:none;" />
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              </div>
-
-              <!-- Timeframe Period Filter Dropdown -->
-              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
-                <label class="form-lbl" style="margin:0;font-size:11px;color:var(--text-muted);">TIMEFRAME:</label>
-                <select id="instPeriodSelect" class="form-input" style="width:145px;font-family:var(--font-mono);font-weight:700;font-size:12px;padding:4px 8px;">
-                  <option value="1m">1 Month Period</option>
-                  <option value="3m" selected>3 Months Period</option>
-                  <option value="6m">6 Months Period</option>
-                  <option value="1y">1 Year Period</option>
-                </select>
-              </div>
-
-              <!-- Sort Order Toggle -->
-              <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
-                <span style="font-size:11px;color:var(--text-muted);">Order:</span>
-                <button id="toggleSortDirectionBtn" class="edit-icon-btn" style="color:var(--accent);font-weight:800;font-size:12px;display:inline-flex;align-items:center;gap:6px;background:var(--bg-raised);padding:5px 12px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;height:30px;">
-                  <span id="sortDirectionLabel">High to Low</span> <span style="font-size:10px;">▼</span>
-                </button>
               </div>
             </div>
           </div>
 
-          <!-- STOCK HOLDINGS TABLE CARD -->
-          <div class="card" style="padding:16px;margin-bottom:24px;">
-            <div class="table-wrap">
-              <table class="holdings-table inst-table">
-                <thead id="theadMainScanner">
-                  <tr>
-                    <th style="white-space:nowrap;padding:12px 14px;min-width:200px;">Stock Symbol</th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:130px;">Today's P&amp;L %</th>
-                    <th style="text-align:right;white-space:nowrap;padding:12px 14px;min-width:150px;">Timeframe Return %</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Institutes Holding</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:160px;">Institutes Added</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:150px;">Conviction Rating</th>
-                    <th style="text-align:center;white-space:nowrap;padding:12px 14px;min-width:170px;">Weightage Score</th>
+          <!-- Sector Filter Tabs -->
+          <div id="shSectorTabs" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;"></div>
+
+          <!-- Summary Cards -->
+          <div id="shSummaryCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
+
+          <!-- Table -->
+          <div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                  <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                    <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;cursor:pointer;" onclick="sortStockTable('name')">Stock Name <span id="shSortName"></span></th>
+                    <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Sector</th>
+                    <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;cursor:pointer;" onclick="sortStockTable('funds')"># Funds <span id="shSortFunds"></span></th>
+                    <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;cursor:pointer;" onclick="sortStockTable('weight')">Total Weight % <span id="shSortWeight"></span></th>
+                    <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;cursor:pointer;" onclick="sortStockTable('value')">Total Mkt Value <span id="shSortValue"></span></th>
+                    <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:center;">Action</th>
                   </tr>
                 </thead>
-                <tbody id="tbodyInstitutionalScanner">
-                  <tr class="empty-row"><td colspan="8">Loading stock holdings database...</td></tr>
+                <tbody id="shTableBody">
+                  <tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">Loading stock holdings...</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- Stock Accumulation Breakdown Modal Window -->
-          <div id="instModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
-            <div class="modal-card card" style="max-width:880px;width:92%;background:var(--bg-panel);border:1px solid var(--accent);border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.8);z-index:100000;">
+          <!-- Detail Modal -->
+          <div id="shDetailModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;">
+            <div style="max-width:900px;width:92%;background:var(--bg-panel);border:1px solid var(--accent);border-radius:12px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,0.8);z-index:100000;max-height:85vh;overflow-y:auto;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;">
                 <div>
-                  <h3 id="instModalTitle" style="margin:0;color:var(--accent-cyan);font-size:15px;font-weight:800;">Stock Accumulation Breakdown</h3>
-                  <p style="margin:2px 0 0 0;font-size:11px;color:var(--text-muted);">Stock-Level Multi-Timeframe Institutional Accumulation Metrics</p>
+                  <h3 id="shModalTitle" style="margin:0;color:var(--accent);font-size:16px;font-weight:800;"></h3>
+                  <p id="shModalSubtitle" style="margin:2px 0 0 0;font-size:11px;color:var(--text-muted);"></p>
                 </div>
-                <button id="closeInstModalBtn" class="edit-icon-btn" style="color:var(--text-muted);font-size:18px;font-weight:800;">✕</button>
+                <button onclick="closeStockModal()" style="background:none;border:none;color:var(--text-muted);font-size:18px;font-weight:800;cursor:pointer;">✕</button>
               </div>
-
-              <!-- Institutional Weightage Summary Stat Cards -->
-              <div id="instModalSummaryContainer" style="display:none;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin-bottom:14px;"></div>
-              <div class="table-wrap" style="max-height:420px;overflow-y:auto;">
-                <table class="holdings-table">
+              <div id="shModalSummary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;"></div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
                   <thead>
-                    <tr>
-                      <th style="width:50px;text-align:center;padding:10px 6px;">#</th>
-                      <th style="padding:10px 12px;">Timeframe Period</th>
-                      <th style="text-align:right;padding:10px 12px;">Stock Return %</th>
-                      <th style="text-align:center;padding:10px 12px;">Institutes Buying</th>
-                      <th style="text-align:right;padding:10px 12px;">Net Capital Flow</th>
-                      <th style="text-align:center;padding:10px 12px;">Accumulation Score</th>
+                    <tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Fund Name</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">AMC</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:left;">Category</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Weight %</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Mkt Value</th>
+                      <th style="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;text-align:right;">Fund AUM</th>
                     </tr>
                   </thead>
-                  <tbody id="tbodySchemeHoldingsModal">
-                    <tr class="empty-row"><td colspan="6">Loading stock accumulation records...</td></tr>
+                  <tbody id="shModalBody">
+                    <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading...</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -2362,55 +2345,212 @@ function _renderMfGridBody(grid, schemes) {
       }
 
       var stockScannerSearchTimeout = null;
-      function loadStockHoldingsScanner(query) {
-        var tbody = document.getElementById('tbodyInstitutionalScanner');
-        if (!tbody) return;
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Loading official MF stock holdings data...</td></tr>';
+      // Stock Holdings from stock_holdings.db
+      var _shData = [];
+      var _shSort = { key: 'funds', dir: 'desc' };
+      var _shSector = 'all';
+      var _shSearch = '';
 
-        fetch('/api/mutual-funds/aggregated-stocks?search=' + encodeURIComponent(query || ''))
-          .then(function(res) { return res.json(); })
+      function loadStockHoldingsScanner(query) {
+        var tbody = document.getElementById('shTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">Loading stock holdings from database...</td></tr>';
+
+        fetch('/api/stock-holdings?limit=500')
+          .then(function(r) { return r.json(); })
           .then(function(data) {
-            if (!data || !data.success || !data.stocks || data.stocks.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted); font-size:13px;">No stock holdings match your search criteria. Data available from verified AMC disclosures: <b>' + (data.verifiedAmcs || ['HDFC Mutual Fund']).join(', ') + '</b>.</td></tr>';
+            if (!data || !data.success || !data.stocks) {
+              tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">No stock data available.</td></tr>';
               return;
             }
-
-            tbody.innerHTML = data.stocks.map(function(s) {
-              var amcBadge = '<span style="background:rgba(59,130,246,0.12);color:#3B82F6;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;">HDFC AMC (Verified)</span>';
-              var mktValText = s.combinedMktValCr > 0 ? '₹' + s.combinedMktValCr.toLocaleString('en-IN') + ' Cr' : 'Not available';
-
-              return '<tr style="border-bottom:1px solid var(--line);">' +
-                       '<td style="padding:12px 14px;font-weight:800;color:var(--text-primary);">' +
-                         '<div style="font-size:13px;">' + s.symbol + '</div>' +
-                         '<div style="font-size:11px;color:var(--text-muted);font-weight:500;">' + s.name + ' · ISIN: ' + s.isin + '</div>' +
-                       '</td>' +
-                       '<td style="padding:12px 14px;text-align:center;">' + amcBadge + '</td>' +
-                       '<td style="padding:12px 14px;text-align:center;font-weight:800;color:var(--text-primary);"><span style="background:rgba(0,179,134,0.12);color:#00B386;padding:4px 10px;border-radius:12px;font-size:12px;">' + s.totalSchemesHolding + ' Schemes</span></td>' +
-                       '<td style="padding:12px 14px;text-align:right;font-weight:800;color:#00B386;">' + s.maxAllocationPct.toFixed(2) + '% NAV</td>' +
-                       '<td style="padding:12px 14px;text-align:right;font-weight:800;color:var(--text-primary);">' + mktValText + '</td>' +
-                       '<td style="padding:12px 14px;text-align:center;"><span style="background:rgba(16,185,129,0.12);color:#10B981;font-size:10px;padding:3px 8px;border-radius:4px;font-weight:800;">VERIFIED DISCLOSURE</span></td>' +
-                       '<td style="padding:12px 14px;text-align:center;"><button class="btn btn-sm" style="font-size:11px;padding:4px 10px;font-weight:700;" onclick="alert(\'Holding HDFC Schemes for ' + s.symbol + ':\\n\\n\' + \'' + s.holdingSchemes.map(function(h){ return h.schemeName + ' (' + h.pct + '% NAV · 1M Ret: +' + (h.returns1M || 3.15) + '%)'; }).join('\\n') + '\')">View Schemes (' + s.totalSchemesHolding + ')</button></td>' +
-                     '</tr>';
-            }).join('');
+            _shData = data.stocks;
+            var h1 = document.getElementById('shTotalStocks');
+            var h2 = document.getElementById('shTotalFunds');
+            if (h1) h1.textContent = data.totalStocks || _shData.length;
+            if (h2) h2.textContent = '739';
+            buildSectorTabs(_shData);
+            buildSummaryCards(_shData);
+            renderStockTable();
           })
           .catch(function(err) {
-            console.warn('[Stock Scanner Warning]:', err.message);
+            console.error('[Stock Holdings]', err);
+            tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:#EB5B56;">Error: ' + err.message + '</td></tr>';
           });
       }
 
-      var searchTimeout = null;
+      function buildSectorTabs(stocks) {
+        var counts = {};
+        stocks.forEach(function(s) { var sec = s.sector || 'Other'; counts[sec] = (counts[sec] || 0) + 1; });
+        var sorted = Object.entries(counts).sort(function(a,b) { return b[1] - a[1]; });
+        var html = '<button onclick="filterStockSector(\x27all\x27)" style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;" id="shTabAll">All</button>';
+        sorted.forEach(function(s) {
+          html += '<button onclick="filterStockSector(\x27' + s[0] + '\x27)" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;" class="sh-sector-tab">' + s[0] + ' (' + s[1] + ')</button>';
+        });
+        var el = document.getElementById('shSectorTabs');
+        if (el) el.innerHTML = html;
+      }
+
+      function filterStockSector(sector) {
+        _shSector = sector;
+        document.querySelectorAll('.sh-sector-tab').forEach(function(b) {
+          b.style.background = 'var(--bg-input)';
+          b.style.color = 'var(--text-muted)';
+          b.style.border = '1px solid var(--line)';
+        });
+        var allBtn = document.getElementById('shTabAll');
+        if (sector === 'all') {
+          if (allBtn) { allBtn.style.background = 'var(--accent)'; allBtn.style.color = '#fff'; }
+        } else {
+          if (allBtn) { allBtn.style.background = 'var(--bg-input)'; allBtn.style.color = 'var(--text-muted)'; allBtn.style.border = '1px solid var(--line)'; }
+        }
+        renderStockTable();
+      }
+
+      function buildSummaryCards(stocks) {
+        var total = stocks.length;
+        var totalWeight = 0;
+        var topStock = null;
+        var sectorCount = {};
+        stocks.forEach(function(s) {
+          totalWeight += (s.totalWeight || 0);
+          if (!topStock || (s.totalFundsHolding || 0) > (topStock.totalFundsHolding || 0)) topStock = s;
+          var sec = s.sector || 'Other';
+          sectorCount[sec] = (sectorCount[sec] || 0) + 1;
+        });
+        var topSector = Object.entries(sectorCount).sort(function(a,b) { return b[1] - a[1]; })[0];
+        var avgWeight = total > 0 ? (totalWeight / total).toFixed(1) : 0;
+        var el = document.getElementById('shSummaryCards');
+        if (!el) return;
+        el.innerHTML = '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">Total Stocks</div><div style="font-size:22px;font-weight:800;color:var(--accent);margin:2px 0;">' + total + '</div><div style="font-size:10px;color:var(--text-muted);">across all AMCs</div></div>' +
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">Most Held Stock</div><div style="font-size:22px;font-weight:800;color:#00B386;margin:2px 0;">' + (topStock ? topStock.totalFundsHolding : 0) + ' funds</div><div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (topStock ? topStock.stockName : '-') + '</div></div>' +
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">Top Sector</div><div style="font-size:22px;font-weight:800;color:#F59E0B;margin:2px 0;">' + (topSector ? topSector[1] : 0) + ' stocks</div><div style="font-size:10px;color:var(--text-muted);">' + (topSector ? topSector[0] : '-') + '</div></div>' +
+          '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:16px;"><div style="font-size:11px;color:var(--text-muted);font-weight:600;">Avg Total Weight</div><div style="font-size:22px;font-weight:800;color:#4A9EFF;margin:2px 0;">' + avgWeight + '%</div><div style="font-size:10px;color:var(--text-muted);">per stock across funds</div></div>';
+      }
+
+      function renderStockTable() {
+        var tbody = document.getElementById('shTableBody');
+        if (!tbody) return;
+        var filtered = _shData.filter(function(s) {
+          if (_shSector !== 'all' && (s.sector || 'Other') !== _shSector) return false;
+          if (_shSearch) {
+            var q = _shSearch.toLowerCase();
+            if ((s.stockName || '').toLowerCase().indexOf(q) === -1 && (s.sector || '').toLowerCase().indexOf(q) === -1 && (s.isin || '').toLowerCase().indexOf(q) === -1) return false;
+          }
+          return true;
+        });
+        filtered.sort(function(a, b) {
+          var va, vb;
+          if (_shSort.key === 'name') { va = (a.stockName || '').toLowerCase(); vb = (b.stockName || '').toLowerCase(); return _shSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+          if (_shSort.key === 'funds') { va = a.totalFundsHolding || 0; vb = b.totalFundsHolding || 0; }
+          else if (_shSort.key === 'weight') { va = a.totalWeight || 0; vb = b.totalWeight || 0; }
+          else if (_shSort.key === 'value') { va = a.totalMarketValue || 0; vb = b.totalMarketValue || 0; }
+          else { va = a.totalFundsHolding || 0; vb = b.totalFundsHolding || 0; }
+          return _shSort.dir === 'desc' ? vb - va : va - vb;
+        });
+        ['Name','Funds','Weight','Value'].forEach(function(k) {
+          var el = document.getElementById('shSort' + k);
+          if (el) el.textContent = '';
+        });
+        var keyMap = { name: 'Name', funds: 'Funds', weight: 'Weight', value: 'Value' };
+        var activeEl = document.getElementById('shSort' + keyMap[_shSort.key]);
+        if (activeEl) activeEl.textContent = _shSort.dir === 'desc' ? '\u25BC' : '\u25B2';
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">No stocks match your filters.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = filtered.slice(0, 200).map(function(s) {
+          var sectorColor = '#6366F1';
+          if ((s.sector || '').indexOf('Financial') !== -1) sectorColor = '#3B82F6';
+          else if ((s.sector || '').indexOf('Technology') !== -1) sectorColor = '#8B5CF6';
+          else if ((s.sector || '').indexOf('Energy') !== -1) sectorColor = '#F59E0B';
+          else if ((s.sector || '').indexOf('Consumer') !== -1) sectorColor = '#EC4899';
+          else if ((s.sector || '').indexOf('Health') !== -1) sectorColor = '#10B981';
+          else if ((s.sector || '').indexOf('Industrial') !== -1) sectorColor = '#64748B';
+          var weightColor = (s.totalWeight || 0) > 500 ? '#00B386' : (s.totalWeight || 0) > 100 ? '#F59E0B' : 'var(--text-primary)';
+          var fundsColor = (s.totalFundsHolding || 0) > 200 ? '#00B386' : (s.totalFundsHolding || 0) > 50 ? '#F59E0B' : 'var(--text-primary)';
+          return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openStockDetail(' + s.id + ')" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+            + '<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>' + s.stockName + '</div><div style="font-size:10px;color:var(--text-muted);font-weight:400;">' + (s.isin || '-') + '</div></td>'
+            + '<td style="padding:10px 12px;"><span style="background:rgba(99,102,241,0.12);color:' + sectorColor + ';font-size:10px;padding:3px 8px;border-radius:10px;font-weight:700;">' + (s.sector || 'Other') + '</span></td>'
+            + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:12px;color:' + fundsColor + ';">' + (s.totalFundsHolding || 0) + '</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:12px;color:' + weightColor + ';">' + (s.totalWeight || 0).toFixed(1) + '%</td>'
+            + '<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:600;">' + (s.totalMarketValue ? '\u20b9' + (s.totalMarketValue / 100).toFixed(0) + ' Cr' : '-') + '</td>'
+            + '<td style="padding:10px 12px;text-align:center;"><button style="background:var(--accent);color:#fff;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;">View Funds</button></td>'
+            + '</tr>';
+        }).join('');
+      }
+
+      function sortStockTable(key) {
+        if (_shSort.key === key) { _shSort.dir = _shSort.dir === 'desc' ? 'asc' : 'desc'; }
+        else { _shSort.key = key; _shSort.dir = key === 'name' ? 'asc' : 'desc'; }
+        renderStockTable();
+      }
+
+      function searchStockHoldings(q) {
+        _shSearch = q || '';
+        renderStockTable();
+      }
+
+      function openStockDetail(stockId) {
+        var modal = document.getElementById('shDetailModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.getElementById('shModalTitle').textContent = 'Loading...';
+        document.getElementById('shModalSubtitle').textContent = '';
+        document.getElementById('shModalSummary').innerHTML = '';
+        document.getElementById('shModalBody').innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading fund data...</td></tr>';
+
+        fetch('/api/stock-holdings/' + stockId)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (!data || !data.success) {
+              document.getElementById('shModalTitle').textContent = 'Error';
+              return;
+            }
+            var stock = data.stock;
+            var funds = data.funds || [];
+            document.getElementById('shModalTitle').textContent = stock.stockName;
+            document.getElementById('shModalSubtitle').textContent = (stock.sector || 'N/A') + ' | ISIN: ' + (stock.isin || 'N/A') + ' | Held by ' + funds.length + ' funds';
+            var totalWeight = 0, totalMkt = 0, amcs = {};
+            funds.forEach(function(f) { totalWeight += (f.weight || 0); totalMkt += (f.marketValue || 0); amcs[f.amc] = (amcs[f.amc] || 0) + 1; });
+            var topAmc = Object.entries(amcs).sort(function(a,b) { return b[1] - a[1]; })[0];
+            document.getElementById('shModalSummary').innerHTML = '<div style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:12px;"><div style="font-size:10px;color:var(--text-muted);">Total Funds</div><div style="font-size:20px;font-weight:800;color:var(--accent);">' + funds.length + '</div></div>' +
+              '<div style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:12px;"><div style="font-size:10px;color:var(--text-muted);">Combined Weight</div><div style="font-size:20px;font-weight:800;color:#00B386;">' + totalWeight.toFixed(1) + '%</div></div>' +
+              '<div style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:12px;"><div style="font-size:10px;color:var(--text-muted);">Top AMC</div><div style="font-size:20px;font-weight:800;color:#F59E0B;">' + (topAmc ? topAmc[0] : '-') + '</div><div style="font-size:10px;color:var(--text-muted);">' + (topAmc ? topAmc[1] + ' funds' : '') + '</div></div>';
+            document.getElementById('shModalBody').innerHTML = funds.map(function(f, i) {
+              var catColor = '#6366F1';
+              if ((f.category || '').indexOf('Equity') !== -1) catColor = '#00B386';
+              else if ((f.category || '').indexOf('Hybrid') !== -1) catColor = '#F59E0B';
+              else if ((f.category || '').indexOf('Debt') !== -1) catColor = '#3B82F6';
+              else if ((f.category || '').indexOf('Index') !== -1) catColor = '#8B5CF6';
+              return '<tr style="border-bottom:1px solid var(--line);">'
+                + '<td style="padding:8px 12px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="color:var(--text-muted);font-size:10px;margin-right:6px;">' + (i+1) + '.</span> ' + (f.schemeName || f.fundId) + '</td>'
+                + '<td style="padding:8px 12px;font-size:11px;color:var(--text-muted);">' + (f.amc || '-') + '</td>'
+                + '<td style="padding:8px 12px;"><span style="background:rgba(99,102,241,0.1);color:' + catColor + ';font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;">' + (f.category || '-') + '</span></td>'
+                + '<td style="padding:8px 12px;text-align:right;font-weight:800;font-size:12px;color:' + ((f.weight||0) > 5 ? '#00B386' : 'var(--text-primary)') + ';">' + (f.weight || 0).toFixed(2) + '%</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-primary);">' + (f.marketValue ? '\u20b9' + (f.marketValue / 100).toFixed(1) + ' Cr' : '-') + '</td>'
+                + '<td style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text-muted);">' + (f.aum ? '\u20b9' + Number(f.aum).toLocaleString('en-IN', {maximumFractionDigits:0}) + ' Cr' : '-') + '</td>'
+                + '</tr>';
+            }).join('');
+          })
+          .catch(function(err) {
+            document.getElementById('shModalTitle').textContent = 'Error loading data';
+            document.getElementById('shModalBody').innerHTML = '<tr><td colspan="6" style="padding:16px;color:#EB5B56;">' + err.message + '</td></tr>';
+          });
+      }
+
+      function closeStockModal() {
+        var m = document.getElementById('shDetailModal');
+        if (m) m.style.display = 'none';
+      }
+
+            var searchTimeout = null;
       document.addEventListener('input', function(e) {
         if (e.target.id === 'mfSearchInput') {
           clearTimeout(searchTimeout);
           currentMfSearch = e.target.value;
           searchTimeout = setTimeout(function() {
             fetchMfSchemes(currentMfTimeframe, currentMfSearch);
-          }, 200);
-        } else if (e.target.id === 'stockSearchInput') {
-          clearTimeout(stockScannerSearchTimeout);
-          var q = e.target.value;
-          stockScannerSearchTimeout = setTimeout(function() {
-            loadStockHoldingsScanner(q);
           }, 200);
         } else if (e.target.id === 'modalHoldingSearchInput') {
           var q = e.target.value.trim().toLowerCase();
