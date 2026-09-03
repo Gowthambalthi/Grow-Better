@@ -739,6 +739,17 @@ try {
   if (fs.existsSync(stockHoldingsDbPath)) {
     stockHoldingsDb = new Database(stockHoldingsDbPath, { readonly: true });
     console.log('[server] stock_holdings.db loaded');
+  } else {
+    // Auto-build if missing (e.g. on Render cold start)
+    console.log('[server] stock_holdings.db missing — building from MF data...');
+    try {
+      const { execSync } = require('child_process');
+      execSync('node scripts/buildStockHoldings.js', { cwd: __dirname, timeout: 60000 });
+      stockHoldingsDb = new Database(stockHoldingsDbPath, { readonly: true });
+      console.log('[server] stock_holdings.db built and loaded');
+    } catch (buildErr) {
+      console.warn('[server] stock_holdings.db build failed:', buildErr.message);
+    }
   }
 } catch (e) {
   console.warn('[server] stock_holdings.db not available:', e.message);
@@ -822,6 +833,17 @@ try {
   if (fs.existsSync(fiiDbPath)) {
     fiiDb = new Database(fiiDbPath, { readonly: true });
     console.log('[server] fii_investors.db loaded');
+  } else {
+    // Auto-build if missing
+    console.log('[server] fii_investors.db missing — building...');
+    try {
+      const { execSync } = require('child_process');
+      execSync('node scripts/buildFiiInvestorDb.js', { cwd: __dirname, timeout: 60000 });
+      fiiDb = new Database(fiiDbPath, { readonly: true });
+      console.log('[server] fii_investors.db built and loaded');
+    } catch (buildErr) {
+      console.warn('[server] fii_investors.db build failed:', buildErr.message);
+    }
   }
 } catch (e) {
   console.warn('[server] fii_investors.db not available:', e.message);
@@ -1103,6 +1125,31 @@ app.get('/api/mutual-funds/all', (req, res) => {
       amcSummary: Object.entries(byAmc).map(([name, d]) => ({ name, count: d.count })),
       source: 'Multi-AMC Official Data (SQLite)',
       schemes
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/mutual-funds/all-schemes-summary — Lightweight summary for Smart Money page
+app.get('/api/mutual-funds/all-schemes-summary', (req, res) => {
+  try {
+    const schemes = hdfcMfDb.getAllSchemesSummary();
+    const totalAum = schemes.reduce((sum, s) => sum + (s.aum || 0), 0);
+    const totalStocks = schemes.reduce((sum, s) => sum + (s.totalHoldings || 0), 0);
+    const byAmc = {};
+    for (const s of schemes) {
+      const a = s.amc || 'Unknown';
+      if (!byAmc[a]) byAmc[a] = 0;
+      byAmc[a]++;
+    }
+    res.json({
+      success: true,
+      totalSchemes: schemes.length,
+      totalAmcs: Object.keys(byAmc).length,
+      totalAum,
+      totalStocks: Math.round(totalStocks / 10),
+      schemes: schemes.slice(0, parseInt(req.query.limit) || 10)
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
