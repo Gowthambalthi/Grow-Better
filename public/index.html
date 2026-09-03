@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903j" />
+<meta name="version" content="v20260903h" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -3002,7 +3002,7 @@ function _renderMfGridBody(grid, schemes) {
           .then(function(r) { return r.json(); })
           .then(function(data) {
             var investors = (data && data.investors) ? data.investors : [];
-            var individual = investors.filter(function(i) { return i.investorType === "INDIVIDUAL" || i.investorType === "SPECIALIST"; });
+            var individual = investors.filter(function(i) { return i.investorType === "INDIVIDUAL"; });
             var family = investors.filter(function(i) { return i.investorType === "INSTITUTIONAL" || i.investorType === "FAMILY" || i.investorType === "PROMOTER"; });
             individual.sort(function(a,b) { return (b.totalPortfolioValue||0) - (a.totalPortfolioValue||0); });
             family.sort(function(a,b) { return (b.totalPortfolioValue||0) - (a.totalPortfolioValue||0); });
