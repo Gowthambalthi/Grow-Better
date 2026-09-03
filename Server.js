@@ -912,6 +912,20 @@ app.get('/api/fii-dii/investors', (req, res) => {
   }
 });
 
+// GET /api/fii-dii/investors/:investorId — Single investor detail
+app.get('/api/fii-dii/investors/:investorId', (req, res) => {
+  if (!fiiDb) return res.json({ success: true, investor: null, holdings: [] });
+  try {
+    const { investorId } = req.params;
+    const investor = fiiDb.prepare('SELECT * FROM individual_investors WHERE id = ?').get(investorId);
+    if (!investor) return res.status(404).json({ success: false, error: 'Investor not found' });
+    const holdings = fiiDb.prepare('SELECT * FROM investor_holdings WHERE investorId = ? ORDER BY holdingPct DESC').all(investorId);
+    res.json({ success: true, investor, holdings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/fii-dii/investors/:investorId/holdings — Holdings of a specific investor
 app.get('/api/fii-dii/investors/:investorId/holdings', (req, res) => {
   if (!fiiDb) return res.json({ success: true, holdings: [] });
