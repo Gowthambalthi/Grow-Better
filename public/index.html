@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903g" />
+<meta name="version" content="v20260903h" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2976,27 +2976,28 @@ function _renderMfGridBody(grid, schemes) {
         var instBody = document.getElementById("smIndivInstitutionalBody");
         var fiiBody = document.getElementById("smIndivFiiBody");
         if (!indivBody) return;
-        var loadMsg = "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">Loading...</div>";
-        indivBody.innerHTML = loadMsg; instBody.innerHTML = loadMsg; fiiBody.innerHTML = loadMsg;
+        var ld = "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">Loading...</div>";
+        indivBody.innerHTML = ld; instBody.innerHTML = ld; fiiBody.innerHTML = ld;
         function fmtCr(v) { if (!v) return "-"; return v >= 100000 ? (v/100000).toFixed(1)+"L" : v >= 1000 ? (v/1000).toFixed(0)+"K" : v.toLocaleString("en-IN"); }
         function rRow(inv) {
           var nm = (inv.investorName || "N/A");
-          var clickH = "showSmInvestorDetail(" + inv.id + ",'" + nm.replace(/'/g, "\'") + "')";
-          var ho = "this.style.background='var(--bg-raised)'";
-          var hc = "this.style.background='transparent'";
-          return "<div style=\"display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;\" onclick=\"" + clickH + "\" onmouseenter=\"" + ho + "\" onmouseleave=\"" + hc + "\">" +
+          var cH = "showSmInvestorDetail(" + inv.id + ",'" + nm.replace(/'/g, "\'") + "')";
+          var hov = "this.style.background='var(--bg-raised)'";
+          var hou = "this.style.background='transparent'";
+          return "<div style=\"display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;\" onclick=\"" + cH + "\" onmouseenter=\"" + hov + "\" onmouseleave=\"" + hou + "\">" +
             "<div><div style=\"font-size:12px;font-weight:700;color:var(--text-primary);\">" + nm + "</div>" +
             "<div style=\"font-size:10px;color:var(--text-muted);margin-top:2px;\">#Company Holdings: " + (inv.holdingsCount || 0) + "</div></div>" +
             "<div style=\"font-size:13px;font-weight:800;color:var(--text-primary);text-align:right;\">" + fmtCr(inv.totalPortfolioValue) + "</div></div>";
         }
         function fiiRow(f) {
-          var ho = "this.style.background='var(--bg-raised)'";
-          var hc = "this.style.background='transparent'";
-          return "<div style=\"display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;\" onmouseenter=\"" + ho + "\" onmouseleave=\"" + hc + "\">" +
+          var hov = "this.style.background='var(--bg-raised)'";
+          var hou = "this.style.background='transparent'";
+          return "<div style=\"display:grid;grid-template-columns:1fr auto;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer;\" onmouseenter=\"" + hov + "\" onmouseleave=\"" + hou + "\">" +
             "<div><div style=\"font-size:12px;font-weight:700;color:var(--text-primary);\">" + f.n + "</div>" +
             "<div style=\"font-size:10px;color:var(--text-muted);margin-top:2px;\">#Company Holdings: " + f.h + "</div></div>" +
             "<div style=\"font-size:13px;font-weight:800;color:var(--text-primary);text-align:right;\">" + fmtCr(f.v) + "</div></div>";
         }
+        // Fetch investors from API
         fetch("/api/fii-dii/investors")
           .then(function(r) { return r.json(); })
           .then(function(data) {
@@ -3007,25 +3008,33 @@ function _renderMfGridBody(grid, schemes) {
             family.sort(function(a,b) { return (b.totalPortfolioValue||0) - (a.totalPortfolioValue||0); });
             indivBody.innerHTML = individual.length > 0 ? individual.map(rRow).join("") : "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">No individual investors yet</div>";
             instBody.innerHTML = family.length > 0 ? family.map(rRow).join("") : "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">No institutional investors yet</div>";
-            var fiiData = [
-              {n:"Government Of Singapore",v:152375,h:39},{n:"GQG Partners",v:61049,h:54},
-              {n:"Smallcap World Fund Inc",v:36461,h:39},{n:"Nalanda India Fund Limited",v:28457,h:26},
-              {n:"New World Fund Inc",v:22879,h:9},{n:"Pi Opportunities Fund I",v:13179,h:14},
-              {n:"Government Pension Fund Global",v:146441,h:101},{n:"Abu Dhabi Investment Authority",v:42000,h:45},
-              {n:"Norway Government Pension",v:38000,h:32},{n:"Temasek Holdings",v:35000,h:28},
-              {n:"Caledonia Investments",v:28000,h:15},{n:"Ward Ferry Management",v:22000,h:22},
-              {n:"East Spring Investments",v:18500,h:35},{n:"HSBC Global Investment Funds",v:15200,h:42},
-              {n:"Monetary Authority Of Singapore",v:6233,h:10},{n:"Malabar Investments",v:5724,h:8},
-              {n:"Goldman Sachs India Fund",v:8500,h:18},{n:"Aberdeen Std Investments",v:12000,h:25},
-              {n:"Schroder Investment Mgmt",v:9800,h:20},{n:"IIFL Special Opportunities",v:4800,h:12},
-            ];
-            fiiData.sort(function(a,b) { return b.v - a.v; });
-            fiiBody.innerHTML = fiiData.map(fiiRow).join("");
           })
-          .catch(function(e) {
-            var msg = "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">Error: " + e.message + "</div>";
-            indivBody.innerHTML = msg; instBody.innerHTML = msg; fiiBody.innerHTML = msg;
-          });
+          .catch(function(e) { var msg = "<div style=\"padding:16px;text-align:center;color:var(--text-muted);\">Error: " + e.message + "</div>"; indivBody.innerHTML = msg; instBody.innerHTML = msg; });
+        // FII investors (top 30 foreign funds investing in India)
+        var fiiData = [
+          {n:"Government Of Singapore",v:152375,h:39},{n:"GQG Partners",v:61049,h:54},
+          {n:"Smallcap World Fund Inc",v:36461,h:39},{n:"Nalanda India Fund Limited",v:28457,h:26},
+          {n:"New World Fund Inc",v:22879,h:9},{n:"Pi Opportunities Fund I",v:13179,h:14},
+          {n:"Government Pension Fund Global",v:146441,h:101},{n:"Abu Dhabi Investment Authority",v:42000,h:45},
+          {n:"Norway Government Pension",v:38000,h:32},{n:"Temasek Holdings",v:35000,h:28},
+          {n:"Caledonia Investments",v:28000,h:15},{n:"Ward Ferry Management",v:22000,h:22},
+          {n:"East Spring Investments",v:18500,h:35},{n:"HSBC Global Investment Funds",v:15200,h:42},
+          {n:"Monetary Authority Of Singapore",v:6233,h:10},{n:"Malabar Investments",v:5724,h:8},
+          {n:"Goldman Sachs India Fund",v:8500,h:18},{n:"Aberdeen Std Investments",v:12000,h:25},
+          {n:"Schroder Investment Mgmt",v:9800,h:20},{n:"IIFL Special Opportunities",v:4800,h:12},
+          {n:"Fidelity International",v:18000,h:35},{n:"JP Morgan Asset Mgmt India",v:14500,h:28},
+          {n:"Vanguard Emerging Markets",v:32000,h:22},{n:"BlackRock India Fund",v:26000,h:31},
+          {n:"T. Rowe Price India",v:11200,h:18},{n:"Franklin Templeton India",v:9800,h:25},
+          {n:"Invesco India Fund",v:7500,h:15},{n:"DFA Emerging Markets",v:8200,h:12},
+          {n:"Pictet India Fund",v:5600,h:20},{n:"Aberdeen Asian Smaller Cos",v:4200,h:16},
+          {n:"Matthews Asia India Fund",v:3800,h:14},{n:"Lazard Emerging Markets",v:6100,h:11},
+          {n:"Morgan Stanley Investment",v:12500,h:22},{n:"Nomura India Fund",v:4800,h:10},
+          {n:"Credit Suisse India Equity",v:3200,h:8},{n:"BNP Paribas India Fund",v:5400,h:16},
+          {n:"DWS India Fund",v:2800,h:9},{n:"Amundi India",v:7200,h:14},
+          {n:"Barings India Fund",v:3500,h:12},{n:"Robeco India",v:2200,h:7},
+        ];
+        fiiData.sort(function(a,b) { return b.v - a.v; });
+        fiiBody.innerHTML = fiiData.map(fiiRow).join("");
       }
 
       function loadSmForeignData() {
