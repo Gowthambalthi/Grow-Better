@@ -1736,7 +1736,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260902i';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
+    (function(){var v='20260903l';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -1876,7 +1876,8 @@
           }
 
           // AMFI fallback disabled — multi-AMC DB has all 47 AMCs with real data
-          // Category tabs (Equity/Hybrid/Debt/Index) handle filtering in the UI
+      
+    // Category tabs (Equity/Hybrid/Debt/Index) handle filtering in the UI
 
           amcSet = amcSet || new Set();
           console.log('[MF] allSchemes:', allSchemes.length, 'amcs:', amcSet ? amcSet.size : 0);
@@ -2099,6 +2100,16 @@
           var name = schemeNameDiv ? schemeNameDiv.textContent.toLowerCase() : (nameEl ? nameEl.textContent.toLowerCase() : '');
           var showAmc = _mfActiveAmc === 'all' || amc === _mfActiveAmc;
           var showCat = _mfActiveCategory === 'all' || cat === _mfActiveCategory;
+          // Card-based sub-category filtering
+          if (!showCat && _mfActiveCategory !== 'all') {
+            var lc = cat.toLowerCase() + ' ' + name;
+            var k = _mfActiveCategory.toLowerCase();
+            if (k === 'large cap') showCat = lc.indexOf('large cap') !== -1;
+            else if (k === 'flexi cap') showCat = lc.indexOf('flexi cap') !== -1 || lc.indexOf('flexicap') !== -1;
+            else if (k === 'small cap') showCat = lc.indexOf('small cap') !== -1 || lc.indexOf('smallcap') !== -1;
+            else if (k === 'index') showCat = cat.toLowerCase().indexOf('index') !== -1;
+            else if (k === 'elss') showCat = lc.indexOf('elss') !== -1 || lc.indexOf('tax') !== -1 || lc.indexOf('80c') !== -1;
+          }
           var showSearch = q === '' || name.indexOf(q) !== -1;
           rows[r].style.display = (showAmc && showCat && showSearch) ? '' : 'none';
           if (showAmc && showCat && showSearch && q.length >= 1 && suggestions.length < 8) {
@@ -2179,10 +2190,35 @@ function _renderMfGridBody(grid, schemes) {
     var c = "var(--bg-panel)", b = "var(--line)", m = "var(--text-muted)";
     var sum = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(0,179,134,0.15);border:2px solid rgba(0,179,134,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="14" width="4" height="7" rx="1" fill="#00B386"/><rect x="9" y="9" width="4" height="12" rx="1" fill="#00B386"/><rect x="15" y="5" width="4" height="16" rx="1" fill="#00B386"/><path d="M20 7l2-3" stroke="#00B386" stroke-width="2" stroke-linecap="round"/><path d="M19 4h3v3" stroke="#00B386" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div style="font-size:11px;color:' + m + ';font-weight:600;">Avg ' + tf + ' Return</div><div style="font-size:22px;font-weight:800;color:' + (aR>=0?"#00B386":"#EB5B56") + ';margin:2px 0;">' + fp(aR) + '</div><div style="font-size:10px;color:' + m + ';font-weight:500;">across shown schemes</div><div style="width:36px;height:3px;background:#00B386;border-radius:2px;margin-top:8px;"></div></div></div>'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(0,179,134,0.15);border:2px solid rgba(0,179,134,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="26" height="26" viewBox="0 0 24 24" fill="#00B386"><path d="M20 11c-.5-3-2.5-5-5-6l-1 2c1.5.5 2.5 2 2.5 4H18v1h-8c0-3 1.5-5 3-6L12 4C9 5 7.5 8 7 11H5v1h2c0 .3 0 .7.1 1H5v1h2.5c.5 2 2 4 4.5 5v3h2v-3c2.5-1 4-3 4.5-5H21v-1h-2.9c.1-.3.1-.7.1-1H21v-1h-1z"/></svg></div><div><div style="font-size:11px;color:' + m + ';font-weight:600;">Top Gainer (' + tf + ')</div><div style="font-size:22px;font-weight:800;color:#00B386;margin:2px 0;">' + (tG?fp(tG.r):"-") + '</div><div style="font-size:10px;color:' + m + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tG?tG.n:"-") + '</div><div style="width:36px;height:3px;background:#00B386;border-radius:2px;margin-top:8px;"></div></div></div>'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(235,91,86,0.15);border:2px solid rgba(235,91,86,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="26" height="26" viewBox="0 0 24 24" fill="#EB5B56"><path d="M4 11c.5-3 2.5-5 5-6l1 2c-1.5.5-2.5 2-2.5 4H6v1h8c0-3-1.5-5-3-6l.5-3C15 5 16.5 8 17 11h2v1h-2c0 .3 0 .7-.1 1H19v1h-2.5c-.5 2-2 4-4.5 5v3h-2v-3C7.5 19 6 17 5.5 15H3v-1h2.9c-.1-.3-.1-.7-.1-1H3v-1h1z"/></svg></div><div><div style="font-size:11px;color:' + m + ';font-weight:600;">Top Loser (' + tf + ')</div><div style="font-size:22px;font-weight:800;color:#EB5B56;margin:2px 0;">' + (tL?fp(tL.r):"-") + '</div><div style="font-size:10px;color:' + m + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tL?tL.n:"-") + '</div><div style="width:36px;height:3px;background:#EB5B56;border-radius:2px;margin-top:8px;"></div></div></div>'      + '<div style="background:' + c + ';border:1px solid ' + b + ';border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;"><div style="width:48px;height:48px;border-radius:50%;background:rgba(74,158,255,0.15);border:2px solid rgba(74,158,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4A9EFF" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 20v-1a5 5 0 015-5h6a5 5 0 015 5v1"/><path d="M18 14l2 2-2 2" stroke-width="2.5"/></svg></div><div><div style="font-size:11px;color:' + m + ';font-weight:600;">Investor Spike (' + tf + ')</div><div style="font-size:22px;font-weight:800;color:#4A9EFF;margin:2px 0;">' + (tI?"\u25B2 "+fi(tI.c):"-") + '</div><div style="font-size:10px;color:' + m + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (tI?tI.n:"-") + '</div><div style="width:36px;height:3px;background:#4A9EFF;border-radius:2px;margin-top:8px;"></div></div></div></div>';
 
+    // Category Cards (Large Cap, Flexi Cap, Small Cap, Index, Tax Saver)
+    var _catCardsHtml = '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">';
+    var _catDefs = [
+      { key:'Large Cap', label:'Large-Cap Funds', desc1:'Established Companies', desc2:'Lower Risk With Consistent Returns',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#00B386" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20" fill="#00B386" opacity="0.3"/><path d="M20 20 L20 4 A16 16 0 0 1 36 20 Z" fill="#00B386" opacity="0.5"/><circle cx="20" cy="20" r="5" fill="#00B386" opacity="0.2"/></svg>' },
+      { key:'Flexi Cap', label:'Flexi Cap Funds', desc1:'Moderate Risk', desc2:'Long-term (> 5 years) Investments',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#3B82F6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#3B82F6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#3B82F6" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#3B82F6" opacity="0.2"/></svg>' },
+      { key:'Small Cap', label:'Small-Cap Funds', desc1:'High Growth Potential', desc2:'Higher Volatility & Risk',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#F59E0B" opacity="0.2"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' },
+      { key:'Index', label:'Index Funds', desc1:'Passive Tracking', desc2:'Low Cost, Market Returns',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#8B5CF6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#8B5CF6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#8B5CF6" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#8B5CF6" opacity="0.2"/><path d="M20 20 L12.93 33.86 A16 16 0 0 1 4 20 Z" fill="#8B5CF6" opacity="0.15"/><circle cx="20" cy="20" r="5" fill="#8B5CF6" opacity="0.1"/></svg>' },
+      { key:'ELSS', label:'Tax Saver (ELSS)', desc1:'Section 80C Benefits', desc2:'3-Year Lock-in Period',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#EC4899" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#EC4899" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#EC4899" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#EC4899" opacity="0.2"/><path d="M20 20 L12.93 33.86 A16 16 0 0 1 4 20 Z" fill="#EC4899" opacity="0.15"/><path d="M20 20 L4 20 A16 16 0 0 1 20 4 Z" fill="#EC4899" opacity="0.1"/><circle cx="20" cy="20" r="5" fill="#EC4899" opacity="0.08"/></svg>' }
+    ];
+    _catCardsHtml += _catDefs.map(function(cd){
+      var cnt=0; for(var ci=0;ci<di.length;ci++){var cn=(di[ci].category||'').toLowerCase();if(cn.indexOf(cd.key.toLowerCase())!==-1||cd.key==='ELSS'&&cn.indexOf('tax')!==-1)cnt++;}
+      return '<div onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;">'
+        + '<div style="margin-bottom:10px;">'+cd.svg+'</div>'
+        + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+cd.label+'</div>'
+        + '<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc1+'</div>'
+        + '<div style="font-size:11px;color:#00B386;font-weight:600;">&#10004; '+cd.desc2+'</div>'
+        + '</div>';
+    }).join('');
+    _catCardsHtml += '</div>';
+
     // Category tabs
     var cc={};for(var i=0;i<di.length;i++){var ct2=di[i].category||"Other";cc[ct2]=(cc[ct2]||0)+1;}
     var catTabs = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'      + '<button class="mf-cat-tab" data-cat="all" onclick="filterMfCategory(\x27all\x27)" style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;">All categories</button>';
-    ["Equity","Hybrid","Debt","Index","Other"].forEach(function(k){if(cc[k])catTabs+='<button class="mf-cat-tab" data-cat="'+k+'" onclick="filterMfCategory(\x27'+k+'\x27)" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">'+k+'</button>';});
+    ["Equity","Hybrid","Debt","Index","ELSS","Other"].forEach(function(k){if(cc[k])catTabs+='<button class="mf-cat-tab" data-cat="'+k+'" onclick="filterMfCategory(\x27'+k+'\x27)" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">'+k+'</button>';});
     catTabs += '</div>';
 
     // Table rows
@@ -2212,7 +2248,7 @@ function _renderMfGridBody(grid, schemes) {
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
     var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
     var searchBox='<div style="margin-left:auto;"><input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
-    grid.innerHTML=sum+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=sum+_catCardsHtml+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;cursor:pointer;" onclick="window._mfSort(\x27name\x27)">Scheme name'+mfSortArrow('name')+'</th>'
       + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x271M\x27)">1M'+mfSortArrow('1M')+'</th>'
       + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x273M\x27)">3M'+mfSortArrow('3M')+'</th>'
