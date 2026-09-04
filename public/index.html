@@ -2304,13 +2304,20 @@ function _renderMfGridBody(grid, schemes) {
       return cells+"</tr>";}).join("");
 
     var tH="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
-    // View tabs (Summary / Ranks / Risk vs Reward)
-    var vTabsHtml = '<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;">';
-    [{k:'Summary',l:'Summary'},{k:'Ranks',l:'Ranks'},{k:'Risk',l:'Risk vs Reward'}].forEach(function(vt){
-      var a=_mfViewTab===vt.k;
-      vTabsHtml+='<button class="mf-vtab" data-vtab="'+vt.k+'" onclick="switchMfViewTab('\x27'+vt.k+'\x27')" style="padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(a?'#00B386':'var(--line)')+';background:'+(a?'#00B386':'var(--bg-input)')+';color:'+(a?'#fff':'var(--text-muted)')+';transition:all .15s;font-family:inherit;">'+vt.l+'</button>';
+    // View tabs - DOM-based to avoid quoting issues
+    var _vTabsDiv = document.createElement("div");
+    _vTabsDiv.style.cssText = "display:flex;gap:6px;margin-bottom:12px;align-items:center;";
+    [{k:"Summary",l:"Summary"},{k:"Ranks",l:"Ranks"},{k:"Risk",l:"Risk vs Reward"}].forEach(function(vt){
+      var a = _mfViewTab === vt.k;
+      var b = document.createElement("button");
+      b.className = "mf-vtab";
+      b.setAttribute("data-vtab", vt.k);
+      b.textContent = vt.l;
+      b.style.cssText = "padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid "+(a?"#00B386":"var(--line)")+";background:"+(a?"#00B386":"var(--bg-input)")+";color:"+(a?"#fff":"var(--text-muted)")+";transition:all .15s;font-family:inherit;";
+      b.onclick = function() { switchMfViewTab(vt.k); };
+      _vTabsDiv.appendChild(b);
     });
-    vTabsHtml+='</div>';
+    var vTabsHtml = _vTabsDiv.outerHTML;
 
     // Build AMC dropdown
     var amcC={};for(var ai=0;ai<di.length;ai++){var an=di[ai].parentAmc||di[ai].amc||'Other';amcC[an]=(amcC[an]||0)+1;}
