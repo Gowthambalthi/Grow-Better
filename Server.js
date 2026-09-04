@@ -1828,3 +1828,55 @@ if (require.main === module) {
 }
 
 module.exports = { app, initBrokers, brokers };
+// GET /api/mutual-funds/metrics — Serve computed risk metrics for all schemes
+app.get('/api/mutual-funds/metrics', (req, res) => {
+  try {
+    const db = require('better-sqlite3')(require('path').join(__dirname, 'data', 'hdfc_mutual_funds.db'));
+    const metrics = db.prepare('SELECT * FROM fund_metrics').all();
+    db.close();
+    const map = {};
+    for (const m of metrics) {
+      map[m.schemeId] = m;
+    }
+    res.json({ success: true, totalMetrics: metrics.length, metrics: map });
+  } catch (err) {
+    // fund_metrics table may not exist yet
+    res.json({ success: true, totalMetrics: 0, metrics: {} });
+  }
+});
+
+// DEBUG: Trigger NAV collection + metrics computation on Render
+app.get('/api/admin/compute-metrics', async (req, res) => {
+  try {
+    const { execSync } = require('child_process');
+    const path = require('path');
+    
+    // Step 1: Collect NAV history
+    console.log('[Admin] Starting NAV collection...');
+    try {
+      const out1 = execSync('node scripts/collectNavHistory.js', { 
+        timeout: 300000, encoding: 'utf8',
+        cwd: path.join(__dirname)
+      });
+      console.log('[Admin] NAV collection output:', out1.substring(out1.length - 200));
+    } catch (e) {
+      console.log('[Admin] NAV collection error:', e.message.substring(0, 200));
+    }
+    
+    // Step 2: Compute metrics
+    console.log('[Admin] Starting metrics computation...');
+    try {
+      const out2 = execSync('node scripts/runMetricsNow.js', { 
+        timeout: 120000, encoding: 'utf8',
+        cwd: path.join(__dirname)
+      });
+      console.log('[Admin] Metrics output:', out2.substring(out2.length - 200));
+    } catch (e) {
+      console.log('[Admin] Metrics error:', e.message.substring(0, 200));
+    }
+    
+    res.json({ success: true, message: 'NAV collection and metrics computation completed' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});

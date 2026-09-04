@@ -90,14 +90,15 @@ var colSets={
     {key:'m3',label:'3 Month %'},
     {key:'m6',label:'6 Month %'},
     {key:'y1',label:'1 Year %'},
+    {key:'alpha',label:'Alpha 1Yr'},
+    {key:'beta',label:'Beta 1Yr'},
+    {key:'sharpe',label:'Sharpe 1Yr'},
+    {key:'sortino',label:'Sortino 1Yr'},
+    {key:'treynor',label:'Treynor 1Yr'},
+    {key:'stddev',label:'Std Dev 1Yr'},
     {key:'aum',label:'AUM (₹ Cr)'},
-    {key:'aumChg',label:'AUM Change'},
-    {key:'aumChg3m',label:'AUM 3M Chg'},
-    {key:'aumChg1y',label:'AUM 1Y Chg'},
-    {key:'investors',label:'Investors'},
-    {key:'invChg',label:'Inv. Change'},
     {key:'ter',label:'Expense Ratio'},
-    {key:'m3y',label:'3 Year %'}
+    {key:'investors',label:'Investors'}
   ]
 };
 
@@ -121,7 +122,7 @@ function getFiltered(){
 function cellHTML(fund,key){
   switch(key){
     case'name':
-      return '<td><div class="fundcell"><span class="star">&#9734;</span><div style="display:flex;flex-direction:column;gap:2px;"><span class="fundname">'+cleanName(fund.schemeName)+'</span><span class="fundtag">Dir \u00b7 Growth \u00b7 '+(fund.amc||'')+'</span></div></div></td>';
+      return '<td><div class="fundcell"><span class="star">&#9734;</span><div style="display:flex;flex-direction:column;gap:2px;"><span class="fundname">'+cleanName(fund.schemeName)+'</span><span class="fundtag">Dir · Growth · '+(fund.amc||'')+'</span></div></div></td>';
     case'score':{
       var sc=fund._scores?fund._scores.total:50;
       var cl=sc>=75?'var(--up)':sc>=60?'#D98A2B':'var(--down)';
@@ -140,18 +141,20 @@ function cellHTML(fund,key){
     case'm3':return '<td>'+pctH(fund.returns?fund.returns['3M']:null)+'</td>';
     case'm6':return '<td>'+pctH(fund.returns?fund.returns['6M']:null)+'</td>';
     case'y1':return '<td>'+pctH(fund.returns?fund.returns['1Y']:null)+'</td>';
-case'm3y':return '<td>'+pctH(fund.returns?fund.returns['3Y']:null)+'</td>';
-case'm3y':return '<td>'+pctH(fund.returns?fund.returns['3Y']:null)+'</td>';
-case'aumChg3m':{var v3=fund.aumChange3M;return '<td>'+(v3!=null?(v3>0?'+':'')+Math.round(v3)+' Cr':'--')+'</td>';}
-case'aumChg1y':{var v4=fund.aumChange1Y;return '<td>'+(v4!=null?(v4>0?'+':'')+Math.round(v4)+' Cr':'--')+'</td>';}
+    case'm3y':return '<td>'+pctH(fund.returns?fund.returns['3Y']:null)+'</td>';
     case'aumChg':{var v=fund.aumChange1M;return '<td>'+(v!=null?(v>0?'+':'')+Math.round(v)+' Cr':'--')+'</td>';}
-case'aumChg3m':{var v3=fund.aumChange3M;return '<td>'+(v3!=null?(v3>0?'+':'')+Math.round(v3)+' Cr':'--')+'</td>';}
-case'aumChg1y':{var v4=fund.aumChange1Y;return '<td>'+(v4!=null?(v4>0?'+':'')+Math.round(v4)+' Cr':'--')+'</td>';}
+    case'aumChg3m':{var v3=fund.aumChange3M;return '<td>'+(v3!=null?(v3>0?'+':'')+Math.round(v3)+' Cr':'--')+'</td>';}
+    case'aumChg1y':{var v4=fund.aumChange1Y;return '<td>'+(v4!=null?(v4>0?'+':'')+Math.round(v4)+' Cr':'--')+'</td>';}
     case'invChg':{var v2=fund.investorChange1M;return '<td>'+(v2!=null?(v2>0?'+':'')+Math.round(v2):'--')+'</td>';}
+    case'alpha':{var m=fund._metrics;return '<td>'+(m&&m.alpha_1y!=null?pctH(m.alpha_1y):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'beta':{var m2=fund._metrics;return '<td>'+(m2&&m2.beta_1y!=null?m2.beta_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'sharpe':{var m3=fund._metrics;return '<td>'+(m3&&m3.sharpe_1y!=null?m3.sharpe_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'sortino':{var m4=fund._metrics;return '<td>'+(m4&&m4.sortino_1y!=null?m4.sortino_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'treynor':{var m5=fund._metrics;return '<td>'+(m5&&m5.treynor_1y!=null?m5.treynor_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'stddev':{var m6=fund._metrics;return '<td>'+(m6&&m6.stdDev_1y!=null?m6.stdDev_1y.toFixed(2)+'%':'<span style="color:var(--muted)">--</span>')+'</td>';}
     default:return '<td></td>';
   }
 }
-
 function render(){
   renderPageHead();renderCatCards();renderChips();renderTabs();
   var cols=colSets[S.tab]||colSets.Summary;
@@ -230,7 +233,7 @@ fetch('/api/mutual-funds/all-schemes-summary?limit=5000')
   .then(function(data){
     if(data&&data.success&&data.schemes){
       AF=data.schemes;
-      AF.forEach(function(f){f._scores=computeScores(f);});
+      AF.forEach(function(f){f._scores=computeScores(f);f._metrics=_metricsMap[f.id]||null;});
       console.log('[Screener] Loaded '+AF.length+' schemes');
     }else{AF=[];}
     render();
@@ -238,3 +241,18 @@ fetch('/api/mutual-funds/all-schemes-summary?limit=5000')
   .catch(function(err){console.error('[Screener] Error:',err);AF=[];render();});
 
 })();
+
+/* ── Risk Metrics Integration ── */
+var _metricsMap = {};
+
+function loadMetrics() {
+  return fetch('/api/mutual-funds/metrics')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.success && data.metrics) {
+        _metricsMap = data.metrics;
+        console.log('[Screener] Loaded metrics for ' + Object.keys(_metricsMap).length + ' schemes');
+      }
+    })
+    .catch(function(e) { console.log('[Screener] Metrics not available yet'); });
+}
