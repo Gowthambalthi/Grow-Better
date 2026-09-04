@@ -85,15 +85,19 @@ var colSets={
   ],
   'Risk vs Reward':[
     {key:'name',label:'Fund Name',sortable:false},
+    {key:'score',label:'Score / 100'},
     {key:'m1',label:'1 Month %'},
     {key:'m3',label:'3 Month %'},
     {key:'m6',label:'6 Month %'},
     {key:'y1',label:'1 Year %'},
-    {key:'aum',label:'AUM (\u20b9 Cr)'},
-    {key:'ter',label:'Expense Ratio'},
-    {key:'investors',label:'Investors'},
+    {key:'aum',label:'AUM (₹ Cr)'},
     {key:'aumChg',label:'AUM Change'},
-    {key:'invChg',label:'Investor Change'}
+    {key:'aumChg3m',label:'AUM 3M Chg'},
+    {key:'aumChg1y',label:'AUM 1Y Chg'},
+    {key:'investors',label:'Investors'},
+    {key:'invChg',label:'Inv. Change'},
+    {key:'ter',label:'Expense Ratio'},
+    {key:'m3y',label:'3 Year %'}
   ]
 };
 
@@ -136,7 +140,13 @@ function cellHTML(fund,key){
     case'm3':return '<td>'+pctH(fund.returns?fund.returns['3M']:null)+'</td>';
     case'm6':return '<td>'+pctH(fund.returns?fund.returns['6M']:null)+'</td>';
     case'y1':return '<td>'+pctH(fund.returns?fund.returns['1Y']:null)+'</td>';
+case'm3y':return '<td>'+pctH(fund.returns?fund.returns['3Y']:null)+'</td>';
+case'm3y':return '<td>'+pctH(fund.returns?fund.returns['3Y']:null)+'</td>';
+case'aumChg3m':{var v3=fund.aumChange3M;return '<td>'+(v3!=null?(v3>0?'+':'')+Math.round(v3)+' Cr':'--')+'</td>';}
+case'aumChg1y':{var v4=fund.aumChange1Y;return '<td>'+(v4!=null?(v4>0?'+':'')+Math.round(v4)+' Cr':'--')+'</td>';}
     case'aumChg':{var v=fund.aumChange1M;return '<td>'+(v!=null?(v>0?'+':'')+Math.round(v)+' Cr':'--')+'</td>';}
+case'aumChg3m':{var v3=fund.aumChange3M;return '<td>'+(v3!=null?(v3>0?'+':'')+Math.round(v3)+' Cr':'--')+'</td>';}
+case'aumChg1y':{var v4=fund.aumChange1Y;return '<td>'+(v4!=null?(v4>0?'+':'')+Math.round(v4)+' Cr':'--')+'</td>';}
     case'invChg':{var v2=fund.investorChange1M;return '<td>'+(v2!=null?(v2>0?'+':'')+Math.round(v2):'--')+'</td>';}
     default:return '<td></td>';
   }
