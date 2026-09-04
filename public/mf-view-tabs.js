@@ -102,7 +102,7 @@
     return null;
   }
 
-  function tryInject(){
+  function tryInject(){ console.log("[VTab] tryInject: injected="+_injected+" grid="+!!document.getElementById("mfSchemesGrid")+" rows="+(document.getElementById("mfSchemesGrid")||{}).querySelectorAll("tr.mf-table-row").length+" schemes="+(_lastSchemes.length));
     if(_injected) return;
     var grid=document.getElementById('mfSchemesGrid');
     if(!grid) return;
@@ -112,11 +112,11 @@
     var schemes=extractSchemesFromDOM();
     if(schemes.length===0) return;
 
-    _lastSchemes=schemes;
+    _lastSchemes=schemes; console.log("[VTab] schemes loaded:", _lastSchemes.length);
     var tableWrap=findTableWrapper(grid);
-    if(!tableWrap) return;
+    if(!tableWrap){console.log("[VTab] tableWrap NOT FOUND");return;}
 
-    _injected=true;
+    _injected=true; console.log("[VTab] TABS INJECTED!");
 
     // Create view tab buttons
     var tabsDiv=document.createElement('div');
