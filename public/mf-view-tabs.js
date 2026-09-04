@@ -1,5 +1,5 @@
 // MF View Tabs - Summary / Ranks / Risk vs Reward
-// Uses only MutationObserver - no override of renderMfGrid needed
+// Extracts scheme data directly from rendered DOM table rows
 (function(){
   if(window._mfTabsInit) return;
   window._mfTabsInit = true;
@@ -9,7 +9,7 @@
   var _metricsData = {};
   var _injected = false;
 
-  // Fetch metrics
+  // Fetch metrics for Risk vs Reward tab
   fetch('/api/mutual-funds/metrics').then(function(r){return r.json();}).then(function(d){
     if(d&&d.success&&d.metrics) _metricsData=d.metrics;
   }).catch(function(){});
@@ -39,6 +39,54 @@
   function thL(l){return'<th style="'+tH()+'text-align:left;">'+l+'</th>';}
   function thC(l){return'<th style="'+tH()+'text-align:center;">'+l+'</th>';}
   function rowStart(s){var sid=(s.id||'').replace(/'/g,"\\\\");return'<tr class="vtab-row" data-cat="'+(s.category||'')+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\x27'+sid+'\x27)">';}
+
+  // Extract scheme objects from the rendered table rows and onclick handlers
+  function extractFromTableRows(){
+    var grid=document.getElementById('mfSchemesGrid');
+    if(!grid) return [];
+    var rows=grid.querySelectorAll('tr.mf-table-row');
+    if(rows.length===0) return [];
+    // Read onclick to get scheme ID, read cells for data
+    var schemes=[];
+    rows.forEach(function(row){
+      var onclick=row.getAttribute('onclick')||'';
+      var idMatch=onclick.match(/openMfDetailFromTable\('([^']+)'\)/);
+      if(!idMatch) return;
+      var id=idMatch[1];
+      var cells=row.querySelectorAll('td');
+      if(cells.length<8) return;
+      // cells: [star, name, 1M, 3M, 6M, 1Y, AUM, ChangeAUM, Investors, InvChange, Rating]
+      var nameDiv=cells[1].querySelector('div');
+      var schemeName=nameDiv?nameDiv.textContent.trim():'';
+      var catDiv=cells[1].querySelectorAll('div');
+      var category=catDiv.length>1?catDiv[1].textContent.trim():'';
+      // Parse values from cells
+      function parsePct(td){
+        var txt=td.textContent.trim().replace(/[+,%]/g,'');
+        var n=parseFloat(txt);
+        return isNaN(n)?null:n;
+      }
+      function parseAum(td){
+        var txt=td.textContent.trim().replace(/[₹Cr,]/g,'').trim();
+        var n=parseFloat(txt);
+        return isNaN(n)?null:n;
+      }
+      function parseInv(td){
+        var txt=td.textContent.trim();
+        if(txt.indexOf('L')!==-1) return parseFloat(txt)*100000;
+        return parseInt(txt.replace(/,/g,''))||null;
+      }
+      var r1M=cells[2]?parsePct(cells[2]):null;
+      var r3M=cells[3]?parsePct(cells[3]):null;
+      var r6M=cells[4]?parsePct(cells[4]):null;
+      var r1Y=cells[5]?parsePct(cells[5]):null;
+      var aumCr=cells[6]?parseAum(cells[6]):null;
+      var investorCount=cells[8]?parseInv(cells[8]):null;
+      var rating=cells[10]?parseInt(cells[10].textContent.trim()):null;
+      schemes.push({id:id,schemeName:schemeName,category:category,returns:{'1M':r1M,'3M':r3M,'6M':r6M,'1Y':r1Y},aumCr:aumCr,investorCount:investorCount,confidenceScore:rating,expenseRatio:null,investorChange1M:null,topHoldings:[]});
+    });
+    return schemes;
+  }
 
   function buildSummary(schemes){
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
@@ -79,44 +127,42 @@
     return h+'</tbody></table>';
   }
 
-  // Extract scheme data from the existing table rows (built by _renderMfGridBody)
-  function extractSchemesFromDOM(){
-    var grid=document.getElementById('mfSchemesGrid');
-    if(!grid) return [];
-    var rows=grid.querySelectorAll('tr.mf-table-row');
-    if(rows.length===0) return [];
-    // We need the original data objects, not DOM parsing
-    // The data is in window._mfLastSchemes
-    return window._mfLastSchemes||[];
-  }
-
-  function findTableWrapper(grid){
-    // The table wrapper is a div containing overflow-x:auto with a table inside
-    var divs=grid.querySelectorAll('div');
-    for(var i=0;i<divs.length;i++){
-      var d=divs[i];
-      if(d.querySelector('table')&&d.querySelector('thead')&&d.getAttribute('style')&&d.getAttribute('style').indexOf('overflow-x:auto')!==-1){
-        return d;
-      }
-    }
-    return null;
-  }
-
-  function tryInject(){ console.log("[VTab] tryInject: injected="+_injected+" grid="+!!document.getElementById("mfSchemesGrid")+" rows="+(document.getElementById("mfSchemesGrid")||{}).querySelectorAll("tr.mf-table-row").length+" schemes="+(_lastSchemes.length));
+  function tryInject(){
     if(_injected) return;
     var grid=document.getElementById('mfSchemesGrid');
     if(!grid) return;
     var rows=grid.querySelectorAll('tr.mf-table-row');
     if(rows.length===0) return;
 
-    var schemes=extractSchemesFromDOM();
+    // Extract data from rendered table rows
+    var schemes=extractFromTableRows();
     if(schemes.length===0) return;
 
-    _lastSchemes=schemes; console.log("[VTab] schemes loaded:", _lastSchemes.length);
-    var tableWrap=findTableWrapper(grid);
-    if(!tableWrap){console.log("[VTab] tableWrap NOT FOUND");return;}
+    // Also try window._mfLastSchemes (more complete data)
+    if(window._mfLastSchemes && window._mfLastSchemes.length > schemes.length){
+      schemes=window._mfLastSchemes;
+    }
+    _lastSchemes=schemes;
 
-    _injected=true; console.log("[VTab] TABS INJECTED!");
+    // Find table wrapper
+    var tableWrap=null;
+    var divs=grid.querySelectorAll('div');
+    for(var i=0;i<divs.length;i++){
+      var st=divs[i].getAttribute('style')||'';
+      if(divs[i].querySelector('table')&&st.indexOf('overflow-x')!==-1){
+        tableWrap=divs[i];break;
+      }
+    }
+    if(!tableWrap){
+      for(var j=0;j<divs.length;j++){
+        if(divs[j].querySelector('table')&&divs[j].querySelector('thead')){
+          tableWrap=divs[j];break;
+        }
+      }
+    }
+    if(!tableWrap) return;
+
+    _injected=true;
 
     // Create view tab buttons
     var tabsDiv=document.createElement('div');
@@ -148,18 +194,16 @@
     tableWrap.innerHTML=buildSummary(_lastSchemes);
   }
 
-  // Watch for grid population using MutationObserver
-  var obs=new MutationObserver(function(){
-    tryInject();
-  });
+  // Watch for grid population
+  var obs=new MutationObserver(function(){ tryInject(); });
   var g=document.getElementById('mfSchemesGrid');
   if(g) obs.observe(g,{childList:true,subtree:true});
 
-  // Also try at intervals in case observer misses it
+  // Also poll every 1s for up to 60s
   var attempts=0;
   var timer=setInterval(function(){
     attempts++;
     tryInject();
-    if(_injected||attempts>30) clearInterval(timer);
-  },500);
+    if(_injected||attempts>60) clearInterval(timer);
+  },1000);
 })();
