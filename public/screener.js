@@ -4,7 +4,7 @@ var AF=[];
 var cats=[{k:'all',n:'All Funds'},{k:'tax',n:'Tax Savings (ELSS)'},{k:'large',n:'Large-Cap Funds'},{k:'mid',n:'Mid-Cap Funds'},{k:'small',n:'Small-Cap Funds'},{k:'index',n:'Index Funds'},{k:'money',n:'Money Market Funds'}];
 var segs=['All','Equity','Hybrid','Commodities'];
 var tabNames=['Summary','Ranks','Risk vs Reward'];
-var catCards=[{k:'large',n:'Large-Cap Funds',d1:'Established Companies',d2:'Lower Risk With Consistent Returns',cl:'#00B386'},{k:'mid',n:'Flexi Cap Funds',d1:'Moderate Risk',d2:'Long-term (> 5 years) Investments',cl:'#3B82F6'},{k:'small',n:'Small-Cap Funds',d1:'High Growth Potential',d2:'Higher Volatility & Risk',cl:'#F59E0B'},{k:'index',n:'Index Funds',d1:'Passive Tracking',d2:'Low Cost, Market Returns',cl:'#8B5CF6'},{k:'tax',n:'Tax Saver (ELSS)',d1:'Section 80C Benefits',d2:'3-Year Lock-in Period',cl:'#EC4899'}];
+var catCards=[{k:'large',n:'Large-Cap Funds',d1:'Established Companies',d2:'Lower Risk With Consistent Returns',cl:'#00B386'},{k:'mid',n:'Flexi Cap Funds',d1:'Moderate Risk',d2:'Long-term (> 5 years) Investments',cl:'#3B82F6'},{k:'small',n:'Small-Cap Funds',d1:'High Growth Potential',d2:'Higher Volatility & Risk',cl:'#F59E0B'},{k:'index',n:'Index Funds',d1:'Passive Tracking',d2:'Low Cost, Market Returns',cl:'#8B5CF6'},{k:'tax',n:'Tax Saver (ELSS)',d1:'Section 80C Benefits',d2:'3-Year Lock-in Period',cl:'#EC4899'},{k:'money',n:'Money Market Funds',d1:'Low Risk Liquid Funds',d2:'Short-term Parking',cl:'#10B981'}];
 
 function fmtCr(n){return n!=null?n.toLocaleString('en-IN',{maximumFractionDigits:0}):'--';}
 function fmtNum(n){return n!=null?n.toLocaleString('en-IN'):'--';}
@@ -28,22 +28,6 @@ function renderCatCards(){
   }).join('');
   el.querySelectorAll('.catcard').forEach(function(card){
     card.addEventListener('click',function(){S.cat=card.dataset.key;render();});
-  });
-}
-
-function renderRail(){
-  var rail=document.getElementById('rail');if(!rail)return;
-  var counts={};cats.forEach(function(c){counts[c.k]=0;});
-  AF.forEach(function(f){var k=mapCat(f.category);if(counts[k]!==undefined)counts[k]++;counts.all++;});
-  rail.innerHTML=cats.map(function(c){
-    var active=S.cat===c.k?'active':'';
-    return '<div class="cat '+active+'" data-key="'+c.k+'">'+
-      '<div class="cat-name">'+c.n+'</div>'+
-      '<div class="cat-count">'+counts[c.k]+' funds</div>'+
-    '</div>';
-  }).join('');
-  rail.querySelectorAll('.cat').forEach(function(el){
-    el.addEventListener('click',function(){S.cat=el.dataset.key;render();});
   });
 }
 
@@ -159,7 +143,7 @@ function cellHTML(fund,key){
 }
 
 function render(){
-  renderPageHead();renderCatCards();renderRail();renderChips();renderTabs();
+  renderPageHead();renderCatCards();renderChips();renderTabs();
   var cols=colSets[S.tab]||colSets.Summary;
   var thead=document.getElementById('theadRow');
   if(thead){

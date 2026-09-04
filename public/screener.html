@@ -20,14 +20,14 @@ html,body{margin:0;width:100%;background:var(--paper);color:var(--ink);font-fami
 .pagehead{margin:20px 0 18px;}
 .pagehead h1{font-family:Newsreader,serif;font-weight:600;font-size:26px;margin:0 0 6px;letter-spacing:-0.01em;}
 .pagehead p{font-size:13.5px;color:var(--muted);margin:0;max-width:640px;line-height:1.5;}
-.rail{display:flex;gap:0;border:1px solid var(--line);background:var(--surface);overflow-x:auto;}
-.cat{flex:1 0 128px;min-width:128px;padding:14px 14px 12px;cursor:pointer;border-right:1px solid var(--line);position:relative;transition:background .12s;}
-.cat:last-child{border-right:none;}
-.cat:hover{background:var(--brand-soft);}
-.cat.active{background:var(--brand-soft);}
-.cat.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--brand);}
-.cat-name{font-size:13.5px;font-weight:500;line-height:1.25;}
-.cat-count{font-size:11px;color:var(--muted);margin-top:5px;font-family:IBM Plex Mono,monospace;}
+
+
+
+
+
+
+
+
 .segrow{display:flex;align-items:center;justify-content:space-between;margin:16px 0 18px;flex-wrap:wrap;gap:12px;}
 .chips{display:flex;gap:8px;}
 .chip{font-size:12.5px;padding:6px 13px;border-radius:14px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--muted);transition:all .12s;}
@@ -87,8 +87,7 @@ tbody tr{cursor:pointer;}
     <p id="pageDesc">Compare all mutual funds in this category based on Checklist Score, AUM, Net Expense Ratio and Risk vs Reward.</p>
   </div>
   <div class="catcards" id="catCards"></div>
-  <div class="rail" id="rail"></div>
-  <div class="segrow">
+    <div class="segrow">
     <div class="chips" id="chips"></div>
     <div class="search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
