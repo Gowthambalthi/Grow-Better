@@ -92,12 +92,12 @@
   }
   
   function getTableWrap(){
+    var w=document.querySelector('[data-mf-table]');
+    if(w) return w;
+    // Fallback
     var grid=document.getElementById('mfSchemesGrid');
     if(!grid)return null;
     var divs=grid.querySelectorAll('div');
-    for(var i=0;i<divs.length;i++){
-      if(divs[i].querySelector('table') && divs[i].style.borderRadius && divs[i].style.borderRadius.indexOf('12px')!==-1) return divs[i];
-    }
     for(var j=0;j<divs.length;j++){
       if(divs[j].querySelector('table') && divs[j].style.overflow) return divs[j];
     }
