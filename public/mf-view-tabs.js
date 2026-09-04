@@ -71,12 +71,12 @@
   // RISK vs REWARD: Alpha 1Y/3Y/5Y/10Y, Beta 1Y/3Y/5Y/10Y, Sharpe 1Y/3Y/5Y/10Y, Sortino 1Y/3Y/5Y/10Y, Treynor 1Y/3Y/5Y/10Y, StdDev 1Y/3Y/5Y/10Y
   function buildRiskTable(){
     var mc=[
-      ['alpha_1y','Alpha 1Yr'],['alpha_3y','Alpha 3Yr'],['alpha_5y','Alpha 5Yr'],['alpha_10y','Alpha 10Yr'],
-      ['beta_1y','Beta 1Yr'],['beta_3y','Beta 3Yr'],['beta_5y','Beta 5Yr'],['beta_10y','Beta 10Yr'],
-      ['sharpe_1y','Sharpe Ratio 1Yr'],['sharpe_3y','Sharpe Ratio 3Yr'],['sharpe_5y','Sharpe Ratio 5Yr'],['sharpe_10y','Sharpe Ratio 10Yr'],
-      ['sortino_1y','Sortino Ratio 1Yr'],['sortino_3y','Sortino Ratio 3Yr'],['sortino_5y','Sortino Ratio 5Yr'],['sortino_10y','Sortino Ratio 10Yr'],
-      ['treynor_1y','Treynor Ratio 1Yr'],['treynor_3y','Treynor Ratio 3Yr'],['treynor_5y','Treynor Ratio 5Yr'],['treynor_10y','Treynor Ratio 10Yr'],
-      ['stdDev_1y','Std Dev 1Yr'],['stdDev_3y','Std Dev 3Yr'],['stdDev_5y','Std Dev 5Yr'],['stdDev_10y','Std Dev 10Yr']
+      ['alpha_1m','Alpha 1M'],['alpha_3m','Alpha 3M'],['alpha_6m','Alpha 6M'],['alpha_1y','Alpha 1Y'],
+      ['beta_1m','Beta 1M'],['beta_3m','Beta 3M'],['beta_6m','Beta 6M'],['beta_1y','Beta 1Y'],
+      ['sharpe_1m','Sharpe 1M'],['sharpe_3m','Sharpe 3M'],['sharpe_6m','Sharpe 6M'],['sharpe_1y','Sharpe 1Y'],
+      ['sortino_1m','Sortino 1M'],['sortino_3m','Sortino 3M'],['sortino_6m','Sortino 6M'],['sortino_1y','Sortino 1Y'],
+      ['treynor_1m','Treynor 1M'],['treynor_3m','Treynor 3M'],['treynor_6m','Treynor 6M'],['treynor_1y','Treynor 1Y'],
+      ['stdDev_1m','StdDev 1M'],['stdDev_3m','StdDev 3M'],['stdDev_6m','StdDev 6M'],['stdDev_1y','StdDev 1Y']
     ];
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:3000px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
     h+='<th style="'+tH+'width:28px;"></th>'+thL('Scheme name');
