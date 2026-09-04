@@ -113,12 +113,10 @@
       b.style.borderColor=a?'#00B386':'var(--line)';
     });
     var wrap=getTableWrap();
-    if(tab==='Summary') {
-      if(wrap) wrap.innerHTML='';
-      if(_origRender) _origRender(_schemes);
-    } else if(wrap) {
-      wrap.innerHTML=tab==='Ranks'?buildRanksTable():buildRiskTable();
-    }
+    if(!wrap) return;
+    if(tab==='Summary') wrap.innerHTML=buildSummaryTable();
+    else if(tab==='Ranks') wrap.innerHTML=buildRanksTable();
+    else wrap.innerHTML=buildRiskTable();
   }
   
   var obs=new MutationObserver(function(){
