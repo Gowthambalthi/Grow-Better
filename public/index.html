@@ -2057,19 +2057,7 @@
       var _mfActiveAmc = 'all';
       var _mfActiveCategory = 'all';
       var _mfSearchText = '';
-      var _mfViewTab = 'Summary';
-      var _mfMetrics = {};
-      function loadMfMetrics() {
-        fetch('/api/mutual-funds/metrics').then(function(r){return r.json();}).then(function(d){
-          if(d&&d.success&&d.metrics) _mfMetrics=d.metrics;
-        }).catch(function(){});
-      }
-      loadMfMetrics();
-      function setMfViewTab(tab) {
-        _mfViewTab = tab;
-        renderMfGrid(window._mfLastSchemes || []);
-      }
-      function filterMfAmc(amc) {
+            function filterMfAmc(amc) {
         _mfActiveAmc = amc || 'all';
         var btn = document.getElementById('mfAmcBtn');
         if (btn) btn.innerHTML = (amc === 'all' ? 'All AMCs' : amc) + ' <span style="font-size:8px;">\u25BC</span>';
@@ -2263,14 +2251,9 @@ function _renderMfGridBody(grid, schemes) {
     var amcS=Object.entries(amcC).sort(function(a,b){return b[1]-a[1];});
     var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
-    var viewTabHtml = '<div style="display:flex;gap:6px;margin:12px 0;align-items:center;">' +
-      ['Summary','Ranks','Risk vs Reward'].map(function(tb){
-        var active = _mfViewTab === tb;
-        return '<button onclick="setMfViewTab('' + tb + '')" style="padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(active?'#00B386':'var(--line)')+';background:'+(active?'#00B386':'var(--bg-input)')+';color:'+(active?'#fff':'var(--text-muted)')+';transition:all .15s;">'+tb+'</button>';
-      }).join('') + '</div>';
 var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
     var searchBox='<div style="margin-left:auto;"><input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
-    grid.innerHTML=sum+_catCardsHtml+catTabs+viewTabHtml+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=sum+_catCardsHtml+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       + '<th style="'+tH+'width:28px;"></th><th style="'+tH+'text-align:left;cursor:pointer;" onclick="window._mfSort(\x27name\x27)">Scheme name'+mfSortArrow('name')+'</th>'
       + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x271M\x27)">1M'+mfSortArrow('1M')+'</th>'
       + '<th style="'+tH+'text-align:right;cursor:pointer;" onclick="window._mfSort(\x273M\x27)">3M'+mfSortArrow('3M')+'</th>'
@@ -3693,7 +3676,7 @@ var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAm
   </script>
   <script type="module" src="/js/app.js?v=20260831_v201">
 </script>
-<script src="/mf-view-tabs.js"></script>
+
 
 </body>
 </html>
