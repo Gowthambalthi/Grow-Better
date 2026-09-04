@@ -9,6 +9,7 @@
     if(d&&d.success&&d.metrics) _metrics=d.metrics;
   }).catch(function(){});
   
+  // Store original render
   var _origRender = window.renderMfGrid;
   window.renderMfGrid = function(schemes) {
     _schemes = schemes || [];
@@ -27,22 +28,22 @@
   }
   
   var tH='padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;';
-  function th(label){return '<th style="'+tH+'text-align:right;">'+label+'</th>';}
-  function thL(label){return '<th style="'+tH+'text-align:left;">'+label+'</th>';}
-  function thC(label){return '<th style="'+tH+'text-align:center;">'+label+'</th>';}
-  
+  function th(l){return'<th style="'+tH+'text-align:right;">'+l+'</th>';}
+  function thL(l){return'<th style="'+tH+'text-align:left;">'+l+'</th>';}
+  function thC(l){return'<th style="'+tH+'text-align:center;">'+l+'</th>';}
   function cellPct(v){if(v==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?'#00B386':'#EB5B56';return'<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?'+':'')+v.toFixed(2)+'%</td>';}
   function cellAum(v){return'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(v!=null?'\u20b9'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:0})+' Cr':'-')+'</td>';}
   function cellAumChg(ch){if(!ch||ch.changePct==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var p=ch.changePct,cl=p>=0?'#00B386':'#EB5B56',a=p>=0?'\u25B2':'\u25BC';return'<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+cl+';font-weight:700;">'+a+' \u20b9'+Math.abs(ch.change).toLocaleString('en-IN')+' Cr</span> <span style="color:var(--text-muted);font-size:10px;">('+(p>=0?'+':'')+p.toFixed(1)+'%)</span></td>';}
   function cellInv(v){return'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:600;white-space:nowrap;">'+(v!=null?(v>10000?(v/100000).toFixed(2)+'L':v.toLocaleString('en-IN')):'-')+'</td>';}
   function cellInvChg(ch){if(!ch||ch.change==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var p=ch.changePct||0,cl=ch.change>=0?'#00B386':'#EB5B56',a=ch.change>=0?'\u25B2':'\u25BC',vs=ch.change>=10000?(ch.change/100000).toFixed(1)+'L':ch.change.toLocaleString('en-IN');return'<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+cl+';font-weight:700;">'+a+' '+vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(p>=0?'+':'')+p.toFixed(1)+'%)</span></td>';}
   function cellRating(sc){var bg=sc>=80?'rgba(0,179,134,0.2)':sc>=60?'rgba(245,158,11,0.2)':'rgba(235,91,86,0.2)';var fg=sc>=80?'#00B386':sc>=60?'#F59E0B':'#EB5B56';return'<td style="padding:10px 12px;text-align:center;"><span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:'+bg+';color:'+fg+';font-size:11px;font-weight:800;">'+sc+'</span></td>';}
-  function cellName(s){var nm=s.schemeName||'',sid=(s.id||'').replace(/'/g,'\\\\');return'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);max-width:320px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+(s.category||'')+'</div></td>';}
-  function cellMetric(v,key){if(v==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">--</td>';if(key.indexOf('alpha')!==-1){var sg=v>0?'+':'';var cl=v>=0?'#00B386':'#EB5B56';return'<td style="padding:10px 12px;text-align:right;font-size:12px;color:'+cl+';font-weight:600;">'+sg+(v*100).toFixed(2)+'%</td>';}if(key.indexOf('stdDev')!==-1)return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+(v*100).toFixed(2)+'%</td>';return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+v.toFixed(2)+'</td>';}
+  function cellName(s){var nm=s.schemeName||'';return'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);max-width:320px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+(s.category||'')+'</div></td>';}
+  function cellMetric(v,k){if(v==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">--</td>';if(k.indexOf('alpha')!==-1){var sg=v>0?'+':'';var cl=v>=0?'#00B386':'#EB5B56';return'<td style="padding:10px 12px;text-align:right;font-size:12px;color:'+cl+';font-weight:600;">'+sg+(v*100).toFixed(2)+'%</td>';}if(k.indexOf('stdDev')!==-1)return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+(v*100).toFixed(2)+'%</td>';return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+v.toFixed(2)+'</td>';}
   function cellTer(v){return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+(v!=null?v.toFixed(2)+'%':'-')+'</td>';}
   
-  function baseRowStart(s){
-    return'<tr class="mf-table-row" data-cat="'+(s.category||'')+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\''+(s.id||'').replace(/'/g,'\\\\')+'\')"><td style="padding:10px 8px;width:28px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>';
+  function rowStart(s){
+    var sid=(s.id||'').replace(/'/g,'\\\\');
+    return'<tr class="mf-table-row" data-cat="'+(s.category||'')+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\''+sid+'\')"><td style="padding:10px 8px;width:28px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>';
   }
   function baseCells(s){
     var sc=calcScore(s);
@@ -57,7 +58,7 @@
     h+=baseThead()+thC('Score /100')+th('Perf /25')+th('Portfolio /25')+th('Operational /25')+th('Reward /25')+'</tr></thead><tbody>';
     _schemes.forEach(function(s){
       var sc=calcScore(s);
-      h+=baseRowStart(s)+baseCells(s)+cellRating(sc.total)+'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.perf+'/25</td><td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.port+'/25</td><td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.oper+'/25</td><td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.risk+'/25</td></tr>';
+      h+=rowStart(s)+baseCells(s)+cellRating(sc.total)+'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.perf+'/25</td><td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.port+'/25</td><td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.oper+'/25</td><td style="padding:10px 12px;text-align:right;font-size:12px;">'+sc.risk+'/25</td></tr>';
     });
     return h+'</tbody></table>';
   }
@@ -70,34 +71,55 @@
     h+=th('Expense Ratio')+'</tr></thead><tbody>';
     _schemes.forEach(function(s){
       var m=_metrics[s.id]||{};
-      h+=baseRowStart(s)+baseCells(s);
+      h+=rowStart(s)+baseCells(s);
       mc.forEach(function(c){h+=cellMetric(m[c[0]],c[0]);});
       h+=cellTer(s.expenseRatio)+'</tr>';
     });
     return h+'</tbody></table>';
   }
   
+  // Find the table container (the div with overflow-x:auto that contains the table)
+  function getTableWrap(){
+    var grid=document.getElementById('mfSchemesGrid');
+    if(!grid)return null;
+    // Find the specific div that wraps the table - it has border-radius:12px and overflow:hidden
+    var divs=grid.querySelectorAll('div');
+    for(var i=0;i<divs.length;i++){
+      if(divs[i].querySelector('table') && divs[i].style.borderRadius && divs[i].style.borderRadius.indexOf('12px')!==-1){
+        return divs[i];
+      }
+    }
+    // Fallback: find div containing table with overflow
+    for(var j=0;j<divs.length;j++){
+      if(divs[j].querySelector('table') && divs[j].style.overflow){
+        return divs[j];
+      }
+    }
+    return null;
+  }
+  
   function switchTab(tab) {
     _currentTab = tab;
+    // Update button styles
     document.querySelectorAll('.mf-vtab').forEach(function(b){
       var a=b.getAttribute('data-vtab')===tab;
       b.style.background=a?'#00B386':'var(--bg-input)';
       b.style.color=a?'#fff':'var(--text-muted)';
       b.style.borderColor=a?'#00B386':'var(--line)';
     });
+    
+    var wrap=getTableWrap();
+    
     if(tab==='Summary') {
-      var grid=document.getElementById('mfSchemesGrid');
-      if(grid){var w=grid.querySelector('div[style*="overflow"]');if(w)w.innerHTML='';}
+      // Re-render original table
+      if(wrap) wrap.innerHTML='';
       if(_origRender) _origRender(_schemes);
-    } else {
-      var grid2=document.getElementById('mfSchemesGrid');
-      if(!grid2)return;
-      var w2=grid2.querySelector('div[style*="overflow"]');
-      if(!w2)return;
-      w2.innerHTML=tab==='Ranks'?buildRanksTable():buildRiskTable();
+    } else if(wrap) {
+      wrap.innerHTML=tab==='Ranks'?buildRanksTable():buildRiskTable();
     }
   }
   
+  // Inject tab buttons via MutationObserver
   var obs=new MutationObserver(function(){
     var grid=document.getElementById('mfSchemesGrid');
     if(!grid||document.querySelector('.mf-vtab')) return;
