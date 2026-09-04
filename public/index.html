@@ -2087,6 +2087,8 @@
           tabs[t].style.border = isActive ? '2px solid #00B386' : '1px solid var(--line)';
         }
         applyMfFilters();
+        // Re-render category cards to show active state
+        renderMfGrid(window._mfLastSchemes || []);
       }
       function applyMfFilters() {
         var q = (_mfSearchText || '').toLowerCase();
