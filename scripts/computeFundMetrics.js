@@ -104,10 +104,16 @@ async function compute() {
 
   // Create fund_metrics table if not exists
   db.exec(`
-    CREATE TABLE IF NOT EXISTS fund_metrics (
+    db.exec('DROP TABLE IF EXISTS fund_metrics');
+  CREATE TABLE IF NOT EXISTS fund_metrics (
       schemeId TEXT PRIMARY KEY,
+      alpha_1m REAL, beta_1m REAL, sharpe_1m REAL, sortino_1m REAL, treynor_1m REAL, stdDev_1m REAL,
+      alpha_3m REAL, beta_3m REAL, sharpe_3m REAL, sortino_3m REAL, treynor_3m REAL, stdDev_3m REAL,
+      alpha_6m REAL, beta_6m REAL, sharpe_6m REAL, sortino_6m REAL, treynor_6m REAL, stdDev_6m REAL,
       alpha_1y REAL, beta_1y REAL, sharpe_1y REAL, sortino_1y REAL, treynor_1y REAL, stdDev_1y REAL,
       alpha_3y REAL, beta_3y REAL, sharpe_3y REAL, sortino_3y REAL, treynor_3y REAL, stdDev_3y REAL,
+      alpha_5y REAL, beta_5y REAL, sharpe_5y REAL, sortino_5y REAL, treynor_5y REAL, stdDev_5y REAL,
+      alpha_10y REAL, beta_10y REAL, sharpe_10y REAL, sortino_10y REAL, treynor_10y REAL, stdDev_10y REAL,
       computedAt TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id)
     )
@@ -142,9 +148,14 @@ async function compute() {
 
   const insert = db.prepare(`
     INSERT OR REPLACE INTO fund_metrics 
-    (schemeId, alpha_1y, beta_1y, sharpe_1y, sortino_1y, treynor_1y, stdDev_1y,
-     alpha_3y, beta_3y, sharpe_3y, sortino_3y, treynor_3y, stdDev_3y, computedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    (schemeId, alpha_1m, beta_1m, sharpe_1m, sortino_1m, treynor_1m, stdDev_1m,
+     alpha_3m, beta_3m, sharpe_3m, sortino_3m, treynor_3m, stdDev_3m,
+     alpha_6m, beta_6m, sharpe_6m, sortino_6m, treynor_6m, stdDev_6m,
+     alpha_1y, beta_1y, sharpe_1y, sortino_1y, treynor_1y, stdDev_1y,
+     alpha_3y, beta_3y, sharpe_3y, sortino_3y, treynor_3y, stdDev_3y,
+     alpha_5y, beta_5y, sharpe_5y, sortino_5y, treynor_5y, stdDev_5y,
+     alpha_10y, beta_10y, sharpe_10y, sortino_10y, treynor_10y, stdDev_10y, computedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `);
 
   let computed = 0, skipped = 0;
@@ -159,31 +170,33 @@ async function compute() {
     const navs = navRows.map(r => r.nav);
     const fundReturns = dailyReturns(navs);
 
-    // 1Y = ~252 trading days
-    const returns1y = fundReturns.slice(-252);
-    const bench1y = benchReturns.slice(-252);
-    const metrics1y = computeMetrics(returns1y, bench1y, RISK_FREE_RATE / 100 / 252);
+    // Compute metrics for all time periods
+    const periods = {
+      '1m': 21, '3m': 63, '6m': 126,
+      '1y': 252, '3y': 756, '5y': 1260, '10y': 2520
+    };
+    const metrics = {};
+    let anyValid = false;
+    for (const [label, days] of Object.entries(periods)) {
+      if (fundReturns.length >= Math.min(days, 30)) {
+        const ret = fundReturns.slice(-days);
+        const bench = benchReturns.slice(-days);
+        metrics[label] = computeMetrics(ret, bench, RISK_FREE_RATE / 100 / 252);
+        if (metrics[label]) anyValid = true;
+      }
+    }
 
-    // 3Y = ~756 trading days
-    const returns3y = fundReturns.slice(-756);
-    const bench3y = benchReturns.slice(-756);
-    const metrics3y = computeMetrics(returns3y, bench3y, RISK_FREE_RATE / 100 / 252);
-
-    if (metrics1y || metrics3y) {
+    if (anyValid) {
+      const m = (p) => metrics[p] || {};
       insert.run(
         scheme.id,
-        metrics1y ? metrics1y.alpha : null,
-        metrics1y ? metrics1y.beta : null,
-        metrics1y ? metrics1y.sharpe : null,
-        metrics1y ? metrics1y.sortino : null,
-        metrics1y ? metrics1y.treynor : null,
-        metrics1y ? metrics1y.stdDev : null,
-        metrics3y ? metrics3y.alpha : null,
-        metrics3y ? metrics3y.beta : null,
-        metrics3y ? metrics3y.sharpe : null,
-        metrics3y ? metrics3y.sortino : null,
-        metrics3y ? metrics3y.treynor : null,
-        metrics3y ? metrics3y.stdDev : null
+        m('1m').alpha||null, m('1m').beta||null, m('1m').sharpe||null, m('1m').sortino||null, m('1m').treynor||null, m('1m').stdDev||null,
+        m('3m').alpha||null, m('3m').beta||null, m('3m').sharpe||null, m('3m').sortino||null, m('3m').treynor||null, m('3m').stdDev||null,
+        m('6m').alpha||null, m('6m').beta||null, m('6m').sharpe||null, m('6m').sortino||null, m('6m').treynor||null, m('6m').stdDev||null,
+        m('1y').alpha||null, m('1y').beta||null, m('1y').sharpe||null, m('1y').sortino||null, m('1y').treynor||null, m('1y').stdDev||null,
+        m('3y').alpha||null, m('3y').beta||null, m('3y').sharpe||null, m('3y').sortino||null, m('3y').treynor||null, m('3y').stdDev||null,
+        m('5y').alpha||null, m('5y').beta||null, m('5y').sharpe||null, m('5y').sortino||null, m('5y').treynor||null, m('5y').stdDev||null,
+        m('10y').alpha||null, m('10y').beta||null, m('10y').sharpe||null, m('10y').sortino||null, m('10y').treynor||null, m('10y').stdDev||null
       );
       computed++;
     } else {

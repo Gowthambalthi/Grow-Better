@@ -85,15 +85,48 @@ var colSets={
   ],
   'Risk vs Reward':[
     {key:'name',label:'Fund Name',sortable:false},
-    {key:'alpha',label:'Alpha 1Yr'},
-    {key:'beta',label:'Beta 1Yr'},
-    {key:'sharpe',label:'Sharpe 1Yr'},
-    {key:'sortino',label:'Sortino 1Yr'},
-    {key:'treynor',label:'Treynor 1Yr'},
-    {key:'stddev',label:'Std Dev 1Yr'},
-    {key:'aum',label:'AUM (₹ Cr)'},
-    {key:'ter',label:'Expense Ratio'},
-    {key:'investors',label:'Investors'}
+    {key:'alpha1m',label:'Alpha 1M'},
+    {key:'alpha3m',label:'Alpha 3M'},
+    {key:'alpha6m',label:'Alpha 6M'},
+    {key:'alpha1y',label:'Alpha 1Yr'},
+    {key:'alpha3y',label:'Alpha 3Yr'},
+    {key:'alpha5y',label:'Alpha 5Yr'},
+    {key:'alpha10y',label:'Alpha 10Yr'},
+    {key:'beta1m',label:'Beta 1M'},
+    {key:'beta3m',label:'Beta 3M'},
+    {key:'beta6m',label:'Beta 6M'},
+    {key:'beta1y',label:'Beta 1Yr'},
+    {key:'beta3y',label:'Beta 3Yr'},
+    {key:'beta5y',label:'Beta 5Yr'},
+    {key:'beta10y',label:'Beta 10Yr'},
+    {key:'sharpe1m',label:'Sharpe 1M'},
+    {key:'sharpe3m',label:'Sharpe 3M'},
+    {key:'sharpe6m',label:'Sharpe 6M'},
+    {key:'sharpe1y',label:'Sharpe 1Yr'},
+    {key:'sharpe3y',label:'Sharpe 3Yr'},
+    {key:'sharpe5y',label:'Sharpe 5Yr'},
+    {key:'sharpe10y',label:'Sharpe 10Yr'},
+    {key:'sortino1m',label:'Sortino 1M'},
+    {key:'sortino3m',label:'Sortino 3M'},
+    {key:'sortino6m',label:'Sortino 6M'},
+    {key:'sortino1y',label:'Sortino 1Yr'},
+    {key:'sortino3y',label:'Sortino 3Yr'},
+    {key:'sortino5y',label:'Sortino 5Yr'},
+    {key:'sortino10y',label:'Sortino 10Yr'},
+    {key:'treynor1m',label:'Treynor 1M'},
+    {key:'treynor3m',label:'Treynor 3M'},
+    {key:'treynor6m',label:'Treynor 6M'},
+    {key:'treynor1y',label:'Treynor 1Yr'},
+    {key:'treynor3y',label:'Treynor 3Yr'},
+    {key:'treynor5y',label:'Treynor 5Yr'},
+    {key:'treynor10y',label:'Treynor 10Yr'},
+    {key:'stddev1m',label:'Std Dev 1M'},
+    {key:'stddev3m',label:'Std Dev 3M'},
+    {key:'stddev6m',label:'Std Dev 6M'},
+    {key:'stddev1y',label:'Std Dev 1Yr'},
+    {key:'stddev3y',label:'Std Dev 3Yr'},
+    {key:'stddev5y',label:'Std Dev 5Yr'},
+    {key:'stddev10y',label:'Std Dev 10Yr'}
   ]
 };
 
@@ -112,6 +145,18 @@ function getFiltered(){
     return String(av).localeCompare(String(bv))*S.sortDir;
   });
   return rows;
+}
+
+function metricVal(fund,key){
+  var m=fund._metrics;
+  if(!m)return null;
+  // Map frontend key to backend field: alpha1m -> alpha_1m, beta3y -> beta_3y etc
+  var field=key.replace(/(alpha|beta|sharpe|sortino|treynor|stddev)(d+m|d+y)/,function(_,metric,period){return metric+'_'+period;});
+  if(m[field]!=null)return m[field];
+  // Fallback: try 1y if requested period not available
+  var base=key.replace(/(alpha|beta|sharpe|sortino|treynor|stddev).*/,'$1');
+  if(m[base+'_1y']!=null)return m[base+'_1y'];
+  return null;
 }
 
 function cellHTML(fund,key){
@@ -141,12 +186,12 @@ function cellHTML(fund,key){
     case'aumChg3m':{var v3=fund.aumChange3M;return '<td>'+(v3!=null?(v3>0?'+':'')+Math.round(v3)+' Cr':'--')+'</td>';}
     case'aumChg1y':{var v4=fund.aumChange1Y;return '<td>'+(v4!=null?(v4>0?'+':'')+Math.round(v4)+' Cr':'--')+'</td>';}
     case'invChg':{var v2=fund.investorChange1M;return '<td>'+(v2!=null?(v2>0?'+':'')+Math.round(v2):'--')+'</td>';}
-    case'alpha':{var m=fund._metrics;return '<td>'+(m&&m.alpha_1y!=null?pctH(m.alpha_1y):'<span style="color:var(--muted)">--</span>')+'</td>';}
-    case'beta':{var m2=fund._metrics;return '<td>'+(m2&&m2.beta_1y!=null?m2.beta_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
-    case'sharpe':{var m3=fund._metrics;return '<td>'+(m3&&m3.sharpe_1y!=null?m3.sharpe_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
-    case'sortino':{var m4=fund._metrics;return '<td>'+(m4&&m4.sortino_1y!=null?m4.sortino_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
-    case'treynor':{var m5=fund._metrics;return '<td>'+(m5&&m5.treynor_1y!=null?m5.treynor_1y.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
-    case'stddev':{var m6=fund._metrics;return '<td>'+(m6&&m6.stdDev_1y!=null?m6.stdDev_1y.toFixed(2)+'%':'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'alpha':case'alpha1m':case'alpha3m':case'alpha6m':case'alpha1y':case'alpha3y':case'alpha5y':case'alpha10y':{var v=metricVal(fund,key);return '<td>'+(v!=null?pctH(v):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'beta':case'beta1m':case'beta3m':case'beta6m':case'beta1y':case'beta3y':case'beta5y':case'beta10y':{var v2=metricVal(fund,key);return '<td>'+(v2!=null?v2.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'sharpe':case'sharpe1m':case'sharpe3m':case'sharpe6m':case'sharpe1y':case'sharpe3y':case'sharpe5y':case'sharpe10y':{var v3=metricVal(fund,key);return '<td>'+(v3!=null?v3.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'sortino':case'sortino1m':case'sortino3m':case'sortino6m':case'sortino1y':case'sortino3y':case'sortino5y':case'sortino10y':{var v4=metricVal(fund,key);return '<td>'+(v4!=null?v4.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'treynor':case'treynor1m':case'treynor3m':case'treynor6m':case'treynor1y':case'treynor3y':case'treynor5y':case'treynor10y':{var v5=metricVal(fund,key);return '<td>'+(v5!=null?v5.toFixed(2):'<span style="color:var(--muted)">--</span>')+'</td>';}
+    case'stddev':case'stddev1m':case'stddev3m':case'stddev6m':case'stddev1y':case'stddev3y':case'stddev5y':case'stddev10y':{var v6=metricVal(fund,key);return '<td>'+(v6!=null?v6.toFixed(2)+'%':'<span style="color:var(--muted)">--</span>')+'</td>';}
     default:return '<td></td>';
   }
 }
