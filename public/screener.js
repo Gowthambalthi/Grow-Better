@@ -85,11 +85,6 @@ var colSets={
   ],
   'Risk vs Reward':[
     {key:'name',label:'Fund Name',sortable:false},
-    {key:'score',label:'Score / 100'},
-    {key:'m1',label:'1 Month %'},
-    {key:'m3',label:'3 Month %'},
-    {key:'m6',label:'6 Month %'},
-    {key:'y1',label:'1 Year %'},
     {key:'alpha',label:'Alpha 1Yr'},
     {key:'beta',label:'Beta 1Yr'},
     {key:'sharpe',label:'Sharpe 1Yr'},
