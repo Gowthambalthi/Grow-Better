@@ -126,7 +126,10 @@ var colSets={
     {key:'stddev1y',label:'Std Dev 1Yr'},
     {key:'stddev3y',label:'Std Dev 3Yr'},
     {key:'stddev5y',label:'Std Dev 5Yr'},
-    {key:'stddev10y',label:'Std Dev 10Yr'}
+    {key:'stddev10y',label:'Std Dev 10Yr'},
+    {key:'aum',label:'AUM (₹ Cr)'},
+    {key:'ter',label:'Expense Ratio'},
+    {key:'investors',label:'Investors'}
   ]
 };
 
