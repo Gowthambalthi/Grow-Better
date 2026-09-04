@@ -49,7 +49,7 @@ const insert = db.prepare(`INSERT OR REPLACE INTO fund_metrics (schemeId, ${cols
 
 function computeMetrics(fundReturns, benchmarkReturns) {
   const n = Math.min(fundReturns.length, benchmarkReturns.length);
-  if (n < 30) return null;
+  if (n < 15) return null;
   const f = fundReturns.slice(-n), b = benchmarkReturns.slice(-n);
   const beta = cov(f,b)/(vr(b)||1e-10);
   const fM = mean(f)*252, bM = mean(b)*252;
