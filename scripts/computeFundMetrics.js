@@ -117,6 +117,15 @@ async function compute() {
       computedAt TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id)
     )
+  // Add any missing columns (handles upgrade from old schema)
+  const newCols = ['alpha_1m','beta_1m','sharpe_1m','sortino_1m','treynor_1m','stdDev_1m',
+    'alpha_3m','beta_3m','sharpe_3m','sortino_3m','treynor_3m','stdDev_3m',
+    'alpha_6m','beta_6m','sharpe_6m','sortino_6m','treynor_6m','stdDev_6m',
+    'alpha_5y','beta_5y','sharpe_5y','sortino_5y','treynor_5y','stdDev_5y',
+    'alpha_10y','beta_10y','sharpe_10y','sortino_10y','treynor_10y','stdDev_10y'];
+  for (const col of newCols) {
+    try { db.exec('ALTER TABLE fund_metrics ADD COLUMN ' + col + ' REAL'); } catch(e) { /* column exists */ }
+  }
   `);
 
   // Load all schemes with categories
