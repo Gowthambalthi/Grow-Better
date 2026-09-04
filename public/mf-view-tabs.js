@@ -3,17 +3,11 @@
   var _currentTab = 'Summary';
   var _schemes = [];
   var _metrics = {};
-  
+
   fetch('/api/mutual-funds/metrics').then(function(r){return r.json();}).then(function(d){
     if(d&&d.success&&d.metrics) _metrics=d.metrics;
   }).catch(function(){});
-  
-  var _origRender = window.renderMfGrid;
-  window.renderMfGrid = function(schemes) {
-    _schemes = schemes || [];
-    if (_origRender) _origRender(schemes);
-  };
-  
+
   function calcScore(s) {
     var perf=0,port=0,oper=0,risk=0;
     var r=s.returns||{};
@@ -24,7 +18,7 @@
     risk=Math.round(((s.confidenceScore||50)/100)*25);
     return{total:Math.min(perf+port+oper+risk,100),perf:perf,port:port,oper:oper,risk:risk};
   }
-  
+
   var tH='padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;';
   function th(l){return'<th style="'+tH+'text-align:right;">'+l+'</th>';}
   function thL(l){return'<th style="'+tH+'text-align:left;">'+l+'</th>';}
@@ -38,12 +32,13 @@
   function cellTer(v){return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+(v!=null?v.toFixed(2)+'%':'-')+'</td>';}
   function cellDayChg(s){var r=s.returns||{};var v=r['1D']||r['day']||null;return cellPct(v);}
   function cellMetric(v,k){if(v==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">--</td>';if(k.indexOf('alpha')!==-1){var sg=v>0?'+':'';var cl=v>=0?'#00B386':'#EB5B56';return'<td style="padding:10px 12px;text-align:right;font-size:12px;color:'+cl+';font-weight:600;">'+sg+(v*100).toFixed(2)+'%</td>';}if(k.indexOf('stdDev')!==-1)return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+(v*100).toFixed(2)+'%</td>';return'<td style="padding:10px 12px;text-align:right;font-size:12px;">'+v.toFixed(2)+'</td>';}
-  
+  function cellRank(sc){return'<td style="padding:10px 12px;text-align:center;font-size:12px;">'+sc+'/25</td>';}
+
   function rowStart(s){
     var sid=(s.id||'').replace(/'/g,'\\\\');
     return'<tr class="mf-table-row" data-cat="'+(s.category||'')+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\''+sid+'\')"><td style="padding:10px 8px;width:28px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>';
   }
-  
+
   // SUMMARY: Scheme name, Score/100, AUM, Net expense ratio, Investors, Investor growth, Day change%, 1M%, 3M%, 6M%, 1Y%
   function buildSummaryTable(){
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
@@ -55,20 +50,20 @@
     });
     return h+'</tbody></table>';
   }
-  
-  // RANKS: Scheme name, Score/100, Day change%, 1M%, 3M%, 6M%, 1Y% (NO AUM, NO expense, NO investors)
+
+  // RANKS: Scheme name, Score/100, Performance/25, Portfolio/25, Operational/25, Risk & Reward/25
   function buildRanksTable(){
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
-    h+='<th style="'+tH+'width:28px;"></th>'+thL('Scheme name')+thC('Score /100')+th('Day change %')+th('1 month %')+th('3 month %')+th('6 month %')+th('1 year %');
+    h+='<th style="'+tH+'width:28px;"></th>'+thL('Scheme name')+thC('Checklist score / 100')+th('Performance /25')+th('Portfolio /25')+th('Operational /25')+th('Risk & Reward /25');
     h+='</tr></thead><tbody>';
     _schemes.forEach(function(s){
-      var sc=calcScore(s),r=s.returns||{};
-      h+=rowStart(s)+cellName(s)+cellRating(sc.total)+cellDayChg(s)+cellPct(r['1M'])+cellPct(r['3M'])+cellPct(r['6M'])+cellPct(r['1Y'])+'</tr>';
+      var sc=calcScore(s);
+      h+=rowStart(s)+cellName(s)+cellRating(sc.total)+cellRank(sc.perf)+cellRank(sc.port)+cellRank(sc.oper)+cellRank(sc.risk)+'</tr>';
     });
     return h+'</tbody></table>';
   }
-  
-  // RISK vs REWARD: Alpha 1Y/3Y/5Y/10Y, Beta 1Y/3Y/5Y/10Y, Sharpe 1Y/3Y/5Y/10Y, Sortino 1Y/3Y/5Y/10Y, Treynor 1Y/3Y/5Y/10Y, StdDev 1Y/3Y/5Y/10Y
+
+  // RISK vs REWARD: Alpha/Beta/Sharpe/Sortino/Treynor/StdDev for 1M/3M/6M/1Y
   function buildRiskTable(){
     var mc=[
       ['alpha_1m','Alpha 1M'],['alpha_3m','Alpha 3M'],['alpha_6m','Alpha 6M'],['alpha_1y','Alpha 1Y'],
@@ -90,20 +85,20 @@
     });
     return h+'</tbody></table>';
   }
-  
+
   function getTableWrap(){
     var w=document.querySelector('[data-mf-table]');
-    if(w) return w;
-    // Fallback
-    var grid=document.getElementById('mfSchemesGrid');
-    if(!grid)return null;
-    var divs=grid.querySelectorAll('div');
-    for(var j=0;j<divs.length;j++){
-      if(divs[j].querySelector('table') && divs[j].style.overflow) return divs[j];
-    }
-    return null;
+    return w;
   }
-  
+
+  function rebuildTable(){
+    var wrap=getTableWrap();
+    if(!wrap) return;
+    if(_currentTab==='Summary') wrap.innerHTML=buildSummaryTable();
+    else if(_currentTab==='Ranks') wrap.innerHTML=buildRanksTable();
+    else wrap.innerHTML=buildRiskTable();
+  }
+
   function switchTab(tab) {
     _currentTab = tab;
     document.querySelectorAll('.mf-vtab').forEach(function(b){
@@ -112,13 +107,17 @@
       b.style.color=a?'#fff':'var(--text-muted)';
       b.style.borderColor=a?'#00B386':'var(--line)';
     });
-    var wrap=getTableWrap();
-    if(!wrap) return;
-    if(tab==='Summary') wrap.innerHTML=buildSummaryTable();
-    else if(tab==='Ranks') wrap.innerHTML=buildRanksTable();
-    else wrap.innerHTML=buildRiskTable();
+    rebuildTable();
   }
-  
+
+  // Override renderMfGrid so it uses our tab-aware table
+  var _origRender = window.renderMfGrid;
+  window.renderMfGrid = function(schemes) {
+    _schemes = schemes || [];
+    rebuildTable();
+  };
+
+  // Add view tabs via MutationObserver
   var obs=new MutationObserver(function(){
     var grid=document.getElementById('mfSchemesGrid');
     if(!grid||document.querySelector('.mf-vtab')) return;
