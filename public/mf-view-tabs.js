@@ -27,7 +27,6 @@
     return{total:Math.min(perf+port+oper+risk,100),perf:perf,port:port,oper:oper,risk:risk};
   }
 
-  // Helper: format percent
   function fp(v){if(v==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return'<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+'%</td>';}
   function fp1(v){if(v==null)return'<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return'<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(1)+'%</td>';}
   function fAum(v){return'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(v!=null?"\u20b9"+Number(v).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+'</td>';}
@@ -44,7 +43,6 @@
   function thL(l){return'<th style="'+tH()+'text-align:left;">'+l+'</th>';}
   function thC(l){return'<th style="'+tH()+'text-align:center;">'+l+'</th>';}
 
-  // Build Summary table
   function buildSummary(schemes){
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
     h+='<th style="'+tH()+'width:28px;"></th>'+thL('Scheme name')+thC('Score /100')+th('AUM (\u20b9 Cr)')+th('Net expense ratio')+th('Investors')+th('Investor growth')+th('Day change %')+th('1 month %')+th('3 month %')+th('6 month %')+th('1 year %');
@@ -58,7 +56,6 @@
     return h+'</tbody></table>';
   }
 
-  // Build Ranks table
   function buildRanks(schemes){
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
     h+='<th style="'+tH()+'width:28px;"></th>'+thL('Scheme name')+thC('Checklist score / 100')+th('Performance /25')+th('Portfolio /25')+th('Operational /25')+th('Risk & Reward /25');
@@ -70,7 +67,6 @@
     return h+'</tbody></table>';
   }
 
-  // Build Risk vs Reward table
   function buildRisk(schemes){
     var mc=[['alpha_1m','Alpha 1M'],['alpha_3m','Alpha 3M'],['alpha_6m','Alpha 6M'],['alpha_1y','Alpha 1Y'],['beta_1m','Beta 1M'],['beta_3m','Beta 3M'],['beta_6m','Beta 6M'],['beta_1y','Beta 1Y'],['sharpe_1m','Sharpe 1M'],['sharpe_3m','Sharpe 3M'],['sharpe_6m','Sharpe 6M'],['sharpe_1y','Sharpe 1Y'],['sortino_1m','Sortino 1M'],['sortino_3m','Sortino 3M'],['sortino_6m','Sortino 6M'],['sortino_1y','Sortino 1Y']];
     var h='<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:2400px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">';
@@ -86,27 +82,25 @@
     return h+'</tbody></table>';
   }
 
-  // Inject view tabs and replace table content
   function injectTabsAndTable(){
     var grid=document.getElementById('mfSchemesGrid');
     if(!grid) return;
 
-    // Find the table container (div with overflow-x:auto containing a table)
+    // Find table wrapper: the div that contains overflow-x:auto (set via HTML attribute)
+    // The inner HTML uses style="overflow-x:auto;" so div.style.overflowX will be 'auto'
     var tableDiv=null;
     var allDivs=grid.querySelectorAll('div');
     for(var i=0;i<allDivs.length;i++){
-      if(allDivs[i].querySelector('table')&&allDivs[i].style.overflow==='auto'){
-        tableDiv=allDivs[i];
+      var d=allDivs[i];
+      if(d.querySelector('table') && (d.style.overflowX==='auto' || d.getAttribute('style') && d.getAttribute('style').indexOf('overflow-x:auto')!==-1)){
+        tableDiv=d;
         break;
       }
     }
     if(!tableDiv) return;
 
-    // Don't re-inject tabs
+    // Don't re-inject
     if(grid.querySelector('.mf-vtab')) return;
-
-    // Find the element right before the table div to insert tabs
-    var insertBefore=tableDiv;
 
     // Create view tab buttons
     var tabsDiv=document.createElement('div');
@@ -122,14 +116,12 @@
       btn.style.cssText='padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid '+(a?"#00B386":"var(--line)")+';background:'+(a?"#00B386":"var(--bg-input)")+';color:'+(a?"#fff":"var(--text-muted)")+';transition:all .15s;font-family:inherit;';
       btn.addEventListener('click',function(){
         _currentTab=td.k;
-        // Update button styles
         tabsDiv.querySelectorAll('.mf-vtab').forEach(function(b){
           var isActive=b.getAttribute('data-vtab')===td.k;
           b.style.background=isActive?"#00B386":"var(--bg-input)";
           b.style.color=isActive?"#fff":"var(--text-muted)";
           b.style.borderColor=isActive?"#00B386":"var(--line)";
         });
-        // Replace table content
         if(td.k==='Summary') tableDiv.innerHTML=buildSummary(_lastSchemes);
         else if(td.k==='Ranks') tableDiv.innerHTML=buildRanks(_lastSchemes);
         else tableDiv.innerHTML=buildRisk(_lastSchemes);
@@ -137,45 +129,30 @@
       tabsDiv.appendChild(btn);
     });
 
-    insertBefore.parentNode.insertBefore(tabsDiv,insertBefore);
-
-    // Replace the default table with the Summary view
+    tableDiv.parentNode.insertBefore(tabsDiv,tableDiv);
     tableDiv.innerHTML=buildSummary(_lastSchemes);
   }
 
-  // Watch for grid changes
-  var observer=new MutationObserver(function(){
-    var grid=document.getElementById('mfSchemesGrid');
-    if(!grid) return;
-    // Check if the table has been rendered (has table rows)
-    var rows=grid.querySelectorAll('tr.mf-table-row');
-    if(rows.length>0){
-      // Extract schemes data from the existing table rows
-      // Actually, we need the original data. Let's intercept renderMfGrid.
-      injectTabsAndTable();
-    }
-  });
-
   // Override renderMfGrid to capture scheme data
-  // renderMfGrid is a local function in the inline script, but it's declared
-  // with 'function' keyword at the top level of a <script> tag, so it's on window.
   var _origRMG=window.renderMfGrid;
   window.renderMfGrid=function(schemes){
     _lastSchemes=schemes||[];
     if(_origRMG) _origRMG(schemes);
-    // After the grid renders, inject our tabs
     setTimeout(function(){injectTabsAndTable();},100);
   };
 
-  // Also observe for when the grid is first populated
-  var g=document.getElementById('mfSchemesGrid');
-  if(g) observer.observe(g,{childList:true,subtree:true});
-
-  // Also try injecting immediately if data is already loaded
+  // Also try injecting immediately
   setTimeout(function(){
     if(window._mfLastSchemes&&window._mfLastSchemes.length>0){
       _lastSchemes=window._mfLastSchemes;
       injectTabsAndTable();
     }
   },2000);
+
+  // Observe grid changes as fallback
+  var obs=new MutationObserver(function(){
+    if(_lastSchemes.length>0) injectTabsAndTable();
+  });
+  var g=document.getElementById('mfSchemesGrid');
+  if(g) obs.observe(g,{childList:true,subtree:true});
 })();
