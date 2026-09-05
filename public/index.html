@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260903k" />
+<meta name="version" content="v20260905b" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2257,13 +2257,13 @@ function _renderMfGridBody(grid, schemes) {
         // View tabs
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
     var vtHtml='<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:6px;">View:</span>';
-    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=(_mfViewTab===_vt.k);vtHtml+='<button onclick="window.switchMfViewTab(\x27'+_vt.k+'\x27)" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">'+_vt.l+'</button>';}vtHtml+='</div>';
+    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=((window._mfViewTab||"summary")===_vt.k);vtHtml+='<button onclick="window.switchMfViewTab(\x27'+_vt.k+'\x27)" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">'+_vt.l+'</button>';}vtHtml+='</div>';
 
     // Table header and rows depend on view tab
     var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
     var _head="", _body="";
 
-    if(_mfViewTab==="ranks") {
+    if((window._mfViewTab||"summary")==="ranks") {
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
         +'<th style="'+_th2+'text-align:right;">Score / 100</th>'
         +'<th style="'+_th2+'text-align:right;">Performance / 25</th>'
@@ -2281,7 +2281,7 @@ function _renderMfGridBody(grid, schemes) {
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+op+'/25</td>'
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+rw+'/25</td></tr>';}).join("");
 
-    } else if(_mfViewTab==="risk") {
+    } else if((window._mfViewTab||"summary")==="risk") {
       var _rk=["Alpha","Beta","Sharpe","Sortino"],_rp=["1M","3M","6M","1Y"];
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>';
       for(var _i=0;_i<_rk.length;_i++)for(var _j=0;_j<_rp.length;_j++)_head+='<th style="'+_th2+'text-align:right;">'+_rk[_i]+' '+_rp[_j]+'</th>';
@@ -2299,25 +2299,25 @@ function _renderMfGridBody(grid, schemes) {
         +'<th style="'+_th2+'text-align:right;">Score /100</th>'
         +'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th>'
         +'<th style="'+_th2+'text-align:right;">Net expense ratio</th>'
-        +'<th style="'+_th2+'text-align:right;">Investors</th>'
-        +'<th style="'+_th2+'text-align:right;">Investor growth</th>'
+
+
         +'<th style="'+_th2+'text-align:right;">Day change %</th>'
         +'<th style="'+_th2+'text-align:right;">1 month %</th>'
         +'<th style="'+_th2+'text-align:right;">3 month %</th>'
         +'<th style="'+_th2+'text-align:right;">6 month %</th>'
         +'<th style="'+_th2+'text-align:right;">1 year %</th>';
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
-        var iv=s.investorChange1M;
+
         function rc3(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
-        function ic3(ch){if(!ch||ch.change==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var p=ch.changePct||0,cl=ch.change>=0?"#00B386":"#EB5B56",a=ch.change>=0?"\u25B2":"\u25BC",v=Math.abs(ch.change),vs=v>=100000?(v/100000).toFixed(1)+"L":v>=1000?(v/1000).toFixed(1)+"K":v.toFixed(0);return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+cl+';font-weight:700;">'+a+" "+vs+'</span> <span style="color:var(--text-muted);font-size:10px;">(' +(p>=0?"+":"")+p.toFixed(1)+"%)</span></td>";}
+
         return '<tr class="mf-table-row" data-cat="'+ct+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
           +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +rn2(s.confidenceScore||50)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>"
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+(s.ter!=null?s.ter.toFixed(2)+"%":"-")+"</td>"
-          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:600;white-space:nowrap;">'+(s.investorCount!=null?(s.investorCount>10000?(s.investorCount/100000).toFixed(2)+"L":s.investorCount.toLocaleString("en-IN")):"-")+"</td>"
-          +ic3(s.investorChange1M)
+
+
           +rc3(s.returns&&s.returns["1D"]!=null?s.returns["1D"]:null)
           +rc3(s.returns&&s.returns["1M"]!=null?s.returns["1M"]:null)
           +rc3(s.returns&&s.returns["3M"]!=null?s.returns["3M"]:null)
