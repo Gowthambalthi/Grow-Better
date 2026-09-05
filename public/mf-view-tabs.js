@@ -251,7 +251,7 @@
   function tryInject() {
     try {
       var wrapper = findTableWrapper();
-      if(!wrapper) return false;
+      if(!wrapper) { console.log("[VTab] no wrapper found"); return false; }
 
       // Check for table rows with data
       var tbody = wrapper.querySelector('tbody');
@@ -259,8 +259,9 @@
 
       // Get schemes from window._mfLastSchemes
       var schemes = window._mfLastSchemes;
-      if(!schemes || schemes.length === 0) return false;
+      if(!schemes || schemes.length === 0) { console.log("[VTab] no schemes, count:", schemes?schemes.length:0); return false; }
 
+      console.log("[VTab] injecting tabs for", schemes.length, "schemes");
       injectTabsAndTable(wrapper, schemes);
       injected = true;
       return true;
