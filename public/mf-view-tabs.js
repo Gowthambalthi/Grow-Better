@@ -231,7 +231,8 @@
     // Method 2: div with overflow-x that contains a table
     var divs = document.querySelectorAll('div');
     for(var i=0;i<divs.length;i++){
-      if(divs[i].style.overflowX === 'auto' || divs[i].getAttribute('style','').indexOf('overflow-x')!==-1) {
+      var sty = divs[i].getAttribute('style') || '';
+      if(divs[i].style.overflowX === 'auto' || sty.indexOf('overflow-x')!==-1) {
         if(divs[i].querySelector('table')) return divs[i].parentElement || divs[i];
       }
     }
@@ -248,36 +249,39 @@
   // Observer for table appearing
   var injected = false;
   function tryInject() {
-    var wrapper = findTableWrapper();
-    if(!wrapper) return false;
+    try {
+      var wrapper = findTableWrapper();
+      if(!wrapper) return false;
 
-    // Check for table rows with data
-    var tbody = wrapper.querySelector('tbody');
-    if(!tbody || tbody.children.length === 0) return false;
+      // Check for table rows with data
+      var tbody = wrapper.querySelector('tbody');
+      if(!tbody || tbody.children.length === 0) return false;
 
-    // Get schemes from window._mfLastSchemes
-    var schemes = window._mfLastSchemes;
-    if(!schemes || schemes.length === 0) return false;
+      // Get schemes from window._mfLastSchemes
+      var schemes = window._mfLastSchemes;
+      if(!schemes || schemes.length === 0) return false;
 
-    injectTabsAndTable(wrapper, schemes);
-    injected = true;
-    return true;
+      injectTabsAndTable(wrapper, schemes);
+      injected = true;
+      return true;
+    } catch(e) { return false; }
   }
 
   // MutationObserver on the smart-money view
   var observer = new MutationObserver(function(mutations) {
-    if(injected) {
-      // Table was re-rendered (e.g., category filter), re-inject
-      var wrapper = findTableWrapper();
-      if(wrapper) {
-        var schemes = window._mfLastSchemes;
-        if(schemes && schemes.length > 0) {
-          injectTabsAndTable(wrapper, schemes);
+    try {
+      if(injected) {
+        var wrapper = findTableWrapper();
+        if(wrapper) {
+          var schemes = window._mfLastSchemes;
+          if(schemes && schemes.length > 0) {
+            injectTabsAndTable(wrapper, schemes);
+          }
         }
+        return;
       }
-      return;
-    }
-    tryInject();
+      tryInject();
+    } catch(e) {}
   });
 
   // Start observing
