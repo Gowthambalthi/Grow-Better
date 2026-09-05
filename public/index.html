@@ -2257,7 +2257,7 @@ function _renderMfGridBody(grid, schemes) {
         // View tabs
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
     var vtHtml='<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:6px;">View:</span>';
-    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=((window._mfViewTab||"summary")===_vt.k);vtHtml+='<button onclick="window.switchMfViewTab(\x27'+_vt.k+'\x27)" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">'+_vt.l+'</button>';}vtHtml+='</div>';
+    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=((window._mfViewTab||"summary")===_vt.k);vtHtml+='<button data-vtab="'+_vt.k+'" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">'+_vt.l+'</button>';}vtHtml+='</div>';
 
     // Table header and rows depend on view tab
     var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
@@ -2327,7 +2327,7 @@ function _renderMfGridBody(grid, schemes) {
 
     }
 
-    grid.innerHTML=sum+_catCardsHtml+vtHtml+catTabs+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=sum+_catCardsHtml+catTabs+vtHtml+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head
       +"</tr></thead><tbody>"+_body+"</tbody></table></div></div>";
   } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
@@ -2338,6 +2338,13 @@ function _renderMfGridBody(grid, schemes) {
 
       // Event Listeners
       document.addEventListener('click', function(e) {
+        // View tab switching (Summary/Ranks/Risk vs Reward)
+        var _vtab = e.target.closest('[data-vtab]');
+        if(_vtab && !_vtab.closest('tr')) {
+          window.switchMfViewTab(_vtab.getAttribute('data-vtab'));
+          return;
+        }
+
         var loadAllBtn = e.target.closest('#btnLoadAllMfSchemes');
         if (loadAllBtn) {
           window.mfDisplayCount = 2500;
