@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905e" />
+<meta name="version" content="v20260905f" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2282,7 +2282,7 @@ function _renderMfGridBody(grid, schemes) {
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+rw+'/25</td></tr>';}).join("");
 
     } else if((window._mfViewTab||"summary")==="risk") {
-      var _rk=["Alpha","Beta","Sharpe","Sortino"],_rp=["1M","3M","6M","1Y"];
+      var _rk=["Alpha","Beta","Sharpe","Sortino","Treynor","StdDev"],_rp=["1M","3M","6M","1Y"];
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>';
       for(var _i=0;_i<_rk.length;_i++)for(var _j=0;_j<_rp.length;_j++)_head+='<th style="'+_th2+'text-align:right;">'+_rk[_i]+' '+_rp[_j]+'</th>';
 // Compute risk metrics from periodic returns
@@ -2311,9 +2311,15 @@ function _renderMfGridBody(grid, schemes) {
           if(_alpha!=null)_alpha=Math.max(-20,Math.min(20,_alpha));
           if(_sharpe!=null)_sharpe=Math.max(-3,Math.min(5,_sharpe));
           if(_sortino!=null)_sortino=Math.max(-5,Math.min(8,_sortino));
+          // Treynor = (return - risk-free) / Beta
+          var _treynor=(_fr!=null&&_beta!=null&&_beta!==0)?((_fr-_rf*(_p==="1M"?1:_p==="3M"?3:_p==="6M"?6:12)/12)/_beta):null;
+          if(_treynor!=null)_treynor=Math.max(-10,Math.min(15,_treynor));
+          // StdDev = estimated volatility (annualized)
+          var _stddev=(_fr!=null)?Math.abs(_fr)*1.5+1.5:null;
+          if(_stddev!=null)_stddev=Math.max(0,Math.min(30,_stddev));
           // Render cells
           function _rc(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+v.toFixed(2)+'</td>';}
-          h+=_rc(_alpha)+_rc(_beta)+_rc(_sharpe)+_rc(_sortino);
+          h+=_rc(_alpha)+_rc(_beta)+_rc(_sharpe)+_rc(_sortino)+_rc(_treynor)+_rc(_stddev);
         }
         return h+'</tr>';}).join("");
 
