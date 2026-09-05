@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905c" />
+<meta name="version" content="v20260905d" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2305,7 +2305,9 @@ function _renderMfGridBody(grid, schemes) {
         +'<th style="'+_th2+'text-align:right;">1 month %</th>'
         +'<th style="'+_th2+'text-align:right;">3 month %</th>'
         +'<th style="'+_th2+'text-align:right;">6 month %</th>'
-        +'<th style="'+_th2+'text-align:right;">1 year %</th>';
+        +'<th style="'+_th2+'text-align:right;">1 year %</th>'
+        +'<th style="'+_th2+'text-align:right;">Benchmark %</th>';
+            var _catAvg1Y={};var _catCnt={};for(var _bi=0;_bi<di.length;_bi++){var _bs=di[_bi],_bc=_bs.category||'Other',_br=_bs.returns&&_bs.returns['1Y']!=null?_bs.returns['1Y']:null;if(_br!==null){_catAvg1Y[_bc]=(_catAvg1Y[_bc]||0)+_br;_catCnt[_bc]=(_catCnt[_bc]||0)+1;}}for(var _ck in _catAvg1Y)_catAvg1Y[_ck]/=_catCnt[_ck];
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
 
         function rc3(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
@@ -2323,7 +2325,8 @@ function _renderMfGridBody(grid, schemes) {
           +rc3(s.returns&&s.returns["3M"]!=null?s.returns["3M"]:null)
           +rc3(s.returns&&s.returns["6M"]!=null?s.returns["6M"]:null)
           +rc3(s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null)
-          +"</tr>";}).join("");
+          
+          +(function(){var _f1y=s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null;var _bavg=_catAvg1Y[s.category||"Other"]||null;if(_f1y==null||_bavg==null) return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _diff=_f1y-_bavg;var _cl=_diff>=0?"#00B386":"#EB5B56";var _arr=_diff>=0?"\u25B2":"\u25BC";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;">'+_arr+' '+(_diff>=0?"+":"")+_diff.toFixed(2)+'%</span><span style="color:var(--text-muted);font-size:10px;margin-left:3px;">vs avg</span></td>';})()+"</tr>";}).join("");
 
     }
 
