@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905h" />
+<meta name="version" content="v20260905i" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2350,6 +2350,7 @@ function _renderMfGridBody(grid, schemes) {
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
         +'<th style="'+_th2+'text-align:right;">Score /100</th>'
         +'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th>'
+        +'<th style="'+_th2+'text-align:right;">Change in AUM</th>'
         +'<th style="'+_th2+'text-align:right;">Net expense ratio</th>'
         +'<th style="'+_th2+'text-align:right;">Post-Report %</th>'
 
@@ -2369,9 +2370,10 @@ function _renderMfGridBody(grid, schemes) {
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
           +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +rn2(s.confidenceScore||50)
-          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>"
-          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+(s.ter!=null?s.ter.toFixed(2)+"%":"-")+"</td>"
-          +(function(){var _lpd=s.lastPortfolioDate||null;var _pr=s.returns&&s.returns["postReport"]!=null?s.returns["postReport"]:null;if(_pr!=null){var _cl=_pr>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;">'+(_pr>=0?"+":"")+_pr.toFixed(2)+'%</span></td>';}if(_lpd){return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:11px;">since '+_lpd+'</td>';}return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';})()
+          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(s.aum!=null?"\u20b9"+Number(s.aum).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>"
+          +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_vs=_ch>=0?"+":"-"+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+"%)</span></td>";})()
+          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+(s.expenseRatio!=null?s.expenseRatio.toFixed(2)+"%":"-")+"</td>"
+          +(function(){var _lpd=s.latestPortfolioDate||s.lastPortfolioDate||null;var _pr=(window._prCache&&window._prCache[s.id]!=null)?window._prCache[s.id]:null;if(_pr!=null&&_pr.complete){var _cl=_pr.val>=0?"#00B386":"#EB5B56";return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" style=\"padding:10px 12px;text-align:right;font-size:12px;\"><span style=\"color:'+_cl+';font-weight:700;\">'+(_pr.val>=0?"+":"")+_pr.val.toFixed(2)+'%</span></td>';}return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" data-lpd=\"'+( _lpd||'')+'\" style=\"padding:10px 12px;text-align:right;color:var(--text-muted);font-size:11px;\">'+( _lpd?'since '+String(_lpd).substring(0,10):'…')+'</td>';})()
 
 
           +rc3(s.returns&&s.returns["1D"]!=null?s.returns["1D"]:null)
@@ -2385,6 +2387,9 @@ function _renderMfGridBody(grid, schemes) {
     }
 
     
+    // Fill Post-Report cells (lazy, cached)
+    fillPostReportCells();
+
     // Highlight active category card
     setTimeout(function(){
       var cards = document.querySelectorAll("#mfSchemesGrid > div:nth-child(2) > div[onclick]");
@@ -2403,6 +2408,64 @@ function _renderMfGridBody(grid, schemes) {
       +"</tr></thead><tbody>"+_body+"</tbody></table></div></div>";
   } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
 }
+
+      // Fill Post-Report cells lazily from nav-history endpoint (mfapi) with cache
+      window._prCache = window._prCache || {};
+      window._prQueue = window._prQueue || [];
+      window._prRunning = window._prRunning || 0;
+      function fillPostReportCells() {
+        if ((window._mfViewTab||'summary') !== 'summary') return;
+        var cells = document.querySelectorAll('.pr-cell[data-sid]');
+        var sids = {};
+        for (var i = 0; i < cells.length; i++) {
+          var sid = cells[i].getAttribute('data-sid');
+          if (!sid) continue;
+          sids[sid] = cells[i];
+        }
+        var uniq = Object.keys(sids);
+        for (var j = 0; j < uniq.length; j++) {
+          var id = uniq[j];
+          var cached = window._prCache[id];
+          if (cached && cached.complete) { applyPrToCell(sids[id], cached.val); continue; }
+          if (cached && cached.loading) continue;
+          if (window._prQueue.indexOf(id) !== -1) continue;
+          window._prQueue.push(id);
+        }
+        pumpPrQueue();
+      }
+      function applyPrToCell(cell, val) {
+        if (!cell) return;
+        var cl = val >= 0 ? '#00B386' : '#EB5B56';
+        cell.innerHTML = '<span style="color:' + cl + ';font-weight:700;">' + (val >= 0 ? '+' : '') + val.toFixed(2) + '%</span>';
+      }
+      function pumpPrQueue() {
+        if (window._prRunning >= 4) return;
+        var id = window._prQueue.shift();
+        if (!id) return;
+        window._prRunning++;
+        window._prCache[id] = { loading: true };
+        var lpd = '';
+        var cell = document.querySelector('.pr-cell[data-sid="' + id + '"]');
+        if (cell) lpd = cell.getAttribute('data-lpd') || '';
+        var url = '/api/mutual-funds/hdfc/' + encodeURIComponent(id) + '/nav-history' + (lpd ? '?from=' + encodeURIComponent(lpd) : '');
+        fetch(url).then(function(r){ return r.json(); }).then(function(d){
+          window._prRunning--;
+          if (d && d.pctChange != null) {
+            window._prCache[id] = { complete: true, val: d.pctChange };
+            var c2 = document.querySelector('.pr-cell[data-sid="' + id + '"]');
+            if (c2) applyPrToCell(c2, d.pctChange);
+          } else {
+            window._prCache[id] = { complete: true, val: null };
+          }
+          pumpPrQueue();
+        }).catch(function(){
+          window._prRunning--;
+          window._prCache[id] = { complete: true, val: null };
+          pumpPrQueue();
+        });
+      }
+
+
 
 
       function getMfFallbackData() { return []; }
