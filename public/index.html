@@ -2295,7 +2295,6 @@ function _renderMfGridBody(grid, schemes) {
         return h+'</tr>';}).join("");
 
     } else {
-      // Summary: Scheme name, Score/100, AUM, TER, Investors, Investor growth, Day%, 1M, 3M, 6M, 1Y
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
         +'<th style="'+_th2+'text-align:right;">Score /100</th>'
         +'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th>'
@@ -3738,27 +3737,27 @@ function _renderMfGridBody(grid, schemes) {
         loadStockHoldingsScanner();
         loadFiiData();
       }
-      window.toggleAmcDropdown = toggleAmcDropdown;
-      window.filterMfAmc = filterMfAmc;
-      window.searchAmcFilter = searchAmcFilter;
-      window.filterMfCategory = filterMfCategory;
-      window.searchMfSchemes = searchMfSchemes;
-      window.applyMfFilters = applyMfFilters;
-          window.closeFiiModal = closeFiiModal;
-      window.closeSmModal = closeSmModal;
-      window.closeStockModal = closeStockModal;
-      window.fetchMfSchemes = fetchMfSchemes;
-      window.filterStockSector = filterStockSector;
-      window.openInvestorDetail = openInvestorDetail;
-      window.openKeyInvestorDetail = openKeyInvestorDetail;
-      window.openPromoterDetail = openPromoterDetail;
-      window.openStockDetail = openStockDetail;
-      window.sortStockTable = sortStockTable;
+      window.toggleAmcDropdown=toggleAmcDropdown;
+      window.filterMfAmc=filterMfAmc;
+      window.searchAmcFilter=searchAmcFilter;
+      window.filterMfCategory=filterMfCategory;
+      window.searchMfSchemes=searchMfSchemes;
+      window.openMfDetailFromTable=openMfDetailFromTable;
+      window.applyMfFilters=applyMfFilters;
+      window.closeFiiModal=closeFiiModal;
+      window.closeSmModal=closeSmModal;
+      window.closeStockModal=closeStockModal;
+      window.fetchMfSchemes=fetchMfSchemes;
+      window.filterStockSector=filterStockSector;
+      window.openInvestorDetail=openInvestorDetail;
+      window.openKeyInvestorDetail=openKeyInvestorDetail;
+      window.openPromoterDetail=openPromoterDetail;
+      window.openStockDetail=openStockDetail;
+      window.sortStockTable=sortStockTable;
       var _mfViewTab = window._mfViewTab || "summary";
       window.switchMfViewTab = function(t){ window._mfViewTab=t; var g=document.getElementById("mfSchemesGrid"); if(g && window._mfLastSchemes) _renderMfGridBody(g, window._mfLastSchemes); };
     })();
   </script>
   <script type="module" src="/js/app.js?v=20260831_v201"></script>
-<script src="/mf-view-tabs.js"></script>
 </body>
 </html>
