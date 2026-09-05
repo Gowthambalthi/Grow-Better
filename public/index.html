@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905f" />
+<meta name="version" content="v20260905g" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -1912,6 +1912,7 @@
           .replace(/-?\s*(direct|regular)\s*/gi, '')
           .replace(/-?\s*(growth|idcw|dividend)\s*(option|payout|re-investment|reinvestment)?\s*/gi, '')
           .replace(/-?\s*plan\s*[a-z0-9]+\s*/gi, '')
+          .replace(/\b[Ff]und\b\s*/g, '')
           .replace(/\s+/g, ' ')
           .trim();
         if (t === t.toUpperCase()) {
@@ -2197,18 +2198,20 @@ function _renderMfGridBody(grid, schemes) {
     // Category Cards (Large Cap, Flexi Cap, Small Cap, Index, Tax Saver)
     var _catCardsHtml = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">';
     var _catDefs = [
-      { key:'Large Cap', label:'Large-Cap Funds', desc1:'Established Companies', desc2:'Lower Risk With Consistent Returns',
+      { key:'Large Cap', label:'Large-Cap', desc1:'Established Companies', desc2:'Lower Risk With Consistent Returns',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#00B386" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20" fill="#00B386" opacity="0.3"/><path d="M20 20 L20 4 A16 16 0 0 1 36 20 Z" fill="#00B386" opacity="0.5"/><circle cx="20" cy="20" r="5" fill="#00B386" opacity="0.2"/></svg>' },
-      { key:'Flexi Cap', label:'Flexi Cap Funds', desc1:'Moderate Risk', desc2:'Long-term (> 5 years) Investments',
+      { key:'Flexi Cap', label:'Flexi Cap', desc1:'Moderate Risk', desc2:'Long-term (> 5 years) Investments',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#3B82F6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#3B82F6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#3B82F6" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#3B82F6" opacity="0.2"/></svg>' },
-      { key:'Small Cap', label:'Small-Cap Funds', desc1:'High Growth Potential', desc2:'Higher Volatility & Risk',
+      { key:'Small Cap', label:'Small-Cap', desc1:'High Growth Potential', desc2:'Higher Volatility & Risk',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#F59E0B" opacity="0.2"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' },
-      { key:'Index', label:'Index Funds', desc1:'Passive Tracking', desc2:'Low Cost, Market Returns',
+      { key:'Index', label:'Index', desc1:'Passive Tracking', desc2:'Low Cost, Market Returns',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#8B5CF6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#8B5CF6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#8B5CF6" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#8B5CF6" opacity="0.2"/><path d="M20 20 L12.93 33.86 A16 16 0 0 1 4 20 Z" fill="#8B5CF6" opacity="0.15"/><circle cx="20" cy="20" r="5" fill="#8B5CF6" opacity="0.1"/></svg>' },
       { key:'ELSS', label:'Tax Saver (ELSS)', desc1:'Section 80C Benefits', desc2:'3-Year Lock-in Period',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#EC4899" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#EC4899" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#EC4899" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#EC4899" opacity="0.2"/><path d="M20 20 L12.93 33.86 A16 16 0 0 1 4 20 Z" fill="#EC4899" opacity="0.15"/><path d="M20 20 L4 20 A16 16 0 0 1 20 4 Z" fill="#EC4899" opacity="0.1"/><circle cx="20" cy="20" r="5" fill="#EC4899" opacity="0.08"/></svg>' },
-      { key:'Money Market', label:'Money Market Funds', desc1:'Low Risk Liquid Funds', desc2:'Short-term Parking',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#10B981" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#10B981" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#10B981" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#10B981" opacity="0.2"/></svg>' }
+      { key:'Money Market', label:'Money Market', desc1:'Low Risk Liquid Funds', desc2:'Short-term Parking',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#10B981" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#10B981" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#10B981" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#10B981" opacity="0.2"/></svg>' },
+      { key:'Commodities', label:'Commodities', desc1:'Gold, Silver, Oil', desc2:'Inflation Hedge',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' }
     ];
     _catCardsHtml += _catDefs.map(function(cd){
       var cnt=0; for(var ci=0;ci<di.length;ci++){var cn=(di[ci].category||'').toLowerCase();if(cn.indexOf(cd.key.toLowerCase())!==-1||cd.key==='ELSS'&&cn.indexOf('tax')!==-1)cnt++;}
