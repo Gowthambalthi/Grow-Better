@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905i" />
+<meta name="version" content="v20260905j" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -1736,7 +1736,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260905a';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
+    (function(){var v='20260905j';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -1861,6 +1861,7 @@
                 investorChange6M: s.investorChange6M || null,
                 investorChange1Y: s.investorChange1Y || null,
                 confidenceScore: s.confidenceScore || 50,
+                metrics: s.metrics || null,
                 latestPortfolioDate: s.latestPortfolioDate,
                 availablePortfolioMonths: s.availablePortfolioMonths,
                 isOfficialHdfc: true,
@@ -2308,41 +2309,19 @@ function _renderMfGridBody(grid, schemes) {
       var _rk=["Alpha","Beta","Sharpe","Sortino","Treynor","StdDev"],_rp=["1M","3M","6M","1Y"];
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>';
       for(var _i=0;_i<_rk.length;_i++)for(var _j=0;_j<_rp.length;_j++)_head+='<th style="'+_th2+'text-align:right;">'+_rk[_i]+' '+_rp[_j]+'</th>';
-// Compute risk metrics from periodic returns
-      var _rf=6.5; // Risk-free rate (India 91-day T-bill)
-      var _bm={"1M":1.5,"3M":4.5,"6M":8.0,"1Y":12.0}; // Approx benchmark returns (Nifty 50)
+// Read REAL risk metrics from backend (fund_metrics computed from NAV history)
+      var _msuf={"1M":"1m","3M":"3m","6M":"6m","1Y":"1y"};
+      function _mfCellPct(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var x=v*100;var cl=x>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+(x>=0?"+":"")+x.toFixed(2)+'%</td>';}
+      function _mfCellNum(v,plus){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=plus?((v>=0)?"#00B386":"#EB5B56"):"var(--text-primary)";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+v.toFixed(2)+'</td>';}
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
-        var _r=s.returns||{};
+        var _m=(s && s.metrics)||{};
+        function _g(k,p){return (_m[k+"_"+(_msuf[p]||"")])!=null?_m[k+"_"+(_msuf[p]||"")]:null;}
         var h='<tr class="mf-table-row" data-cat="'+ct+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
           +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>';
         for(var _j=0;_j<_rp.length;_j++){
           var _p=_rp[_j];
-          var _fr=_r[_p]!=null?_r[_p]:null;
-          var _br=_bm[_p]||null;
-          // Alpha = fund return - benchmark return
-          var _alpha=(_fr!=null&&_br!=null)?_fr-_br:null;
-          // Beta = rough estimate from return ratio
-          var _beta=(_fr!=null&&_br!=null&&_br!==0)?(_fr/_br):null;
-          if(_beta!=null)_beta=Math.max(-2,Math.min(3,_beta)); // Clamp
-          // Sharpe = (return - risk-free) / estimated volatility
-          var _vol=(_fr!=null)?Math.abs(_fr)*1.8+2:null; // Rough vol estimate
-          var _sharpe=(_fr!=null&&_vol!=null&&_vol!==0)?((_fr-_rf/4*(_p==="1M"?1:_p==="3M"?3:_p==="6M"?6:12)/12)/(_vol/100)):null;
-          // Sortino = same but only downside deviation
-          var _sortino=(_fr!=null&&_fr<0)?(_fr/_vol*100-_rf/4):(_fr!=null?(_fr-_rf/4)/(_vol*0.7/100):null);
-          // Clamp values
-          if(_alpha!=null)_alpha=Math.max(-20,Math.min(20,_alpha));
-          if(_sharpe!=null)_sharpe=Math.max(-3,Math.min(5,_sharpe));
-          if(_sortino!=null)_sortino=Math.max(-5,Math.min(8,_sortino));
-          // Treynor = (return - risk-free) / Beta
-          var _treynor=(_fr!=null&&_beta!=null&&_beta!==0)?((_fr-_rf*(_p==="1M"?1:_p==="3M"?3:_p==="6M"?6:12)/12)/_beta):null;
-          if(_treynor!=null)_treynor=Math.max(-10,Math.min(15,_treynor));
-          // StdDev = estimated volatility (annualized)
-          var _stddev=(_fr!=null)?Math.abs(_fr)*1.5+1.5:null;
-          if(_stddev!=null)_stddev=Math.max(0,Math.min(30,_stddev));
-          // Render cells
-          function _rc(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+v.toFixed(2)+'</td>';}
-          h+=_rc(_alpha)+_rc(_beta)+_rc(_sharpe)+_rc(_sortino)+_rc(_treynor)+_rc(_stddev);
+          h+=_mfCellPct(_g("alpha",_p))+_mfCellNum(_g("beta",_p),false)+_mfCellNum(_g("sharpe",_p),true)+_mfCellNum(_g("sortino",_p),true)+_mfCellPct(_g("treynor",_p))+_mfCellPct(_g("stdDev",_p));
         }
         return h+'</tr>';}).join("");
 
@@ -2359,7 +2338,7 @@ function _renderMfGridBody(grid, schemes) {
         +'<th style="'+_th2+'text-align:right;">Aug-Sep %</th>'
         +'<th style="'+_th2+'text-align:right;">Jun-Sep %</th>'
         +'<th style="'+_th2+'text-align:right;">Mar-Sep %</th>'
-        +'<th style="'+_th2+'text-align:right;">1 year %</th>'
+        +'<th style="'+_th2+'text-align:right;">1 year %</th>'
         +'<th style="'+_th2+'text-align:right;">Benchmark %</th>';
             var _catAvg1Y={};var _catCnt={};for(var _bi=0;_bi<di.length;_bi++){var _bs=di[_bi],_bc=_bs.category||'Other',_br=_bs.returns&&_bs.returns['1Y']!=null?_bs.returns['1Y']:null;if(_br!==null){_catAvg1Y[_bc]=(_catAvg1Y[_bc]||0)+_br;_catCnt[_bc]=(_catCnt[_bc]||0)+1;}}for(var _ck in _catAvg1Y)_catAvg1Y[_ck]/=_catCnt[_ck];
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";

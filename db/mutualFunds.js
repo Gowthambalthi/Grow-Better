@@ -576,7 +576,14 @@ const helpers = {
 
   getAllSchemesSummary() {
     const schemes = this.getAllSchemes();
+    // Load all computed risk metrics once (Alpha/Beta/Sharpe/Sortino/Treynor/StdDev per period)
+    let metricsMap = {};
+    try {
+      const rows = db.prepare('SELECT * FROM fund_metrics').all();
+      for (const r of rows) metricsMap[r.schemeId] = r;
+    } catch (e) { /* fund_metrics may not exist yet */ }
     return schemes.map(s => {
+      const metrics = metricsMap[s.id] || null;
       const ret = this.getReturn(s.id);
       const aum = this.getAum(s.id);
       const nav = this.getNav(s.id);
@@ -626,6 +633,7 @@ const helpers = {
           sector: h.sector,
           weight: h.weight
         })),
+        metrics,
         // Confidence score: based on returns, AUM, holdings, expense ratio
         confidenceScore: (() => {
           let score = 50; // baseline

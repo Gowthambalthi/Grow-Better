@@ -206,6 +206,17 @@ async function runDailyNavTracking() {
     
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     console.log(`[Daily NAV] Completed in ${elapsed}s — tracked: ${tracked}, skipped: ${skipped}, failed: ${failed}`);
+
+    // Recompute Alpha/Beta/Sharpe/Sortino/Treynor/StdDev from the updated NAV history
+    try {
+      const { execFile } = require('child_process');
+      execFile('node', ['scripts/runMetricsNow.js'], { cwd: path.join(__dirname, '..', '..') }, (err, stdout) => {
+        if (err) console.error('[Metrics Recompute Error]', err.message);
+        else console.log('[Metrics Recompute]', String(stdout).trim().split('\n').pop());
+      });
+    } catch (e) {
+      console.warn('[Metrics Recompute] spawn failed (non-fatal):', e.message);
+    }
   } catch (err) {
     console.error('[Daily NAV Error]', err.message);
   }

@@ -12,6 +12,9 @@ const DB_PATH = path.join(__dirname, '..', 'data', 'hdfc_mutual_funds.db');
 const CONCURRENCY = 5;
 const DELAY_MS = 200; // delay between batches
 const MAX_RETRIES = 2;
+// Only keep the last ~13 months of daily NAV (covers 1M/3M/6M/1Y windows, keeps DB small).
+const MAX_HISTORY_DAYS = parseInt(process.env.MAX_HISTORY_DAYS || '400', 10);
+const CUTOFF = new Date(Date.now() - MAX_HISTORY_DAYS * 86400000).toISOString().slice(0, 10);
 
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
@@ -68,6 +71,7 @@ async function collect() {
                 // Date format from mfapi: 'DD-MM-YYYY'
                 const parts = row.date.split('-');
                 const navDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+                if (navDate < CUTOFF) continue; // skip ancient history
                 const nav = parseFloat(row.nav);
                 if (isNaN(nav) || nav <= 0) continue;
                 const r = insert.run(scheme.id, navDate, nav);
