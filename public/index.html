@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905k" />
+<meta name="version" content="v20260905l" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2411,7 +2411,8 @@ function _renderMfGridBody(grid, schemes) {
         for (var j = 0; j < uniq.length; j++) {
           var id = uniq[j];
           var cached = window._prCache[id];
-          if (cached && cached.complete) { applyPrToCell(sids[id], cached.val); continue; }
+          if (cached && cached.complete && cached.val != null) { applyPrToCell(sids[id], cached.val); continue; }
+          if (cached && cached.complete) continue; // failed fetch (no pctChange) — keep the 'since …' placeholder
           if (cached && cached.loading) continue;
           if (window._prQueue.indexOf(id) !== -1) continue;
           window._prQueue.push(id);
@@ -2419,7 +2420,7 @@ function _renderMfGridBody(grid, schemes) {
         pumpPrQueue();
       }
       function applyPrToCell(cell, val) {
-        if (!cell) return;
+        if (!cell || val == null) return;
         var cl = val >= 0 ? '#00B386' : '#EB5B56';
         cell.innerHTML = '<span style="color:' + cl + ';font-weight:700;">' + (val >= 0 ? '+' : '') + val.toFixed(2) + '%</span>';
       }
