@@ -1151,7 +1151,7 @@ app.get('/api/mutual-funds/all', (req, res) => {
 
     res.json({
       success: true,
-      totalSchemes: schemes.length,
+      totalSchemes: hdfcMfDb.getUniverseStats().totalSchemes,
       totalAmcs: Object.keys(byAmc).length,
       amcSummary: Object.entries(byAmc).map(([name, d]) => ({ name, count: d.count })),
       cardCounts,

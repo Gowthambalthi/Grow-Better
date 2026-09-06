@@ -814,6 +814,15 @@ const helpers = {
   },
 
   /**
+   * Cheap universe stats (full counts, not limited by the summary slice)
+   */
+  getUniverseStats() {
+    const s = db.prepare('SELECT COUNT(*) AS n FROM mutual_fund_schemes').get();
+    const a = db.prepare('SELECT COUNT(DISTINCT amc) AS n FROM mutual_fund_schemes').get();
+    return { totalSchemes: s.n, totalAmcs: a.n };
+  },
+
+  /**
    * Validate data integrity
    */
   validateIntegrity() {
