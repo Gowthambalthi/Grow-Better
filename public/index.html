@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905q" />
+<meta name="version" content="v20260905r" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2397,7 +2397,7 @@ function _renderMfGridBody(grid, schemes) {
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(s.aum!=null?"\u20b9"+Number(s.aum).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>"
           +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_vs=_ch>=0?"+":"-"+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+"%)</span></td>";})()
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+(s.expenseRatio!=null?s.expenseRatio.toFixed(2)+"%":"-")+"</td>"
-          +(function(){var _lpd=s.latestPortfolioDate||s.lastPortfolioDate||null;var _pr=(window._prCache&&window._prCache[s.id]!=null)?window._prCache[s.id]:null;if(_pr!=null&&_pr.complete){var _cl=_pr.val>=0?"#00B386":"#EB5B56";return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" style=\"padding:10px 12px;text-align:right;font-size:12px;\"><span style=\"color:'+_cl+';font-weight:700;\">'+(_pr.val>=0?"+":"")+_pr.val.toFixed(2)+'%</span></td>';}return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" data-lpd=\"'+( _lpd||'')+'\" style=\"padding:10px 12px;text-align:right;color:var(--text-muted);font-size:11px;\">'+( _lpd?'since '+String(_lpd).substring(0,10):'…')+'</td>';})()
+          +(function(){var _lpd=s.latestPortfolioDate||s.lastPortfolioDate||null;var _pr=(window._prCache&&window._prCache[s.id]!=null)?window._prCache[s.id]:null;if(_pr!=null&&_pr.complete&&_pr.val!=null){var _cl=_pr.val>=0?"#00B386":"#EB5B56";return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" style=\"padding:10px 12px;text-align:right;font-size:12px;\"><span style=\"color:'+_cl+';font-weight:700;\">'+(_pr.val>=0?"+":"")+_pr.val.toFixed(2)+'%</span></td>';}return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" data-lpd=\"'+( _lpd||'')+'\" style=\"padding:10px 12px;text-align:right;color:var(--text-muted);font-size:11px;\">'+( _lpd?'since '+String(_lpd).substring(0,10):'…')+'</td>';})()
 
 
           +rc3(s.returns&&s.returns["1D"]!=null?s.returns["1D"]:null)
@@ -2464,7 +2464,12 @@ function _renderMfGridBody(grid, schemes) {
           var id = uniq[j];
           var cached = window._prCache[id];
           if (cached && cached.complete && cached.val != null) { applyPrToCell(sids[id], cached.val); continue; }
-          if (cached && cached.complete) continue; // failed fetch (no pctChange) — keep the 'since …' placeholder
+          if (cached && cached.complete) {
+            // Failed/no-data fetch: give it a bounded retry on a later render so a transient failure
+            // (or a pre-fix null response) can't pin the 'since …' placeholder forever.
+            if ((cached.fails || 0) >= 2) continue;
+            cached.fails = (cached.fails || 0) + 1;
+          }
           if (cached && cached.loading) continue;
           if (window._prQueue.indexOf(id) !== -1) continue;
           window._prQueue.push(id);
@@ -2481,7 +2486,7 @@ function _renderMfGridBody(grid, schemes) {
         var id = window._prQueue.shift();
         if (!id) return;
         window._prRunning++;
-        window._prCache[id] = { loading: true };
+        window._prCache[id] = { loading: true, fails: (window._prCache[id] && window._prCache[id].fails) || 0 };
         var lpd = '';
         var cell = document.querySelector('.pr-cell[data-sid="' + id + '"]');
         if (cell) lpd = cell.getAttribute('data-lpd') || '';
@@ -2493,12 +2498,12 @@ function _renderMfGridBody(grid, schemes) {
             var c2 = document.querySelector('.pr-cell[data-sid="' + id + '"]');
             if (c2) applyPrToCell(c2, d.pctChange);
           } else {
-            window._prCache[id] = { complete: true, val: null };
+            window._prCache[id] = { complete: true, val: null, fails: (window._prCache[id] && window._prCache[id].fails || 0) + 1 };
           }
           pumpPrQueue();
         }).catch(function(){
           window._prRunning--;
-          window._prCache[id] = { complete: true, val: null };
+          window._prCache[id] = { complete: true, val: null, fails: (window._prCache[id] && window._prCache[id].fails || 0) + 1 };
           pumpPrQueue();
         });
       }

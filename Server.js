@@ -1401,11 +1401,17 @@ app.get('/api/mutual-funds/hdfc/:schemeId/nav-history', async (req, res) => {
         filtered = history.filter(h => h.navDate >= portfolioDate);
       }
       if (filtered.length >= 2) {
+        const asc = filtered.slice().reverse(); // chronological
+        const startNav = asc[0].nav;
+        const currentNav = asc[asc.length - 1].nav;
+        // Same pctChange contract as the mfapi fallback: portfolio date -> latest NAV
+        const pctChange = startNav > 0 ? parseFloat(((currentNav - startNav) / startNav * 100).toFixed(2)) : null;
         return res.json({
           success: true, schemeId, schemeName: scheme.schemeName,
-          portfolioDate: portfolioDate || filtered[0].navDate,
-          source: 'tracked', dataPoints: filtered.length,
-          data: filtered.reverse().map(h => ({ date: h.navDate, nav: h.nav }))
+          portfolioDate: portfolioDate || asc[0].navDate,
+          source: 'tracked', currentNav, pctChange,
+          dataPoints: filtered.length,
+          data: asc.map(h => ({ date: h.navDate, nav: h.nav }))
         });
       }
     }
