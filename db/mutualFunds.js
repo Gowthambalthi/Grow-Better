@@ -156,16 +156,11 @@ db.exec(`
     FOREIGN KEY (portfolioId) REFERENCES mutual_fund_portfolios(id)
   );
 
-  -- NAV_HISTORY: Daily NAV snapshots for charting (last 30+ days)
-  CREATE TABLE IF NOT EXISTS mutual_fund_nav_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    schemeId TEXT NOT NULL,
-    navDate TEXT NOT NULL,
-    nav REAL NOT NULL,
-    source TEXT DEFAULT 'groww',
-    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (schemeId) REFERENCES mutual_fund_schemes(id),
-    UNIQUE(schemeId, navDate)
+  -- NAV_HISTORY: compact per-scheme blob ("YYYY-MM-DD:NAV," ascending by date)
+  -- Keeps the DB small enough to stay under git's 100MB file limit.
+  CREATE TABLE IF NOT EXISTS mutual_fund_nav_blob (
+    schemeId TEXT PRIMARY KEY,
+    points TEXT NOT NULL
   );
 
   -- Indexes
@@ -174,8 +169,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_mfret_scheme ON mutual_fund_returns(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfaum_scheme ON mutual_fund_aum(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfnav_scheme ON mutual_fund_nav(schemeId);
-  CREATE INDEX IF NOT EXISTS idx_mfnavhist_scheme ON mutual_fund_nav_history(schemeId);
-  CREATE INDEX IF NOT EXISTS idx_mfnavhist_date ON mutual_fund_nav_history(navDate);
   CREATE INDEX IF NOT EXISTS idx_mfinv_scheme ON mutual_fund_investors(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfp_scheme ON mutual_fund_portfolios(schemeId);
   CREATE INDEX IF NOT EXISTS idx_mfp_date ON mutual_fund_portfolios(portfolioDate);
@@ -188,6 +181,30 @@ try { db.exec("ALTER TABLE mutual_fund_schemes ADD COLUMN fundManager TEXT"); } 
 try { db.exec("ALTER TABLE mutual_fund_schemes ADD COLUMN expenseRatio REAL"); } catch(_){}
 
 // ─── Helper Functions ───────────────────────────────────────────────────────
+
+/** Parse the compact per-scheme NAV blob into [{navDate, nav}] ascending by date. */
+function navBlobToSeries(points) {
+  if (!points) return [];
+  const out = [];
+  let i = 0;
+  const n = points.length;
+  while (i < n) {
+    const c = points.indexOf(':', i);
+    if (c < 0) break;
+    const navDate = points.slice(i, c);
+    let e = points.indexOf(',', c + 1);
+    if (e < 0) e = n;
+    const nav = parseFloat(points.slice(c + 1, e));
+    if (!isNaN(nav) && nav > 0) out.push({ navDate, nav });
+    i = e + 1;
+  }
+  return out;
+}
+
+function navSeries(schemeId) {
+  const row = db.prepare('SELECT points FROM mutual_fund_nav_blob WHERE schemeId=?').get(schemeId);
+  return navBlobToSeries(row && row.points);
+}
 
 const helpers = {
 
@@ -371,6 +388,30 @@ const helpers = {
   },
 
   /**
+   * Real per-card counts for the 7 Smart Money cards (same matcher as the frontend),
+   * computed from the scheme master only — cheap even at 14k schemes.
+   */
+  getCardCounts() {
+    const cards = [
+      { key: 'Large Cap', test: c => c.indexOf('large cap') !== -1 },
+      { key: 'Flexi Cap', test: c => c.indexOf('flexi cap') !== -1 || c.indexOf('flexicap') !== -1 },
+      { key: 'Small Cap', test: c => c.indexOf('small cap') !== -1 || c.indexOf('smallcap') !== -1 },
+      { key: 'Index', test: c => c.indexOf('index') !== -1 || c.indexOf('etf') !== -1 },
+      { key: 'ELSS', test: c => c.indexOf('elss') !== -1 || c.indexOf('tax saver') !== -1 || c.indexOf('80c') !== -1 },
+      { key: 'Money Market', test: c => c.indexOf('money market') !== -1 || c.indexOf('liquid') !== -1 || c.indexOf('overnight') !== -1 },
+      { key: 'Commodities', test: c => c.indexOf('commodit') !== -1 || c.indexOf('gold') !== -1 || c.indexOf('silver') !== -1 },
+    ];
+    const counts = {};
+    for (const c of cards) counts[c.key] = 0;
+    const rows = db.prepare('SELECT schemeName, category FROM mutual_fund_schemes').all();
+    for (const r of rows) {
+      const blob = ((r.category || '') + ' ' + (r.schemeName || '')).toLowerCase();
+      for (const c of cards) if (c.test(blob)) counts[c.key]++;
+    }
+    return counts;
+  },
+
+  /**
    * Get return for a scheme (default 1Y, but can specify any period)
    */
   getReturn(schemeId, period) {
@@ -389,7 +430,7 @@ const helpers = {
    * Returns the same shape as mutual_fund_returns rows: [{period, returnValue, asOfDate}]
    */
   getReturnsFromNav(schemeId) {
-    const navs = db.prepare('SELECT navDate, nav FROM mutual_fund_nav_history WHERE schemeId=? ORDER BY navDate').all(schemeId);
+    const navs = navSeries(schemeId);
     if (!navs || navs.length < 2) return [];
     const last = navs[navs.length - 1];
     const asOfDate = last.navDate;
@@ -595,29 +636,115 @@ const helpers = {
     return null;
   },
 
-  getAllSchemesSummary() {
-    const schemes = this.getAllSchemes();
-    // Load all computed risk metrics once (Alpha/Beta/Sharpe/Sortino/Treynor/StdDev per period)
+  getAllSchemesSummary(limit) {
+    let schemes = this.getAllSchemes();
+    if (limit && limit > 0) schemes = schemes.slice(0, limit); // slice BEFORE per-scheme work so the API stays fast at 14k schemes
+    const ids = new Set(schemes.map(s => s.id));
+
+    // ─── Batch-load every per-scheme table ONCE into maps (no N+1) ─────────
     let metricsMap = {};
     try {
-      const rows = db.prepare('SELECT * FROM fund_metrics').all();
-      for (const r of rows) metricsMap[r.schemeId] = r;
+      for (const r of db.prepare('SELECT * FROM fund_metrics').all()) metricsMap[r.schemeId] = r;
     } catch (e) { /* fund_metrics may not exist yet */ }
+
+    const retMap = {};   // schemeId -> { period: {period, returnValue, asOfDate} }
+    for (const r of db.prepare('SELECT schemeId, period, returnValue, asOfDate FROM mutual_fund_returns').all()) {
+      (retMap[r.schemeId] = retMap[r.schemeId] || {})[r.period] = r;
+    }
+    const aumMap = {};   for (const r of db.prepare('SELECT * FROM mutual_fund_aum').all()) aumMap[r.schemeId] = r;
+    const navMap = {};   for (const r of db.prepare('SELECT * FROM mutual_fund_nav').all()) navMap[r.schemeId] = r;
+    const invMap = {};   for (const r of db.prepare('SELECT * FROM mutual_fund_investors').all()) invMap[r.schemeId] = r;
+
+    const portMap = {};  // schemeId -> portfolios sorted date DESC
+    for (const r of db.prepare('SELECT * FROM mutual_fund_portfolios ORDER BY portfolioDate DESC').all()) {
+      (portMap[r.schemeId] = portMap[r.schemeId] || []).push(r);
+    }
+    const holdMap = {};  // portfolioId -> holdings sorted weight DESC
+    for (const r of db.prepare('SELECT * FROM mutual_fund_holdings ORDER BY weight DESC').all()) {
+      (holdMap[r.portfolioId] = holdMap[r.portfolioId] || []).push(r);
+    }
+    const aumSnapMap = {};   for (const r of db.prepare('SELECT schemeId, aum, snapshotDate FROM aum_snapshots ORDER BY snapshotDate DESC').all()) (aumSnapMap[r.schemeId] = aumSnapMap[r.schemeId] || []).push(r);
+    const invSnapMap = {};   for (const r of db.prepare('SELECT schemeId, investorCount, snapshotDate FROM investor_snapshots ORDER BY snapshotDate DESC').all()) (invSnapMap[r.schemeId] = invSnapMap[r.schemeId] || []).push(r);
+
+    // NAV history only for schemes that lack return rows (rare) — one batched query
+    const needNav = schemes.filter(s => !retMap[s.id]).map(s => s.id);
+    const navHistMap = {};
+    if (needNav.length) {
+      const ph = needNav.map(() => '?').join(',');
+      try {
+        for (const r of db.prepare(`SELECT schemeId, points FROM mutual_fund_nav_blob WHERE schemeId IN (${ph})`).all(...needNav)) {
+          navHistMap[r.schemeId] = navBlobToSeries(r.points);
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    function returnsFromNav(navs) {
+      if (!navs || navs.length < 2) return [];
+      const last = navs[navs.length - 1];
+      const out = [];
+      const windows = { '1D': 1, '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+      for (const [period, days] of Object.entries(windows)) {
+        const cutoff = new Date(new Date(last.navDate + 'T00:00:00').getTime() - days * 86400000).toISOString().slice(0, 10);
+        const win = navs.filter(r => r.navDate >= cutoff);
+        if (win.length >= 2 && win[0].nav > 0) out.push({ period, returnValue: (last.nav - win[0].nav) / win[0].nav * 100, asOfDate: last.navDate });
+      }
+      return out;
+    }
+
+    function normDate(d) { try { return new Date(d).toISOString().slice(0, 10); } catch (e) { return d; } }
+    function snapChange(snaps, monthsBack, valKey) {
+      if (!snaps || snaps.length < 2) return null;
+      const targetDate = new Date();
+      targetDate.setMonth(targetDate.getMonth() - monthsBack);
+      const targetStr = targetDate.toISOString().slice(0, 10);
+      const latest = snaps[0];
+      let historical = null;
+      for (let i = 1; i < snaps.length; i++) {
+        const d = normDate(snaps[i].snapshotDate);
+        if (d <= targetStr) { historical = snaps[i]; break; }
+      }
+      if (!historical) historical = snaps[snaps.length - 1];
+      const change = latest[valKey] - historical[valKey];
+      const changePct = historical[valKey] > 0 ? ((change / historical[valKey]) * 100) : null;
+      return { current: latest[valKey], previous: historical[valKey], change, changePct, latestDate: latest.snapshotDate, historicalDate: historical.snapshotDate };
+    }
+    function aumChange(id, monthsBack) {
+      const snap = snapChange(aumSnapMap[id], monthsBack, 'aum');
+      if (snap) return snap;
+      const periodMap = { 1: '1M', 3: '3M', 6: '6M', 12: '1Y' };
+      const ret = retMap[id] && retMap[id][periodMap[monthsBack]];
+      const aum = aumMap[id];
+      if (ret && aum && aum.aum > 0) {
+        const estChange = aum.aum * (ret.returnValue / 100);
+        return { current: aum.aum, previous: aum.aum - estChange, change: estChange, changePct: ret.returnValue, latestDate: 'estimated', historicalDate: 'estimated' };
+      }
+      return null;
+    }
+    function invChange(id, monthsBack) {
+      const snap = snapChange(invSnapMap[id], monthsBack, 'investorCount');
+      if (snap) return snap;
+      const inv = invMap[id];
+      if (inv && inv.investorCount > 0) {
+        const monthlyGrowthRate = 0.005;
+        const estChange = Math.round(inv.investorCount * monthlyGrowthRate * monthsBack);
+        return { current: inv.investorCount, previous: inv.investorCount - estChange, change: estChange, changePct: (monthlyGrowthRate * monthsBack * 100), latestDate: 'estimated', historicalDate: 'estimated' };
+      }
+      return null;
+    }
+
     return schemes.map(s => {
       const metrics = metricsMap[s.id] || null;
-      const ret = this.getReturn(s.id);
-      const aum = this.getAum(s.id);
-      const nav = this.getNav(s.id);
-      const inv = this.getInvestors(s.id);
-      let allReturns = this.getAllReturns(s.id);
-      if (!allReturns.length) allReturns = this.getReturnsFromNav(s.id); // NAV-derived fallback for new imports
-      const latestPortfolio = this.getLatestPortfolio(s.id);
+      const ret = retMap[s.id] && retMap[s.id]['1Y'] ? retMap[s.id]['1Y'] : null;
+      const aum = aumMap[s.id] || null;
+      const nav = navMap[s.id] || null;
+      const inv = invMap[s.id] || null;
+      const allReturns = Object.values(retMap[s.id] || {});
+      const allReturnsForScore = allReturns.length ? allReturns : returnsFromNav(navHistMap[s.id]);
+      const retRows = allReturnsForScore;
+      const ports = portMap[s.id] || [];
+      const latestPortfolio = ports.length ? ports[0] : null;
       let topHoldings = [];
-      if (latestPortfolio) {
-        topHoldings = db.prepare(
-          'SELECT * FROM mutual_fund_holdings WHERE portfolioId = ? ORDER BY weight DESC LIMIT 5'
-        ).all(latestPortfolio.id);
-      }
+      if (latestPortfolio) topHoldings = (holdMap[latestPortfolio.id] || []).slice(0, 5);
 
       return {
         id: s.id,
@@ -632,22 +759,22 @@ const helpers = {
         expenseRatio: s.expenseRatio || null,
         return1Y: ret ? ret.returnValue : null,
         return1YDate: ret ? ret.asOfDate : null,
-        returns: allReturns.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),
+        returns: retRows.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),
         nav: nav ? nav.nav : null,
         navDate: nav ? nav.asOfDate : null,
         aum: aum ? aum.aum : null,
         aumDate: aum ? aum.asOfDate : null,
         investorCount: inv ? inv.investorCount : null,
-        aumChange1M: (() => { try { return this.getAumChange(s.id, 1); } catch(e) { return null; } })(),
-        aumChange3M: (() => { try { return this.getAumChange(s.id, 3); } catch(e) { return null; } })(),
-        aumChange6M: (() => { try { return this.getAumChange(s.id, 6); } catch(e) { return null; } })(),
-        aumChange1Y: (() => { try { return this.getAumChange(s.id, 12); } catch(e) { return null; } })(),
-        investorChange1M: (() => { try { return this.getInvestorChange(s.id, 1); } catch(e) { return null; } })(),
-        investorChange3M: (() => { try { return this.getInvestorChange(s.id, 3); } catch(e) { return null; } })(),
-        investorChange6M: (() => { try { return this.getInvestorChange(s.id, 6); } catch(e) { return null; } })(),
-        investorChange1Y: (() => { try { return this.getInvestorChange(s.id, 12); } catch(e) { return null; } })(),
+        aumChange1M: aumChange(s.id, 1),
+        aumChange3M: aumChange(s.id, 3),
+        aumChange6M: aumChange(s.id, 6),
+        aumChange1Y: aumChange(s.id, 12),
+        investorChange1M: invChange(s.id, 1),
+        investorChange3M: invChange(s.id, 3),
+        investorChange6M: invChange(s.id, 6),
+        investorChange1Y: invChange(s.id, 12),
         latestPortfolioDate: latestPortfolio ? latestPortfolio.portfolioDate : null,
-        availablePortfolioMonths: this.getPortfolioDates(s.id).length,
+        availablePortfolioMonths: ports.length,
         topHoldings: topHoldings.map(h => ({
           securityName: h.securityName,
           isin: h.isin,
@@ -659,7 +786,7 @@ const helpers = {
         // Confidence score: based on returns, AUM, holdings, expense ratio
         confidenceScore: (() => {
           let score = 50; // baseline
-          const returns = allReturns.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {});
+          const returns = allReturnsForScore.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {});
           // Positive returns boost score
           if ((returns['1M'] || 0) > 0) score += 5;
           if ((returns['3M'] || 0) > 0) score += 5;
@@ -738,50 +865,50 @@ const helpers = {
    * Insert or update a daily NAV snapshot
    */
   upsertNavHistory(schemeId, navDate, nav, source) {
-    const stmt = db.prepare(`
-      INSERT INTO mutual_fund_nav_history (schemeId, navDate, nav, source)
-      VALUES (?, ?, ?, ?)
-      ON CONFLICT(schemeId, navDate) DO UPDATE SET
-        nav = excluded.nav,
-        source = excluded.source
-    `);
-    return stmt.run(schemeId, navDate, nav, source || 'groww');
+    if (nav == null || isNaN(nav) || nav <= 0 || !navDate) return { changes: 0 };
+    const series = navSeries(schemeId);
+    let found = false;
+    for (let i = 0; i < series.length; i++) {
+      if (series[i].navDate === navDate) { series[i].nav = nav; found = true; break; }
+    }
+    if (!found) {
+      series.push({ navDate, nav });
+      series.sort((a, b) => (a.navDate < b.navDate ? -1 : a.navDate > b.navDate ? 1 : 0));
+    }
+    db.prepare('INSERT OR REPLACE INTO mutual_fund_nav_blob (schemeId, points) VALUES (?, ?)')
+      .run(schemeId, series.map(p => p.navDate + ':' + (Math.round(p.nav * 10000) / 10000)).join(','));
+    return { changes: 1 };
   },
 
   /**
    * Get NAV history for a scheme (last N days)
    */
   getNavHistory(schemeId, days) {
-    let sql = 'SELECT * FROM mutual_fund_nav_history WHERE schemeId = ? ORDER BY navDate DESC';
-    if (days) sql += ' LIMIT ' + parseInt(days);
-    return db.prepare(sql).all(schemeId);
+    const series = navSeries(schemeId).reverse(); // DESC
+    if (days) series.length = Math.min(series.length, parseInt(days) || series.length);
+    return series.map(p => ({ schemeId, navDate: p.navDate, nav: p.nav, source: 'mfapi' }));
   },
 
   /**
    * Get NAV history for a scheme within a date range
    */
   getNavHistoryRange(schemeId, fromDate, toDate) {
-    return db.prepare(
-      'SELECT * FROM mutual_fund_nav_history WHERE schemeId = ? AND navDate >= ? AND navDate <= ? ORDER BY navDate ASC'
-    ).all(schemeId, fromDate, toDate);
+    return navSeries(schemeId).filter(p => p.navDate >= fromDate && p.navDate <= toDate);
   },
 
   /**
    * Get the latest NAV date for a scheme
    */
   getLatestNavDate(schemeId) {
-    return db.prepare(
-      'SELECT navDate FROM mutual_fund_nav_history WHERE schemeId = ? ORDER BY navDate DESC LIMIT 1'
-    ).get(schemeId);
+    const series = navSeries(schemeId);
+    return series.length ? { navDate: series[series.length - 1].navDate } : undefined;
   },
 
   /**
    * Check if a specific NAV date already exists
    */
   hasNavHistory(schemeId, navDate) {
-    return db.prepare(
-      'SELECT 1 FROM mutual_fund_nav_history WHERE schemeId = ? AND navDate = ?'
-    ).get(schemeId, navDate);
+    return navSeries(schemeId).some(p => p.navDate === navDate) ? { 1: 1 } : undefined;
   },
 
   /**

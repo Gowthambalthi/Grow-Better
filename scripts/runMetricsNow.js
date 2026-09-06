@@ -12,6 +12,31 @@ const path = require('path');
 const db = new Database(path.join(__dirname, '..', 'data', 'hdfc_mutual_funds.db'));
 db.pragma('journal_mode = WAL');
 
+// ─── NAV blob helpers (nav history is stored as one compact "YYYY-MM-DD:NAV," string per scheme) ───
+function navSeries(schemeId) {
+  const row = db.prepare('SELECT points FROM mutual_fund_nav_blob WHERE schemeId=?').get(schemeId);
+  if (!row || !row.points) return [];
+  const out = [];
+  let i = 0;
+  const n = row.points.length;
+  while (i < n) {
+    const c = row.points.indexOf(':', i);
+    if (c < 0) break;
+    const navDate = row.points.slice(i, c);
+    let e = row.points.indexOf(',', c + 1);
+    if (e < 0) e = n;
+    const nav = parseFloat(row.points.slice(c + 1, e));
+    if (!isNaN(nav) && nav > 0) out.push({ navDate, nav });
+    i = e + 1;
+  }
+  return out;
+}
+
+function navCount(schemeId) {
+  const row = db.prepare("SELECT (length(points) - length(replace(points, ',', ''))) + 1 AS cnt FROM mutual_fund_nav_blob WHERE schemeId=?").get(schemeId);
+  return row && row.cnt ? row.cnt : 0;
+}
+
 // ─── Schema ──────────────────────────────────────────────────────────────────
 db.exec('DROP TABLE IF EXISTS fund_metrics');
 db.exec(`CREATE TABLE fund_metrics (
@@ -94,19 +119,21 @@ function metricsFor(aligned) {
 }
 
 // ─── Benchmark: a Nifty 50 index fund with the most NAV data ─────────────────
-const benchRow = db.prepare(`
-  SELECT schemeId, COUNT(*) AS cnt
-  FROM mutual_fund_nav_history
-  WHERE schemeId IN (
-    SELECT id FROM mutual_fund_schemes
-    WHERE schemeName LIKE '%Nifty 50%' OR schemeName LIKE '%NIFTY 50%'
-  )
-  GROUP BY schemeId ORDER BY cnt DESC LIMIT 1
-`).get();
-
-const bench = benchRow && benchRow.cnt > 100
-  ? benchRow
-  : db.prepare('SELECT schemeId, COUNT(*) AS cnt FROM mutual_fund_nav_history GROUP BY schemeId ORDER BY cnt DESC LIMIT 1').get();
+const niftyCands = db.prepare("SELECT id FROM mutual_fund_schemes WHERE (schemeName LIKE '%Nifty 50 Index%' OR schemeName LIKE '%NIFTY 50 Index%' OR schemeName LIKE '%Nifty 50 ETF%' OR schemeName LIKE '%NIFTY 50 ETF%') AND schemeName NOT LIKE '%Nifty 500%' AND schemeName NOT LIKE '%NIFTY 500%'").all();
+let benchRow = null;
+for (const c of niftyCands) {
+  const cnt = navCount(c.id);
+  if (cnt > 100 && (!benchRow || cnt > benchRow.cnt)) benchRow = { schemeId: c.id, cnt };
+}
+let bench = benchRow;
+if (!bench) {
+  let best = null;
+  for (const c of db.prepare('SELECT schemeId FROM mutual_fund_nav_blob').all()) {
+    const cnt = navCount(c.schemeId);
+    if (!best || cnt > best.cnt) best = { schemeId: c.schemeId, cnt };
+  }
+  bench = best;
+}
 
 if (!bench) {
   console.log('No NAV data available. Run collectNavHistory.js first.');
@@ -117,7 +144,7 @@ if (!bench) {
 const benchName = db.prepare('SELECT schemeName FROM mutual_fund_schemes WHERE id = ?').get(bench.schemeId);
 console.log('Benchmark scheme:', bench.schemeId, '—', benchName ? benchName.schemeName : '', '(' + bench.cnt + ' days)');
 
-const benchNavs = db.prepare('SELECT navDate, nav FROM mutual_fund_nav_history WHERE schemeId=? ORDER BY navDate').all(bench.schemeId);
+const benchNavs = navSeries(bench.schemeId);
 
 // ─── Official benchmark detection ────────────────────────────────────────────
 // Ordered list: first matching rule wins. Each entry: [searchTokens(lowercase), benchmarkLabel]
@@ -227,12 +254,9 @@ function detectBenchmark(schemeName, category) {
 // Cache benchmark returns per benchmark label so we only compute once per index
 const benchProxyCache = {};  // label -> { proxyId, navs }
 const benchProxyStmt = db.prepare(`
-  SELECT s.id AS schemeId, COUNT(h.navDate) AS cnt
-  FROM mutual_fund_schemes s
-  LEFT JOIN mutual_fund_nav_history h ON h.schemeId = s.id
-  WHERE (s.schemeName LIKE ? OR s.schemeName LIKE ?)
-    AND (s.schemeName LIKE '%Index%' OR s.schemeName LIKE '%ETF%' OR s.schemeName LIKE '%ETF FOF%' OR s.schemeName LIKE '%ETF FoF%')
-  GROUP BY s.id ORDER BY cnt DESC LIMIT 1
+  SELECT id FROM mutual_fund_schemes
+  WHERE (schemeName LIKE ? OR schemeName LIKE ?)
+    AND (schemeName LIKE '%Index%' OR schemeName LIKE '%ETF%')
 `);
 
 // Map benchmark label -> index-fund name fragment(s) to find a proxy in the DB
@@ -304,11 +328,13 @@ function getBenchmarkProxy(label) {
   const frags = PROXY_FRAGMENTS[label] || ['%' + label.replace(' TRI', '').replace('S&P BSE SENSEX', 'Sensex') + '%Index%'];
   let best = null;
   for (const f of frags) {
-    const row = benchProxyStmt.get(f, f);
-    if (row && (!best || row.cnt > best.cnt)) best = row;
+    for (const c of benchProxyStmt.all(f, f)) {
+      const cnt = navCount(c.id);
+      if (cnt && (!best || cnt > best.cnt)) best = { schemeId: c.id, cnt };
+    }
   }
   if (!best || !best.cnt) { benchProxyCache[label] = null; return null; }
-  const navs = db.prepare('SELECT navDate, nav FROM mutual_fund_nav_history WHERE schemeId=? ORDER BY navDate').all(best.schemeId);
+  const navs = navSeries(best.schemeId);
   benchProxyCache[label] = { proxyId: best.schemeId, navs };
   return benchProxyCache[label];
 }
@@ -345,7 +371,7 @@ const schemes = db.prepare('SELECT id, schemeName, category FROM mutual_fund_sch
 let computed = 0, skipped = 0, benchMatched = 0, benchMissed = 0;
 
 for (const s of schemes) {
-  const fundNavs = db.prepare('SELECT navDate, nav FROM mutual_fund_nav_history WHERE schemeId=? ORDER BY navDate').all(s.id);
+  const fundNavs = navSeries(s.id);
   if (!fundNavs.length) { skipped++; continue; }
   const vals = {};
   let anyValid = false;
@@ -391,6 +417,35 @@ for (const s of schemes) {
     computed++;
   } else skipped++;
 }
+
+// ─── Materialize NAV-derived returns into mutual_fund_returns ───────────────
+// So the summary API can batch-load returns without per-scheme NAV queries.
+const upsertRet = db.prepare(`
+  INSERT INTO mutual_fund_returns (schemeId, period, returnValue, asOfDate, source)
+  VALUES (?, ?, ?, ?, 'nav-derived')
+  ON CONFLICT(schemeId, period) DO UPDATE SET returnValue = excluded.returnValue, asOfDate = excluded.asOfDate, source = excluded.source
+`);
+let retMat = 0;
+{
+  const retTx = db.transaction(() => {
+    for (const s of schemes) {
+      const navs = navSeries(s.id);
+      if (!navs || navs.length < 2) continue;
+      const last = navs[navs.length - 1];
+      const windows = { '1D': 1, '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+      for (const [period, days] of Object.entries(windows)) {
+        const cutoff = new Date(new Date(last.navDate + 'T00:00:00').getTime() - days * 86400000).toISOString().slice(0, 10);
+        const win = navs.filter(r => r.navDate >= cutoff);
+        if (win.length >= 2 && win[0].nav > 0) {
+          upsertRet.run(s.id, period, (last.nav - win[0].nav) / win[0].nav * 100, last.navDate);
+        }
+      }
+      retMat++;
+    }
+  });
+  retTx();
+}
+console.log('Materialized NAV-derived returns for', retMat, 'schemes');
 
 console.log('Computed metrics for', computed, 'schemes (' + skipped + ' skipped)');
 console.log('Benchmark matched:', benchMatched, '| missed (no index-fund proxy):', benchMissed);

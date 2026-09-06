@@ -38,16 +38,39 @@ async function collect() {
   const db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
 
-  // Get all schemes with schemeCode
+  // Get all schemes with schemeCode, skipping ones that already have NAV history
+  // (INSERT OR IGNORE would dedupe but still cost a fetch — skip entirely when possible)
+  // BACKFILL_ALL=1 forces full refetch of everything.
+  const skipExisting = process.env.BACKFILL_ALL !== '1';
   const schemes = db.prepare(
-    "SELECT id, schemeCode, schemeName FROM mutual_fund_schemes WHERE schemeCode IS NOT NULL AND schemeCode != ''"
+    "SELECT s.id, s.schemeCode, s.schemeName FROM mutual_fund_schemes s WHERE s.schemeCode IS NOT NULL AND s.schemeCode != '' " +
+    (skipExisting ? "AND NOT EXISTS (SELECT 1 FROM mutual_fund_nav_blob b WHERE b.schemeId = s.id)" : "")
   ).all();
 
   console.log(`[NAV History] Found ${schemes.length} schemes to process`);
 
-  const insert = db.prepare(
-    "INSERT OR IGNORE INTO mutual_fund_nav_history (schemeId, navDate, nav, source) VALUES (?, ?, ?, 'mfapi')"
-  );
+  const getBlob = db.prepare('SELECT points FROM mutual_fund_nav_blob WHERE schemeId = ?');
+  const upsert = db.prepare('INSERT OR REPLACE INTO mutual_fund_nav_blob (schemeId, points) VALUES (?, ?)');
+
+  // Merge new [{d, n}] points into an existing "d:n,d:n,..." blob (ascending, deduped)
+  function mergePoints(existing, pts) {
+    const map = {};
+    if (existing) {
+      let i = 0;
+      const len = existing.length;
+      while (i < len) {
+        const c = existing.indexOf(':', i);
+        if (c < 0) break;
+        const d = existing.slice(i, c);
+        let e = existing.indexOf(',', c + 1);
+        if (e < 0) e = len;
+        map[d] = parseFloat(existing.slice(c + 1, e));
+        i = e + 1;
+      }
+    }
+    for (const p of pts) map[p.d] = p.n;
+    return Object.keys(map).sort().map(d => d + ':' + map[d]).join(',');
+  }
 
   let totalInserted = 0;
   let totalSkipped = 0;
@@ -66,19 +89,22 @@ async function collect() {
               return { scheme: scheme.id, inserted: 0, skipped: 0, error: 'no data' };
             }
             let inserted = 0, skipped = 0;
+            const pts = [];
+            for (const row of data.data) {
+              // Date format from mfapi: 'DD-MM-YYYY'
+              const parts = row.date.split('-');
+              const navDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
+              if (navDate < CUTOFF) continue; // skip ancient history
+              const nav = parseFloat(row.nav);
+              if (isNaN(nav) || nav <= 0) continue;
+              pts.push({ d: navDate, n: Math.round(nav * 10000) / 10000 });
+            }
             const tx = db.transaction(() => {
-              for (const row of data.data) {
-                // Date format from mfapi: 'DD-MM-YYYY'
-                const parts = row.date.split('-');
-                const navDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD
-                if (navDate < CUTOFF) continue; // skip ancient history
-                const nav = parseFloat(row.nav);
-                if (isNaN(nav) || nav <= 0) continue;
-                const r = insert.run(scheme.id, navDate, nav);
-                if (r.changes > 0) inserted++; else skipped++;
-              }
+              const existingRow = getBlob.get(scheme.id);
+              upsert.run(scheme.id, mergePoints(existingRow && existingRow.points, pts));
             });
             tx();
+            inserted = pts.length;
             return { scheme: scheme.id, inserted, skipped };
           } catch (e) {
             if (retry < MAX_RETRIES) {
@@ -117,10 +143,9 @@ async function collect() {
   console.log(`  Total errors: ${totalErrors}`);
 
   // Verify
-  const stats = db.prepare(
-    'SELECT COUNT(*) as cnt, COUNT(DISTINCT schemeId) as schemes, MIN(navDate) as minDate, MAX(navDate) as maxDate FROM mutual_fund_nav_history'
-  ).get();
-  console.log(`  DB now has ${stats.cnt} records across ${stats.schemes} schemes (${stats.minDate} to ${stats.maxDate})`);
+  const stats = db.prepare('SELECT COUNT(*) AS schemes FROM mutual_fund_nav_blob').get();
+  const total = db.prepare("SELECT SUM(length(points) - length(replace(points, ',', '')) + 1) AS cnt FROM mutual_fund_nav_blob").get();
+  console.log(`  DB now has ${total.cnt} records across ${stats.schemes} schemes`);
 
   db.close();
 }

@@ -1114,7 +1114,9 @@ registerDebugRoute(app);
 app.get('/api/mutual-funds/all', (req, res) => {
   try {
     const { search, amc, category, limit } = req.query;
-    let schemes = hdfcMfDb.getAllSchemesSummary();
+    // Slice BEFORE the per-scheme summary work so the endpoint stays fast at 14k schemes
+    let schemes = hdfcMfDb.getAllSchemesSummary(limit ? parseInt(limit) : 5000);
+    const cardCounts = hdfcMfDb.getCardCounts(); // real counts for the 7 cards (full universe)
 
     // Filter by AMC
     if (amc) {
@@ -1139,10 +1141,6 @@ app.get('/api/mutual-funds/all', (req, res) => {
       );
     }
 
-    // Limit
-    const lim = limit ? parseInt(limit) : 5000;
-    schemes = schemes.slice(0, lim);
-
     // Group by AMC for summary
     const byAmc = {};
     for (const s of schemes) {
@@ -1156,6 +1154,7 @@ app.get('/api/mutual-funds/all', (req, res) => {
       totalSchemes: schemes.length,
       totalAmcs: Object.keys(byAmc).length,
       amcSummary: Object.entries(byAmc).map(([name, d]) => ({ name, count: d.count })),
+      cardCounts,
       source: 'Multi-AMC Official Data (SQLite)',
       schemes
     });
@@ -1167,7 +1166,8 @@ app.get('/api/mutual-funds/all', (req, res) => {
 // GET /api/mutual-funds/all-schemes-summary — Lightweight summary for Smart Money page
 app.get('/api/mutual-funds/all-schemes-summary', (req, res) => {
   try {
-    const schemes = hdfcMfDb.getAllSchemesSummary();
+    const { limit } = req.query;
+    const schemes = hdfcMfDb.getAllSchemesSummary(limit ? parseInt(limit) : 5000);
     const totalAum = schemes.reduce((sum, s) => sum + (s.aum || 0), 0);
     const totalStocks = schemes.reduce((sum, s) => sum + (s.totalHoldings || 0), 0);
     const byAmc = {};
@@ -1192,7 +1192,8 @@ app.get('/api/mutual-funds/all-schemes-summary', (req, res) => {
 // GET /api/mutual-funds/amcs — List all AMCs with scheme counts
 app.get('/api/mutual-funds/amcs', (req, res) => {
   try {
-    const schemes = hdfcMfDb.getAllSchemesSummary();
+    const { limit } = req.query;
+    const schemes = hdfcMfDb.getAllSchemesSummary(limit ? parseInt(limit) : 5000);
     const byAmc = {};
     for (const s of schemes) {
       const a = s.amc || 'Unknown';

@@ -2,13 +2,14 @@
 /**
  * scripts/importFullUniverse.js
  *
- * Import the FULL AMFI NAVAll universe (all ~52 AMCs, all plan/option variants)
- * for the 7 Smart Money category cards, capped per card at the target counts:
- *   Large Cap 200, Flexi Cap 200, Small Cap 200, Index 200, ELSS 150,
- *   Money Market 150, Commodities 50+.
+ * Import the ENTIRE AMFI NAVAll universe — every scheme row (~14.3k) across
+ * all ~52 AMCs and all plan/option variants, no caps.
  *
- * Priority order per category: Direct Growth first, then Direct IDCW,
- * Regular Growth, Regular IDCW — so caps fill with the most useful variants.
+ * Category assignment:
+ *   - Schemes matching one of the 7 Smart Money cards get that card as category
+ *     (Large Cap / Flexi Cap / Small Cap / Index / ELSS / Money Market / Commodities)
+ *   - Everything else gets its SEBI family from the AMFI header
+ *     (Equity / Debt / Hybrid / Index / ETF / FoF / Commodities / Other)
  *
  * Runs as: node scripts/importFullUniverse.js
  */
@@ -23,27 +24,27 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
 // ─── Card category detection (matches frontend card keys) ───────────────────
-// Each card: key, cap, name-matching tokens (lowercase)
 const CARDS = [
-  { key: 'Large Cap',   cap: 200, match: n => n.indexOf('large cap') !== -1 || n.indexOf('bluechip') !== -1 || n.indexOf('top 100') !== -1 },
-  { key: 'Flexi Cap',   cap: 200, match: n => n.indexOf('flexi cap') !== -1 || n.indexOf('flexicap') !== -1 },
-  { key: 'Small Cap',   cap: 200, match: n => n.indexOf('small cap') !== -1 || n.indexOf('smallcap') !== -1 },
-  { key: 'Index',       cap: 200, match: n => n.indexOf('index') !== -1 || n.indexOf('etf') !== -1 },
-  { key: 'ELSS',        cap: 150, match: n => n.indexOf('elss') !== -1 || n.indexOf('tax saver') !== -1 || n.indexOf('80c') !== -1 },
-  { key: 'Money Market', cap: 150, match: n => n.indexOf('money market') !== -1 || n.indexOf('liquid') !== -1 || n.indexOf('overnight') !== -1 },
-  { key: 'Commodities', cap: 60,  match: n => n.indexOf('gold') !== -1 || n.indexOf('silver') !== -1 || n.indexOf('commodit') !== -1 },
+  { key: 'Large Cap',   match: n => n.indexOf('large cap') !== -1 || n.indexOf('bluechip') !== -1 || n.indexOf('top 100') !== -1 },
+  { key: 'Flexi Cap',   match: n => n.indexOf('flexi cap') !== -1 || n.indexOf('flexicap') !== -1 },
+  { key: 'Small Cap',   match: n => n.indexOf('small cap') !== -1 || n.indexOf('smallcap') !== -1 },
+  { key: 'Index',       match: n => n.indexOf('index') !== -1 || n.indexOf('etf') !== -1 },
+  { key: 'ELSS',        match: n => n.indexOf('elss') !== -1 || n.indexOf('tax saver') !== -1 || n.indexOf('80c') !== -1 },
+  { key: 'Money Market', match: n => n.indexOf('money market') !== -1 || n.indexOf('liquid') !== -1 || n.indexOf('overnight') !== -1 },
+  { key: 'Commodities', match: n => n.indexOf('gold') !== -1 || n.indexOf('silver') !== -1 || n.indexOf('commodit') !== -1 },
 ];
 
-// Variant priority: Direct Growth best
-function variantRank(plan, option) {
-  const p = (plan || '').toLowerCase();
-  const o = (option || '').toLowerCase();
-  const direct = p.indexOf('direct') !== -1;
-  const growth = o.indexOf('growth') !== -1;
-  if (direct && growth) return 0;
-  if (direct) return 1;                 // Direct IDCW
-  if (growth) return 2;                 // Regular Growth
-  return 3;                             // Regular IDCW
+// AMFI header -> SEBI family for non-card schemes
+function sebiFamily(header) {
+  const h = header || '';
+  if (h.indexOf('Equity Scheme') !== -1 || h.indexOf('Equity Schemes') !== -1 || h.indexOf('ELSS') !== -1) return 'Equity';
+  if (h.indexOf('Debt Scheme') !== -1 || h.indexOf('Income/Debt') !== -1) return 'Debt';
+  if (h.indexOf('Hybrid') !== -1) return 'Hybrid';
+  if (h.indexOf('Index Funds') !== -1 || h.indexOf('Index Fund') !== -1) return 'Index';
+  if (h.indexOf('ETF') !== -1) return 'ETF';
+  if (h.indexOf('FoF') !== -1 || h.indexOf('Fund of Funds') !== -1 || h.indexOf('Fund Of Funds') !== -1) return 'FoF';
+  if (h.indexOf('Commod') !== -1 || h.indexOf('Gold') !== -1 || h.indexOf('Silver') !== -1) return 'Commodities';
+  return 'Other';
 }
 
 // Normalize AMC name -> id token (uppercase, underscore-separated)
@@ -58,12 +59,12 @@ async function main() {
   const res = await axios.get('https://www.amfiindia.com/spages/NAVAll.txt', { timeout: 60000 });
   const lines = res.data.split('\n');
 
-  let amc = '', category = '';
+  let amc = '', header = '';
   const rawSchemes = [];
   for (const line of lines) {
     const l = line.trim().replace(/\r/g, '');
     if (!l) continue;
-    if (l.startsWith('Open Ended Schemes') || l.startsWith('Close Ended Schemes')) { category = l; continue; }
+    if (l.startsWith('Open Ended Schemes') || l.startsWith('Close Ended Schemes')) { header = l; continue; }
     if (l.includes('Mutual Fund') && !l.includes(';')) { amc = l; continue; }
     if (l.includes(';')) {
       const p = l.split(';');
@@ -77,55 +78,41 @@ async function main() {
           nav: parseFloat(p[6]),
           navDate: (p[7] || '').trim().replace(/\r/g, ''),
           amc,
-          amfiCategory: category,
+          header,
         });
       }
     }
   }
   console.log(`[ImportFullUniverse] Parsed ${rawSchemes.length} scheme rows, ${new Set(rawSchemes.map(s => s.amc)).size} AMCs`);
 
-  // Existing ids by schemeCode (so we reuse the same id for schemes already in DB)
+  // Existing ids by schemeCode (reuse to avoid dupes)
   const existingByCode = new Map();
   for (const r of db.prepare('SELECT id, schemeCode FROM mutual_fund_schemes WHERE schemeCode IS NOT NULL').all()) {
     if (r.schemeCode && !existingByCode.has(r.schemeCode)) existingByCode.set(r.schemeCode, r.id);
   }
   console.log(`[ImportFullUniverse] Existing schemeCodes in DB: ${existingByCode.size}`);
 
-  // Map each scheme to its card (a scheme may match multiple cards — pick first in card order)
-  const cardOf = {};
-  const cardBuckets = {};
-  for (const c of CARDS) cardBuckets[c.key] = [];
-  const unmatched = [];
-
-  for (const s of rawSchemes) {
+  // Assign category: card key if matched, else SEBI family
+  let cardAssigned = 0;
+  const withCategory = rawSchemes.map(s => {
     const name = s.schemeName.toLowerCase();
-    let assigned = null;
+    let cat = null;
     for (const c of CARDS) {
-      if (c.match(name)) { assigned = c.key; break; }
+      if (c.match(name)) { cat = c.key; cardAssigned++; break; }
     }
-    if (!assigned) { unmatched.push(s); continue; }
-    s.card = assigned;
-    cardBuckets[assigned].push(s);
+    if (!cat) cat = sebiFamily(s.header);
+    return { ...s, category: cat };
+  });
+
+  // Category tally
+  const tally = {};
+  for (const s of withCategory) tally[s.category] = (tally[s.category] || 0) + 1;
+  console.log('[ImportFullUniverse] Category tally (card-assigned: ' + cardAssigned + '):');
+  for (const [k, v] of Object.entries(tally).sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${String(k).padEnd(14)} ${v}`);
   }
 
-  // Cap each bucket with variant priority
-  const selected = [];
-  let cardStats = [];
-  for (const c of CARDS) {
-    const bucket = cardBuckets[c.key] || [];
-    bucket.sort((a, b) => {
-      const r = variantRank(a.plan, a.option) - variantRank(b.plan, b.option);
-      if (r !== 0) return r;
-      return a.schemeName.localeCompare(b.schemeName);
-    });
-    const take = bucket.slice(0, c.cap);
-    selected.push(...take);
-    cardStats.push(`${c.key}=${take.length}/${bucket.length}`);
-  }
-  console.log('[ImportFullUniverse] Card buckets:', cardStats.join('  '));
-  console.log('[ImportFullUniverse] Total to import:', selected.length, '| unmatched (non-card):', unmatched.length);
-
-  // Upsert
+  // Upsert all
   const upsert = db.prepare(`
     INSERT INTO mutual_fund_schemes (id, schemeCode, schemeName, amc, category, plan, option, isin, status, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', datetime('now'))
@@ -143,10 +130,9 @@ async function main() {
 
   let inserted = 0, updated = 0;
   const tx = db.transaction(() => {
-    for (const s of selected) {
-      // Prefer existing id by schemeCode to avoid dupes
+    for (const s of withCategory) {
       const id = existingByCode.get(s.schemeCode) || `${amcToken(s.amc)}_${s.schemeCode}`;
-      const info = upsert.run(id, s.schemeCode, s.schemeName, s.amc.replace(/Mutual\s*Fund/i, '').trim() || s.amc, s.card, s.plan || 'Direct', s.option || 'Growth', s.isin || null);
+      const info = upsert.run(id, s.schemeCode, s.schemeName, s.amc.replace(/Mutual\s*Fund/i, '').trim() || s.amc, s.category, s.plan || 'Direct', s.option || 'Growth', s.isin || null);
       if (info.changes > 0) {
         if (existingByCode.has(s.schemeCode)) updated++; else inserted++;
         existingByCode.set(s.schemeCode, id);
@@ -157,18 +143,6 @@ async function main() {
 
   const total = db.prepare('SELECT COUNT(*) c FROM mutual_fund_schemes').get().c;
   console.log(`[ImportFullUniverse] Done: ${inserted} new, ${updated} existing touched. Total schemes now: ${total}`);
-
-  // Verify per-card real counts using same matcher as frontend (category + name)
-  const all = db.prepare('SELECT id, schemeName, category FROM mutual_fund_schemes').all();
-  console.log('--- Real per-card counts after import (frontend matcher) ---');
-  for (const c of CARDS) {
-    let n = 0;
-    for (const s of all) {
-      const lc = (s.category || '').toLowerCase() + ' ' + (s.schemeName || '').toLowerCase();
-      if (c.match(lc)) n++;
-    }
-    console.log(`  ${c.key.padEnd(13)} ${n}`);
-  }
   db.close();
 }
 
