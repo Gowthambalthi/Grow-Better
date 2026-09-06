@@ -385,6 +385,27 @@ const helpers = {
   },
 
   /**
+   * Compute returns from stored NAV history (fallback for schemes without Groww return rows).
+   * Returns the same shape as mutual_fund_returns rows: [{period, returnValue, asOfDate}]
+   */
+  getReturnsFromNav(schemeId) {
+    const navs = db.prepare('SELECT navDate, nav FROM mutual_fund_nav_history WHERE schemeId=? ORDER BY navDate').all(schemeId);
+    if (!navs || navs.length < 2) return [];
+    const last = navs[navs.length - 1];
+    const asOfDate = last.navDate;
+    const out = [];
+    const windows = { '1D': 1, '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+    for (const [period, days] of Object.entries(windows)) {
+      const cutoff = new Date(new Date(last.navDate + 'T00:00:00').getTime() - days * 86400000).toISOString().slice(0, 10);
+      const win = navs.filter(r => r.navDate >= cutoff);
+      if (win.length >= 2 && win[0].nav > 0) {
+        out.push({ period, returnValue: (last.nav - win[0].nav) / win[0].nav * 100, asOfDate });
+      }
+    }
+    return out;
+  },
+
+  /**
    * Get AUM for a scheme
    */
   getAum(schemeId) {
@@ -588,7 +609,8 @@ const helpers = {
       const aum = this.getAum(s.id);
       const nav = this.getNav(s.id);
       const inv = this.getInvestors(s.id);
-      const allReturns = this.getAllReturns(s.id);
+      let allReturns = this.getAllReturns(s.id);
+      if (!allReturns.length) allReturns = this.getReturnsFromNav(s.id); // NAV-derived fallback for new imports
       const latestPortfolio = this.getLatestPortfolio(s.id);
       let topHoldings = [];
       if (latestPortfolio) {

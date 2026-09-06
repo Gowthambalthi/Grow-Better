@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905l" />
+<meta name="version" content="v20260905m" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2234,13 +2234,26 @@ function _renderMfGridBody(grid, schemes) {
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' }
     ];
     _catCardsHtml += _catDefs.map(function(cd){
-      var cnt=0; for(var ci=0;ci<di.length;ci++){var cn=(di[ci].category||'').toLowerCase();if(cn.indexOf(cd.key.toLowerCase())!==-1||cd.key==='ELSS'&&cn.indexOf('tax')!==-1)cnt++;}
+      // Real count — same matcher as the grid filter, over the FULL scheme list (not the filtered view)
+      var cnt=0;
+      for(var ci=0;ci<schemes.length;ci++){
+        var _cn=(schemes[ci].category||'').toLowerCase(), _nm=(schemes[ci].schemeName||'').toLowerCase(), _cc=_cn+' '+_nm, _k=cd.key.toLowerCase();
+        var _hit = (_k==='large cap') ? _cc.indexOf('large cap')!==-1
+          : (_k==='flexi cap') ? (_cc.indexOf('flexi cap')!==-1||_cc.indexOf('flexicap')!==-1)
+          : (_k==='small cap') ? (_cc.indexOf('small cap')!==-1||_cc.indexOf('smallcap')!==-1)
+          : (_k==='index') ? (_cn.indexOf('index')!==-1||_nm.indexOf('index')!==-1||_nm.indexOf('etf')!==-1)
+          : (_k==='elss') ? (_cc.indexOf('elss')!==-1||_cn.indexOf('tax')!==-1||_nm.indexOf('tax')!==-1||_nm.indexOf('80c')!==-1)
+          : (_k==='money market') ? (_cc.indexOf('money market')!==-1||_cc.indexOf('liquid')!==-1||_cc.indexOf('overnight')!==-1)
+          : (_k==='commodities') ? (_cc.indexOf('commodit')!==-1||_cc.indexOf('gold')!==-1||_cc.indexOf('silver')!==-1)
+          : _cn.indexOf(_k)!==-1;
+        if(_hit) cnt++;
+      }
       return '<div onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;">'
         + '<div style="margin-bottom:10px;">'+cd.svg+'</div>'
         + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+cd.label+'</div>'
         + '<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc1+'</div>'
         + '<div style="font-size:11px;color:#00B386;font-weight:600;">&#10004; '+cd.desc2+'</div>'
-        + '<div style="font-size:12px;color:var(--text-primary);font-weight:800;margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">'+cd.count+' <span style="font-size:10px;color:var(--text-muted);font-weight:500;">mutual funds</span></div>'
+        + '<div style="font-size:12px;color:var(--text-primary);font-weight:800;margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">'+cnt+' <span style="font-size:10px;color:var(--text-muted);font-weight:500;">mutual funds</span></div>'
         + '</div>';
     }).join('');
     _catCardsHtml += '</div>';
