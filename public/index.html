@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905o" />
+<meta name="version" content="v20260905p" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -1818,8 +1818,8 @@
               .catch(function() { clearTimeout(timer); return null; });
           }
 
-          // SINGLE SOURCE: Multi-AMC API (all real scheme-level data)
-          var allAmcData = await fetchWithTimeout('/api/mutual-funds/all?limit=20000', 45000);
+          // SINGLE SOURCE: Multi-AMC API (initial fast page load = first 500; full 14k fetched lazily on Show-all/search)
+          var allAmcData = await fetchWithTimeout('/api/mutual-funds/all?limit=500', 45000);
           console.log('[MF] multi-amc:', allAmcData ? allAmcData.totalSchemes : 'null');
           // Real full-universe card counts from the server (badges stay correct even at 14k schemes)
           window._mfCardCounts = (allAmcData && allAmcData.cardCounts) ? allAmcData.cardCounts : null;
@@ -1831,7 +1831,8 @@
 
           // Process multi-AMC real data (PRIMARY)
           if (allAmcData && allAmcData.success && Array.isArray(allAmcData.schemes)) {
-            allSchemes = allAmcData.schemes.map(function(s) {
+            // Shared mapper: API scheme -> frontend scheme (used for the initial load AND the lazy full-universe fetch)
+            window._mapMfScheme = function(s) {
               amcSet.add(s.amc || 'Unknown');
               return {
                 id: s.id,
@@ -1870,7 +1871,8 @@
                 isOfficialData: true,
                 searchBlob: (s.schemeName + ' ' + (s.amc || '') + ' ' + (s.category || '')).toLowerCase()
               };
-            });
+            };
+            allSchemes = allAmcData.schemes.map(window._mapMfScheme);
             if (serverTag) {
               serverTag.textContent = allAmcData.totalAmcs + ' AMCs · ' + allAmcData.totalSchemes + ' Official Data';
               serverTag.style.background = 'rgba(16,185,129,0.15)';
@@ -1887,10 +1889,26 @@
 
           mfCache = allSchemes;
 
+          // Lazy-load the full universe (14k) only when the user hits "Show all" or searches
+          window._mfFullSchemes = null;
+          window.mfEnsureFull = function() {
+            return new Promise(function(resolve) {
+              if (window._mfFullSchemes) return resolve(window._mfFullSchemes);
+              fetchWithTimeout('/api/mutual-funds/all?limit=20000', 60000).then(function(d) {
+                if (d && d.success && Array.isArray(d.schemes)) {
+                  if (d.cardCounts) window._mfCardCounts = d.cardCounts;
+                  window._mfFullSchemes = d.schemes.map(window._mapMfScheme);
+                }
+                resolve(window._mfFullSchemes || null);
+              });
+            });
+          };
+
           if (subTitle) {
             var total = allSchemes.length;
             var amcCount = (amcSet && amcSet.size != null) ? amcSet.size : 0;
-            subTitle.textContent = total.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
+            var totalAll = (allAmcData && allAmcData.totalSchemes) ? allAmcData.totalSchemes : total;
+            subTitle.textContent = totalAll.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
           }
 
           renderMfGrid(allSchemes);
@@ -2149,6 +2167,13 @@
       }
       var _mfSearchTimer = null; function searchMfSchemes(query) { clearTimeout(_mfSearchTimer); _mfSearchTimer = setTimeout(function() { _doSearch(query); }, 150); } function _doSearch(query) {
         _mfSearchText = query || '';
+        if (_mfSearchText && !window._mfFullSchemes) {
+          // Search needs the FULL universe — load it once, then re-render filtered
+          window.mfEnsureFull().then(function() {
+            renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
+          });
+          return;
+        }
         applyMfFilters();
       }
 
@@ -2407,13 +2432,13 @@ function _renderMfGridBody(grid, schemes) {
       }
     }, 50);
     // Cap the rendered rows (14k rows would freeze the DOM); "Show all" lifts the cap
-    var _maxRows = window.mfDisplayCount || 500;
+    var _maxRows = _mfSearchText ? 0 : (window.mfDisplayCount || 500);
     var _fullBody = _body;
     if (_maxRows > 0 && di.length > _maxRows) {
       _body = _body.split("</tr>").slice(0, _maxRows).join("</tr>") + "</tr>";
     }
     var _showAllBtn = (di.length > _maxRows)
-      ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.renderMfGrid(window._mfLastSchemes||[]);" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
+      ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.mfEnsureFull().then(function(f){window.renderMfGrid(f||window._mfLastSchemes||[]);});" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
       : '';
     grid.innerHTML=sum+_catCardsHtml+catTabs+vtHtml+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head

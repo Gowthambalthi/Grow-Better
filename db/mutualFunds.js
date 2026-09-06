@@ -639,34 +639,40 @@ const helpers = {
   getAllSchemesSummary(limit) {
     let schemes = this.getAllSchemes();
     if (limit && limit > 0) schemes = schemes.slice(0, limit); // slice BEFORE per-scheme work so the API stays fast at 14k schemes
-    const ids = new Set(schemes.map(s => s.id));
+    const ids = Array.from(new Set(schemes.map(s => s.id)));
+    const inClause = ids.map(() => '?').join(',');
 
-    // ─── Batch-load every per-scheme table ONCE into maps (no N+1) ─────────
+    // ─── Batch-load ONLY the sliced schemes' rows into maps (no N+1, no full-table scans) ─────────
     let metricsMap = {};
     try {
-      for (const r of db.prepare('SELECT * FROM fund_metrics').all()) metricsMap[r.schemeId] = r;
+      for (const r of db.prepare(`SELECT * FROM fund_metrics WHERE schemeId IN (${inClause})`).all(...ids)) metricsMap[r.schemeId] = r;
     } catch (e) { /* fund_metrics may not exist yet */ }
 
     const retMap = {};   // schemeId -> { period: {period, returnValue, asOfDate} }
-    for (const r of db.prepare('SELECT schemeId, period, returnValue, asOfDate FROM mutual_fund_returns').all()) {
+    for (const r of db.prepare(`SELECT schemeId, period, returnValue, asOfDate FROM mutual_fund_returns WHERE schemeId IN (${inClause})`).all(...ids)) {
       (retMap[r.schemeId] = retMap[r.schemeId] || {})[r.period] = r;
     }
-    const aumMap = {};   for (const r of db.prepare('SELECT * FROM mutual_fund_aum').all()) aumMap[r.schemeId] = r;
-    const navMap = {};   for (const r of db.prepare('SELECT * FROM mutual_fund_nav').all()) navMap[r.schemeId] = r;
-    const invMap = {};   for (const r of db.prepare('SELECT * FROM mutual_fund_investors').all()) invMap[r.schemeId] = r;
+    const aumMap = {};   for (const r of db.prepare(`SELECT * FROM mutual_fund_aum WHERE schemeId IN (${inClause})`).all(...ids)) aumMap[r.schemeId] = r;
+    const navMap = {};   for (const r of db.prepare(`SELECT * FROM mutual_fund_nav WHERE schemeId IN (${inClause})`).all(...ids)) navMap[r.schemeId] = r;
+    const invMap = {};   for (const r of db.prepare(`SELECT * FROM mutual_fund_investors WHERE schemeId IN (${inClause})`).all(...ids)) invMap[r.schemeId] = r;
 
     const portMap = {};  // schemeId -> portfolios sorted date DESC
-    for (const r of db.prepare('SELECT * FROM mutual_fund_portfolios ORDER BY portfolioDate DESC').all()) {
+    for (const r of db.prepare(`SELECT * FROM mutual_fund_portfolios WHERE schemeId IN (${inClause}) ORDER BY portfolioDate DESC`).all(...ids)) {
       (portMap[r.schemeId] = portMap[r.schemeId] || []).push(r);
     }
-    const holdMap = {};  // portfolioId -> holdings sorted weight DESC
-    for (const r of db.prepare('SELECT * FROM mutual_fund_holdings ORDER BY weight DESC').all()) {
-      (holdMap[r.portfolioId] = holdMap[r.portfolioId] || []).push(r);
+    const holdMap = {};  // portfolioId -> holdings sorted weight DESC (only for the sliced schemes' portfolios)
+    const pids = [];
+    for (const k in portMap) for (const p of portMap[k]) pids.push(p.id);
+    if (pids.length) {
+      const ph = pids.map(() => '?').join(',');
+      for (const r of db.prepare(`SELECT * FROM mutual_fund_holdings WHERE portfolioId IN (${ph}) ORDER BY weight DESC`).all(...pids)) {
+        (holdMap[r.portfolioId] = holdMap[r.portfolioId] || []).push(r);
+      }
     }
-    const aumSnapMap = {};   for (const r of db.prepare('SELECT schemeId, aum, snapshotDate FROM aum_snapshots ORDER BY snapshotDate DESC').all()) (aumSnapMap[r.schemeId] = aumSnapMap[r.schemeId] || []).push(r);
-    const invSnapMap = {};   for (const r of db.prepare('SELECT schemeId, investorCount, snapshotDate FROM investor_snapshots ORDER BY snapshotDate DESC').all()) (invSnapMap[r.schemeId] = invSnapMap[r.schemeId] || []).push(r);
+    const aumSnapMap = {};   for (const r of db.prepare(`SELECT schemeId, aum, snapshotDate FROM aum_snapshots WHERE schemeId IN (${inClause}) ORDER BY snapshotDate DESC`).all(...ids)) (aumSnapMap[r.schemeId] = aumSnapMap[r.schemeId] || []).push(r);
+    const invSnapMap = {};   for (const r of db.prepare(`SELECT schemeId, investorCount, snapshotDate FROM investor_snapshots WHERE schemeId IN (${inClause}) ORDER BY snapshotDate DESC`).all(...ids)) (invSnapMap[r.schemeId] = invSnapMap[r.schemeId] || []).push(r);
 
-    // NAV history only for schemes that lack return rows (rare) — one batched query
+    // NAV-derived returns fallback — only for schemes that lack return rows AND still have NAV history (rare)
     const needNav = schemes.filter(s => !retMap[s.id]).map(s => s.id);
     const navHistMap = {};
     if (needNav.length) {
