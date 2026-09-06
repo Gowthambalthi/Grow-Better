@@ -403,8 +403,12 @@ const helpers = {
     ];
     const counts = {};
     for (const c of cards) counts[c.key] = 0;
+    // Count UNIQUE funds (dedupe plan/option variants that share a schemeName) so badges match the grid
     const rows = db.prepare('SELECT schemeName, category FROM mutual_fund_schemes').all();
+    const seen = new Set();
     for (const r of rows) {
+      if (seen.has(r.schemeName)) continue;
+      seen.add(r.schemeName);
       const blob = ((r.category || '') + ' ' + (r.schemeName || '')).toLowerCase();
       for (const c of cards) if (c.test(blob)) counts[c.key]++;
     }
@@ -638,6 +642,22 @@ const helpers = {
 
   getAllSchemesSummary(limit) {
     let schemes = this.getAllSchemes();
+    // Collapse plan/option variants (same schemeName, e.g. Direct Growth / Regular IDCW) into ONE row per fund.
+    // Keeps the preferred variant (Direct + Growth wins) and reports how many plan variants exist.
+    const bestVariant = new Map();   // schemeName -> { score, s }
+    const variantCounts = new Map(); // schemeName -> count
+    for (const s of schemes) {
+      const k = s.schemeName;
+      variantCounts.set(k, (variantCounts.get(k) || 0) + 1);
+      const pl = (s.plan || '').toLowerCase();
+      const op = (s.option || '').toLowerCase();
+      let score = 0;
+      if (pl.indexOf('direct') !== -1) score += 2; else if (pl.indexOf('regular') !== -1) score -= 1;
+      if (op.indexOf('growth') !== -1) score += 1; else if (op.indexOf('idcw') !== -1) score -= 1;
+      const prev = bestVariant.get(k);
+      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) bestVariant.set(k, { score, s });
+    }
+    schemes = Array.from(bestVariant.values()).map(v => { v.s.variantCount = variantCounts.get(v.s.schemeName) || 1; return v.s; });
     if (limit && limit > 0) schemes = schemes.slice(0, limit); // slice BEFORE per-scheme work so the API stays fast at 14k schemes
     const ids = Array.from(new Set(schemes.map(s => s.id)));
     const inClause = ids.map(() => '?').join(',');
@@ -763,6 +783,7 @@ const helpers = {
         status: s.status,
         fundManager: s.fundManager || null,
         expenseRatio: s.expenseRatio || null,
+        variantCount: s.variantCount || 1,
         return1Y: ret ? ret.returnValue : null,
         return1YDate: ret ? ret.asOfDate : null,
         returns: retRows.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),
