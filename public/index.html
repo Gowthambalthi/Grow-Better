@@ -10,8 +10,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905w" />
+<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260906a" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -1716,7 +1715,7 @@
 
   <script>
     // Force reload if stale cached version
-    (function(){var v='20260905t';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
+    (function(){var v='20260906a';var s=localStorage.getItem('_appV');if(s!==v){localStorage.setItem('_appV',v);if('caches' in window&&caches.keys){caches.keys().then(function(n){n.forEach(function(k){caches.delete(k);});}).then(function(){location.reload(true);}).catch(function(){location.reload(true);});}else{location.reload(true);}}})();
     // Mutual Funds Platform Controller & Resilient Server Failover Engine
     (function() {
       var currentMfTimeframe = '1M';
@@ -2203,6 +2202,10 @@ function _renderMfGridBody(grid, schemes) {
         var _cn = (_s2.category||'').toLowerCase();
         var _nm = (_s2.schemeName||'').toLowerCase();
         var _cc = _cn + ' ' + _nm;
+        if(_k==='multi cap') return _cc.indexOf('multi cap')!==-1 || _cc.indexOf('multicap')!==-1;
+        if(_k==='mid cap') return _cc.indexOf('mid cap')!==-1 || _cc.indexOf('midcap')!==-1;
+        if(_k==='large & mid cap') return _cc.indexOf('large & mid')!==-1 || _cc.indexOf('large and mid')!==-1 || _cc.indexOf('large & midcap')!==-1 || _cc.indexOf('large and midcap')!==-1;
+        if(_k==='value') return _cc.indexOf('value')!==-1 || _cc.indexOf('contra')!==-1;
         if(_k==='large cap') return _cc.indexOf('large cap')!==-1;
         if(_k==='flexi cap') return _cc.indexOf('flexi cap')!==-1 || _cc.indexOf('flexicap')!==-1;
         if(_k==='small cap') return _cc.indexOf('small cap')!==-1 || _cc.indexOf('smallcap')!==-1;
