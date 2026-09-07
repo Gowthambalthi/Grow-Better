@@ -392,25 +392,41 @@ const helpers = {
    * computed from the scheme master only — cheap even at 14k schemes.
    */
   getCardCounts() {
-    const cards = [
-      { key: 'Large Cap', test: c => c.indexOf('large cap') !== -1 },
-      { key: 'Flexi Cap', test: c => c.indexOf('flexi cap') !== -1 || c.indexOf('flexicap') !== -1 },
-      { key: 'Small Cap', test: c => c.indexOf('small cap') !== -1 || c.indexOf('smallcap') !== -1 },
-      { key: 'Index', test: c => c.indexOf('index') !== -1 || c.indexOf('etf') !== -1 },
-      { key: 'ELSS', test: c => c.indexOf('elss') !== -1 || c.indexOf('tax saver') !== -1 || c.indexOf('80c') !== -1 },
-      { key: 'Money Market', test: c => c.indexOf('money market') !== -1 || c.indexOf('liquid') !== -1 || c.indexOf('overnight') !== -1 },
-      { key: 'Commodities', test: c => c.indexOf('commodit') !== -1 || c.indexOf('gold') !== -1 || c.indexOf('silver') !== -1 },
-    ];
+    // Keys must match the frontend card keys exactly (cd.key in index.html).
+    // These tests replicate filterMfCategory() in index.html so the badge always equals the grid.
+    const keys = ['Large Cap', 'Flexi Cap', 'Small Cap', 'Index', 'ELSS', 'Money Market', 'Commodities'];
     const counts = {};
-    for (const c of cards) counts[c.key] = 0;
-    // Count UNIQUE funds (dedupe plan/option variants that share a schemeName) so badges match the grid
-    const rows = db.prepare('SELECT schemeName, category FROM mutual_fund_schemes').all();
-    const seen = new Set();
+    for (const k of keys) counts[k] = 0;
+    const match = (cn, nm, key) => {
+      const cc = cn + ' ' + nm;
+      switch (key) {
+        case 'Large Cap': return cc.indexOf('large cap') !== -1;
+        case 'Flexi Cap': return cc.indexOf('flexi cap') !== -1 || cc.indexOf('flexicap') !== -1;
+        case 'Small Cap': return cc.indexOf('small cap') !== -1 || cc.indexOf('smallcap') !== -1;
+        case 'Index': return cn.indexOf('index') !== -1 || nm.indexOf('index') !== -1 || nm.indexOf('etf') !== -1;
+        case 'ELSS': return cc.indexOf('elss') !== -1 || cn.indexOf('tax') !== -1 || nm.indexOf('tax') !== -1 || nm.indexOf('80c') !== -1;
+        case 'Money Market': return cc.indexOf('money market') !== -1 || cc.indexOf('liquid') !== -1 || cc.indexOf('overnight') !== -1;
+        case 'Commodities': return cc.indexOf('commodit') !== -1 || cc.indexOf('gold') !== -1 || cc.indexOf('silver') !== -1;
+        default: return cn.indexOf(key.toLowerCase()) !== -1;
+      }
+    };
+    // Count UNIQUE funds (dedupe plan/option variants that share a schemeName) using the SAME
+    // best-variant selection as getAllSchemesSummary (Direct + Growth wins), so badges match the grid.
+    const rows = db.prepare('SELECT schemeName, category, plan, option FROM mutual_fund_schemes').all();
+    const best = new Map(); // schemeName -> { score, s }
     for (const r of rows) {
-      if (seen.has(r.schemeName)) continue;
-      seen.add(r.schemeName);
-      const blob = ((r.category || '') + ' ' + (r.schemeName || '')).toLowerCase();
-      for (const c of cards) if (c.test(blob)) counts[c.key]++;
+      const pl = (r.plan || '').toLowerCase();
+      const op = (r.option || '').toLowerCase();
+      let score = 0;
+      if (pl.indexOf('direct') !== -1) score += 2; else if (pl.indexOf('regular') !== -1) score -= 1;
+      if (op.indexOf('growth') !== -1) score += 1; else if (op.indexOf('idcw') !== -1) score -= 1;
+      const prev = best.get(r.schemeName);
+      if (!prev || score > prev.score) best.set(r.schemeName, { score, s: r });
+    }
+    for (const { s } of best.values()) {
+      const cn = (s.category || '').toLowerCase();
+      const nm = (s.schemeName || '').toLowerCase();
+      for (const k of keys) if (match(cn, nm, k)) counts[k]++;
     }
     return counts;
   },
