@@ -410,11 +410,14 @@ const helpers = {
         default: return cn.indexOf(key.toLowerCase()) !== -1;
       }
     };
-    // Count ALL scheme rows (every plan/option variant) so the badges show the maximum possible
-    // numbers. The table itself stays deduplicated (one row per fund) via getAllSchemesSummary —
-    // only the card badge counts every variant.
+    // Count UNIQUE funds (distinct schemeName) so the badge exactly equals the number of rows
+    // the table shows — the grid deduplicates plan/option variants via getAllSchemesSummary, so
+    // the badge must too, or the card says 164 while the table lists 35.
     const rows = db.prepare('SELECT schemeName, category FROM mutual_fund_schemes').all();
+    const seen = new Set();
     for (const r of rows) {
+      if (seen.has(r.schemeName)) continue;
+      seen.add(r.schemeName);
       const cn = (r.category || '').toLowerCase();
       const nm = (r.schemeName || '').toLowerCase();
       for (const k of keys) if (match(cn, nm, k)) counts[k]++;

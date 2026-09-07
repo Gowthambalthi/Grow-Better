@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905t" />
+<meta name="version" content="v20260905u" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -115,80 +115,60 @@
             <!-- Dropdown Popover (Exact Match to User's Market Watchlist Screenshot) -->
             <div class="dropdown-popover watchlist-dropdown-popover" id="watchlistPopover">
               <div class="popover-header">
-                <span class="popover-title" id="popoverMarketTitle">Market Watchlist</span>
-                <span class="live-tag" id="popoverMarketTag">
-                  <span class="live-dot">●</span> LIVE (NSE IST) <span class="live-clock" id="popoverLiveClock">12:38:24 pm</span>
-                </span>
+                <div style="display:flex; flex-direction:column; line-height: 1.15;">
+                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #0F172A;">Market</span>
+                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #0F172A;">Watchlist</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items: flex-end; font-family:'Plus Jakarta Sans', sans-serif; font-size: 11.5px; font-weight: 500; color: #64748B; line-height: 1.3;">
+                  <div style="display:flex; align-items:center; gap: 4px;">
+                    <span style="color:#10B981; font-size: 10px;">●</span> LIVE (NSE <span class="live-clock" id="popoverLiveClock" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#64748B; font-weight:600; margin-left:2px;">11:08:14</span>
+                  </div>
+                  <div>
+                    IST) <span class="live-ampm" id="popoverLiveAmPm" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#64748B; font-weight:600;">am</span>
+                  </div>
+                </div>
               </div>
               <div class="popover-body" style="padding:0;">
                 <div class="watch-row active" data-symbol="NIFTY" id="popoverRowNifty">
                   <span class="w-name">NIFTY 50</span>
                   <div class="w-right">
-                    <div class="w-price" id="popNiftyPrice">24,053.15</div>
-                    <div class="w-change negative" id="popNiftyChange">▼ 101.75 (-0.42%)</div>
+                    <div class="w-price" id="popNiftyPrice">23,772.85</div>
+                    <div class="w-change negative" id="popNiftyChange">▼ 124.85 (-0.52%)</div>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="BANKNIFTY" id="popoverRowBanknifty">
                   <span class="w-name">BANK NIFTY</span>
                   <div class="w-right">
-                    <div class="w-price" id="popBankPrice">57,055.05</div>
-                    <div class="w-change negative" id="popBankChange">▼ 207.35 (-0.36%)</div>
+                    <div class="w-price" id="popBankPrice">57,045.75</div>
+                    <div class="w-change negative" id="popBankChange">▼ 323.90 (-0.56%)</div>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="SENSEX" id="popoverRowSensex">
                   <span class="w-name">SENSEX</span>
                   <div class="w-right">
-                    <div class="w-price" id="popSensexPrice">76,903.32</div>
-                    <div class="w-change negative" id="popSensexChange">▼ 332.14 (-0.43%)</div>
+                    <div class="w-price" id="popSensexPrice">76,116.33</div>
+                    <div class="w-change negative" id="popSensexChange">▼ 399.10 (-0.52%)</div>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="FINNIFTY" id="popoverRowFinnifty">
                   <span class="w-name">FIN NIFTY</span>
                   <div class="w-right">
-                    <div class="w-price" id="popFinPrice">25,981.40</div>
-                    <div class="w-change negative" id="popFinChange">▼ 126.60 (-0.48%)</div>
+                    <div class="w-price" id="popFinPrice">25,935.30</div>
+                    <div class="w-change negative" id="popFinChange">▼ 115.70 (-0.44%)</div>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="MIDCPNIFTY" id="popoverRowMidcpnifty">
                   <span class="w-name">MIDCAP NIFTY</span>
                   <div class="w-right">
-                    <div class="w-price" id="popMidPrice">14,861.05</div>
-                    <div class="w-change positive" id="popMidChange">▲ 20.30 (+0.14%)</div>
+                    <div class="w-price" id="popMidPrice">14,661.00</div>
+                    <div class="w-change negative" id="popMidChange">▼ 52.65 (-0.36%)</div>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="GIFTNIFTY" id="popoverRowGiftnifty">
                   <span class="w-name">GIFT NIFTY</span>
                   <div class="w-right">
-                    <div class="w-price" id="popGiftPrice">24,114.00</div>
-                    <div class="w-change negative" id="popGiftChange">▼ 116.10 (-0.48%)</div>
-                  </div>
-                </div>
-                <div class="watch-row" data-symbol="GOLD" id="popoverRowGold">
-                  <span class="w-name">MCX GOLD</span>
-                  <div class="w-right">
-                    <div class="w-price" id="popGoldPrice">71,850.00</div>
-                    <div class="w-change positive" id="popGoldChange">▲ 330.00 (+0.46%)</div>
-                  </div>
-                </div>
-                <div class="watch-row" data-symbol="SILVER" id="popoverRowSilver">
-                  <span class="w-name">MCX SILVER</span>
-                  <div class="w-right">
-                    <div class="w-price" id="popSilverPrice">84,620.00</div>
-                    <div class="w-change negative" id="popSilverChange">▼ 530.00 (-0.62%)</div>
-                  </div>
-                </div>
-                <div class="watch-row" data-symbol="CRUDEOIL" id="popoverRowCrude">
-                  <span class="w-name">MCX CRUDE</span>
-                  <div class="w-right">
-                    <div class="w-price" id="popCrudePrice">6,412.00</div>
-                    <div class="w-change positive" id="popCrudeChange">▲ 27.00 (+0.42%)</div>
-                  </div>
-                </div>
-                <div class="watch-row" data-symbol="NATURALGAS" id="popoverRowNatgas">
-                  <span class="w-name">MCX NATGAS</span>
-                  <div class="w-right">
-                    <div class="w-price" id="popNatgasPrice">184.50</div>
-                    <div class="w-change negative" id="popNatgasChange">▼ 2.70 (-1.44%)</div>
+                    <div class="w-price" id="popGiftPrice">24,180.00</div>
+                    <div class="w-change negative" id="popGiftChange">▼ 7.50 (-0.03%)</div>
                   </div>
                 </div>
               </div>
@@ -2286,7 +2266,7 @@ function _renderMfGridBody(grid, schemes) {
         + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+cd.label+'</div>'
         + '<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc1+'</div>'
         + '<div style="font-size:11px;color:#00B386;font-weight:600;">&#10004; '+cd.desc2+'</div>'
-        + '<div style="font-size:12px;color:var(--text-primary);font-weight:800;margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">'+shownCnt+' <span style="font-size:10px;color:var(--text-muted);font-weight:500;">mutual funds</span></div>'
+        + '<div style="font-size:12px;color:var(--text-muted);font-weight:600;margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">'+shownCnt+' <span style="font-size:10px;color:var(--text-muted);font-weight:500;">mutual funds</span></div>'
         + '</div>';
     }).join('');
     _catCardsHtml += '</div>';
