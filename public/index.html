@@ -11,7 +11,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Grow Better — Algo Trading Terminal</title>
-<meta name="version" content="v20260905v" />
+<meta name="version" content="v20260905w" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2113,6 +2113,9 @@
             var lc = cat.toLowerCase() + ' ' + name;
             var k = _mfActiveCategory.toLowerCase();
             if (k === 'multi cap') showCat = lc.indexOf('multi cap') !== -1 || lc.indexOf('multicap') !== -1;
+            else if (k === 'mid cap') showCat = lc.indexOf('mid cap') !== -1 || lc.indexOf('midcap') !== -1;
+            else if (k === 'large & mid cap') showCat = lc.indexOf('large & mid') !== -1 || lc.indexOf('large and mid') !== -1 || lc.indexOf('large & midcap') !== -1 || lc.indexOf('large and midcap') !== -1;
+            else if (k === 'value') showCat = lc.indexOf('value') !== -1 || lc.indexOf('contra') !== -1;
             else if (k === 'large cap') showCat = lc.indexOf('large cap') !== -1;
             else if (k === 'flexi cap') showCat = lc.indexOf('flexi cap') !== -1 || lc.indexOf('flexicap') !== -1;
             else if (k === 'small cap') showCat = lc.indexOf('small cap') !== -1 || lc.indexOf('smallcap') !== -1;
@@ -2232,6 +2235,12 @@ function _renderMfGridBody(grid, schemes) {
     var _catDefs = [
       { key:'Multi Cap', label:'Multi Cap', count:200, desc1:'Diversified Across Market Caps', desc2:'Balanced Growth & Stability',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#0EA5E9" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#0EA5E9" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#0EA5E9" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#0EA5E9" opacity="0.2"/></svg>' },
+      { key:'Mid Cap', label:'Mid-Cap', count:200, desc1:'Fast-Growing Mid-Size Companies', desc2:'Higher Growth Potential',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#6366F1" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#6366F1" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#6366F1" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#6366F1" opacity="0.2"/></svg>' },
+      { key:'Large & Mid Cap', label:'Large & Mid Cap', count:200, desc1:'Blend of Large & Mid Stocks', desc2:'Balanced Growth & Stability',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#14B8A6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#14B8A6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#14B8A6" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#14B8A6" opacity="0.2"/></svg>' },
+      { key:'Value', label:'Value Funds', count:200, desc1:'Undervalued Stocks', desc2:'Long-term Value Creation',
+        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F97316" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F97316" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F97316" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#F97316" opacity="0.2"/></svg>' },
       { key:'Large Cap', label:'Large-Cap', count:200, desc1:'Established Companies', desc2:'Lower Risk With Consistent Returns',
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#00B386" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20" fill="#00B386" opacity="0.3"/><path d="M20 20 L20 4 A16 16 0 0 1 36 20 Z" fill="#00B386" opacity="0.5"/><circle cx="20" cy="20" r="5" fill="#00B386" opacity="0.2"/></svg>' },
       { key:'Flexi Cap', label:'Flexi Cap', count:200, desc1:'Moderate Risk', desc2:'Long-term (> 5 years) Investments',
@@ -2253,6 +2262,9 @@ function _renderMfGridBody(grid, schemes) {
       for(var ci=0;ci<schemes.length;ci++){
         var _cn=(schemes[ci].category||'').toLowerCase(), _nm=(schemes[ci].schemeName||'').toLowerCase(), _cc=_cn+' '+_nm, _k=cd.key.toLowerCase();
         var _hit = (_k==='multi cap') ? (_cc.indexOf('multi cap')!==-1||_cc.indexOf('multicap')!==-1)
+          : (_k==='mid cap') ? (_cc.indexOf('mid cap')!==-1||_cc.indexOf('midcap')!==-1)
+          : (_k==='large & mid cap') ? (_cc.indexOf('large & mid')!==-1||_cc.indexOf('large and mid')!==-1||_cc.indexOf('large & midcap')!==-1||_cc.indexOf('large and midcap')!==-1)
+          : (_k==='value') ? (_cc.indexOf('value')!==-1||_cc.indexOf('contra')!==-1)
           : (_k==='large cap') ? _cc.indexOf('large cap')!==-1
           : (_k==='flexi cap') ? (_cc.indexOf('flexi cap')!==-1||_cc.indexOf('flexicap')!==-1)
           : (_k==='small cap') ? (_cc.indexOf('small cap')!==-1||_cc.indexOf('smallcap')!==-1)

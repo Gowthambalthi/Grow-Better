@@ -394,13 +394,16 @@ const helpers = {
   getCardCounts() {
     // Keys must match the frontend card keys exactly (cd.key in index.html).
     // These tests replicate filterMfCategory() in index.html so the badge always equals the grid.
-    const keys = ['Multi Cap', 'Large Cap', 'Flexi Cap', 'Small Cap', 'Index', 'ELSS', 'Money Market', 'Commodities'];
+    const keys = ['Multi Cap', 'Mid Cap', 'Large & Mid Cap', 'Value', 'Large Cap', 'Flexi Cap', 'Small Cap', 'Index', 'ELSS', 'Money Market', 'Commodities'];
     const counts = {};
     for (const k of keys) counts[k] = 0;
     const match = (cn, nm, key) => {
       const cc = cn + ' ' + nm;
       switch (key) {
         case 'Multi Cap': return cc.indexOf('multi cap') !== -1 || cc.indexOf('multicap') !== -1;
+        case 'Mid Cap': return cc.indexOf('mid cap') !== -1 || cc.indexOf('midcap') !== -1;
+        case 'Large & Mid Cap': return cc.indexOf('large & mid') !== -1 || cc.indexOf('large and mid') !== -1 || cc.indexOf('large & midcap') !== -1 || cc.indexOf('large and midcap') !== -1;
+        case 'Value': return cc.indexOf('value') !== -1 || cc.indexOf('contra') !== -1;
         case 'Large Cap': return cc.indexOf('large cap') !== -1;
         case 'Flexi Cap': return cc.indexOf('flexi cap') !== -1 || cc.indexOf('flexicap') !== -1;
         case 'Small Cap': return cc.indexOf('small cap') !== -1 || cc.indexOf('smallcap') !== -1;
