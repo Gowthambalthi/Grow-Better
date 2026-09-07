@@ -410,22 +410,13 @@ const helpers = {
         default: return cn.indexOf(key.toLowerCase()) !== -1;
       }
     };
-    // Count UNIQUE funds (dedupe plan/option variants that share a schemeName) using the SAME
-    // best-variant selection as getAllSchemesSummary (Direct + Growth wins), so badges match the grid.
-    const rows = db.prepare('SELECT schemeName, category, plan, option FROM mutual_fund_schemes').all();
-    const best = new Map(); // schemeName -> { score, s }
+    // Count ALL scheme rows (every plan/option variant) so the badges show the maximum possible
+    // numbers. The table itself stays deduplicated (one row per fund) via getAllSchemesSummary —
+    // only the card badge counts every variant.
+    const rows = db.prepare('SELECT schemeName, category FROM mutual_fund_schemes').all();
     for (const r of rows) {
-      const pl = (r.plan || '').toLowerCase();
-      const op = (r.option || '').toLowerCase();
-      let score = 0;
-      if (pl.indexOf('direct') !== -1) score += 2; else if (pl.indexOf('regular') !== -1) score -= 1;
-      if (op.indexOf('growth') !== -1) score += 1; else if (op.indexOf('idcw') !== -1) score -= 1;
-      const prev = best.get(r.schemeName);
-      if (!prev || score > prev.score) best.set(r.schemeName, { score, s: r });
-    }
-    for (const { s } of best.values()) {
-      const cn = (s.category || '').toLowerCase();
-      const nm = (s.schemeName || '').toLowerCase();
+      const cn = (r.category || '').toLowerCase();
+      const nm = (r.schemeName || '').toLowerCase();
       for (const k of keys) if (match(cn, nm, k)) counts[k]++;
     }
     return counts;
