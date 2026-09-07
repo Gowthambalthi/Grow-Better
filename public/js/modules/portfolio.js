@@ -54,6 +54,8 @@ export function renderHoldingsRow(row) {
   else if (firstLetter === 'S') logoBg = '#F59E0B';
 
   const netPlClass = netPL >= 0 ? 'net-pl-light-gain' : 'net-pl-light-loss';
+  const overallPlClass = rawOverallPL >= 0 ? 'net-pl-light-gain' : 'net-pl-light-loss';
+  const dayPlClass = dayPlVal >= 0 ? 'net-pl-light-gain' : 'net-pl-light-loss';
 
   return `
     <tr class="clickable-holding-row" data-action="order" data-symbol="${rawSymbol}" data-ltp="${row.ltp || 0}" data-broker="${row.broker || 'angelone'}" style="cursor:pointer;" title="Click row to open Order Ticket for ${rawSymbol}">
@@ -76,9 +78,9 @@ export function renderHoldingsRow(row) {
       <td style="color:#0F172A !important;font-weight:600;">${money(row.ltp)}</td>
       <td style="color:#0F172A !important;font-weight:600;">${money(row.investedAmount)}</td>
       <td style="color:#0F172A !important;font-weight:600;">${money(row.currentAmount)}</td>
-      <td class="${plClass(rawOverallPL)}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
+      <td class="${overallPlClass}">${money(rawOverallPL)}<br><small>${pct(rawOverallPLPercent)}</small></td>
       <td class="${netPlClass}" title="Gross P&L: ${money(rawOverallPL)} | Buy Taxes: -${money(row.buyCharges || 0)} | Est Sell Taxes & DP: -${money(row.estimatedSellCharges || 0)} | MTF Int: -${money(row.mtfInterestAccrued || 0)}"><span style="font-weight:700;">${money(netPL)}</span><br><small>${pct(netPLPercent)}</small></td>
-      <td class="${plClass(dayPlVal)}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
+      <td class="${dayPlClass}">${money(dayPlVal)}<br><small>${pct(dayPlPct)}</small></td>
       <td style="text-align:right;padding-right:20px !important;color:#0F172A !important;font-weight:600;">${daysText}</td>
     </tr>`;
 }
@@ -464,6 +466,19 @@ function initSettingsPopover() {
       e.stopPropagation();
       togglePortfolioSettingsPopover();
     });
+  }
+
+  const redDot = document.getElementById('settingsRedDotBadge');
+  if (redDot) {
+    redDot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePortfolioSettingsPopover(true);
+    });
+  }
+
+  const alertBanner = document.getElementById('ulAlertBanner');
+  if (alertBanner) {
+    alertBanner.addEventListener('click', () => togglePortfolioSettingsPopover(true));
   }
 
   const closeSettingsBtn = document.getElementById('closeSettingsPopoverBtn');

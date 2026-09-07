@@ -6,18 +6,14 @@
 import { api } from '../core/api.js';
 import { rawMoney, pct, plSign } from '../core/formatters.js';
 
-const WATCHLIST = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY', 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
+const WATCHLIST = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY'];
 const tickerPrices = {
-  NIFTY: { price: 24053.15, prevPrice: 24154.90, change: -101.75, changePct: -0.42 },
-  BANKNIFTY: { price: 57055.05, prevPrice: 57262.40, change: -207.35, changePct: -0.36 },
-  SENSEX: { price: 76903.32, prevPrice: 77235.46, change: -332.14, changePct: -0.43 },
-  FINNIFTY: { price: 25981.40, prevPrice: 26108.00, change: -126.60, changePct: -0.48 },
-  MIDCPNIFTY: { price: 14861.05, prevPrice: 14840.75, change: 20.30, changePct: 0.14 },
-  GIFTNIFTY: { price: 24114.00, prevPrice: 24230.10, change: -116.10, changePct: -0.48 },
-  GOLD: { price: 71850.00, prevPrice: 71520.00, change: 330.00, changePct: 0.46 },
-  SILVER: { price: 84620.00, prevPrice: 85150.00, change: -530.00, changePct: -0.62 },
-  CRUDEOIL: { price: 6412.00, prevPrice: 6385.00, change: 27.00, changePct: 0.42 },
-  NATURALGAS: { price: 184.50, prevPrice: 187.20, change: -2.70, changePct: -1.44 },
+  NIFTY: { price: 23772.85, prevPrice: 23897.70, change: -124.85, changePct: -0.52 },
+  BANKNIFTY: { price: 57045.75, prevPrice: 57369.65, change: -323.90, changePct: -0.56 },
+  SENSEX: { price: 76116.33, prevPrice: 76515.43, change: -399.10, changePct: -0.52 },
+  FINNIFTY: { price: 25935.30, prevPrice: 26051.00, change: -115.70, changePct: -0.44 },
+  MIDCPNIFTY: { price: 14661.00, prevPrice: 14713.65, change: -52.65, changePct: -0.36 },
+  GIFTNIFTY: { price: 24180.00, prevPrice: 24187.50, change: -7.50, changePct: -0.03 },
 };
 
 export function isIndianMarketOpen() {
@@ -156,8 +152,11 @@ function renderTickerUI() {
   }
   const liveClockEl = document.getElementById('popoverLiveClock');
   if (liveClockEl) {
-    const timeStr = ist.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
-    liveClockEl.textContent = timeStr;
+    const timeStr = ist.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    const parts = timeStr.split(' ');
+    liveClockEl.textContent = parts[0];
+    const ampmEl = document.getElementById('popoverLiveAmPm');
+    if (ampmEl && parts[1]) ampmEl.textContent = parts[1].toLowerCase();
   }
 
   // Update Topbar Ticker Value

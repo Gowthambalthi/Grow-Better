@@ -373,7 +373,11 @@ async function main() {
   console.log('\nDone!');
 }
 
-main().catch(function(err) {
-  console.error('FATAL:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(function(err) {
+    console.error('FATAL:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { main };

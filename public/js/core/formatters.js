@@ -17,7 +17,7 @@ export function rawMoney(n) {
 
 export function plClass(n) {
   if (n == null || isNaN(Number(n))) return '';
-  return Number(n) >= 0 ? 'pl-positive' : 'pl-negative';
+  return Number(n) >= 0 ? 'net-pl-light-gain' : 'net-pl-light-loss';
 }
 
 export function plSign(n) {

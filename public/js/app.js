@@ -13,6 +13,8 @@ import { loadMtfPositions, initPositionsSubtabs } from './modules/positions.js?v
 import { initInstitutionalScanner } from './modules/scanner.js?v=20260821_v149';
 import { initSettingsView, loadFundsTotals } from './modules/settings.js?v=20260821_v149';
 
+window.loadPortfolio = loadPortfolio;
+
 function refreshAll() {
   loadStatus();
   loadPortfolio();
