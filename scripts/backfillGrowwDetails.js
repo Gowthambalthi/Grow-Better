@@ -84,6 +84,58 @@ async function fetchNextData(url) {
   return (j.props && j.props.pageProps && j.props.pageProps.mfServerSideData) || null;
 }
 
+/** True when the scheme is an ETF / exchange-traded fund (hosted under /etfs/ on Groww). */
+function isEtfName(s) { return /etf|exchange traded/i.test(s.schemeName); }
+
+/**
+ * Fetch ETF data from Groww's ETF product page (/etfs/{slug}). Returns the
+ * normalized shape persist() expects: { aum, expense_ratio, holdings: [] }.
+ * AUM/TER come from pageProps.fundamentalsData (aumInCrores / expenseRatio).
+ */
+async function fetchEtfData(url) {
+  const res = await axios.get(url, { timeout: 20000, headers: UA });
+  const m = res.data.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) return null;
+  const j = JSON.parse(m[1]);
+  const pp = j.props && j.props.pageProps;
+  const fd = pp && pp.fundamentalsData;
+  if (!fd) return null;
+  const aum = (fd.aumInCrores != null && !isNaN(fd.aumInCrores)) ? Number(fd.aumInCrores) : null;
+  const ter = (fd.expenseRatio != null && !isNaN(fd.expenseRatio)) ? Number(fd.expenseRatio) : null;
+  if (aum == null && ter == null) return null;
+  return { aum, expense_ratio: ter, holdings: [], nav_date: null, fund_manager: null };
+}
+
+/** Resolve one scheme to its data via the mutual-fund path OR the ETF path. */
+async function resolveScheme(s) {
+  if (isEtfName(s)) {
+    const base = slugify(cleanBase(s.schemeName));
+    const candidates = [base];
+    const withoutEtf = slugify(cleanBase(s.schemeName).replace(/\betf\b/g, ' '));
+    if (withoutEtf && withoutEtf !== base) candidates.push(withoutEtf);
+    for (const slug of candidates) {
+      try {
+        const ss = await fetchEtfData('https://groww.in/etfs/' + slug);
+        if (ss) return ss;
+      } catch (e) {
+        const code = e.response ? e.response.status : e.code;
+        if (code === 429) await new Promise(r => setTimeout(r, 4000));
+      }
+    }
+    return null;
+  }
+  for (const slug of slugCandidates(s)) {
+    try {
+      const ss = await fetchNextData('https://groww.in/mutual-funds/' + slug);
+      if (ss) return ss;
+    } catch (e) {
+      const code = e.response ? e.response.status : e.code;
+      if (code === 429) await new Promise(r => setTimeout(r, 4000));
+    }
+  }
+  return null;
+}
+
 function normalizeHoldings(raw) {
   if (!Array.isArray(raw)) return { portfolioDate: null, holdings: [] };
   const portfolioDate = raw[0] && raw[0].portfolio_date ? String(raw[0].portfolio_date).split('T')[0] : null;
@@ -141,11 +193,12 @@ async function main() {
   const targets = preferredRows();
   console.log('[Backfill] distinct funds:', targets.length);
 
+  const etfOnly = process.argv.includes('--etf-only');
   const already = new Set();
   for (const r of db.prepare('SELECT schemeId FROM mutual_fund_aum WHERE aum > 0').all()) already.add(r.schemeId);
   for (const r of db.prepare('SELECT id FROM mutual_fund_schemes WHERE expenseRatio > 0').all()) already.add(r.id);
-  const todo = targets.filter(s => !already.has(s.id) && !/etf|exchange traded/i.test(s.schemeName));
-  console.log('[Backfill] to fetch:', todo.length, '(skipping', targets.length - todo.length, 'already-filled or ETF)');
+  const todo = targets.filter(s => !already.has(s.id) && (etfOnly ? isEtfName(s) : !isEtfName(s)));
+  console.log('[Backfill] to fetch:', todo.length, '(etfOnly:', etfOnly + ')');
 
   const idx = { next: 0 };
   const stats = { ok: 0, aum: 0, ter: 0, holdings: 0, fail: 0 };
@@ -156,21 +209,13 @@ async function main() {
       const i = idx.next++;
       if (i >= todo.length) return;
       const s = todo[i];
-      let ss = null, usedUrl = null;
-      for (const slug of slugCandidates(s)) {
-        const url = 'https://groww.in/mutual-funds/' + slug;
-        try {
-          const data = await fetchNextData(url);
-          if (data) { ss = data; usedUrl = url; break; }
-          // 200 but no mfServerSideData — try next variant
-        } catch (e) {
-          const code = e.response ? e.response.status : e.code;
-          if (code === 429) await new Promise(r => setTimeout(r, 4000));
-        }
-      }
+      let ss = null;
+      try {
+        ss = await resolveScheme(s);
+      } catch (e) { /* worker-level errors counted as fail */ }
       if (!ss) { stats.fail++; if (i % 25 === 0) console.log(`[Backfill] ${i}/${todo.length} fail@${s.schemeName}`); continue; }
       stats.ok++;
-      const w = persist(s, ss, usedUrl);
+      const w = persist(s, ss, 'groww');
       if (w >= 1) stats.aum++;
       if (i % 25 === 0) console.log(`[Backfill] ${i}/${todo.length} ok=${stats.ok} fail=${stats.fail} aum+ter+hold=${w} ${s.schemeName.slice(0, 45)}`);
     }
