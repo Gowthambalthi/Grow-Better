@@ -20,6 +20,22 @@ const SYMBOL_TOKENS = {
   '471725':   { key: 'SILVER', name: 'MCX SILVER' }
 };
 
+// World indices (USA / Asia / Europe) — fetched live from Yahoo Finance chart API
+const WORLD_SYMBOLS = {
+  SPX:     { ySym: '^GSPC',    name: 'S&P 500' },
+  DJI:     { ySym: '^DJI',     name: 'DOW JONES' },
+  NASDAQ:  { ySym: '^IXIC',    name: 'NASDAQ' },
+  VIX:     { ySym: '^VIX',     name: 'US VIX' },
+  NIKKEI:  { ySym: '^N225',    name: 'NIKKEI 225' },
+  HANGSENG:{ ySym: '^HSI',     name: 'HANG SENG' },
+  SHANGHAI:{ ySym: '000001.SS', name: 'SHANGHAI' },
+  KOSPI:   { ySym: '^KS11',    name: 'KOSPI' },
+  FTSE:    { ySym: '^FTSE',    name: 'FTSE 100' },
+  DAX:     { ySym: '^GDAXI',   name: 'DAX' },
+  CAC:     { ySym: '^FCHI',    name: 'CAC 40' },
+  STOXX50: { ySym: '^STOXX50E', name: 'EURO STOXX 50' }
+};
+
 let cachedSession = null;
 
 async function getAngelSession() {
@@ -59,6 +75,7 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
   };
 
   for (const k of symbolKeys) {
+    if (WORLD_SYMBOLS[k]) continue; // world keys are handled by the Yahoo fetch below — no fake fallback price
     const def = defaults[k] || { price: 100, close: 100, change: 0, changePct: 0 };
     result[k] = {
       symbol: k,
@@ -198,7 +215,38 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
     }));
   } catch (cErr) {}
 
-  return symbolKeys.map(k => result[k]);
+  // 4. Fetch world indices (USA / Asia / Europe) live from Yahoo Finance chart API
+  const worldKeys = symbolKeys.filter(k => WORLD_SYMBOLS[k]);
+  if (worldKeys.length) {
+    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+    await Promise.all(worldKeys.map(async (k) => {
+      try {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(WORLD_SYMBOLS[k].ySym)}?interval=1m&range=1d`;
+        const res = await axios.get(url, { headers: uHeaders, timeout: 2500 });
+        const meta = res.data?.chart?.result?.[0]?.meta;
+        if (meta && meta.regularMarketPrice != null) {
+          const price = Number(meta.regularMarketPrice);
+          const close = Number(meta.chartPreviousClose || meta.previousClose || price);
+          const chg = Number((price - close).toFixed(2));
+          const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
+          result[k] = {
+            symbol: k,
+            name: WORLD_SYMBOLS[k].name,
+            ltp: price,
+            price,
+            close,
+            change: chg,
+            changePct: chgPct,
+            quote: { price, close, change: chg, changePct: chgPct },
+            source: 'Yahoo Finance Live',
+            lastUpdated: new Date().toISOString()
+          };
+        }
+      } catch (wErr) {}
+    }));
+  }
+
+  return symbolKeys.map(k => result[k]).filter(Boolean);
 }
 
 /**

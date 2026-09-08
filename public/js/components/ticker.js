@@ -6,7 +6,23 @@
 import { api } from '../core/api.js';
 import { rawMoney, pct, plSign } from '../core/formatters.js';
 
-const WATCHLIST = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY'];
+// India rows shown in the popover (order matters)
+const INDIA_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY', 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
+// World rows per region tab
+const REGION_SYMBOLS = {
+  usa: ['SPX', 'DJI', 'NASDAQ', 'VIX'],
+  asia: ['NIKKEI', 'HANGSENG', 'SHANGHAI', 'KOSPI'],
+  europe: ['FTSE', 'DAX', 'CAC', 'STOXX50'],
+};
+const DISPLAY_NAMES = {
+  NIFTY: 'NIFTY 50', BANKNIFTY: 'BANK NIFTY', SENSEX: 'SENSEX', FINNIFTY: 'FIN NIFTY',
+  MIDCPNIFTY: 'MIDCAP NIFTY', GIFTNIFTY: 'GIFT NIFTY', GOLD: 'MCX GOLD', SILVER: 'MCX SILVER',
+  CRUDEOIL: 'MCX CRUDE', NATURALGAS: 'MCX NATGAS',
+  SPX: 'S&P 500', DJI: 'DOW JONES', NASDAQ: 'NASDAQ', VIX: 'US VIX',
+  NIKKEI: 'NIKKEI 225', HANGSENG: 'HANG SENG', SHANGHAI: 'SHANGHAI', KOSPI: 'KOSPI',
+  FTSE: 'FTSE 100', DAX: 'DAX', CAC: 'CAC 40', STOXX50: 'EURO STOXX 50',
+};
+const ALL_SYMBOLS = Array.from(new Set([...INDIA_SYMBOLS, ...Object.values(REGION_SYMBOLS).flat()]));
 const tickerPrices = {
   NIFTY: { price: 23772.85, prevPrice: 23897.70, change: -124.85, changePct: -0.52 },
   BANKNIFTY: { price: 57045.75, prevPrice: 57369.65, change: -323.90, changePct: -0.56 },
@@ -48,6 +64,41 @@ export function togglePopover(popoverId, buttonId) {
 }
 
 let selectedSymbolOverride = null;
+let activeRegion = 'india';
+
+function ensureWorldRows() {
+  const body = document.querySelector('#watchlistPopover .popover-body');
+  if (!body) return;
+  for (const [region, syms] of Object.entries(REGION_SYMBOLS)) {
+    for (const sym of syms) {
+      if (body.querySelector(`.watch-row[data-symbol="${sym}"]`)) continue;
+      const row = document.createElement('div');
+      row.className = 'watch-row world-row';
+      row.setAttribute('data-symbol', sym);
+      row.setAttribute('data-region', region);
+      row.style.display = 'none';
+      row.innerHTML = `<span class="w-name">${DISPLAY_NAMES[sym] || sym}</span>`
+        + `<div class="w-right"><div class="w-price">–</div><div class="w-change">…</div></div>`;
+      row.addEventListener('click', () => {
+        selectedSymbolOverride = sym;
+        renderTickerUI();
+        document.querySelectorAll('.dropdown-popover').forEach((p) => p.classList.remove('show'));
+      });
+      body.appendChild(row);
+    }
+  }
+}
+
+function applyRegionFilter() {
+  document.querySelectorAll('#watchlistPopover .watch-row').forEach((row) => {
+    const isWorld = row.classList.contains('world-row');
+    const rowRegion = row.getAttribute('data-region') || 'india';
+    row.style.display = rowRegion === activeRegion ? '' : 'none';
+    if (isWorld && rowRegion === activeRegion) row.style.display = '';
+  });
+  const viewAll = document.querySelector('#watchlistPopover .inder-viewall');
+  if (viewAll) viewAll.style.display = activeRegion === 'india' ? '' : 'none';
+}
 
 export function initPopovers() {
   const indexPill = document.getElementById('topbarIndexPill');
@@ -66,17 +117,13 @@ export function initPopovers() {
     });
   }
 
-  // Region tabs (India / USA / Asia / Europe) — hide non-India rows since only NSE data is live.
+  // Region tabs (India / USA / Asia / Europe) — switch which rows show
   document.querySelectorAll('#watchlistPopover .inder-region-tab').forEach((tab) => {
     tab.addEventListener('click', (e) => {
       e.stopPropagation();
-      const region = tab.getAttribute('data-region');
+      activeRegion = tab.getAttribute('data-region') || 'india';
       document.querySelectorAll('#watchlistPopover .inder-region-tab').forEach((t) => t.classList.toggle('active', t === tab));
-      document.querySelectorAll('#watchlistPopover .watch-row').forEach((row) => {
-        row.style.display = region === 'india' ? '' : 'none';
-      });
-      const viewAll = document.querySelector('#watchlistPopover .inder-viewall');
-      if (viewAll) viewAll.style.display = region === 'india' ? '' : 'none';
+      applyRegionFilter();
     });
   });
 
@@ -103,6 +150,7 @@ export function initPopovers() {
 let tickerTimer = null;
 
 export async function startTicker() {
+  ensureWorldRows();
   renderTickerUI();
   await updateTickerData();
   if (!tickerTimer) {
@@ -112,15 +160,16 @@ export async function startTicker() {
 
 async function updateTickerData() {
   try {
-    const watchlist = await api(`/api/instruments/watchlist?symbols=${WATCHLIST.join(',')}`).catch(() => []);
+    const watchlist = await api(`/api/instruments/watchlist?symbols=${ALL_SYMBOLS.join(',')}`).catch(() => []);
     if (Array.isArray(watchlist)) {
       for (const item of watchlist) {
-        if (item.quote && item.quote.price != null) {
+        if (item && item.quote && item.quote.price != null) {
           tickerPrices[item.symbol] = {
             price: item.quote.price,
             prevPrice: item.quote.close,
             change: item.quote.change,
             changePct: item.quote.changePct,
+            name: item.name,
             lastUpdated: item.lastUpdated,
             source: item.source,
           };
@@ -150,19 +199,7 @@ function renderTickerUI() {
   const nameEl = document.getElementById('mainHeaderIndexName');
   const marketTagEl = document.getElementById('popoverMarketTag');
   if (nameEl) {
-    const titleMap = {
-      'NIFTY': 'NIFTY 50',
-      'GIFTNIFTY': 'GIFT NIFTY',
-      'BANKNIFTY': 'BANK NIFTY',
-      'SENSEX': 'SENSEX',
-      'FINNIFTY': 'FIN NIFTY',
-      'MIDCPNIFTY': 'MIDCAP NIFTY',
-      'GOLD': 'GOLD',
-      'SILVER': 'SILVER',
-      'CRUDEOIL': 'MCX CRUDE',
-      'NATURALGAS': 'MCX NATGAS'
-    };
-    nameEl.textContent = titleMap[activeSymbol] || activeSymbol;
+    nameEl.textContent = DISPLAY_NAMES[activeSymbol] || activeSymbol;
   }
   const liveClockEl = document.getElementById('popoverLiveClock');
   if (liveClockEl) {
@@ -195,8 +232,8 @@ function renderTickerUI() {
     }
   }
 
-  // Update Watchlist Popover Rows (NIFTY, BANKNIFTY, SENSEX, FINNIFTY, MIDCPNIFTY, GIFTNIFTY)
-  for (const sym of WATCHLIST) {
+  // Update Watchlist Popover Rows (India + MCX + world indices)
+  for (const sym of ALL_SYMBOLS) {
     const row = document.querySelector(`.watch-row[data-symbol="${sym}"]`);
     if (!row) continue;
 
