@@ -6,8 +6,12 @@
 import { api } from '../core/api.js';
 import { rawMoney, pct, plSign } from '../core/formatters.js';
 
+// Core symbols polled every tick — they feed the always-visible topbar ticker
+const CORE_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY'];
+// Extra rows (MCX + world indices) fetched ONLY while the Indices List popover is open (lazy)
+const EXTRA_SYMBOLS = ['GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'SPX', 'DJI', 'NASDAQ', 'VIX', 'NIKKEI', 'HANGSENG', 'SHANGHAI', 'KOSPI', 'FTSE', 'DAX', 'CAC', 'STOXX50'];
 // India rows shown in the popover (order matters)
-const INDIA_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY', 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
+const INDIA_SYMBOLS = [...CORE_SYMBOLS, 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
 // World rows per region tab
 const REGION_SYMBOLS = {
   usa: ['SPX', 'DJI', 'NASDAQ', 'VIX'],
@@ -22,7 +26,7 @@ const DISPLAY_NAMES = {
   NIKKEI: 'NIKKEI 225', HANGSENG: 'HANG SENG', SHANGHAI: 'SHANGHAI', KOSPI: 'KOSPI',
   FTSE: 'FTSE 100', DAX: 'DAX', CAC: 'CAC 40', STOXX50: 'EURO STOXX 50',
 };
-const ALL_SYMBOLS = Array.from(new Set([...INDIA_SYMBOLS, ...Object.values(REGION_SYMBOLS).flat()]));
+const ALL_SYMBOLS = Array.from(new Set([...INDIA_SYMBOLS, ...EXTRA_SYMBOLS]));
 const tickerPrices = {
   NIFTY: { price: 23772.85, prevPrice: 23897.70, change: -124.85, changePct: -0.52 },
   BANKNIFTY: { price: 57045.75, prevPrice: 57369.65, change: -323.90, changePct: -0.56 },
@@ -60,11 +64,16 @@ export function togglePopover(popoverId, buttonId) {
   if (!isShown) {
     popover.classList.add('show');
     if (btn) btn.classList.add('active');
+    popoverOpen = true;
+    updateTickerData(); // lazy-load MCX + world quotes on open
+  } else {
+    popoverOpen = false;
   }
 }
 
 let selectedSymbolOverride = null;
 let activeRegion = 'india';
+let popoverOpen = false; // extra (MCX + world) quotes are fetched only while this is true
 
 function ensureWorldRows() {
   const body = document.querySelector('#watchlistPopover .popover-body');
@@ -160,7 +169,13 @@ export async function startTicker() {
 
 async function updateTickerData() {
   try {
-    const watchlist = await api(`/api/instruments/watchlist?symbols=${ALL_SYMBOLS.join(',')}`).catch(() => []);
+    // Lazy polling: core symbols always (topbar feed); extras only while the popover is open
+    // or when the selected topbar symbol is an extra one.
+    const wanted = new Set(CORE_SYMBOLS);
+    if (popoverOpen) EXTRA_SYMBOLS.forEach((s) => wanted.add(s));
+    if (selectedSymbolOverride) wanted.add(selectedSymbolOverride);
+    const symbolList = ALL_SYMBOLS.filter((s) => wanted.has(s));
+    const watchlist = await api(`/api/instruments/watchlist?symbols=${symbolList.join(',')}`).catch(() => []);
     if (Array.isArray(watchlist)) {
       for (const item of watchlist) {
         if (item && item.quote && item.quote.price != null) {
