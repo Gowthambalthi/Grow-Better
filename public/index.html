@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260908c" />
+<link rel="stylesheet" href="/css/style.css?v=20260908d" />
 </head>
 <body>
 
@@ -2106,6 +2106,16 @@
         var dd = document.getElementById('mfAmcDropdown');
         if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
       }
+      function toggleMfCatDropdown() {
+        var dd = document.getElementById('mfCatDropdown');
+        if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+      }
+      function toggleMfCat(cat) {
+        var sel = window._mfSelCats = window._mfSelCats || [];
+        var i = sel.indexOf(cat);
+        if (i === -1) sel.push(cat); else sel.splice(i, 1);
+        renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
+      }
       function searchAmcFilter(query) {
         var items = document.querySelectorAll('.mf-amc-item');
         var q = (query || '').toLowerCase();
@@ -2252,6 +2262,11 @@ function _renderMfGridBody(grid, schemes) {
         return _cn.indexOf(_k)!==-1;
       });
     }
+    // Categories dropdown multi-select (Equity / Hybrid / Commodities)
+    var _selCats = window._mfSelCats || [];
+    if(_selCats.length){
+      di = di.filter(function(_s3){ return _selCats.indexOf(_s3.category||'') !== -1; });
+    }
     window._mfLastSchemes = di;
 
     // Summary stats
@@ -2329,11 +2344,24 @@ function _renderMfGridBody(grid, schemes) {
     }).join('');
     _catCardsHtml += '</div>';
 
-    // Category tabs
+    // Categories dropdown (right side, next to search) — Equity / Hybrid / Commodities only
     var cc={};for(var i=0;i<di.length;i++){var ct2=di[i].category||"Other";cc[ct2]=(cc[ct2]||0)+1;}
-    var catTabs = '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'      + '<button class="mf-cat-tab" data-cat="all" onclick="filterMfCategory(\x27all\x27)" style="background:var(--accent);color:#fff;border:none;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;">All categories</button>';
-    ["Equity","Hybrid","Debt","Index","ELSS","Other"].forEach(function(k){if(cc[k])catTabs+='<button class="mf-cat-tab" data-cat="'+k+'" onclick="filterMfCategory(\x27'+k+'\x27)" style="background:var(--bg-input);color:var(--text-muted);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">'+k+'</button>';});
-    catTabs += '</div>';
+    var _selCats=window._mfSelCats=window._mfSelCats||[];
+    var _catOpts=["Equity","Hybrid","Commodities"];
+    var catTabs = '<div style="display:flex;gap:8px;align-items:center;">'
+      + '<div style="position:relative;display:inline-block;">'
+      + '<button id="mfCatBtn" onclick="toggleMfCatDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Categories'
+      + (_selCats.length?' <span style="background:var(--accent);color:#fff;border-radius:9px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:2px;">'+_selCats.length+'</span>':'')
+      + ' <span style="font-size:8px;">\u25BC</span></button>'
+      + '<div id="mfCatDropdown" style="display:none;position:absolute;top:100%;right:0;z-index:150;width:200px;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;padding:6px 0;">'
+      + _catOpts.map(function(k){
+          var chk=_selCats.indexOf(k)!==-1;
+          return '<div class="mf-cat-item" data-cat="'+k+'" onclick="toggleMfCat(\x27'+k+'\x27)" style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:12.5px;color:var(--text-primary);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+            +'<span style="width:16px;height:16px;flex:none;border-radius:4px;border:1.5px solid '+(chk?'var(--accent)':'var(--text-muted)')+';background:'+(chk?'var(--accent)':'transparent')+';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;">'+(chk?'\u2713':'')+'</span>'
+            +'<span style="flex:1;font-weight:'+(chk?'700':'500')+';">'+k+'</span>'
+            +'<span style="color:var(--text-muted);font-size:11px;">'+(cc[k]||0)+'</span></div>';
+        }).join('')
+      + '</div></div>';
 
     // Table rows
     function rc2(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
@@ -2361,7 +2389,9 @@ function _renderMfGridBody(grid, schemes) {
     var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
     var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
-    var searchBox='<div style="margin-left:auto;"><input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;"></div>';
+    var searchBox='<div style="margin-left:auto;display:flex;gap:8px;align-items:center;">'
+      + '<input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;">'
+      + '</div>';
         // View tabs
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
     var vtHtml='<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:6px;">View:</span>';
@@ -2481,7 +2511,7 @@ function _renderMfGridBody(grid, schemes) {
     var _showAllBtn = (di.length > _maxRows)
       ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.mfEnsureFull().then(function(f){window.renderMfGrid(f||window._mfLastSchemes||[]);});" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
       : '';
-    grid.innerHTML=sum+_catCardsHtml+catTabs+vtHtml+amcDD+searchBox+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=sum+_catCardsHtml+vtHtml+'<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;justify-content:flex-end;">'+amcDD+catTabs+searchBox+'</div>'+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head
       +"</tr></thead><tbody>"+_body+"</tbody></table></div>"+_showAllBtn+"</div>";
   } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
@@ -3975,6 +4005,8 @@ function _renderMfGridBody(grid, schemes) {
         loadFiiData();
       }
       window.toggleAmcDropdown=toggleAmcDropdown;
+      window.toggleMfCatDropdown=toggleMfCatDropdown;
+      window.toggleMfCat=toggleMfCat;
       window.filterMfAmc=filterMfAmc;
       window.searchAmcFilter=searchAmcFilter;
       window.filterMfCategory=filterMfCategory;
@@ -3996,6 +4028,6 @@ function _renderMfGridBody(grid, schemes) {
       window.switchMfViewTab = function(t){ window._mfViewTab=t; var g=document.getElementById("mfSchemesGrid"); if(g && window._mfLastSchemes) _renderMfGridBody(g, window._mfLastSchemes); };
     })();
   </script>
-  <script type="module" src="/js/app.js?v=20260908c"></script>
+  <script type="module" src="/js/app.js?v=20260908d"></script>
 </body>
 </html>
