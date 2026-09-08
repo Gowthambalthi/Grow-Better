@@ -66,6 +66,20 @@ export function initPopovers() {
     });
   }
 
+  // Region tabs (India / USA / Asia / Europe) — hide non-India rows since only NSE data is live.
+  document.querySelectorAll('#watchlistPopover .inder-region-tab').forEach((tab) => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const region = tab.getAttribute('data-region');
+      document.querySelectorAll('#watchlistPopover .inder-region-tab').forEach((t) => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('#watchlistPopover .watch-row').forEach((row) => {
+        row.style.display = region === 'india' ? '' : 'none';
+      });
+      const viewAll = document.querySelector('#watchlistPopover .inder-viewall');
+      if (viewAll) viewAll.style.display = region === 'india' ? '' : 'none';
+    });
+  });
+
   // Click Watchlist Row to switch active topbar index
   document.querySelectorAll('.watch-row').forEach((row) => {
     row.addEventListener('click', (e) => {

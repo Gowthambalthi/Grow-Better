@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/style.css?v=20260901b" />
+<link rel="stylesheet" href="/css/style.css?v=20260908a" />
 </head>
 <body>
 
@@ -115,17 +115,23 @@
             <div class="dropdown-popover watchlist-dropdown-popover" id="watchlistPopover">
               <div class="popover-header">
                 <div style="display:flex; flex-direction:column; line-height: 1.15;">
-                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #0F172A;">Market</span>
-                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #0F172A;">Watchlist</span>
+                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #E2E8F0;">Indices</span>
+                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #E2E8F0;">List</span>
                 </div>
-                <div style="display:flex; flex-direction:column; align-items: flex-end; font-family:'Plus Jakarta Sans', sans-serif; font-size: 11.5px; font-weight: 500; color: #64748B; line-height: 1.3;">
+                <div style="display:flex; flex-direction:column; align-items: flex-end; font-family:'Plus Jakarta Sans', sans-serif; font-size: 11.5px; font-weight: 500; color: #94A3B8; line-height: 1.3;">
                   <div style="display:flex; align-items:center; gap: 4px;">
-                    <span style="color:#10B981; font-size: 10px;">●</span> LIVE (NSE <span class="live-clock" id="popoverLiveClock" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#64748B; font-weight:600; margin-left:2px;">11:08:14</span>
+                    <span style="color:#10B981; font-size: 10px;">●</span> LIVE (NSE <span class="live-clock" id="popoverLiveClock" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#94A3B8; font-weight:600; margin-left:2px;">11:08:14</span>
                   </div>
                   <div>
-                    IST) <span class="live-ampm" id="popoverLiveAmPm" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#64748B; font-weight:600;">am</span>
+                    IST) <span class="live-ampm" id="popoverLiveAmPm" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#94A3B8; font-weight:600;">am</span>
                   </div>
                 </div>
+              </div>
+              <div class="inder-region-tabs">
+                <button class="inder-region-tab active" data-region="india">India</button>
+                <button class="inder-region-tab" data-region="usa">USA</button>
+                <button class="inder-region-tab" data-region="asia">Asia</button>
+                <button class="inder-region-tab" data-region="europe">Europe</button>
               </div>
               <div class="popover-body" style="padding:0;">
                 <div class="watch-row active" data-symbol="NIFTY" id="popoverRowNifty">
@@ -171,6 +177,7 @@
                   </div>
                 </div>
               </div>
+              <div class="inder-viewall">VIEW ALL INDICES</div>
             </div>
           </div>
 
@@ -1832,6 +1839,7 @@
                   return { symbol: h.securityName, name: h.securityName, pct: h.weight, sector: h.sector, isin: h.isin };
                 }),
                 variantCount: s.variantCount || 1,
+                plan: s.plan || 'Direct',
                 variants: [],
                 investorCount: s.investorCount,
                 aumChange1M: s.aumChange1M || null,
@@ -2206,7 +2214,7 @@ function _renderMfGridBody(grid, schemes) {
         if(_k==='mid cap') return _cc.indexOf('mid cap')!==-1 || _cc.indexOf('midcap')!==-1;
         if(_k==='large & mid cap') return _cc.indexOf('large & mid')!==-1 || _cc.indexOf('large and mid')!==-1 || _cc.indexOf('large & midcap')!==-1 || _cc.indexOf('large and midcap')!==-1;
         if(_k==='value') return _cc.indexOf('value')!==-1 || _cc.indexOf('contra')!==-1;
-        if(_k==='large cap') return _cc.indexOf('large cap')!==-1;
+        if(_k==='large cap') return _cc.indexOf('large cap')!==-1 || _cc.indexOf('largecap')!==-1;
         if(_k==='flexi cap') return _cc.indexOf('flexi cap')!==-1 || _cc.indexOf('flexicap')!==-1;
         if(_k==='small cap') return _cc.indexOf('small cap')!==-1 || _cc.indexOf('smallcap')!==-1;
         if(_k==='index') return _cn.indexOf('index')!==-1 || _nm.indexOf('index')!==-1 || _nm.indexOf('etf')!==-1;
@@ -2260,15 +2268,18 @@ function _renderMfGridBody(grid, schemes) {
         svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' }
     ];
     _catCardsHtml += _catDefs.map(function(cd){
-      // Real count — same matcher as the grid filter, over the FULL scheme list (not the filtered view)
+      // Real count — same matcher as the grid filter, over the FULL scheme list.
+      // Dedup by schemeName because the API now returns one row per plan (Direct + Regular).
       var cnt=0;
+      var _seen={};
       for(var ci=0;ci<schemes.length;ci++){
         var _cn=(schemes[ci].category||'').toLowerCase(), _nm=(schemes[ci].schemeName||'').toLowerCase(), _cc=_cn+' '+_nm, _k=cd.key.toLowerCase();
+        if(_seen[_nm]) continue; _seen[_nm]=1;
         var _hit = (_k==='multi cap') ? (_cc.indexOf('multi cap')!==-1||_cc.indexOf('multicap')!==-1)
           : (_k==='mid cap') ? (_cc.indexOf('mid cap')!==-1||_cc.indexOf('midcap')!==-1)
           : (_k==='large & mid cap') ? (_cc.indexOf('large & mid')!==-1||_cc.indexOf('large and mid')!==-1||_cc.indexOf('large & midcap')!==-1||_cc.indexOf('large and midcap')!==-1)
           : (_k==='value') ? (_cc.indexOf('value')!==-1||_cc.indexOf('contra')!==-1)
-          : (_k==='large cap') ? _cc.indexOf('large cap')!==-1
+          : (_k==='large cap') ? (_cc.indexOf('large cap')!==-1||_cc.indexOf('largecap')!==-1)
           : (_k==='flexi cap') ? (_cc.indexOf('flexi cap')!==-1||_cc.indexOf('flexicap')!==-1)
           : (_k==='small cap') ? (_cc.indexOf('small cap')!==-1||_cc.indexOf('smallcap')!==-1)
           : (_k==='index') ? (_cn.indexOf('index')!==-1||_nm.indexOf('index')!==-1||_nm.indexOf('etf')!==-1)
@@ -2343,7 +2354,7 @@ function _renderMfGridBody(grid, schemes) {
         var sc=s.confidenceScore||50,pf=Math.round(sc*.25),po=Math.round(sc*.22),op=Math.round(sc*.26),rw=sc-pf-po-op;
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' &middot; '+s.variantCount+' plans':'')+'</div></td>'
+          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;vertical-align:middle;background:'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'rgba(74,158,255,0.15);color:#4A9EFF':'rgba(0,179,134,0.15);color:#00B386')+';">'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'REG':'DIR')+'</span>':'')+'</div></td>'
           +rn2(sc)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+pf+'/25</td>'
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+po+'/25</td>'
@@ -2363,7 +2374,7 @@ function _renderMfGridBody(grid, schemes) {
         function _g(k,p){return (_m[k+"_"+(_msuf[p]||"")])!=null?_m[k+"_"+(_msuf[p]||"")]:null;}
         var h='<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' &middot; '+s.variantCount+' plans':'')+'</div></td>';
+          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;vertical-align:middle;background:'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'rgba(74,158,255,0.15);color:#4A9EFF':'rgba(0,179,134,0.15);color:#00B386')+';">'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'REG':'DIR')+'</span>':'')+'</div></td>';
         for(var _j=0;_j<_rp.length;_j++){
           var _p=_rp[_j];
           h+=_mfCellPct(_g("alpha",_p))+_mfCellNum(_g("beta",_p),false)+_mfCellNum(_g("sharpe",_p),true)+_mfCellNum(_g("sortino",_p),true)+_mfCellPct(_g("treynor",_p))+_mfCellPct(_g("stdDev",_p));
@@ -2394,7 +2405,7 @@ function _renderMfGridBody(grid, schemes) {
 
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' &middot; '+s.variantCount+' plans':'')+'</div></td>'
+          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;vertical-align:middle;background:'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'rgba(74,158,255,0.15);color:#4A9EFF':'rgba(0,179,134,0.15);color:#00B386')+';">'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'REG':'DIR')+'</span>':'')+'</div></td>'
           +rn2(s.confidenceScore||50)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(function(){var _a=s.aumCr!=null?s.aumCr:(s.aum!=null?s.aum:null);return _a!=null?"\u20b9"+Number(_a).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-";})()+"</td>"
           +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_est=_ca.latestDate==='estimated'?' <span style="color:var(--text-muted);font-size:9px;font-weight:500;">est</span>':'',_vs=(_ch>=0?"+":"-")+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+'%)</span>'+_est+'</td>';})()
@@ -3957,6 +3968,6 @@ function _renderMfGridBody(grid, schemes) {
       window.switchMfViewTab = function(t){ window._mfViewTab=t; var g=document.getElementById("mfSchemesGrid"); if(g && window._mfLastSchemes) _renderMfGridBody(g, window._mfLastSchemes); };
     })();
   </script>
-  <script type="module" src="/js/app.js?v=20260831_v201"></script>
+  <script type="module" src="/js/app.js?v=20260908a"></script>
 </body>
 </html>

@@ -404,7 +404,7 @@ const helpers = {
         case 'Mid Cap': return cc.indexOf('mid cap') !== -1 || cc.indexOf('midcap') !== -1;
         case 'Large & Mid Cap': return cc.indexOf('large & mid') !== -1 || cc.indexOf('large and mid') !== -1 || cc.indexOf('large & midcap') !== -1 || cc.indexOf('large and midcap') !== -1;
         case 'Value': return cc.indexOf('value') !== -1 || cc.indexOf('contra') !== -1;
-        case 'Large Cap': return cc.indexOf('large cap') !== -1;
+        case 'Large Cap': return cc.indexOf('large cap') !== -1 || cc.indexOf('largecap') !== -1;
         case 'Flexi Cap': return cc.indexOf('flexi cap') !== -1 || cc.indexOf('flexicap') !== -1;
         case 'Small Cap': return cc.indexOf('small cap') !== -1 || cc.indexOf('smallcap') !== -1;
         case 'Index': return cn.indexOf('index') !== -1 || nm.indexOf('index') !== -1 || nm.indexOf('etf') !== -1;
@@ -656,22 +656,39 @@ const helpers = {
 
   getAllSchemesSummary(limit) {
     let schemes = this.getAllSchemes();
-    // Collapse plan/option variants (same schemeName, e.g. Direct Growth / Regular IDCW) into ONE row per fund.
-    // Keeps the preferred variant (Direct + Growth wins) and reports how many plan variants exist.
-    const bestVariant = new Map();   // schemeName -> { score, s }
-    const variantCounts = new Map(); // schemeName -> count
+    // Emit ONE ROW PER PLAN (Direct first, then Regular) so both plans are visible in the grid.
+    // Funds with only one plan keep a single row; planless rows (empty plan field) collapse to one.
+    const planBuckets = new Map(); // schemeName -> { direct: {score,s}, regular: {score,s}, plain: {score,s} }
     for (const s of schemes) {
-      const k = s.schemeName;
-      variantCounts.set(k, (variantCounts.get(k) || 0) + 1);
       const pl = (s.plan || '').toLowerCase();
       const op = (s.option || '').toLowerCase();
       let score = 0;
-      if (pl.indexOf('direct') !== -1) score += 2; else if (pl.indexOf('regular') !== -1) score -= 1;
       if (op.indexOf('growth') !== -1) score += 1; else if (op.indexOf('idcw') !== -1) score -= 1;
-      const prev = bestVariant.get(k);
-      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) bestVariant.set(k, { score, s });
+      if (score === 0) score = s.id < 1e12 ? 0 : 0; // stable tiebreak below by id
+      const bucket = planBuckets.get(s.schemeName) || {};
+      let slot;
+      if (pl.indexOf('regular') !== -1) slot = 'regular';
+      else if (pl.indexOf('direct') !== -1) slot = 'direct';
+      else slot = 'plain';
+      const prev = bucket[slot];
+      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) bucket[slot] = { score, s };
+      planBuckets.set(s.schemeName, bucket);
     }
-    schemes = Array.from(bestVariant.values()).map(v => { v.s.variantCount = variantCounts.get(v.s.schemeName) || 1; return v.s; });
+    const expanded = [];
+    for (const [name, bucket] of planBuckets) {
+      const hasPlans = bucket.direct || bucket.regular;
+      const rows = [];
+      if (bucket.direct) rows.push(bucket.direct.s);
+      if (bucket.regular) rows.push(bucket.regular.s);
+      if (!hasPlans && bucket.plain) rows.push(bucket.plain.s); // planless-only funds: one row
+      for (const r of rows) {
+        r.variantCount = rows.length;
+        r.plan = (r.plan || '').toLowerCase().indexOf('regular') !== -1 ? 'Regular'
+               : (r.plan || '').toLowerCase().indexOf('direct') !== -1 ? 'Direct' : (r.plan || '');
+        expanded.push(r);
+      }
+    }
+    schemes = expanded;
     if (limit && limit > 0) schemes = schemes.slice(0, limit); // slice BEFORE per-scheme work so the API stays fast at 14k schemes
     const ids = Array.from(new Set(schemes.map(s => s.id)));
     const inClause = ids.map(() => '?').join(',');
