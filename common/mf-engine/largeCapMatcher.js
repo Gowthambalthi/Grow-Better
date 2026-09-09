@@ -1,34 +1,54 @@
 /**
  * common/mf-engine/largeCapMatcher.js
  *
- * Single source of truth for "does this fund belong under the Large-Cap card".
- * Used by db/mutualFunds.js getCardCounts, scripts/importFullUniverse.js, and
- * duplicated inline in public/index.html (frontend cannot require modules).
+ * Single source of truth for the cap-style card matchers (Large/Mid/Small).
+ * Used by db/mutualFunds.js getCardCounts and duplicated inline in
+ * public/index.html (frontend cannot require modules — keep in sync).
  *
  * Rules (user-approved classification):
- *   YES: large cap / bluechip / top 100, Nifty 50, Nifty Next 50, Nifty 100
- *        (incl. Equal Weight / Low Volatility 30 / Quality 30), BSE Sensex
- *        (incl. Next 50 / Next 30 / Equal Weight), Nifty Top 10/15/20.
- *   NO:  Mid Cap, Small Cap, Large & Mid Cap, Flexi Cap, Multi Cap, Nifty 200,
- *        any midcap/smallcap index.
+ *   Large Cap: large cap / bluechip / top 100, Nifty 50, Nifty Next 50,
+ *     Nifty 100 (incl. Equal Weight / Low Volatility 30 / Quality 30),
+ *     BSE Sensex (incl. Next 50/30, Equal Weight), Nifty Top 10/15/20.
+ *   Mid Cap:   mid cap / midcap — Nifty Midcap 50/100/150/Select, BSE MidCap.
+ *   Small Cap: small cap / smallcap — Nifty Smallcap 50/100/250/Select, BSE SmallCap.
+ *   Never on any pure cap card: Large & Mid Cap / Nifty LargeMidcap 250
+ *     (own card), Flexi Cap, Multi Cap.
  */
 'use strict';
 
-// Exclusions run first — a name containing any of these is never Large Cap.
-var LC_EXCLUDE = /mid\s*cap|midcap|small\s*cap|smallcap|flexi\s*cap|flexicap|multi\s*cap|multicap|large\s*&\s*mid|large\s+and\s+mid|nifty\s*200(?![0-9])|nifty\s*midcap|nifty\s*smallcap/;
+var B = String.fromCharCode(92); // backslash, keeps the regexes copy-paste safe
+
+// Patterns each card must NOT contain — every card excludes the other caps,
+// the blended categories, and Flexi/Multi.
+function otherCaps(own) {
+  var parts = {
+    large: 'mid' + B + 's*cap|midcap|small' + B + 's*cap|smallcap|largemidcap|large' + B + 's*midcap|large' + B + 's*&' + B + 's*mid|large' + B + 's+and' + B + 's+mid',
+    mid:   'small' + B + 's*cap|smallcap|largemidcap|large' + B + 's*midcap|large' + B + 's*&' + B + 's*mid|large' + B + 's+and' + B + 's+mid',
+    small: 'mid' + B + 's*cap|midcap|largemidcap|large' + B + 's*midcap|large' + B + 's*&' + B + 's*mid|large' + B + 's+and' + B + 's+mid',
+  };
+  return new RegExp(parts[own] + '|flexi' + B + 's*cap|flexicap|multi' + B + 's*cap|multicap');
+}
+
+var LC_EXCLUDE = otherCaps('large');
+var MID_EXCLUDE = otherCaps('mid');
+var SMALL_EXCLUDE = otherCaps('small');
 
 // nifty 50 must not match "nifty 500"; nifty 100 must not match "nifty 1000".
 var LC_INCLUDE = /large\s*cap|largecap|bluechip|top\s*100(?![0-9])|nifty\s*50(?![0-9])|nifty50(?![0-9])|next\s*50(?![0-9])|nifty\s*100(?![0-9])|nifty100(?![0-9])|sensex|nifty\s*top\s*(10|15|20)(?![0-9])/;
 
-/**
- * @param {string} name  scheme name
- * @param {string} [cat] AMFI/SEBI category (optional)
- * @returns {boolean}
- */
-function isLargeCapName(name, cat) {
-  var s = ((name || '') + ' ' + (cat || '')).toLowerCase();
-  if (LC_EXCLUDE.test(s)) return false;
-  return LC_INCLUDE.test(s);
+var MID_INCLUDE = /mid\s*cap|midcap/;
+var SMALL_INCLUDE = /small\s*cap|smallcap/;
+
+function make(include, exclude) {
+  return function (name, cat) {
+    var s = ((name || '') + ' ' + (cat || '')).toLowerCase();
+    if (exclude.test(s)) return false;
+    return include.test(s);
+  };
 }
 
-module.exports = { isLargeCapName: isLargeCapName };
+var isLargeCapName = make(LC_INCLUDE, LC_EXCLUDE);
+var isMidCapName = make(MID_INCLUDE, MID_EXCLUDE);
+var isSmallCapName = make(SMALL_INCLUDE, SMALL_EXCLUDE);
+
+module.exports = { isLargeCapName: isLargeCapName, isMidCapName: isMidCapName, isSmallCapName: isSmallCapName };

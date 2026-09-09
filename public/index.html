@@ -10,7 +10,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260909d" />
+<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260909e" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2120,15 +2120,28 @@
           items[i].style.display = (q === '' || name.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
         }
       }
-      // Large-Cap matcher — port of common/mf-engine/largeCapMatcher.js (kept in sync).
-      // YES: large cap/bluechip/top 100, Nifty 50/Next 50/100 (incl. EW/LV30/Q30), Sensex family, Top 10/15/20.
-      // NO: Mid/Small/Large&Mid/Flexi/Multi Cap, Nifty 200/500, midcap/smallcap indices.
-      var _MF_LC_EXCLUDE = /mid\s*cap|midcap|small\s*cap|smallcap|flexi\s*cap|flexicap|multi\s*cap|multicap|large\s*&\s*mid|large\s+and\s+mid|nifty\s*200(?![0-9])|nifty\s*midcap|nifty\s*smallcap/;
+      // Cap matchers — port of common/mf-engine/largeCapMatcher.js (kept in sync).
+      // Large: large cap/bluechip/top 100, Nifty 50/Next 50/100 (EW/LV30/Q30), Sensex family, Top 10/15/20.
+      // Mid: mid cap/midcap (Nifty Midcap 50/100/150/Select, BSE MidCap). Small: small cap/smallcap.
+      // All exclude the other caps, Nifty LargeMidcap 250, Flexi Cap, Multi Cap.
+      var _MF_LC_EXCLUDE = /small\s*cap|smallcap|mid\s*cap|midcap|largemidcap|large\s*midcap|large\s*&\s*mid|large\s+and\s+mid|flexi\s*cap|flexicap|multi\s*cap|multicap/;
       var _MF_LC_INCLUDE = /large\s*cap|largecap|bluechip|top\s*100(?![0-9])|nifty\s*50(?![0-9])|nifty50(?![0-9])|next\s*50(?![0-9])|nifty\s*100(?![0-9])|nifty100(?![0-9])|sensex|nifty\s*top\s*(10|15|20)(?![0-9])/;
+      var _MF_MID_EXCLUDE = /small\s*cap|smallcap|largemidcap|large\s*midcap|large\s*&\s*mid|large\s+and\s+mid|flexi\s*cap|flexicap|multi\s*cap|multicap/;
+      var _MF_SMALL_EXCLUDE = /mid\s*cap|midcap|largemidcap|large\s*midcap|large\s*&\s*mid|large\s+and\s+mid|flexi\s*cap|flexicap|multi\s*cap|multicap/;
       window.mfIsLargeCap = function(name, cat) {
         var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
         if (_MF_LC_EXCLUDE.test(s)) return false;
         return _MF_LC_INCLUDE.test(s);
+      };
+      window.mfIsMidCap = function(name, cat) {
+        var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
+        if (_MF_MID_EXCLUDE.test(s)) return false;
+        return /mid\s*cap|midcap/.test(s);
+      };
+      window.mfIsSmallCap = function(name, cat) {
+        var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
+        if (_MF_SMALL_EXCLUDE.test(s)) return false;
+        return /small\s*cap|smallcap/.test(s);
       };
       function filterMfCategory(cat) {
         var _cardScroll = document.getElementById('mfSchemesGrid');
@@ -2164,12 +2177,12 @@
             var lc = cat.toLowerCase() + ' ' + name;
             var k = _mfActiveCategory.toLowerCase();
             if (k === 'multi cap') showCat = lc.indexOf('multi cap') !== -1 || lc.indexOf('multicap') !== -1;
-            else if (k === 'mid cap') showCat = lc.indexOf('mid cap') !== -1 || lc.indexOf('midcap') !== -1;
+            else if (k === 'mid cap') showCat = window.mfIsMidCap(name, cat.toLowerCase());
             else if (k === 'large & mid cap') showCat = lc.indexOf('large & mid') !== -1 || lc.indexOf('large and mid') !== -1 || lc.indexOf('large & midcap') !== -1 || lc.indexOf('large and midcap') !== -1;
             else if (k === 'value') showCat = lc.indexOf('value') !== -1 || lc.indexOf('contra') !== -1;
             else if (k === 'large cap') showCat = window.mfIsLargeCap(name, cat.toLowerCase());
             else if (k === 'flexi cap') showCat = lc.indexOf('flexi cap') !== -1 || lc.indexOf('flexicap') !== -1;
-            else if (k === 'small cap') showCat = lc.indexOf('small cap') !== -1 || lc.indexOf('smallcap') !== -1;
+            else if (k === 'small cap') showCat = window.mfIsSmallCap(name, cat.toLowerCase());
             else if (k === 'index') showCat = cat.toLowerCase().indexOf('index') !== -1;
             else if (k === 'elss') showCat = lc.indexOf('elss') !== -1 || lc.indexOf('tax') !== -1 || lc.indexOf('80c') !== -1;
             else if (k === 'money market') showCat = lc.indexOf('money market') !== -1 || lc.indexOf('liquid') !== -1 || lc.indexOf('overnight') !== -1;
@@ -2255,12 +2268,12 @@ function _renderMfGridBody(grid, schemes) {
         var _nm = (_s2.schemeName||'').toLowerCase();
         var _cc = _cn + ' ' + _nm;
         if(_k==='multi cap') return _cc.indexOf('multi cap')!==-1 || _cc.indexOf('multicap')!==-1;
-        if(_k==='mid cap') return _cc.indexOf('mid cap')!==-1 || _cc.indexOf('midcap')!==-1;
+        if(_k==='mid cap') return window.mfIsMidCap(_nm, _cn);
         if(_k==='large & mid cap') return _cc.indexOf('large & mid')!==-1 || _cc.indexOf('large and mid')!==-1 || _cc.indexOf('large & midcap')!==-1 || _cc.indexOf('large and midcap')!==-1;
         if(_k==='value') return _cc.indexOf('value')!==-1 || _cc.indexOf('contra')!==-1;
         if(_k==='large cap') return window.mfIsLargeCap(_nm, _cn);
         if(_k==='flexi cap') return _cc.indexOf('flexi cap')!==-1 || _cc.indexOf('flexicap')!==-1;
-        if(_k==='small cap') return _cc.indexOf('small cap')!==-1 || _cc.indexOf('smallcap')!==-1;
+        if(_k==='small cap') return window.mfIsSmallCap(_nm, _cn);
         if(_k==='index') return _cn.indexOf('index')!==-1 || _nm.indexOf('index')!==-1 || _nm.indexOf('etf')!==-1;
         if(_k==='elss') return _cc.indexOf('elss')!==-1 || _cn.indexOf('tax')!==-1 || _nm.indexOf('tax')!==-1 || _nm.indexOf('80c')!==-1;
         if(_k==='money market') return _cc.indexOf('money market')!==-1 || _cc.indexOf('liquid')!==-1 || _cc.indexOf('overnight')!==-1;
@@ -2325,12 +2338,12 @@ function _renderMfGridBody(grid, schemes) {
         var _cn=(schemes[ci].category||'').toLowerCase(), _nm=(schemes[ci].schemeName||'').toLowerCase(), _cc=_cn+' '+_nm, _k=cd.key.toLowerCase();
         if(_seen[_nm]) continue; _seen[_nm]=1;
         var _hit = (_k==='multi cap') ? (_cc.indexOf('multi cap')!==-1||_cc.indexOf('multicap')!==-1)
-          : (_k==='mid cap') ? (_cc.indexOf('mid cap')!==-1||_cc.indexOf('midcap')!==-1)
+          : (_k==='mid cap') ? window.mfIsMidCap(_nm, _cn)
           : (_k==='large & mid cap') ? (_cc.indexOf('large & mid')!==-1||_cc.indexOf('large and mid')!==-1||_cc.indexOf('large & midcap')!==-1||_cc.indexOf('large and midcap')!==-1)
           : (_k==='value') ? (_cc.indexOf('value')!==-1||_cc.indexOf('contra')!==-1)
           : (_k==='large cap') ? window.mfIsLargeCap(_nm, _cn)
           : (_k==='flexi cap') ? (_cc.indexOf('flexi cap')!==-1||_cc.indexOf('flexicap')!==-1)
-          : (_k==='small cap') ? (_cc.indexOf('small cap')!==-1||_cc.indexOf('smallcap')!==-1)
+          : (_k==='small cap') ? window.mfIsSmallCap(_nm, _cn)
           : (_k==='index') ? (_cn.indexOf('index')!==-1||_nm.indexOf('index')!==-1||_nm.indexOf('etf')!==-1)
           : (_k==='elss') ? (_cc.indexOf('elss')!==-1||_cn.indexOf('tax')!==-1||_nm.indexOf('tax')!==-1||_nm.indexOf('80c')!==-1)
           : (_k==='money market') ? (_cc.indexOf('money market')!==-1||_cc.indexOf('liquid')!==-1||_cc.indexOf('overnight')!==-1)

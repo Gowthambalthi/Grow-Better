@@ -397,16 +397,17 @@ const helpers = {
     const keys = ['Multi Cap', 'Mid Cap', 'Large & Mid Cap', 'Value', 'Large Cap', 'Flexi Cap', 'Small Cap', 'Index', 'ELSS', 'Money Market', 'Commodities'];
     const counts = {};
     for (const k of keys) counts[k] = 0;
+    const lcMatcher = require('../common/mf-engine/largeCapMatcher');
     const match = (cn, nm, key) => {
       const cc = cn + ' ' + nm;
       switch (key) {
         case 'Multi Cap': return cc.indexOf('multi cap') !== -1 || cc.indexOf('multicap') !== -1;
-        case 'Mid Cap': return cc.indexOf('mid cap') !== -1 || cc.indexOf('midcap') !== -1;
-        case 'Large & Mid Cap': return cc.indexOf('large & mid') !== -1 || cc.indexOf('large and mid') !== -1 || cc.indexOf('large & midcap') !== -1 || cc.indexOf('large and midcap') !== -1;
+        case 'Mid Cap': return lcMatcher.isMidCapName(nm, cn);
+        case 'Large & Mid Cap': return cc.indexOf('large & mid') !== -1 || cc.indexOf('large and mid') !== -1 || cc.indexOf('large & midcap') !== -1 || cc.indexOf('large and midcap') !== -1 || cc.indexOf('largemidcap') !== -1 || cc.indexOf('large midcap') !== -1;
         case 'Value': return cc.indexOf('value') !== -1 || cc.indexOf('contra') !== -1;
-        case 'Large Cap': return require('../common/mf-engine/largeCapMatcher').isLargeCapName(nm, cn);
+        case 'Large Cap': return lcMatcher.isLargeCapName(nm, cn);
         case 'Flexi Cap': return cc.indexOf('flexi cap') !== -1 || cc.indexOf('flexicap') !== -1;
-        case 'Small Cap': return cc.indexOf('small cap') !== -1 || cc.indexOf('smallcap') !== -1;
+        case 'Small Cap': return lcMatcher.isSmallCapName(nm, cn);
         case 'Index': return cn.indexOf('index') !== -1 || nm.indexOf('index') !== -1 || nm.indexOf('etf') !== -1;
         case 'ELSS': return cc.indexOf('elss') !== -1 || cn.indexOf('tax') !== -1 || nm.indexOf('tax') !== -1 || nm.indexOf('80c') !== -1;
         case 'Money Market': return cc.indexOf('money market') !== -1 || cc.indexOf('liquid') !== -1 || cc.indexOf('overnight') !== -1;
