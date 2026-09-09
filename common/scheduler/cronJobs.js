@@ -2,10 +2,13 @@
  * common/scheduler/cronJobs.js
  * Automated Daily Scheduler for Institutional Conviction Pipeline
  */
+'use strict';
 
+const path = require('path');
 const { scrapeBulkAndBlockDeals } = require('../scrapers/nseBulkBlockScraper');
 const { ingestDailyDeliveryData } = require('../scrapers/nseBhavcopyScraper');
 const institutionalService = require('../institutional/institutionalService');
+const { syncNewFunds } = require('./weeklyMfSync');
 
 let cron;
 try {
@@ -49,9 +52,15 @@ function initScheduler() {
       runDailyConvictionPipeline();
     }, { timezone: 'Asia/Kolkata' });
 
-    // Sunday 2:00 AM IST weekly: Run Institutes & AMFI pipeline (0 2 * * 0)
+    // Sunday 2:00 PM IST weekly: Run Institutes & AMFI pipeline (0 2 * * 0)
     cron.schedule('0 2 * * 0', () => {
       runWeeklyInstitutesPipeline();
+    }, { timezone: 'Asia/Kolkata' });
+
+    // Sunday 2:00 PM IST: check AMFI master for NEW mutual funds (all types;
+    // large-cap ones identified with the shared large-cap matcher)
+    cron.schedule('0 14 * * 0', () => {
+      runWeeklyMfSync();
     }, { timezone: 'Asia/Kolkata' });
 
         // Daily 7:30 PM IST: Smart AMC refresh — only re-fetches stale schemes (30 19 * * *)
@@ -64,7 +73,7 @@ function initScheduler() {
       runDailyNavTracking();
     }, { timezone: 'Asia/Kolkata' });
 
-    console.log('[Cron Scheduler] Scheduled: Daily pipeline (7 PM), Smart AMC Refresh (7:30 PM), Daily NAV (10 PM), Sunday Institutes (2 AM).');
+    console.log('[Cron Scheduler] Scheduled: Daily pipeline (7 PM), Smart AMC Refresh (7:30 PM), Daily NAV (10 PM), Sunday Institutes (2 AM), Sunday MF Sync (2 PM).');
   } else {
     // Fallback: Check pipeline run every 4 hours
     setInterval(() => {
@@ -93,6 +102,14 @@ function initScheduler() {
   if (lastWeeklyRunWeek !== currentWeek) {
     console.log(`[Auto-Run] App started for week ${currentWeek}. Executing Institutes pipeline automatically...`);
     runWeeklyInstitutesPipeline();
+  }
+
+  // Catch-up: if this week's Sunday 2 PM MF sync hasn't run yet, do it on startup
+  // (covers the app not being open at exactly Sunday 2 PM)
+  const mfSyncWeek = getISOWeekKey();
+  if (lastMfSyncWeek !== mfSyncWeek) {
+    lastMfSyncWeek = mfSyncWeek;
+    setTimeout(() => runWeeklyMfSync(), 15000); // let the server finish booting first
   }
 }
 
@@ -247,6 +264,20 @@ async function runSmartAmcRefresh() {
 
 let lastAmcRefreshDate = '';
 
+let lastMfSyncWeek = '';
+
+/**
+ * Weekly new-fund sync (Sunday 2 PM IST) — detects funds newly added to the
+ * Indian market and imports them into the app's fund universe.
+ */
+async function runWeeklyMfSync() {
+  try {
+    await syncNewFunds();
+  } catch (err) {
+    console.error('[Weekly MF Sync Error]', err.message);
+  }
+}
+
 // Auto-run AMC refresh if not done today
   const today = new Date().toISOString().slice(0, 10);
   if (lastAmcRefreshDate !== today && new Date().getDay() === 0) {
@@ -260,5 +291,6 @@ module.exports = {
   runWeeklyInstitutesPipeline,
   runSmartAmcRefresh,
   runDailyNavTracking,
+  runWeeklyMfSync,
   initScheduler
 };

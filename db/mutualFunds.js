@@ -404,7 +404,7 @@ const helpers = {
         case 'Mid Cap': return cc.indexOf('mid cap') !== -1 || cc.indexOf('midcap') !== -1;
         case 'Large & Mid Cap': return cc.indexOf('large & mid') !== -1 || cc.indexOf('large and mid') !== -1 || cc.indexOf('large & midcap') !== -1 || cc.indexOf('large and midcap') !== -1;
         case 'Value': return cc.indexOf('value') !== -1 || cc.indexOf('contra') !== -1;
-        case 'Large Cap': return cc.indexOf('large cap') !== -1 || cc.indexOf('largecap') !== -1;
+        case 'Large Cap': return require('../common/mf-engine/largeCapMatcher').isLargeCapName(nm, cn);
         case 'Flexi Cap': return cc.indexOf('flexi cap') !== -1 || cc.indexOf('flexicap') !== -1;
         case 'Small Cap': return cc.indexOf('small cap') !== -1 || cc.indexOf('smallcap') !== -1;
         case 'Index': return cn.indexOf('index') !== -1 || nm.indexOf('index') !== -1 || nm.indexOf('etf') !== -1;
