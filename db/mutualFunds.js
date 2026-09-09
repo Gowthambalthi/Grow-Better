@@ -656,39 +656,24 @@ const helpers = {
 
   getAllSchemesSummary(limit) {
     let schemes = this.getAllSchemes();
-    // Emit ONE ROW PER PLAN (Direct first, then Regular) so both plans are visible in the grid.
-    // Funds with only one plan keep a single row; planless rows (empty plan field) collapse to one.
-    const planBuckets = new Map(); // schemeName -> { direct: {score,s}, regular: {score,s}, plain: {score,s} }
+    // DIRECT ONLY — collapse to one row per fund, preferring the Direct plan
+    // (Regular rows are never shown; funds without a Direct plan fall back to
+    // their best Growth-option variant).
+    const best = new Map(); // schemeName -> chosen scheme row
     for (const s of schemes) {
       const pl = (s.plan || '').toLowerCase();
       const op = (s.option || '').toLowerCase();
       let score = 0;
+      if (pl.indexOf('direct') !== -1) score += 100;             // Direct wins outright
+      else if (pl.indexOf('regular') !== -1) score -= 100;       // Regular only if nothing better
       if (op.indexOf('growth') !== -1) score += 1; else if (op.indexOf('idcw') !== -1) score -= 1;
-      if (score === 0) score = s.id < 1e12 ? 0 : 0; // stable tiebreak below by id
-      const bucket = planBuckets.get(s.schemeName) || {};
-      let slot;
-      if (pl.indexOf('regular') !== -1) slot = 'regular';
-      else if (pl.indexOf('direct') !== -1) slot = 'direct';
-      else slot = 'plain';
-      const prev = bucket[slot];
-      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) bucket[slot] = { score, s };
-      planBuckets.set(s.schemeName, bucket);
+      const prev = best.get(s.schemeName);
+      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) best.set(s.schemeName, { score, s });
     }
-    const expanded = [];
-    for (const [name, bucket] of planBuckets) {
-      const hasPlans = bucket.direct || bucket.regular;
-      const rows = [];
-      if (bucket.direct) rows.push(bucket.direct.s);
-      if (bucket.regular) rows.push(bucket.regular.s);
-      if (!hasPlans && bucket.plain) rows.push(bucket.plain.s); // planless-only funds: one row
-      for (const r of rows) {
-        r.variantCount = rows.length;
-        r.plan = (r.plan || '').toLowerCase().indexOf('regular') !== -1 ? 'Regular'
-               : (r.plan || '').toLowerCase().indexOf('direct') !== -1 ? 'Direct' : (r.plan || '');
-        expanded.push(r);
-      }
-    }
-    schemes = expanded;
+    schemes = Array.from(best.values(), b => {
+      b.s.variantCount = 1;
+      return b.s;
+    });
     if (limit && limit > 0) schemes = schemes.slice(0, limit); // slice BEFORE per-scheme work so the API stays fast at 14k schemes
     const ids = Array.from(new Set(schemes.map(s => s.id)));
     const inClause = ids.map(() => '?').join(',');

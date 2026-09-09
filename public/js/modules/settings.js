@@ -1,3 +1,6 @@
+import { api } from '../core/api.js';
+import { money } from '../core/formatters.js';
+
 export const STOCK_LEVERAGE_DEFAULTS = {
   'EMMVEE-EQ': 2.9,
   'EMMVEE': 2.9,

@@ -10,7 +10,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260909a" />
+<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260909b" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2123,8 +2123,8 @@
       // Large-Cap matcher — port of common/mf-engine/largeCapMatcher.js (kept in sync).
       // YES: large cap/bluechip/top 100, Nifty 50/Next 50/100 (incl. EW/LV30/Q30), Sensex family, Top 10/15/20.
       // NO: Mid/Small/Large&Mid/Flexi/Multi Cap, Nifty 200/500, midcap/smallcap indices.
-      var _MF_LC_EXCLUDE = /mid\\s*cap|midcap|small\\s*cap|smallcap|flexi\\s*cap|flexicap|multi\\s*cap|multicap|large\\s*&\\s*mid|large\\s+and\\s+mid|nifty\\s*200(?![0-9])|nifty\\s*midcap|nifty\\s*smallcap/;
-      var _MF_LC_INCLUDE = /large\\s*cap|largecap|bluechip|top\\s*100(?![0-9])|nifty\\s*50(?![0-9])|nifty50(?![0-9])|next\\s*50(?![0-9])|nifty\\s*100(?![0-9])|nifty100(?![0-9])|sensex|nifty\\s*top\\s*(10|15|20)(?![0-9])/;
+      var _MF_LC_EXCLUDE = /mid\s*cap|midcap|small\s*cap|smallcap|flexi\s*cap|flexicap|multi\s*cap|multicap|large\s*&\s*mid|large\s+and\s+mid|nifty\s*200(?![0-9])|nifty\s*midcap|nifty\s*smallcap/;
+      var _MF_LC_INCLUDE = /large\s*cap|largecap|bluechip|top\s*100(?![0-9])|nifty\s*50(?![0-9])|nifty50(?![0-9])|next\s*50(?![0-9])|nifty\s*100(?![0-9])|nifty100(?![0-9])|sensex|nifty\s*top\s*(10|15|20)(?![0-9])/;
       window.mfIsLargeCap = function(name, cat) {
         var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
         if (_MF_LC_EXCLUDE.test(s)) return false;
@@ -2397,8 +2397,14 @@ function _renderMfGridBody(grid, schemes) {
     var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
     var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
-    var searchBox='<div style="margin-left:auto;display:flex;gap:8px;align-items:center;">'
+    var searchBox='<div style="display:flex;gap:8px;align-items:center;">'
       + '<input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;">'
+      + '</div>';
+    // Filter toolbar — rendered ABOVE the summary cards (top of the section),
+    // AMC dropdown on the left, Categories + search on the right.
+    var toolbarHtml='<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;">'
+      + '<div style="display:flex;gap:8px;align-items:center;">'+amcDD+'</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;">'+catTabs+searchBox+'</div>'
       + '</div>';
         // View tabs
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
@@ -2420,7 +2426,7 @@ function _renderMfGridBody(grid, schemes) {
         var sc=s.confidenceScore||50,pf=Math.round(sc*.25),po=Math.round(sc*.22),op=Math.round(sc*.26),rw=sc-pf-po-op;
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;vertical-align:middle;background:'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'rgba(74,158,255,0.15);color:#4A9EFF':'rgba(0,179,134,0.15);color:#00B386')+';">'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'REG':'DIR')+'</span>':'')+'</div></td>'
+          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(sc)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+pf+'/25</td>'
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+po+'/25</td>'
@@ -2440,7 +2446,7 @@ function _renderMfGridBody(grid, schemes) {
         function _g(k,p){return (_m[k+"_"+(_msuf[p]||"")])!=null?_m[k+"_"+(_msuf[p]||"")]:null;}
         var h='<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;vertical-align:middle;background:'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'rgba(74,158,255,0.15);color:#4A9EFF':'rgba(0,179,134,0.15);color:#00B386')+';">'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'REG':'DIR')+'</span>':'')+'</div></td>';
+          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>';
         for(var _j=0;_j<_rp.length;_j++){
           var _p=_rp[_j];
           h+=_mfCellPct(_g("alpha",_p))+_mfCellNum(_g("beta",_p),false)+_mfCellNum(_g("sharpe",_p),true)+_mfCellNum(_g("sortino",_p),true)+_mfCellPct(_g("treynor",_p))+_mfCellPct(_g("stdDev",_p));
@@ -2471,7 +2477,7 @@ function _renderMfGridBody(grid, schemes) {
 
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+(s.variantCount>1?' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;vertical-align:middle;background:'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'rgba(74,158,255,0.15);color:#4A9EFF':'rgba(0,179,134,0.15);color:#00B386')+';">'+(String(s.plan).toLowerCase().indexOf('regular')!==-1?'REG':'DIR')+'</span>':'')+'</div></td>'
+          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(s.confidenceScore||50)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(function(){var _a=s.aumCr!=null?s.aumCr:(s.aum!=null?s.aum:null);return _a!=null?"\u20b9"+Number(_a).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-";})()+"</td>"
           +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_est=_ca.latestDate==='estimated'?' <span style="color:var(--text-muted);font-size:9px;font-weight:500;">est</span>':'',_vs=(_ch>=0?"+":"-")+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+'%)</span>'+_est+'</td>';})()
@@ -2519,7 +2525,7 @@ function _renderMfGridBody(grid, schemes) {
     var _showAllBtn = (di.length > _maxRows)
       ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.mfEnsureFull().then(function(f){window.renderMfGrid(f||window._mfLastSchemes||[]);});" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
       : '';
-    grid.innerHTML=sum+_catCardsHtml+vtHtml+'<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;justify-content:flex-end;">'+amcDD+catTabs+searchBox+'</div>'+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=toolbarHtml+sum+_catCardsHtml+vtHtml+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head
       +"</tr></thead><tbody>"+_body+"</tbody></table></div>"+_showAllBtn+"</div>";
   } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
