@@ -10,7 +10,7 @@
 <meta http-equiv="Expires" content="0" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260909b" />
+<title>Grow Better — Algo Trading Terminal</title>    <meta name="version" content="v20260909d" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
@@ -2133,12 +2133,12 @@
       function filterMfCategory(cat) {
         var _cardScroll = document.getElementById('mfSchemesGrid');
         _mfActiveCategory = cat || 'all';
-        var tabs = document.querySelectorAll('.mf-cat-tab');
-        for (var t = 0; t < tabs.length; t++) {
-          var isActive = tabs[t].getAttribute('data-cat') === (cat || 'all');
-          tabs[t].style.background = isActive ? 'var(--accent)' : 'var(--bg-input)';
-          tabs[t].style.color = isActive ? '#fff' : 'var(--text-muted)';
-          tabs[t].style.border = isActive ? '2px solid #00B386' : '1px solid var(--line)';
+        // Highlight the clicked category card (green border + tint)
+        var cards = document.querySelectorAll('[data-mfcard]');
+        for (var t = 0; t < cards.length; t++) {
+          var isActive = cards[t].getAttribute('data-mfcard') === (cat || '');
+          cards[t].style.background = isActive ? 'rgba(0,179,134,0.10)' : 'var(--bg-panel)';
+          cards[t].style.border = isActive ? '2px solid #00B386' : '1px solid var(--line)';
         }
         applyMfFilters();
         // Re-render from the FULL universe so the selected category shows every matching fund,
@@ -2340,7 +2340,7 @@ function _renderMfGridBody(grid, schemes) {
       }
       // Prefer the server's full-universe count; fall back to the local count
       var shownCnt = (window._mfCardCounts && window._mfCardCounts[cd.key] != null) ? window._mfCardCounts[cd.key] : cnt;
-      return '<div onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;flex:1 1 150px;min-width:150px;">'
+      return '<div data-mfcard="' + cd.key + '" onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:' + ((_mfActiveCategory||'all')===cd.key?'rgba(0,179,134,0.10)':'var(--bg-panel)') + ';border:' + ((_mfActiveCategory||'all')===cd.key?'2px solid #00B386':'1px solid var(--line)') + ';border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;flex:1 1 150px;min-width:150px;">'
         + '<div style="margin-bottom:10px;">'+cd.svg+'</div>'
         + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+cd.label+'</div>'
         + (cd.desc1?'<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc1+'</div>':'')
