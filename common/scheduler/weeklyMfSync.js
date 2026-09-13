@@ -92,10 +92,14 @@ async function syncNewFunds() {
     seenCodes.add(s.schemeCode);
     const nameLc = s.schemeName.toLowerCase();
     const isLc = isLargeCapName(s.schemeName, s.header);
+    const lcMatcher = require('../mf-engine/largeCapMatcher');
     // Card categories for matchable funds; SEBI family otherwise
     let category;
     if (isLc) category = 'Large Cap';
     else if (nameLc.indexOf('flexi cap') !== -1 || nameLc.indexOf('flexicap') !== -1) category = 'Flexi Cap';
+    else if (lcMatcher.isMultiCapName(s.schemeName, s.header)) category = 'Multi Cap';
+    else if (lcMatcher.isLargeMidCapName(s.schemeName, s.header)) category = 'Large & Mid Cap';
+    else if (lcMatcher.isInternationalName(s.schemeName, s.header)) category = 'International';
     else if (nameLc.indexOf('small cap') !== -1 || nameLc.indexOf('smallcap') !== -1) category = 'Small Cap';
     else if (nameLc.indexOf('mid cap') !== -1 || nameLc.indexOf('midcap') !== -1) category = 'Mid Cap';
     else if (nameLc.indexOf('elss') !== -1 || nameLc.indexOf('tax saver') !== -1) category = 'ELSS';

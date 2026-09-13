@@ -394,25 +394,36 @@ const helpers = {
   getCardCounts() {
     // Keys must match the frontend card keys exactly (cd.key in index.html).
     // These tests replicate filterMfCategory() in index.html so the badge always equals the grid.
-    const keys = ['Multi Cap', 'Mid Cap', 'Large & Mid Cap', 'Value', 'Large Cap', 'Flexi Cap', 'Small Cap', 'Index', 'ELSS', 'Money Market', 'Commodities'];
+    const keys = ['Large Cap', 'Mid Cap', 'Small Cap', 'Large & Mid Cap', 'Multi Cap', 'Flexi Cap', 'ELSS', 'Dividend Yield', 'Thematic', 'Sectoral', 'Contra', 'Value Oriented', 'International', 'Gold', 'Silver', 'Balanced Hybrid', 'Dynamic Asset Allocation', 'Equity Savings', 'Multi Asset Allocation', 'Aggressive Hybrid', 'Conservative Hybrid', 'Arbitrage'];
     const counts = {};
     for (const k of keys) counts[k] = 0;
     const lcMatcher = require('../common/mf-engine/largeCapMatcher');
     const match = (cn, nm, key) => {
-      const cc = cn + ' ' + nm;
+      const s = (nm + ' ' + cn).toLowerCase();
       switch (key) {
-        case 'Multi Cap': return cc.indexOf('multi cap') !== -1 || cc.indexOf('multicap') !== -1;
-        case 'Mid Cap': return lcMatcher.isMidCapName(nm, cn);
-        case 'Large & Mid Cap': return cc.indexOf('large & mid') !== -1 || cc.indexOf('large and mid') !== -1 || cc.indexOf('large & midcap') !== -1 || cc.indexOf('large and midcap') !== -1 || cc.indexOf('largemidcap') !== -1 || cc.indexOf('large midcap') !== -1;
-        case 'Value': return cc.indexOf('value') !== -1 || cc.indexOf('contra') !== -1;
         case 'Large Cap': return lcMatcher.isLargeCapName(nm, cn);
-        case 'Flexi Cap': return cc.indexOf('flexi cap') !== -1 || cc.indexOf('flexicap') !== -1;
+        case 'Mid Cap': return lcMatcher.isMidCapName(nm, cn);
         case 'Small Cap': return lcMatcher.isSmallCapName(nm, cn);
-        case 'Index': return cn.indexOf('index') !== -1 || nm.indexOf('index') !== -1 || nm.indexOf('etf') !== -1;
-        case 'ELSS': return cc.indexOf('elss') !== -1 || cn.indexOf('tax') !== -1 || nm.indexOf('tax') !== -1 || nm.indexOf('80c') !== -1;
-        case 'Money Market': return cc.indexOf('money market') !== -1 || cc.indexOf('liquid') !== -1 || cc.indexOf('overnight') !== -1;
-        case 'Commodities': return cc.indexOf('commodit') !== -1 || cc.indexOf('gold') !== -1 || cc.indexOf('silver') !== -1;
-        default: return cn.indexOf(key.toLowerCase()) !== -1;
+        case 'Large & Mid Cap': return lcMatcher.isLargeMidCapName(nm, cn);
+        case 'Multi Cap': return lcMatcher.isMultiCapName(nm, cn);
+        case 'Flexi Cap': return /flexi.?cap/.test(s);
+        case 'ELSS': return /elss/.test(s) || /tax|80c/.test(s);
+        case 'Dividend Yield': return /dividend\s*yield/.test(s);
+        case 'Thematic': return /thematic|theme|business\s*cycle|innovation|manufacturing|\bpsu\b|defen[cs]e|consumption|consumer|\besg\b|mnc|special\s*opportunit|rural|export/.test(s) && !/debt|gilt|bond|money\s*market|liquid/.test(s);
+        case 'Sectoral': return (/sector|pharma|health\s*care|healthcare|banking|financial|technolog|digital|energy|power|metal|transport|real\s*estate|infrastructure|housing|fmcg/).test(s) && !/debt|gilt|bond|money\s*market|liquid/.test(s);
+        case 'Contra': return /contra/.test(s);
+        case 'Value Oriented': return /value/.test(s);
+        case 'International': return lcMatcher.isInternationalName(nm, cn);
+        case 'Gold': return /gold/.test(s);
+        case 'Silver': return /silver/.test(s);
+        case 'Balanced Hybrid': return /balanced/.test(s) && !/advantage/.test(s);
+        case 'Dynamic Asset Allocation': return /dynamic\s*asset|balanced\s*advantage/.test(s);
+        case 'Equity Savings': return /equity\s*saving/.test(s);
+        case 'Multi Asset Allocation': return /multi\s*asset/.test(s);
+        case 'Aggressive Hybrid': return /aggressive/.test(s);
+        case 'Conservative Hybrid': return /conservative/.test(s);
+        case 'Arbitrage': return /arbitrage/.test(s);
+        default: return s.indexOf(key.toLowerCase()) !== -1;
       }
     };
     // Count UNIQUE funds (distinct schemeName) so the badge exactly equals the number of rows
@@ -711,14 +722,19 @@ const helpers = {
 
     // NAV-derived returns fallback — only for schemes that lack return rows AND still have NAV history (rare)
     const needNav = schemes.filter(s => !retMap[s.id]).map(s => s.id);
+    // 'ALL' (since inception) needs NAV history for every scheme with return rows too
+    const allNavIds = schemes.map(s => s.id);
     const navHistMap = {};
-    if (needNav.length) {
-      const ph = needNav.map(() => '?').join(',');
+    if (allNavIds.length) {
+      const ph = allNavIds.map(() => '?').join(',');
       try {
-        for (const r of db.prepare(`SELECT schemeId, points FROM mutual_fund_nav_blob WHERE schemeId IN (${ph})`).all(...needNav)) {
+        for (const r of db.prepare(`SELECT schemeId, points FROM mutual_fund_nav_blob WHERE schemeId IN (${ph})`).all(...allNavIds)) {
           navHistMap[r.schemeId] = navBlobToSeries(r.points);
         }
       } catch (e) { /* ignore */ }
+    }
+    if (needNav.length && needNav.length !== allNavIds.length) {
+      // schemes with neither return rows nor blobs stay absent from navHistMap — no extra work needed
     }
 
     function returnsFromNav(navs) {
@@ -755,11 +771,20 @@ const helpers = {
       const snap = snapChange(aumSnapMap[id], monthsBack, 'aum');
       if (snap) return snap;
       const periodMap = { 1: '1M', 3: '3M', 6: '6M', 12: '1Y' };
-      const ret = retMap[id] && retMap[id][periodMap[monthsBack]];
+      let retPct = retMap[id] && retMap[id][periodMap[monthsBack]] ? retMap[id][periodMap[monthsBack]].returnValue : null;
+      // Fallback: derive the period return from NAV history when the returns table lacks it
+      if (retPct == null && navHistMap[id] && navHistMap[id].length > 2) {
+        const navs = navHistMap[id];
+        const last = navs[navs.length - 1];
+        const target = new Date(new Date(last.navDate + 'T00:00:00').getTime() - monthsBack * 30 * 86400000).toISOString().slice(0, 10);
+        let oldest = null;
+        for (const p of navs) { if (p.navDate >= target) { oldest = p; break; } }
+        if (oldest && oldest.nav > 0) retPct = (last.nav - oldest.nav) / oldest.nav * 100;
+      }
       const aum = aumMap[id];
-      if (ret && aum && aum.aum > 0) {
-        const estChange = aum.aum * (ret.returnValue / 100);
-        return { current: aum.aum, previous: aum.aum - estChange, change: estChange, changePct: ret.returnValue, latestDate: 'estimated', historicalDate: 'estimated' };
+      if (retPct != null && aum && aum.aum > 0) {
+        const estChange = aum.aum * (retPct / 100);
+        return { current: aum.aum, previous: aum.aum - estChange, change: estChange, changePct: retPct, latestDate: 'estimated', historicalDate: 'estimated' };
       }
       return null;
     }
@@ -803,7 +828,16 @@ const helpers = {
         variantCount: s.variantCount || 1,
         return1Y: ret ? ret.returnValue : null,
         return1YDate: ret ? ret.asOfDate : null,
-        returns: retRows.reduce((acc, r) => { acc[r.period] = r.returnValue; return acc; }, {}),
+        returns: (() => {
+          const acc = retRows.reduce((a, r) => { a[r.period] = r.returnValue; return a; }, {});
+          // 'ALL' = return since inception from full NAV history (first available NAV vs latest)
+          if (acc['ALL'] == null && navHistMap[s.id] && navHistMap[s.id].length > 2) {
+            const navs = navHistMap[s.id];
+            const first = navs[0], last = navs[navs.length - 1];
+            if (first && last && first.nav > 0) acc['ALL'] = (last.nav - first.nav) / first.nav * 100;
+          }
+          return acc;
+        })(),
         nav: nav ? nav.nav : null,
         navDate: nav ? nav.asOfDate : null,
         aum: aum ? aum.aum : null,

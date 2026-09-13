@@ -95,7 +95,8 @@ const AMC_ALIASES = {
 
 // Equity category keywords
 const EQUITY_KEYWORDS = [
-  'equity', 'large cap', 'mid cap', 'small cap', 'flexi cap', 'multi cap',
+  'equity', 'large cap', 'mid cap', 'small cap', 'flexi cap', 'multi cap', 'multicap', 'large & mid', 'large and mid',
+  'international', 'global', 'overseas', 'foreign', 'nasdaq', 'us equity',
   'focused', 'value', 'contra', 'elss', 'tax saver', 'dividend yield',
   'index', 'nifty', 'sensex', 'sector', 'thematic', 'infrastructure',
   'banking', 'pharma', 'technology', 'manufacturing', 'consumption',
@@ -284,7 +285,9 @@ function categorizeScheme(name) {
   if (lower.includes('mid cap') || lower.includes('midcap')) return 'Mid Cap';
   if (lower.includes('large cap') || lower.includes('largecap') || lower.includes('bluechip')) return 'Large Cap';
   if (lower.includes('flexi cap') || lower.includes('flexicap')) return 'Flexi Cap';
-  if (lower.includes('multi cap') || lower.includes('multicap')) return 'Multi Cap';
+  if (lower.includes('multi cap') || lower.includes('multicap') || /multi[-\s]cap/.test(lower)) return 'Multi Cap';
+  if (/large[\s&+,-]*(and[\s]+)?mid[\s-]*cap|large[\s&+,-]*midcap|largemidcap/.test(lower)) return 'Large & Mid Cap';
+  if (/(?:internationa|global|overseas|foreign|nasdaq|us equity|s\s*&\s*p\s*500|msci)/.test(lower)) return 'International';
   if (lower.includes('focused')) return 'Focused';
   if (lower.includes('value') || lower.includes('contra')) return 'Value';
   if (lower.includes('elss') || lower.includes('tax saver')) return 'ELSS';

@@ -614,13 +614,14 @@ class MutualFundsService {
 
   _extractCategory(schemeName) {
     const s = schemeName.toLowerCase();
-    if (s.includes('large & mid') || s.includes('large and mid') || s.includes('large & midcap')) return 'Equity: Large & MidCap';
+    if (/large[\s&+,-]*(and[\s]+)?mid[\s-]*cap|large[\s&+,-]*midcap|largemidcap/.test(s)) return 'Equity: Large & MidCap';
     if (s.includes('small cap') || s.includes('smallcap')) return 'Equity: Small Cap';
     if (s.includes('mid cap') || s.includes('midcap')) return 'Equity: Mid Cap';
     if (s.includes('large cap') || s.includes('largecap') || s.includes('top 100') || s.includes('bluechip')) return 'Equity: Large Cap';
     if (s.includes('flexi cap') || s.includes('flexicap')) return 'Equity: Flexi Cap';
-    if (s.includes('multi cap') || s.includes('multicap')) return 'Equity: Multi Cap';
+    if (/multi[-\s]*cap|multicap/.test(s)) return 'Equity: Multi Cap';
     if (s.includes('contra') || s.includes('value')) return 'Equity: Value & Contra';
+    if (/internationa|global|world|overseas|foreign|\bus\s*(equity|stocks|opportunit|bluechip|technology|tech)|u\.s\.|united\s+states|nasdaq|s\s*&\s*p\s*500|dow\s*jones|japan|china|hong\s*kong|taiwan|korea|europe|emerging\s*market|developed\s*market|asia(?!n)|msci|ftse/.test(s)) return 'Equity: International';
     if (s.includes('elss') || s.includes('tax saver')) return 'Equity: ELSS Tax Saver';
     if (s.includes('nifty') || s.includes('index') || s.includes('sensex')) return 'Index Fund / ETF';
     if (s.includes('balanced') || s.includes('hybrid') || s.includes('arbitrage')) return 'Hybrid Scheme';

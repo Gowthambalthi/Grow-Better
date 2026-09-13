@@ -343,12 +343,13 @@ function createSchemeId(schemeName, plan, option) {
 function extractCategory(schemeName) {
   const s = (schemeName || '').toLowerCase();
 
-  if (s.includes('large & mid') || s.includes('large and mid')) return 'Equity: Large & Mid Cap';
+  if (/large[\s&+,-]*(and[\s]+)?mid[\s-]*cap|large[\s&+,-]*midcap|largemidcap/.test(s)) return 'Equity: Large & Mid Cap';
   if (s.includes('small cap') || s.includes('smallcap')) return 'Equity: Small Cap';
   if (s.includes('mid cap') || s.includes('midcap')) return 'Equity: Mid Cap';
   if (s.includes('large cap') || s.includes('largecap') || s.includes('top 100') || s.includes('bluechip')) return 'Equity: Large Cap';
   if (s.includes('flexi cap') || s.includes('flexicap')) return 'Equity: Flexi Cap';
-  if (s.includes('multi cap') || s.includes('multicap')) return 'Equity: Multi Cap';
+  if (/multi[-\s]*cap|multicap/.test(s)) return 'Equity: Multi Cap';
+  if (/(?:internationa|global|overseas|foreign|nasdaq|us equity|s\s*&\s*p\s*500|msci)/.test(s)) return 'Equity: International';
   if (s.includes('focused')) return 'Equity: Focused';
   if (s.includes('contra')) return 'Equity: Contra';
   if (s.includes('value')) return 'Equity: Value';

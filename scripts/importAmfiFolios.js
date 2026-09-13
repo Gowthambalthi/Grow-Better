@@ -109,11 +109,12 @@ function guessAmfiCategory(scheme) {
   
   // Name-based matching
   if (name.includes('flexi cap') || name.includes('flexicap')) return 'Equity: Flexi Cap';
-  if (name.includes('large & mid cap') || name.includes('large mid cap')) return 'Equity: Large & Mid Cap';
+  if (/large[\s&+,-]*(and[\s]+)?mid[\s-]*cap|large[\s&+,-]*midcap|largemidcap/.test(name)) return 'Equity: Large & Mid Cap';
   if (name.includes('large cap')) return 'Equity: Large Cap';
   if (name.includes('mid cap') || name.includes('midcap')) return 'Equity: Mid Cap';
   if (name.includes('small cap') || name.includes('smallcap')) return 'Equity: Small Cap';
-  if (name.includes('multi cap') || name.includes('multicap')) return 'Equity: Multi Cap';
+  if (/multi[-\s]*cap|multicap/.test(name)) return 'Equity: Multi Cap';
+  if (/(?:internationa|global|overseas|foreign|nasdaq|us equity|s\s*&\s*p\s*500|msci)/.test(name)) return 'Equity: International';
   if (name.includes('focused')) return 'Equity: Focused';
   if (name.includes('contra') || name.includes('value fund')) return 'Equity: Value';
   if (name.includes('sectoral') || name.includes('banking') || name.includes('pharma') || name.includes('technology') || name.includes('infrastructure') || name.includes('manufacturing')) return 'Equity: Sectoral';

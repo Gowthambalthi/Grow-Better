@@ -15,6 +15,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css?v=20260908e" />
+<style>
+.mf-chart-full{position:fixed!important;inset:12px!important;z-index:9998;margin:0!important;padding:18px!important;box-shadow:0 24px 80px rgba(0,0,0,.6);background:var(--bg-panel)!important;overflow:auto;}
+.mf-table-row{cursor:default;}
+</style>
 </head>
 <body>
 
@@ -871,27 +875,31 @@
         <!-- ---- Smart Money: Mutual Funds ---- -->
         <section class="view" id="view-smart-money">
 
-          <!-- Smart Money Header (removed) -->
+          <!-- Smart Money main tab switcher: Mutual Funds | Individual/Family | Foreign Funds -->
+          <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+            <button class="sm-main-pill active" data-smtab="mf" onclick="switchSmMain('mf')" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;">Mutual Funds</button>
+            <button class="sm-main-pill" data-smtab="individual" onclick="switchSmMain('individual')" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:8px 22px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;">Individual/Family</button>
+            <button class="sm-main-pill" data-smtab="foreign" onclick="switchSmMain('foreign')" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:8px 22px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;">Foreign Funds</button>
+          </div>
 
           <!-- Summary Cards -->
           <div id="smartMoneySummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
 
           <!-- Mutual Funds Content -->
           <div id="smContentMf" style="display:block;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px;">
-              <div>
-                <span id="mfSubtitleCount" style="font-size:12px;color:var(--text-muted);">Loading schemes...</span>
-                <span id="mfServerTag" style="background:rgba(0,179,134,0.15);color:#00B386;border:1px solid rgba(0,179,134,0.3);font-size:10px;padding:2px 8px;border-radius:12px;font-weight:700;margin-left:8px;">47 AMCs · 739 Official Data</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                <input type="text" id="mfSearchInput" placeholder="Search schemes, AMCs, stocks..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:7px 12px;border-radius:6px;font-size:12px;width:240px;">
-                <div style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:6px;border:1px solid var(--line);">
-                  <button class="mf-tf-btn active" data-tf="1M" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:var(--accent);color:#fff;cursor:pointer;">1M</button>
-                  <button class="mf-tf-btn" data-tf="3M" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">3M</button>
-                  <button class="mf-tf-btn" data-tf="6M" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">6M</button>
-                  <button class="mf-tf-btn" data-tf="1Y" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:transparent;color:var(--text-muted);cursor:pointer;">1Y</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:12px;">
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                <div>
+                  <div style="font-size:20px;font-weight:800;color:var(--text-primary);">Mutual Funds</div>
+                  <div id="mfSubtitleCount" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Loading schemes...</div>
+                </div>
+                <!-- Single-select Equity / Hybrid / Commodities dropdown -->
+                <div style="position:relative;display:inline-block;">
+                  <button id="mfSectorBtn" onclick="toggleMfSectorDD()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Sectors <span style="font-size:8px;">&#9660;</span></button>
+                  <div id="mfSectorDD" style="display:none;position:absolute;top:100%;left:0;z-index:160;width:230px;max-height:420px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;padding:6px 0;"></div>
                 </div>
               </div>
+              <div style="display:none;"></div>
             </div>
             <div id="mfSchemesGrid" style="display:block;width:100%;">
               <div style="padding:20px;text-align:center;color:var(--text-muted);background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;">Loading Mutual Fund Schemes...</div>
@@ -1282,6 +1290,19 @@
             </div>
 
             <!-- MOBILE & WHATSAPP NOTIFICATION SETTINGS CARD -->
+            <!-- MUTUAL FUND DATA REFRESH CARD -->
+            <div class="card mf-refresh-card" style="grid-column:1 / -1;">
+              <h3 style="margin-top:0;font-size:14px;color:var(--accent);">Mutual Fund Data Refresh</h3>
+              <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.4;">
+                Data normally auto-updates nightly between <b>4:00 PM – 8:30 AM</b> (any fund whose latest NAV is older than 30 days).
+                Click below to force a refresh right now for all funds 30+ days stale.
+              </p>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <button type="button" id="mfForceRefreshBtn" class="submit-btn" style="padding:8px 16px;font-size:11px;">FORCE UPDATE ALL MUTUAL FUND DATA</button>
+                <span id="mfRefreshStatus" style="font-size:11px;color:var(--text-muted);"></span>
+              </div>
+            </div>
+
             <div class="card notification-settings-card" style="grid-column:1 / -1;margin-top:16px;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                 <h3 style="margin:0;font-size:14px;color:var(--accent);display:flex;align-items:center;gap:8px;">
@@ -1828,8 +1849,10 @@
               .catch(function() { clearTimeout(timer); return null; });
           }
 
-          // SINGLE SOURCE: Multi-AMC API (initial fast page load = first 500; full 14k fetched lazily on Show-all/search)
-          var allAmcData = await fetchWithTimeout('/api/mutual-funds/all?limit=500', 45000);
+          // SINGLE SOURCE: Multi-AMC API — load the FULL universe upfront so
+          // category cards always show every matching fund (no partial-slice
+          // race where e.g. Small Cap appears to be missing funds).
+          var allAmcData = await fetchWithTimeout('/api/mutual-funds/all?limit=20000', 60000);
           console.log('[MF] multi-amc:', allAmcData ? allAmcData.totalSchemes : 'null');
           // Real full-universe card counts from the server (badges stay correct even at 14k schemes)
           window._mfCardCounts = (allAmcData && allAmcData.cardCounts) ? allAmcData.cardCounts : null;
@@ -1900,19 +1923,11 @@
 
           mfCache = allSchemes;
 
-          // Lazy-load the full universe (14k) only when the user hits "Show all" or searches
-          window._mfFullSchemes = null;
+          // Full universe is loaded upfront (see fetch above) — mfEnsureFull
+          // is kept as a no-op-when-ready helper for older call sites.
+          window._mfFullSchemes = allSchemes;
           window.mfEnsureFull = function() {
-            return new Promise(function(resolve) {
-              if (window._mfFullSchemes) return resolve(window._mfFullSchemes);
-              fetchWithTimeout('/api/mutual-funds/all?limit=20000', 60000).then(function(d) {
-                if (d && d.success && Array.isArray(d.schemes)) {
-                  if (d.cardCounts) window._mfCardCounts = d.cardCounts;
-                  window._mfFullSchemes = d.schemes.map(window._mapMfScheme);
-                }
-                resolve(window._mfFullSchemes || null);
-              });
-            });
+            return Promise.resolve(window._mfFullSchemes);
           };
 
           if (subTitle) {
@@ -1990,9 +2005,9 @@
             return '<td style="padding:8px 10px;text-align:right;color:' + color + ';font-weight:700;font-size:12px;">' + sign + val.toFixed(2) + '%</td>';
           }
 
-          return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" onclick="openMfDetailFromTable(\'' + s.id + '\')">' +
+          return '<tr style="border-bottom:1px solid var(--line);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background=\'var(--bg-input)\'" onmouseout="this.style.background=\'\'" >' +
             '<td style="padding:8px 6px;font-size:10px;color:var(--accent);font-weight:600;white-space:nowrap;">' + amcTag + '</td>' +
-            '<td style="padding:8px 10px;font-weight:700;font-size:12px;color:var(--text-primary);white-space:nowrap;">' + name + '</td>' +
+            '<td class="mf-fund-name" data-id="' + s.id + '" style="padding:8px 10px;font-weight:700;font-size:12px;color:var(--text-primary);white-space:nowrap;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:3px;" onmouseover="this.style.textDecorationColor=\'var(--accent)\'" onmouseout="this.style.textDecorationColor=\'transparent\'">' + name + '</td>' +
             retCell(ret1m) +
             retCell(ret3m) +
             retCell(ret6m) +
@@ -2089,7 +2104,10 @@
       // AMC dropdown + search + combined filter
       var _mfActiveAmc = 'all';
       var _mfActiveCategory = 'all';
-      var _mfSearchText = '';
+      // Search text persists for the lifetime of the page (survives tab/view
+      // switches); it's only cleared when the user empties the search box or
+      // the terminal is reopened (full page reload).
+      var _mfSearchText = window._mfPersistedSearch || '';
       function filterMfAmc(amc) {
         _mfActiveAmc = amc || 'all';
         var btn = document.getElementById('mfAmcBtn');
@@ -2128,6 +2146,31 @@
       var _MF_LC_INCLUDE = /large\s*cap|largecap|bluechip|top\s*100(?![0-9])|nifty\s*50(?![0-9])|nifty50(?![0-9])|next\s*50(?![0-9])|nifty\s*100(?![0-9])|nifty100(?![0-9])|sensex|nifty\s*top\s*(10|15|20)(?![0-9])/;
       var _MF_MID_EXCLUDE = /small\s*cap|smallcap|largemidcap|large\s*midcap|large\s*&\s*mid|large\s+and\s+mid|flexi\s*cap|flexicap|multi\s*cap|multicap/;
       var _MF_SMALL_EXCLUDE = /mid\s*cap|midcap|largemidcap|large\s*midcap|large\s*&\s*mid|large\s+and\s+mid|flexi\s*cap|flexicap|multi\s*cap|multicap/;
+      // Multi Cap: official SEBI category (incl. Nifty 500 Multicap 50:25:25) — NOT every Nifty 500 fund.
+      var _MF_MULTI_INCLUDE = /multi[-\s]*cap|multicap/;
+      // Large & Mid Cap: blended category (incl. Nifty LargeMidcap 250).
+      var _MF_LM_INCLUDE = /large[\s&+,-]*(?:and[\s]+)?mid[\s-]*cap|large[\s&+,-]*midcap|largemidcap/;
+      // International: any explicit foreign-market signal.
+      var _MF_INTL_INCLUDE = /internationa|global|world|overseas|foreign|\bus\s*(equity|stocks|opportunit|bluechip|technology|tech)|u\.s\.|united\s+states|nasdaq|s\s*&\s*p\s*500|dow\s*jones|russell\s*(1000|2000|3000)|japan|china|hong\s*kong|taiwan|korea|europe|euro-?zone|emerging\s*market|developed\s*market|asia(?!n)|bric|asean|latin\s*america|\bafrica\b|msci|ftse/;
+      window.mfIsMultiCap = function(name, cat) {
+        var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
+        return _MF_MULTI_INCLUDE.test(s);
+      };
+      window.mfIsLargeMidCap = function(name, cat) {
+        var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
+        return _MF_LM_INCLUDE.test(s);
+      };
+      window.mfIsInternational = function(name, cat) {
+        var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
+        // Index/ETF funds (Nasdaq ETFs, MSCI ETFs…) DO count as International —
+        // the index exclusion applies only to the pure cap cards.
+        return _MF_INTL_INCLUDE.test(s);
+      };
+      // Index/ETF funds are excluded from every card — except Multi Cap, where
+      // the Nifty 500 Multicap 50:25:25 index fund belongs (its category is
+      // 'Multi Cap', not 'Index', so the cat-based exclusion is enough).
+      // (Index/ETF index funds count on the cap cards — user-confirmed. The
+      // standalone Index card was removed from the UI.)
       window.mfIsLargeCap = function(name, cat) {
         var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
         if (_MF_LC_EXCLUDE.test(s)) return false;
@@ -2135,7 +2178,10 @@
       };
       window.mfIsMidCap = function(name, cat) {
         var s = ((name||'') + ' ' + (cat||'')).toLowerCase();
+        // MidSmallcap400 schemes are blended mid+small exposure — Mid Cap card.
+        if (/midsmallcap|mid[-\s]*small[-\s]*cap/.test(s)) return true;
         if (_MF_MID_EXCLUDE.test(s)) return false;
+        // Includes midcap index funds/ETFs/FOFs (Nifty Midcap 150 Index etc.).
         return /mid\s*cap|midcap/.test(s);
       };
       window.mfIsSmallCap = function(name, cat) {
@@ -2143,22 +2189,53 @@
         if (_MF_SMALL_EXCLUDE.test(s)) return false;
         return /small\s*cap|smallcap/.test(s);
       };
-      function filterMfCategory(cat) {
-        var _cardScroll = document.getElementById('mfSchemesGrid');
-        _mfActiveCategory = cat || 'all';
-        // Highlight the clicked category card (green border + tint)
-        var cards = document.querySelectorAll('[data-mfcard]');
-        for (var t = 0; t < cards.length; t++) {
-          var isActive = cards[t].getAttribute('data-mfcard') === (cat || '');
-          cards[t].style.background = isActive ? 'rgba(0,179,134,0.10)' : 'var(--bg-panel)';
-          cards[t].style.border = isActive ? '2px solid #00B386' : '1px solid var(--line)';
+      // ── Single shared category matcher (used by sectors dropdown, grid
+      // filter, card counts, row filter). Keys are lowercase. Keep in sync
+      // with Server.js capMatchers (server mirrors the same rules).
+      window.mfMatchCat = function(key, nm, cn) {
+        var s = (nm||'') + ' ' + (cn||'');
+        switch (key) {
+          case 'large cap':          return window.mfIsLargeCap(nm, cn);
+          case 'mid cap':            return window.mfIsMidCap(nm, cn);
+          case 'small cap':          return window.mfIsSmallCap(nm, cn);
+          case 'multi cap':          return window.mfIsMultiCap(nm, cn);
+          case 'large & mid cap':    return window.mfIsLargeMidCap(nm, cn);
+          case 'flexi cap':          return cn === 'flexi cap' || /flexi.?cap/.test(nm);
+          case 'elss':               return /elss/.test(s) || cn.indexOf('tax')!==-1 || nm.indexOf('tax')!==-1 || nm.indexOf('80c')!==-1;
+          case 'dividend yield':     return /dividend\s*yield/.test(s);
+          case 'thematic':           return /thematic|theme|business\s*cycle|innovation|manufacturing|\bpsu\b|defen[cs]e|consumption|consumer|\besg\b|mnc|special\s*opportunit|rural|export/.test(s) && !/debt|gilt|bond|money\s*market|liquid/.test(s);
+          case 'sectoral':           return (/sector|pharma|health\s*care|healthcare|banking|financial|technolog|digital|energy|power|metal|transport|real\s*estate|infrastructure|housing|fmcg/).test(s) && !/debt|gilt|bond|money\s*market|liquid/.test(s);
+          case 'contra':             return /contra/.test(s);
+          case 'value oriented':     return /value/.test(s);
+          case 'international':      return window.mfIsInternational(nm, cn);
+          case 'gold':               return /gold/.test(s);
+          case 'silver':             return /silver/.test(s);
+          case 'balanced hybrid':    return /balanced/.test(s) && !/advantage/.test(s);
+          case 'dynamic asset allocation': return /dynamic\s*asset|balanced\s*advantage/.test(s);
+          case 'equity savings':     return /equity\s*saving/.test(s);
+          case 'multi asset allocation':   return /multi\s*asset/.test(s);
+          case 'aggressive hybrid':  return /aggressive/.test(s);
+          case 'conservative hybrid':return /conservative/.test(s);
+          case 'arbitrage':          return /arbitrage/.test(s);
+          case 'money market':       return /money\s*market|liquid|overnight/.test(s);
+          case 'commodities':        return /commodit|gold|silver/.test(s);
+          default:                   return cn === key;
         }
-        applyMfFilters();
-        // Re-render from the FULL universe so the selected category shows every matching fund,
-        // not just the initially-loaded 500 (or the previous card's small subset).
-        window.mfEnsureFull().then(function() {
-          renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
-        });
+      };
+      function filterMfCategory(cat) {
+        cat = cat || 'all';
+        var sel = window._mfSelCats = window._mfSelCats || [];
+        if (cat === 'all') { sel.length = 0; }
+        else {
+          var i = sel.indexOf(cat);
+          if (i === -1) sel.push(cat); else sel.splice(i, 1);
+        }
+        // Re-render from the FULL universe so chips + table reflect the selection
+        renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
+      }
+      function toggleMfFundCatDD() {
+        var dd = document.getElementById('mfFundCatDD');
+        if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
       }
       function applyMfFilters() {
         var q = (_mfSearchText || '').toLowerCase();
@@ -2171,25 +2248,31 @@
           var schemeNameDiv = nameEl ? nameEl.querySelector('div:first-child') : null;
           var name = schemeNameDiv ? schemeNameDiv.textContent.toLowerCase() : (nameEl ? nameEl.textContent.toLowerCase() : '');
           var showAmc = _mfActiveAmc === 'all' || amc === _mfActiveAmc;
-          var showCat = _mfActiveCategory === 'all' || cat === _mfActiveCategory;
-          // Card-based sub-category filtering
-          if (!showCat && _mfActiveCategory !== 'all') {
+          // Multi-select sector filter (window._mfSectors; empty = All)
+          var showSector = (!window._mfSectors || window._mfSectors.length === 0) ? true : _mfRowSectorMatch(name, cat.toLowerCase());
+          // Multi-select category filtering via window._mfSelCats (empty = all)
+          var _sel = window._mfSelCats || [];
+          var showCat = _sel.length === 0;
+          if (!showCat) {
             var lc = cat.toLowerCase() + ' ' + name;
-            var k = _mfActiveCategory.toLowerCase();
-            if (k === 'multi cap') showCat = lc.indexOf('multi cap') !== -1 || lc.indexOf('multicap') !== -1;
-            else if (k === 'mid cap') showCat = window.mfIsMidCap(name, cat.toLowerCase());
-            else if (k === 'large & mid cap') showCat = lc.indexOf('large & mid') !== -1 || lc.indexOf('large and mid') !== -1 || lc.indexOf('large & midcap') !== -1 || lc.indexOf('large and midcap') !== -1;
-            else if (k === 'value') showCat = lc.indexOf('value') !== -1 || lc.indexOf('contra') !== -1;
-            else if (k === 'large cap') showCat = window.mfIsLargeCap(name, cat.toLowerCase());
-            else if (k === 'flexi cap') showCat = lc.indexOf('flexi cap') !== -1 || lc.indexOf('flexicap') !== -1;
-            else if (k === 'small cap') showCat = window.mfIsSmallCap(name, cat.toLowerCase());
-            else if (k === 'index') showCat = cat.toLowerCase().indexOf('index') !== -1;
-            else if (k === 'elss') showCat = lc.indexOf('elss') !== -1 || lc.indexOf('tax') !== -1 || lc.indexOf('80c') !== -1;
-            else if (k === 'money market') showCat = lc.indexOf('money market') !== -1 || lc.indexOf('liquid') !== -1 || lc.indexOf('overnight') !== -1;
+            for (var si = 0; si < _sel.length && !showCat; si++) {
+              var k = _sel[si].toLowerCase();
+              if (k === 'multi cap') showCat = window.mfIsMultiCap(name, cat.toLowerCase());
+              else if (k === 'mid cap') showCat = window.mfIsMidCap(name, cat.toLowerCase());
+              else if (k === 'large & mid cap') showCat = window.mfIsLargeMidCap(name, cat.toLowerCase());
+              else if (k === 'value') showCat = lc.indexOf('value') !== -1 || lc.indexOf('contra') !== -1;
+              else if (k === 'large cap') showCat = window.mfIsLargeCap(name, cat.toLowerCase());
+              else if (k === 'flexi cap') showCat = lc.indexOf('flexi cap') !== -1 || lc.indexOf('flexicap') !== -1;
+              else if (k === 'international') showCat = window.mfIsInternational(name, cat.toLowerCase());
+              else if (k === 'small cap') showCat = window.mfIsSmallCap(name, cat.toLowerCase());
+              else if (k === 'elss') showCat = lc.indexOf('elss') !== -1 || lc.indexOf('tax') !== -1 || lc.indexOf('80c') !== -1;
+              else if (k === 'money market') showCat = lc.indexOf('money market') !== -1 || lc.indexOf('liquid') !== -1 || lc.indexOf('overnight') !== -1;
+              else showCat = cat.toLowerCase().indexOf(k) !== -1;
+            }
           }
           var showSearch = q === '' || name.indexOf(q) !== -1;
-          rows[r].style.display = (showAmc && showCat && showSearch) ? '' : 'none';
-          if (showAmc && showCat && showSearch && q.length >= 1 && suggestions.length < 8) {
+          rows[r].style.display = (showAmc && showCat && showSector && showSearch) ? '' : 'none';
+          if (showAmc && showCat && showSector && showSearch && q.length >= 1 && suggestions.length < 8) {
             suggestions.push(schemeNameDiv ? schemeNameDiv.textContent.trim() : (nameEl ? nameEl.textContent.trim() : ''));
           }
         }
@@ -2216,16 +2299,34 @@
           }
         }
       }
+      function _mfSingleSectorMatch(scheme, sec) {
+        var save=window._mfSectors;
+        window._mfSectors=[];
+        var r=_mfSectorMatches(scheme,sec);
+        window._mfSectors=save;
+        return r;
+      }
+      function _mfRowSectorMatch(nameLc, catLc) {
+        var secs = window._mfSectors || [];
+        for (var i = 0; i < secs.length; i++) {
+          if (window.mfMatchCat(secs[i].toLowerCase(), nameLc, catLc)) return true;
+        }
+        return false;
+      }
       var _mfSearchTimer = null; function searchMfSchemes(query) { clearTimeout(_mfSearchTimer); _mfSearchTimer = setTimeout(function() { _doSearch(query); }, 150); } function _doSearch(query) {
         _mfSearchText = query || '';
-        if (_mfSearchText && !window._mfFullSchemes) {
+        window._mfPersistedSearch = _mfSearchText;
+        if (!window._mfFullSchemes) {
           // Search needs the FULL universe — load it once, then re-render filtered
           window.mfEnsureFull().then(function() {
             renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
           });
           return;
         }
-        applyMfFilters();
+        // Always re-render from the FULL universe so the table reflects the
+        // query across all schemes (applyMfFilters alone only toggles rows
+        // already in the DOM, which can be a previously-filtered subset).
+        renderMfGrid(window._mfFullSchemes);
       }
 
       
@@ -2259,6 +2360,11 @@ function _renderMfGridBody(grid, schemes) {
       return;
     }
     var di = schemes, tf = currentMfTimeframe || "1M";
+    // Apply single-select sector filter + AMC + search at the data level, so
+    // re-renders keep the user's filters (row-level applyMfFilters alone can miss this).
+    if(window._mfSchemeSectors){ di = di.filter(function(_s3){ return window._mfSchemeSectors(_s3); }); }
+    if(_mfActiveAmc !== 'all'){ di = di.filter(function(_s3){ return (_s3.parentAmc || _s3.amc || 'Other') === _mfActiveAmc; }); }
+    if(_mfSearchText){ var _q3=_mfSearchText.toLowerCase(); di = di.filter(function(_s3){ return ((_s3.schemeName||'')+' '+(_s3.parentAmc||_s3.amc||'')+' '+(_s3.category||'')).toLowerCase().indexOf(_q3)!==-1; }); }
     // Filter by active category card
     var _ac = _mfActiveCategory || 'all';
     if(_ac !== 'all'){
@@ -2266,25 +2372,21 @@ function _renderMfGridBody(grid, schemes) {
       di = di.filter(function(_s2){
         var _cn = (_s2.category||'').toLowerCase();
         var _nm = (_s2.schemeName||'').toLowerCase();
-        var _cc = _cn + ' ' + _nm;
-        if(_k==='multi cap') return _cc.indexOf('multi cap')!==-1 || _cc.indexOf('multicap')!==-1;
-        if(_k==='mid cap') return window.mfIsMidCap(_nm, _cn);
-        if(_k==='large & mid cap') return _cc.indexOf('large & mid')!==-1 || _cc.indexOf('large and mid')!==-1 || _cc.indexOf('large & midcap')!==-1 || _cc.indexOf('large and midcap')!==-1;
-        if(_k==='value') return _cc.indexOf('value')!==-1 || _cc.indexOf('contra')!==-1;
-        if(_k==='large cap') return window.mfIsLargeCap(_nm, _cn);
-        if(_k==='flexi cap') return _cc.indexOf('flexi cap')!==-1 || _cc.indexOf('flexicap')!==-1;
-        if(_k==='small cap') return window.mfIsSmallCap(_nm, _cn);
-        if(_k==='index') return _cn.indexOf('index')!==-1 || _nm.indexOf('index')!==-1 || _nm.indexOf('etf')!==-1;
-        if(_k==='elss') return _cc.indexOf('elss')!==-1 || _cn.indexOf('tax')!==-1 || _nm.indexOf('tax')!==-1 || _nm.indexOf('80c')!==-1;
-        if(_k==='money market') return _cc.indexOf('money market')!==-1 || _cc.indexOf('liquid')!==-1 || _cc.indexOf('overnight')!==-1;
-        if(_k==='commodities') return _cc.indexOf('commodit')!==-1 || _cc.indexOf('gold')!==-1 || _cc.indexOf('silver')!==-1;
-        return _cn.indexOf(_k)!==-1;
+        return window.mfMatchCat(_k, _nm, _cn);
       });
     }
-    // Categories dropdown multi-select (Equity / Hybrid / Commodities)
+    // Categories dropdown / cap-card multi-select. Cap keys need name-based
+    // matchers (DB stores 'Equity' etc., not 'Mid Cap'); exact category keys
+    // (Equity/Hybrid/...) match directly.
     var _selCats = window._mfSelCats || [];
     if(_selCats.length){
-      di = di.filter(function(_s3){ return _selCats.indexOf(_s3.category||'') !== -1; });
+      di = di.filter(function(_s3){
+        var _cn=(_s3.category||'').toLowerCase(), _nm=(_s3.schemeName||'').toLowerCase();
+        for(var _ci=0;_ci<_selCats.length;_ci++){
+          if(window.mfMatchCat(_selCats[_ci].toLowerCase(), _nm, _cn)) return true;
+        }
+        return false;
+      });
     }
     window._mfLastSchemes = di;
 
@@ -2306,55 +2408,50 @@ function _renderMfGridBody(grid, schemes) {
     // All 7 in ONE row — horizontal scroll on narrow screens
     var _catCardsHtml = '<div style="display:flex;gap:12px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;">';
     var _catDefs = [
-      { key:'Multi Cap', label:'Multi Cap', count:200, desc1:'Diversified Across Market Caps', desc2:'Balanced Growth & Stability', desc3:'Higher volatility', desc4:'Depends on fund manager',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#0EA5E9" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#0EA5E9" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#0EA5E9" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#0EA5E9" opacity="0.2"/></svg>' },
-      { key:'Mid Cap', label:'Mid-Cap', count:200, desc1:'Higher Growth Potential', desc2:'Fast-Growing Mid-Size Companies', desc3:'High volatility', desc4:'Market risk',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#6366F1" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#6366F1" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#6366F1" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#6366F1" opacity="0.2"/></svg>' },
-      { key:'Large & Mid Cap', label:'Large & Mid Cap', count:200, desc1:'Blend of Large & Mid Stocks', desc2:'Balanced Growth & Stability', desc3:'Mid-cap drawdowns', desc4:'Higher volatility',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#14B8A6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#14B8A6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#14B8A6" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#14B8A6" opacity="0.2"/></svg>' },
-      { key:'Value', label:'Value Funds', count:200, desc1:'Undervalued Stocks', desc2:'Long-term Value Creation', desc3:'Slower recovery cycles', desc4:'Value traps',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F97316" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F97316" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F97316" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#F97316" opacity="0.2"/></svg>' },
-      { key:'Large Cap', label:'Large-Cap', count:200, desc1:'Stability', desc2:'Long-term suitability', desc3:'Lower growth potential', desc4:'Market risk',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#00B386" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20" fill="#00B386" opacity="0.3"/><path d="M20 20 L20 4 A16 16 0 0 1 36 20 Z" fill="#00B386" opacity="0.5"/><circle cx="20" cy="20" r="5" fill="#00B386" opacity="0.2"/></svg>' },
-      { key:'Flexi Cap', label:'Flexi Cap', count:200, desc1:'Moderate Risk', desc2:'Long-term (> 5 years) Investments', desc3:'Manager-dependent', desc4:'Market risk',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#3B82F6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#3B82F6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#3B82F6" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#3B82F6" opacity="0.2"/></svg>' },
-      { key:'Small Cap', label:'Small-Cap', count:200, desc1:'High Growth Potential', desc2:'High Return Potential', desc3:'Higher Volatility & Risk', desc4:'Steep drawdowns',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#F59E0B" opacity="0.2"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' },
-      { key:'Index', label:'Index', count:200, desc1:'Low Cost', desc2:'Passive Market Returns', desc3:'No downside protection', desc4:'Tracks market falls',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#8B5CF6" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#8B5CF6" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#8B5CF6" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#8B5CF6" opacity="0.2"/><path d="M20 20 L12.93 33.86 A16 16 0 0 1 4 20 Z" fill="#8B5CF6" opacity="0.15"/><circle cx="20" cy="20" r="5" fill="#8B5CF6" opacity="0.1"/></svg>' },
-      { key:'ELSS', label:'Tax Saver (ELSS)', count:150, desc1:'Section 80C Benefits', desc2:'Equity Growth', desc3:'3-Year Lock-in', desc4:'Equity market risk',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#EC4899" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#EC4899" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#EC4899" opacity="0.3"/><path d="M20 20 L27.07 33.86 A16 16 0 0 1 12.93 33.86 Z" fill="#EC4899" opacity="0.2"/><path d="M20 20 L12.93 33.86 A16 16 0 0 1 4 20 Z" fill="#EC4899" opacity="0.15"/><path d="M20 20 L4 20 A16 16 0 0 1 20 4 Z" fill="#EC4899" opacity="0.1"/><circle cx="20" cy="20" r="5" fill="#EC4899" opacity="0.08"/></svg>' },
-      { key:'Money Market', label:'Money Market', count:150, desc1:'Low Risk', desc2:'Short-term Parking', desc3:'Low returns', desc4:'Inflation erosion',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#10B981" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#10B981" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#10B981" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#10B981" opacity="0.2"/></svg>' },
-      { key:'Commodities', label:'Commodities', count:50, desc1:'Inflation Hedge', desc2:'Portfolio Diversification', desc3:'Price volatility', desc4:'No income yield',
-        svg:'<svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#F59E0B" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="#F59E0B" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="#F59E0B" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="#F59E0B" opacity="0.15"/></svg>' }
+      { key:'Large Cap', label:'Large Cap', desc1:'Stability', desc2:'Long-term suitability', desc3:'Lower growth potential', desc4:'Market risk', color:'#00B386' },
+      { key:'Mid Cap', label:'Mid Cap', desc1:'Higher Growth Potential', desc2:'Fast-Growing Mid-Size Companies', desc3:'High volatility', desc4:'Market risk', color:'#6366F1' },
+      { key:'Small Cap', label:'Small Cap', desc1:'High Growth Potential', desc2:'High Return Potential', desc3:'Higher Volatility & Risk', desc4:'Steep drawdowns', color:'#F59E0B' },
+      { key:'Large & Mid Cap', label:'Large & Mid Cap', desc1:'Blend of Large & Mid Stocks', desc2:'Balanced Growth & Stability', desc3:'Mid-cap drawdowns', desc4:'Higher volatility', color:'#14B8A6' },
+      { key:'Multi Cap', label:'Multi Cap', desc1:'Diversified Across Market Caps', desc2:'Balanced Growth & Stability', desc3:'Higher volatility', desc4:'Depends on fund manager', color:'#0EA5E9' },
+      { key:'Flexi Cap', label:'Flexi Cap', desc1:'Moderate Risk', desc2:'Long-term (> 5 years) Investments', desc3:'Manager-dependent', desc4:'Market risk', color:'#3B82F6' },
+      { key:'ELSS', label:'ELSS (Tax Saver)', desc1:'Section 80C Benefits', desc2:'Equity Growth', desc3:'3-Year Lock-in', desc4:'Equity market risk', color:'#EC4899' },
+      { key:'Dividend Yield', label:'Dividend Yield', desc1:'High-Dividend Companies', desc2:'Regular Income Potential', desc3:'Value-trap risk', desc4:'Cyclical payouts', color:'#A855F7' },
+      { key:'Thematic', label:'Thematic', desc1:'Theme-based Investing', desc2:'High Conviction Bets', desc3:'Concentration risk', desc4:'Cycle-dependent', color:'#F97316' },
+      { key:'Sectoral', label:'Sectoral', desc1:'Single-Sector Focus', desc2:'Deep Sector Expertise', desc3:'Highest concentration risk', desc4:'Very volatile', color:'#EF4444' },
+      { key:'Contra', label:'Contra', desc1:'Contrarian Picks', desc2:'Buys Out-of-Favour Stocks', desc3:'Long recovery cycles', desc4:'Requires patience', color:'#8B5CF6' },
+      { key:'Value Oriented', label:'Value Oriented', desc1:'Undervalued Stocks', desc2:'Long-term Value Creation', desc3:'Slower recovery cycles', desc4:'Value traps', color:'#F97316' },
+      { key:'International', label:'International', desc1:'Foreign Market Exposure', desc2:'US / Global / EM Diversification', desc3:'Currency risk', desc4:'Higher expense ratio', color:'#4A9EFF' },
+      { key:'Gold', label:'Gold', desc1:'Inflation Hedge', desc2:'Safe-Haven Asset', desc3:'No income generation', desc4:'Price cycles', color:'#EAB308' },
+      { key:'Silver', label:'Silver', desc1:'Industrial + Precious Metal', desc2:'Inflation Hedge', desc3:'More volatile than gold', desc4:'Smaller market', color:'#94A3B8' },
+      { key:'Balanced Hybrid', label:'Balanced Hybrid', desc1:'~65% Equity / 35% Debt', desc2:'Steady Compounding', desc3:'Moderate drawdowns', desc4:'Equity exposure risk', color:'#10B981' },
+      { key:'Dynamic Asset Allocation', label:'Dynamic Asset Allocation', desc1:'Auto Equity/Debt Switching', desc2:'Valuation-based Allocation', desc3:'Model-dependent', desc4:'Moderate returns', color:'#06B6D4' },
+      { key:'Equity Savings', label:'Equity Savings', desc1:'Equity + Arbitrage + Debt', desc2:'Tax-efficient Returns', desc3:'Limited upside', desc4:'Lock-in on units', color:'#22C55E' },
+      { key:'Multi Asset Allocation', label:'Multi Asset Allocation', desc1:'Equity + Debt + Gold', desc2:'True Diversification', desc3:'Diluted returns', desc4:'Rebalance risk', color:'#0EA5E9' },
+      { key:'Aggressive Hybrid', label:'Aggressive Hybrid', desc1:'~75% Equity / 25% Debt', desc2:'Equity-like Returns', desc3:'High volatility', desc4:'Equity risk', color:'#84CC16' },
+      { key:'Conservative Hybrid', label:'Conservative Hybrid', desc1:'~75% Debt / 25% Equity', desc2:'Stability First', desc3:'Lower returns', desc4:'Credit risk', color:'#64748B' },
+      { key:'Arbitrage', label:'Arbitrage', desc1:'Low Risk', desc2:'Equity Taxation', desc3:'Returns track interest rates', desc4:'Limited upside', color:'#14B8A6' }
     ];
     _catCardsHtml += _catDefs.map(function(cd){
-      // Real count — same matcher as the grid filter, over the FULL scheme list.
-      // Dedup by schemeName because the API now returns one row per plan (Direct + Regular).
+      // Real count — same matcher as the grid filter, over the scheme list
+      // already narrowed to the selected sectors (so cards show only caps
+      // available within the selected sector). Dedup by schemeName.
       var cnt=0;
       var _seen={};
-      for(var ci=0;ci<schemes.length;ci++){
-        var _cn=(schemes[ci].category||'').toLowerCase(), _nm=(schemes[ci].schemeName||'').toLowerCase(), _cc=_cn+' '+_nm, _k=cd.key.toLowerCase();
+      var _scope = (window._mfSectors && window._mfSectors.length) ? schemes.filter(function(_sc){ return window._mfSchemeSectors(_sc); }) : schemes;
+      for(var ci=0;ci<_scope.length;ci++){
+        var _cn=(schemes[ci].category||'').toLowerCase(), _nm=(schemes[ci].schemeName||'').toLowerCase(), _k=cd.key.toLowerCase();
         if(_seen[_nm]) continue; _seen[_nm]=1;
-        var _hit = (_k==='multi cap') ? (_cc.indexOf('multi cap')!==-1||_cc.indexOf('multicap')!==-1)
-          : (_k==='mid cap') ? window.mfIsMidCap(_nm, _cn)
-          : (_k==='large & mid cap') ? (_cc.indexOf('large & mid')!==-1||_cc.indexOf('large and mid')!==-1||_cc.indexOf('large & midcap')!==-1||_cc.indexOf('large and midcap')!==-1)
-          : (_k==='value') ? (_cc.indexOf('value')!==-1||_cc.indexOf('contra')!==-1)
-          : (_k==='large cap') ? window.mfIsLargeCap(_nm, _cn)
-          : (_k==='flexi cap') ? (_cc.indexOf('flexi cap')!==-1||_cc.indexOf('flexicap')!==-1)
-          : (_k==='small cap') ? window.mfIsSmallCap(_nm, _cn)
-          : (_k==='index') ? (_cn.indexOf('index')!==-1||_nm.indexOf('index')!==-1||_nm.indexOf('etf')!==-1)
-          : (_k==='elss') ? (_cc.indexOf('elss')!==-1||_cn.indexOf('tax')!==-1||_nm.indexOf('tax')!==-1||_nm.indexOf('80c')!==-1)
-          : (_k==='money market') ? (_cc.indexOf('money market')!==-1||_cc.indexOf('liquid')!==-1||_cc.indexOf('overnight')!==-1)
-          : (_k==='commodities') ? (_cc.indexOf('commodit')!==-1||_cc.indexOf('gold')!==-1||_cc.indexOf('silver')!==-1)
-          : _cn.indexOf(_k)!==-1;
-        if(_hit) cnt++;
+        if(window.mfMatchCat(_k, _nm, _cn)) cnt++;
       }
+      // Hide cards with no funds inside the selected sector(s)
+      if(window._mfSectors && window._mfSectors.length && cnt===0) return '';
       // Prefer the server's full-universe count; fall back to the local count
-      var shownCnt = (window._mfCardCounts && window._mfCardCounts[cd.key] != null) ? window._mfCardCounts[cd.key] : cnt;
-      return '<div data-mfcard="' + cd.key + '" onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:' + ((_mfActiveCategory||'all')===cd.key?'rgba(0,179,134,0.10)':'var(--bg-panel)') + ';border:' + ((_mfActiveCategory||'all')===cd.key?'2px solid #00B386':'1px solid var(--line)') + ';border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;flex:1 1 150px;min-width:150px;">'
-        + '<div style="margin-bottom:10px;">'+cd.svg+'</div>'
+      // When a sector filter is active, the scoped local count is the truth;
+      // otherwise prefer the server's full-universe count.
+      var shownCnt = (window._mfSectors && window._mfSectors.length) ? cnt : ((window._mfCardCounts && window._mfCardCounts[cd.key] != null) ? window._mfCardCounts[cd.key] : cnt);
+      var _cardActive = (function(){ var _s=window._mfSelCats||[]; return _s.length? _s.indexOf(cd.key)!==-1 : ((_mfActiveCategory||'all')===cd.key); })();
+      return '<div data-mfcard="' + cd.key + '" onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:var(--bg-panel);border:' + (_cardActive?'2px solid #00B386':'1px solid var(--line)') + ';border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;flex:1 1 150px;min-width:150px;">'
+        + '<div style="margin-bottom:10px;"><svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="'+cd.color+'" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="'+cd.color+'" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="'+cd.color+'" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="'+cd.color+'" opacity="0.2"/></svg></div>'
         + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+cd.label+'</div>'
         + (cd.desc1?'<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc1+'</div>':'')
         + (cd.desc2?'<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc2+'</div>':'')
@@ -2409,7 +2506,7 @@ function _renderMfGridBody(grid, schemes) {
     var amcS=Object.entries(amcC).sort(function(a,b){return b[1]-a[1];});
     var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
-    var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
+    var amcDD='<div style="position:relative;display:inline-block;"><button id="mfAmcBtn" onclick="toggleAmcDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;">All AMCs <span style="font-size:8px;">\u25BC</span></button><div id="mfAmcDropdown" style="display:none;position:absolute;top:100%;right:0;z-index:100;width:260px;max-height:400px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;"><div style="padding:8px;border-bottom:1px solid var(--line);"><input type="text" placeholder="Search AMCs" oninput="searchAmcFilter(this.value)" style="width:100%;background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text-primary);font-size:12px;outline:none;"></div>'+amcIt+'</div></div>';
     var searchBox='<div style="display:flex;gap:8px;align-items:center;">'
       + '<input type="text" id="mfGridSearchInput" placeholder="Search schemes, AMCs, stocks" oninput="searchMfSchemes(this.value)" style="background:var(--bg-input);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--text-primary);font-size:12px;width:220px;outline:none;">'
       + '</div>';
@@ -2419,10 +2516,67 @@ function _renderMfGridBody(grid, schemes) {
       + '<div style="display:flex;gap:8px;align-items:center;">'+amcDD+'</div>'
       + '<div style="display:flex;gap:8px;align-items:center;">'+catTabs+searchBox+'</div>'
       + '</div>';
-        // View tabs
+        // ─── Layout: title + active chips/FundCat right, chip row, chart, View row, table ───
+    var _chipCats=['ALL','Large Cap','Mid Cap','Small Cap','Large & Mid Cap','Multi Cap','Flexi Cap','ELSS','Dividend Yield','Thematic','Sectoral','Contra','Value Oriented','International','Gold','Silver','Balanced Hybrid','Dynamic Asset Allocation','Equity Savings','Multi Asset Allocation','Aggressive Hybrid','Conservative Hybrid','Arbitrage'];
+    var _sel=window._mfSelCats=window._mfSelCats||[];
+    window._mfShowAllSel=window._mfShowAllSel||false;
+    function _mfChipStyle(active){return 'background:'+(active?'var(--accent)':'var(--bg-input)')+';color:'+(active?'#fff':'var(--text-primary)')+';border:1px solid '+(active?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;';}
+    var _chipsHtml='<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">'
+      + _chipCats.map(function(k){var _kk=(k==='ALL'?'all':k);return '<button class="mf-chip" onclick="filterMfCategory(\x27'+_kk+'\x27)" style="'+_mfChipStyle(_kk==='all'?_sel.length===0:_sel.indexOf(k)!==-1)+'">'+k+'</button>';}).join('')
+      + '</div>';
+    var _mfHeaderHtml='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;gap:10px;">'
+      + '<div></div>'
+      + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+      + (function(){
+          var _p='';
+          var _shown=_sel.slice(0,5);
+          _shown.forEach(function(k){_p+='<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,179,134,0.12);border:1px solid rgba(0,179,134,0.4);color:#00B386;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;">'+k+' <span onclick="filterMfCategory(\x27'+k+'\x27)" style="cursor:pointer;font-weight:800;">\u00d7</span></span>';});
+          if(_sel.length>5){_p+='<span onclick="window._mfShowAllSel=!window._mfShowAllSel;renderMfGrid(window._mfFullSchemes||window._mfLastSchemes||[])" style="display:inline-flex;align-items:center;background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">+'+(_sel.length-5)+'</span>';}
+          if(window._mfShowAllSel&&_sel.length>5){_sel.slice(5).forEach(function(k){_p+='<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,179,134,0.12);border:1px solid rgba(0,179,134,0.4);color:#00B386;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;">'+k+' <span onclick="filterMfCategory(\x27'+k+'\x27)" style="cursor:pointer;font-weight:800;">\u00d7</span></span>';});}
+          if(_mfActiveAmc!=='all')_p+='<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(74,158,255,0.12);border:1px solid rgba(74,158,255,0.4);color:#4A9EFF;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;white-space:nowrap;">'+_mfActiveAmc+' <span onclick="filterMfAmc(\x27all\x27)" style="cursor:pointer;font-weight:800;">\u00d7</span></span>';
+          return _p;
+        })()
+      // Fund Category dropdown (all chip options, multi-select)
+      + '<div style="position:relative;display:inline-block;">'
+      + '<button onclick="toggleMfFundCatDD()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;">Fund Category'+(_sel.length?' ('+_sel.length+')':'')+' <span style="font-size:8px;">\u25BC</span></button>'
+      + '<div id="mfFundCatDD" style="display:none;position:absolute;top:100%;right:0;z-index:160;width:210px;max-height:340px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;padding:6px 0;">'
+      + _chipCats.filter(function(k){return k!=='ALL';}).map(function(k){
+          var chk=_sel.indexOf(k)!==-1;
+          return '<div onclick="filterMfCategory(\x27'+k+'\x27)" style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;font-size:12px;color:var(--text-primary);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
+            +'<span style="width:16px;height:16px;flex:none;border-radius:4px;border:1.5px solid '+(chk?'var(--accent)':'var(--text-muted)')+';background:'+(chk?'var(--accent)':'transparent')+';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;">'+(chk?'\u2713':'')+'</span>'
+            +'<span style="flex:1;font-weight:'+(chk?'700':'500')+';">'+k+'</span></div>';
+        }).join('')
+      + '</div></div>'
+      + '</div></div>'
+      + _chipsHtml;
+    // Pill row ABOVE the graph: Returns | Ranks | AUM | Change in AUM | Compare Top Gainers | Compare Top Losers
+    var _pillDefs=[{k:"summary",l:"Returns"},{k:"ranks",l:"Ranks"},{k:"aum",l:"AUM"},{k:"aumchange",l:"Change in AUM"},{k:"gainers",l:"Compare Top Gainers"},{k:"losers",l:"Compare Top Losers"}];
+    var _curTab=(window._mfViewTab||"summary");
+    var _pillHtml='<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">'
+      + _pillDefs.map(function(_pd){var _ia=(_curTab===_pd.k);return '<button onclick="switchMfViewTab(\x27'+_pd.k+'\x27)" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-primary)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:6px 18px;border-radius:8px;font-size:11.5px;font-weight:'+(_ia?'700':'600')+';cursor:pointer;transition:all .15s;">'+_pd.l+'</button>';}).join('')
+      + '</div>';
+    // Category performance chart (canvas, drawn async after render)
+    var _mfChartHtml='<div id="mfChartCard" style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:14px 10px 8px 10px;margin-bottom:12px;position:relative;">'
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:6px;padding-right:8px;">'
+      + '<div style="display:flex;gap:4px;background:var(--bg-input);padding:3px;border-radius:6px;border:1px solid var(--line);">'
+      + ['1M','3M','6M','1Y','3Y','5Y','ALL'].map(function(t){var _on=(currentMfTimeframe||'1M')===t;return '<button class="mf-tf-btn'+(_on?' active':'')+'" data-tf="'+t+'" style="padding:4px 12px;font-size:11px;font-weight:700;border:none;border-radius:4px;background:'+(_on?'var(--accent)':'transparent')+';color:'+(_on?'#fff':'var(--text-muted)')+';cursor:pointer;">'+(t==='ALL'?'All':t)+'</button>';}).join('')
+      + '</div>'
+      + '<button id="mfChartExpandBtn" title="Expand chart" style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-muted);margin-left:6px;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;line-height:1;">\u26F6</button>'
+      + '</div>'
+      + '<canvas id="mfCatChartCanvas" height="220" style="width:100%;height:220px;display:block;"></canvas><div id="mfCatChartLegend" style="display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin:8px 0 6px 0;"></div>'
+      + '</div>';
+    // View row: View label + tabs, search input parallel on the right (outside the graph card)
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
-    var vtHtml='<div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;"><span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:6px;">View:</span>';
-    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=((window._mfViewTab||"summary")===_vt.k);vtHtml+='<button data-vtab="'+_vt.k+'" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;">'+_vt.l+'</button>';}vtHtml+='</div>';
+    var vtHtml='<div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">'
+      + '<div style="display:flex;gap:6px;align-items:center;flex:none;"><span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:6px;">View:</span>';
+    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=((window._mfViewTab||"summary")===_vt.k);vtHtml+='<button data-vtab="'+_vt.k+'" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;">'+_vt.l+'</button>';}vtHtml+='</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap;min-width:0;">'
+      + '<input type="text" id="mfSearchInput" placeholder="Search schemes, AMCs, stocks..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:7px 12px;border-radius:8px;font-size:12px;width:190px;max-width:100%;flex:1 1 140px;">'
+      + amcDD.replace('width:260px;max-height:400px','width:230px;max-height:400px').replace('padding:6px 14px;border-radius:20px;font-size:11px','padding:6px 12px;border-radius:8px;font-size:11.5px')
+      + '</div>'
+      + '</div>';
+
+    // View tabs — BELOW the graph (user request)
 
     // Table header and rows depend on view tab
     var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
@@ -2439,7 +2593,7 @@ function _renderMfGridBody(grid, schemes) {
         var sc=s.confidenceScore||50,pf=Math.round(sc*.25),po=Math.round(sc*.22),op=Math.round(sc*.26),rw=sc-pf-po-op;
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
+          +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(sc)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+pf+'/25</td>'
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+po+'/25</td>'
@@ -2447,11 +2601,11 @@ function _renderMfGridBody(grid, schemes) {
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+rw+'/25</td></tr>';}).join("");
 
     } else if((window._mfViewTab||"summary")==="risk") {
-      var _rk=["Alpha","Beta","Sharpe","Sortino","Treynor","StdDev"],_rp=["1M","3M","6M","1Y"];
+      var _rk=["Alpha","Beta","Sharpe","Sortino","Treynor","StdDev"],_rp=["1M","3M","6M","1Y","3Y","5Y","All"];
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>';
       for(var _i=0;_i<_rk.length;_i++)for(var _j=0;_j<_rp.length;_j++)_head+='<th style="'+_th2+'text-align:right;">'+_rk[_i]+' '+_rp[_j]+'</th>';
 // Read REAL risk metrics from backend (fund_metrics computed from NAV history)
-      var _msuf={"1M":"1m","3M":"3m","6M":"6m","1Y":"1y"};
+      var _msuf={"1M":"1m","3M":"3m","6M":"6m","1Y":"1y","3Y":"3y","5Y":"5y","All":"all"};
       function _mfCellPct(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var x=v*100;var cl=x>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+(x>=0?"+":"")+x.toFixed(2)+'%</td>';}
       function _mfCellNum(v,plus){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=plus?((v>=0)?"#00B386":"#EB5B56"):"var(--text-primary)";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+v.toFixed(2)+'</td>';}
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
@@ -2459,12 +2613,57 @@ function _renderMfGridBody(grid, schemes) {
         function _g(k,p){return (_m[k+"_"+(_msuf[p]||"")])!=null?_m[k+"_"+(_msuf[p]||"")]:null;}
         var h='<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>';
+          +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>';
         for(var _j=0;_j<_rp.length;_j++){
           var _p=_rp[_j];
           h+=_mfCellPct(_g("alpha",_p))+_mfCellNum(_g("beta",_p),false)+_mfCellNum(_g("sharpe",_p),true)+_mfCellNum(_g("sortino",_p),true)+_mfCellPct(_g("treynor",_p))+_mfCellPct(_g("stdDev",_p));
         }
         return h+'</tr>';}).join("");
+
+    } else if(_curTab==="aum" || _curTab==="aumchange") {
+      // AUM / Change in AUM focused views — same summary table, sorted and highlighted
+      var _isAum=(_curTab==="aum");
+      var _sorted=di.slice().sort(function(a,b){
+        if(_isAum){var _av=a.aumCr!=null?a.aumCr:(a.aum||0),_bv=b.aumCr!=null?b.aumCr:(b.aum||0);return _bv-_av;}
+        var _ac2=a.aumChange1M&&a.aumChange1M.change!=null?a.aumChange1M.change:-1e18;
+        var _bc2=b.aumChange1M&&b.aumChange1M.change!=null?b.aumChange1M.change:-1e18;
+        return _bc2-_ac2;
+      });
+      _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
+        +(_isAum?'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th>':'<th style="'+_th2+'text-align:right;">Change in AUM (1M)</th>')
+        +'<th style="'+_th2+'text-align:right;">Category</th><th style="'+_th2+'text-align:right;">Score /100</th>';
+      _body=_sorted.slice(0,50).map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
+        var _cell;
+        if(_isAum){_cell='<td style="padding:10px 12px;text-align:right;font-size:13px;color:var(--text-primary);font-weight:800;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>";}
+        else{var _ca=s.aumChange1M;if(!_ca||_ca.change==null){_cell='<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';}else{var _cl=_ca.change>=0?"#00B386":"#EB5B56";var _ar=_ca.change>=0?"\u25B2":"\u25BC";_cell='<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:800;white-space:nowrap;">'+_ar+' \u20b9'+Math.abs(_ca.change).toLocaleString("en-IN",{maximumFractionDigits:1})+' Cr</span> <span style="color:var(--text-muted);font-size:10px;">('+(_ca.changePct||0>=0?"+":"")+(_ca.changePct||0).toFixed(1)+'%)</span></td>';}}
+        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
+          +_cell
+          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-muted);">'+ct+'</td>'
+          +rn2(s.confidenceScore||50)+'</tr>';}).join("");
+
+    } else if(_curTab==="gainers" || _curTab==="losers") {
+      // Compare Top Gainers / Losers — ranked by selected-period return
+      var _isG=(_curTab==="gainers");
+      var _rk2=_rp||["1M","3M","6M","1Y"];
+      var _pkey={'1M':'1M','3M':'3M','6M':'6M','1Y':'1Y','3Y':'3Y','5Y':'5Y','ALL':'ALL'}[currentMfTimeframe]||'1M';
+      var _withR=di.filter(function(s){return s.returns&&s.returns[_pkey]!=null;});
+      _withR.sort(function(a,b){return _isG?(b.returns[_pkey]-a.returns[_pkey]):(a.returns[_pkey]-b.returns[_pkey]);});
+      _head='<th style="'+_th2+'width:36px;">#</th><th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
+        +'<th style="'+_th2+'text-align:right;">'+_pkey+' return</th>'
+        +'<th style="'+_th2+'text-align:right;">1M</th><th style="'+_th2+'text-align:right;">3M</th><th style="'+_th2+'text-align:right;">6M</th><th style="'+_th2+'text-align:right;">1Y</th>'
+        +'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th><th style="'+_th2+'text-align:right;">Score /100</th>';
+      _body=_withR.slice(0,25).map(function(s,i){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
+        function _rr(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
+        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+          +'<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:12px;color:'+(i<3?'#F59E0B':'var(--text-muted)')+';">'+(i+1)+'</td>'
+          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
+          +'<td style="padding:10px 12px;text-align:right;"><span style="display:inline-flex;align-items:center;gap:3px;background:'+((_isG?'rgba(0,179,134,0.15)':'rgba(235,91,86,0.15)'))+';color:'+(_isG?'#00B386':'#EB5B56')+';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:800;">'+(_isG?'\u25B2':'\u25BC')+' '+(s.returns[_pkey]>=0?"+":"")+s.returns[_pkey].toFixed(2)+'%</span></td>'
+          +_rr(s.returns&&s.returns["1M"])+_rr(s.returns&&s.returns["3M"])+_rr(s.returns&&s.returns["6M"])+_rr(s.returns&&s.returns["1Y"])
+          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>"
+          +rn2(s.confidenceScore||50)+'</tr>';}).join("");
 
     } else {
       _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
@@ -2480,6 +2679,9 @@ function _renderMfGridBody(grid, schemes) {
         +'<th style="'+_th2+'text-align:right;">Jun-Sep %</th>'
         +'<th style="'+_th2+'text-align:right;">Mar-Sep %</th>'
         +'<th style="'+_th2+'text-align:right;">1 year %</th>'
+        +'<th style="'+_th2+'text-align:right;">3 year %</th>'
+        +'<th style="'+_th2+'text-align:right;">5 year %</th>'
+        +'<th style="'+_th2+'text-align:right;">All (since inception) %</th>'
         +'<th style="'+_th2+'text-align:right;">Benchmark %</th>'
         +'<th style="'+_th2+'text-align:right;">Vs Benchmark</th>'
         +'<th style="'+_th2+'text-align:right;">Vs Category</th>';
@@ -2490,7 +2692,7 @@ function _renderMfGridBody(grid, schemes) {
 
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
-          +'<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
+          +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(s.confidenceScore||50)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(function(){var _a=s.aumCr!=null?s.aumCr:(s.aum!=null?s.aum:null);return _a!=null?"\u20b9"+Number(_a).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-";})()+"</td>"
           +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_est=_ca.latestDate==='estimated'?' <span style="color:var(--text-muted);font-size:9px;font-weight:500;">est</span>':'',_vs=(_ch>=0?"+":"-")+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+'%)</span>'+_est+'</td>';})()
@@ -2503,6 +2705,9 @@ function _renderMfGridBody(grid, schemes) {
           +rc3(s.returns&&s.returns["3M"]!=null?s.returns["3M"]:null)
           +rc3(s.returns&&s.returns["6M"]!=null?s.returns["6M"]:null)
           +rc3(s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null)
+          +rc3(s.returns&&s.returns["3Y"]!=null?s.returns["3Y"]:null)
+          +rc3(s.returns&&s.returns["5Y"]!=null?s.returns["5Y"]:null)
+          +rc3(s.returns&&s.returns["ALL"]!=null?s.returns["ALL"]:null)
           // Benchmark % — actual 1Y return of the scheme's official benchmark index (TRI, via matching index-fund proxy)
           +(function(){var _bm=s.metrics&&s.metrics.benchmark_1y;if(_bm==null) return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _v=_bm*100;var _cl=_v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;">'+(_v>=0?"+":"")+_v.toFixed(2)+'%</span></td>';})()
           // Vs Benchmark — fund 1Y return minus its official benchmark return
@@ -2524,7 +2729,7 @@ function _renderMfGridBody(grid, schemes) {
         var match=onclick.match(/filterMfCategory\(\x27([^\x27]+)\x27\)/);
         if(match){
           var isActive=(_mfActiveCategory||"all")===match[1];
-          cards[i].style.background=isActive?"rgba(0,179,134,0.12)":"var(--bg-panel)";
+          cards[i].style.background="var(--bg-panel)";
           cards[i].style.border=isActive?"2px solid #00B386":"1px solid var(--line)";
         }
       }
@@ -2538,11 +2743,298 @@ function _renderMfGridBody(grid, schemes) {
     var _showAllBtn = (di.length > _maxRows)
       ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.mfEnsureFull().then(function(f){window.renderMfGrid(f||window._mfLastSchemes||[]);});" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
       : '';
-    grid.innerHTML=toolbarHtml+sum+_catCardsHtml+vtHtml+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=sum+_pillHtml+_mfChartHtml+vtHtml+_catCardsHtml+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head
       +"</tr></thead><tbody>"+_body+"</tbody></table></div>"+_showAllBtn+"</div>";
+    if((window._mfViewTab||"summary")==="summary"){setTimeout(function(){try{drawMfCatChart();}catch(e){console.error('[MF Chart]',e);}},0);}
+    // Restore persisted search text into the re-rendered input box
+    setTimeout(function(){
+      var _si=document.getElementById('mfSearchInput');
+      if(_si && _mfSearchText && _si.value!==_mfSearchText){ _si.value=_mfSearchText; }
+    },0);
   } catch(e) { console.error("[MF Grid]", e); grid.innerHTML = "<div style=\"padding:24px;color:#EB5B56;\">Error: "+e.message+"</div>"; }
 }
+
+      // Category performance chart — dispatches per active pill view:
+      //   Returns  -> avg normalized NAV series per sector (line chart)
+      //   Ranks    -> avg score per sector (bars)
+      //   AUM      -> avg AUM per sector (bars)
+      //   Change in AUM -> avg 1M AUM change per sector (bars, +/-)
+      //   Gainers / Losers -> top fund's period return per sector (bars)
+      var _MFCAT_COLORS={'Large Cap':'#EB5B56','Mid Cap':'#14B8A6','Small Cap':'#4A9EFF','Multi Cap':'#F59E0B','Flexi Cap':'#A855F7','Equity':'#00B386','Hybrid':'#FF9F43','Debt':'#4A9EFF','Commodities':'#F59E0B','Gold':'#FFD54F','Silver':'#B0BEC5','International':'#A855F7','Large & Mid Cap':'#26C6DA','ELSS':'#EF5350','Money Market':'#78909C','Index':'#7E57C2','ETF':'#5C6BC0','FoF':'#8D6E63','Dividend Yield':'#BA68C8','Thematic':'#FF8A65','Sectoral':'#E57373','Contra':'#9575CD','Value Oriented':'#FFB74D','Balanced Hybrid':'#4DB6AC','Dynamic Asset Allocation':'#4DD0E1','Equity Savings':'#81C784','Multi Asset Allocation':'#64B5F6','Aggressive Hybrid':'#AED581','Conservative Hybrid':'#90A4AE','Arbitrage':'#80CBC4'};
+      var _MF_EXTRA_COLORS=['#26C6DA','#FF9F43','#AB47BC','#66BB6A','#EC407A','#26A69A','#FFA726','#7E57C2'];
+      var _mfChartFetchToken=0;
+      function _mfSectorListForChart(){ return (window._mfSectors&&window._mfSectors.length)?window._mfSectors:['Large Cap','Mid Cap','Small Cap','Multi Cap','Flexi Cap']; }
+      function _mfSectorMembers(schemes,sec){ return schemes.filter(function(s){ return window._mfSingleSectorMatch?_mfSingleSectorMatch(s,sec):false; }); }
+      async function drawMfCatChart() {
+        var _vt=window._mfViewTab||'summary';
+        if(_vt==='summary'){ return _drawMfReturnsChart(); }
+        return _drawMfBarChart(_vt);
+      }
+      async function _drawMfReturnsChart() {
+        var canvas=document.getElementById('mfCatChartCanvas');if(!canvas)return;
+        var legend=document.getElementById('mfCatChartLegend');
+        var range={'1M':'1M','3M':'3M','6M':'6M','1Y':'1Y','3Y':'3Y','5Y':'5Y','ALL':'ALL'}[currentMfTimeframe]||'1Y';
+        var _fetchToken=++_mfChartFetchToken;
+        var _mfSecs=(window._mfSectors&&window._mfSectors.length)?window._mfSectors:[];
+        var _qs=_mfSecs.length?('&sectors='+encodeURIComponent(_mfSecs.join('|'))):'';
+        var res=await fetch('/api/mutual-funds/category-series?range='+range+_qs);
+        var json=await res.json();
+        // If the view tab changed while fetching, discard — a bar chart owns the canvas now
+        if(_fetchToken!==_mfChartFetchToken||(window._mfViewTab||'summary')!=='summary')return;
+        if(!json.success||!json.categories)return;
+        var cats=Object.keys(json.categories).filter(function(c){return json.categories[c]&&json.categories[c].series&&json.categories[c].series.length>1;});
+        if(!cats.length){if(legend)legend.innerHTML='';return;}
+        var longest=cats[0],maxLen=0;
+        cats.forEach(function(c){if(json.categories[c].series.length>maxLen){maxLen=json.categories[c].series.length;longest=c;}});
+        var xs=json.categories[longest].series.map(function(p){return p.date;});
+        var allv=[];cats.forEach(function(c){json.categories[c].series.forEach(function(p){allv.push(p.pct);});});
+        var mn=Math.min.apply(null,allv),mx=Math.max.apply(null,allv);
+        mn=Math.floor(mn/10)*10;mx=Math.ceil(mx/10)*10;if(mx-mn<10)mx=mn+10;
+        var dpr=window.devicePixelRatio||1;var rect=canvas.getBoundingClientRect();var H=window._mfChartExpanded?Math.max(400,Math.round(window.innerHeight*0.78)):220;
+        canvas.width=rect.width*dpr;canvas.height=H*dpr;canvas.style.height=H+'px';
+        var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+        var W=rect.width,pad=40,cw=W-pad-14,chH=H-pad-22;
+        ctx.clearRect(0,0,W,H);
+        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        var steps=4;
+        for(var i=0;i<=steps;i++){var v=mn+(mx-mn)*i/steps;var y=pad+chH-(v-mn)/(mx-mn)*chH;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(Math.round(v)+'%',pad-6,y+3);}
+        // X-axis tick marks, time-appropriate per range:
+        //   1Y -> month names (all 12), 6M -> months + 15-day marks,
+        //   3M -> months + week marks, 1M -> day numbers.
+        // Labels are light-colored; the Y axis stays month-marked only.
+        ctx.textAlign='center';
+        (function(){
+          var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          var d0=new Date(xs[0]), dN=new Date(xs[xs.length-1]);
+          var spanDays=(dN-d0)/86400000;
+          function xOf(d){return pad+(d-d0)/((dN-d0)||1)*cw;}
+          function lightLabel(txt,x){ctx.fillStyle='rgba(139,147,167,0.45)';ctx.fillText(txt,x,H-6);}
+          // month boundaries (vertical light marks)
+          ctx.strokeStyle='rgba(128,128,128,0.10)';
+          var _multiYear=spanDays>800;
+          var m=new Date(d0); m.setDate(1);
+          if(m<d0) m.setMonth(m.getMonth()+1);
+          // For 3Y/5Y/All: label January of each year with the year; skip per-month labels (too dense)
+          var _mstep=_multiYear?12:1;
+          // align to a labeled boundary
+          if(_multiYear){ m=new Date(d0.getFullYear(),0,1); if(m<d0) m.setFullYear(m.getFullYear()+1); }
+          ctx.textAlign='left';
+          while(m<=dN){
+            var mx2=xOf(m);
+            if(mx2>pad+6&&mx2<W-14){
+              ctx.beginPath();ctx.moveTo(mx2,pad);ctx.lineTo(mx2,pad+chH);ctx.stroke();
+              lightLabel(_multiYear?String(m.getFullYear()):(MO[m.getMonth()]+' '+String(m.getFullYear()).slice(2)),mx2+2);
+            }
+            if(_multiYear)m.setFullYear(m.getFullYear()+1); else m.setMonth(m.getMonth()+1);
+            // skip-ahead guard for dense multi-year month stepping (not used when _multiYear)
+            if(!_multiYear && m.getMonth()!==((m.getMonth()))) break;
+          }
+          function marksEvery(days,labelFn){
+            var d=new Date(d0); d.setDate(d.getDate()+days);
+            while(d<=dN){ var x=xOf(d); if(x>pad+4&&x<W-10) labelFn(x,d); d.setDate(d.getDate()+days); }
+          }
+          if(range==='1Y'){
+            // month names only — nothing extra
+          } else if(range==='6M'){
+            // 15-day light tick dots (no text, keep months as Y labels)
+            marksEvery(15,function(x){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);});
+          } else if(range==='3M'){
+            // week marks with small light week labels
+            marksEvery(7,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);if(d.getDate()<=7){lightLabel('wk',x);} });
+          } else if(range==='1M'){
+            // day labels (every 5 days), light
+            marksEvery(5,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(String(d.getDate()),x);});
+          }
+          ctx.textAlign='center';
+        })();
+        var _extraIx=0;
+        var _seriesMeta=[];
+        cats.forEach(function(c){
+          var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx++%_MF_EXTRA_COLORS.length];
+          var s=json.categories[c].series;
+          _seriesMeta.push({name:c,col:col,data:s});
+          ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();
+          for(var i2=0;i2<s.length;i2++){var x=pad+i2/(xs.length-1)*cw;var y=pad+chH-(s[i2].pct-mn)/(mx-mn)*chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+          ctx.stroke();
+        });
+        var _extraIx2=0;
+        if(legend){legend.innerHTML=cats.map(function(c){var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx2++%_MF_EXTRA_COLORS.length];return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="width:10px;height:10px;border-radius:50%;background:'+col+';display:inline-block;"></span>'+c+'</span>';}).join('');}
+        // Hover tooltip: crosshair + per-category values at the hovered date
+        _mfAttachLineHover(canvas,{xs:xs,pad:pad,cw:cw,chH:chH,series:_seriesMeta,mn:mn,mx:mx,H:H});
+      }
+
+      // Shared hover machinery — returns-chart crosshair + tooltip
+      var _mfTip=null;
+      function _mfTooltipEl(){
+        if(_mfTip&&document.body.contains(_mfTip))return _mfTip;
+        _mfTip=document.createElement('div');
+        _mfTip.style.cssText='position:fixed;z-index:400;pointer-events:none;background:var(--bg-panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);padding:8px 12px;font-size:11.5px;color:var(--text-primary);display:none;max-width:280px;';
+        document.body.appendChild(_mfTip);
+        return _mfTip;
+      }
+      function _mfAttachLineHover(canvas,chart){
+        canvas.onmousemove=function(ev){
+          var rect=canvas.getBoundingClientRect();
+          var mxp=ev.clientX-rect.left;
+          var ix=Math.round((mxp-chart.pad)/chart.cw*(chart.xs.length-1));
+          if(ix<0)ix=0; if(ix>chart.xs.length-1)ix=chart.xs.length-1;
+          var date=chart.xs[ix];
+          // redraw with crosshair
+          var ctx=canvas.getContext('2d');
+          var dpr=window.devicePixelRatio||1;
+          var W=chart.pad+chart.cw+14;
+          ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
+          // grid + y labels
+          ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+          var steps=4;
+          for(var i=0;i<=steps;i++){var v=chart.mn+(chart.mx-chart.mn)*i/steps;var y=chart.pad+chart.chH-(v-chart.mn)/(chart.mx-chart.mn)*chart.chH;ctx.beginPath();ctx.moveTo(chart.pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(Math.round(v)+'%',chart.pad-6,y+3);}
+          // crosshair at hovered x
+          var hx=chart.pad+ix/(chart.xs.length-1)*chart.cw;
+          ctx.strokeStyle='rgba(0,179,134,0.5)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(hx,chart.pad);ctx.lineTo(hx,chart.pad+chart.chH);ctx.stroke();ctx.setLineDash([]);
+          // series lines
+          var vals=[];
+          chart.series.forEach(function(sm){
+            ctx.strokeStyle=sm.col;ctx.lineWidth=1.8;ctx.beginPath();
+            for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+            ctx.stroke();
+            // point value at ix if series has data there
+            var pt=null;
+            for(var k=0;k<sm.data.length;k++){ if(sm.data[k].date===date){pt=sm.data[k].pct;break;} }
+            if(pt!=null){
+              var py=chart.pad+chart.chH-(pt-chart.mn)/(chart.mx-chart.mn)*chart.chH;
+              ctx.fillStyle=sm.col;ctx.beginPath();ctx.arc(hx,py,3.5,0,Math.PI*2);ctx.fill();
+              ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();
+              vals.push({name:sm.name,col:sm.col,pct:pt});
+            }
+          });
+          // x date labels (light month marks) — redraw minimal
+          ctx.fillStyle='rgba(139,147,167,0.45)';ctx.font='10px sans-serif';ctx.textAlign='left';
+          var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          var d0=new Date(chart.xs[0]),dN=new Date(chart.xs[chart.xs.length-1]);
+          var m=new Date(d0);m.setDate(1);if(m<d0)m.setMonth(m.getMonth()+1);
+          while(m<=dN){var mxx=chart.pad+(m-d0)/((dN-d0)||1)*chart.cw;if(mxx>chart.pad+6&&mxx<W-14)ctx.fillText(MO[m.getMonth()],mxx+2,chart.H-6);m.setMonth(m.getMonth()+1);}
+          // tooltip
+          var tip=_mfTooltipEl();
+          var html='<div style="font-weight:800;margin-bottom:4px;">'+date+'</div>';
+          vals.sort(function(a,b){return b.pct-a.pct;}).forEach(function(v){
+            html+='<div style="display:flex;align-items:center;gap:6px;margin:2px 0;"><span style="width:8px;height:8px;border-radius:50%;background:'+v.col+';display:inline-block;"></span>'+v.name+' <span style="margin-left:auto;font-weight:700;color:'+(v.pct>=0?'#00B386':'#EB5B56')+';">'+(v.pct>=0?'+':'')+v.pct.toFixed(2)+'%</span></div>';
+          });
+          tip.innerHTML=html;tip.style.display='block';
+          var tw=tip.offsetWidth;
+          var left=ev.clientX+14; if(left+tw>window.innerWidth-8)left=ev.clientX-tw-14;
+          tip.style.left=left+'px';tip.style.top=Math.max(8,ev.clientY-20)+'px';
+        };
+        canvas.onmouseleave=function(){
+          if(_mfTip)_mfTip.style.display='none';
+          drawMfCatChart();
+        };
+      }
+
+      // Bar-chart hover: highlight + tooltip per bar
+      function _mfAttachBarHover(canvas,bars,geom){
+        canvas.onmousemove=function(ev){
+          var rect=canvas.getBoundingClientRect();
+          var mxp=ev.clientX-rect.left;
+          var hit=null;
+          bars.forEach(function(b){ if(mxp>=b.x0&&mxp<=b.x1)hit=b; });
+          var tip=_mfTooltipEl();
+          if(!hit){tip.style.display='none';return;}
+          var html='<div style="font-weight:800;margin-bottom:3px;">'+hit.sec+'</div>'
+            +'<div style="color:var(--text-muted);">'+hit.cap+'</div>'
+            +'<div style="margin-top:3px;font-weight:700;">Value: '+(typeof hit.val==='number'?(viewFmt(hit.val)):'-')+'</div>';
+          tip.innerHTML=html;tip.style.display='block';
+          var tw=tip.offsetWidth;
+          var left=ev.clientX+14; if(left+tw>window.innerWidth-8)left=ev.clientX-tw-14;
+          tip.style.left=left+'px';tip.style.top=Math.max(8,ev.clientY-20)+'px';
+        };
+        canvas.onmouseleave=function(){ if(_mfTip)_mfTip.style.display='none'; };
+      }
+      function viewFmt(v){
+        var _vt=window._mfViewTab||'summary';
+        if(_vt==='aum')return '₹'+Math.round(v).toLocaleString('en-IN')+' Cr';
+        if(_vt==='aumchange')return (v>=0?'+':'')+'₹'+Math.abs(Math.round(v)).toLocaleString('en-IN')+' Cr';
+        if(_vt==='ranks')return Math.round(v)+' / 100';
+        return (v>=0?'+':'')+v.toFixed(2)+'%';
+      }
+
+      // Bar chart per active pill: one bar per selected sector, using the
+      // funds currently shown in the table (di = window._mfLastSchemes).
+      function _drawMfBarChart(view) {
+        var canvas=document.getElementById('mfCatChartCanvas');if(!canvas)return;
+        var legend=document.getElementById('mfCatChartLegend');
+        var schemes=window._mfLastSchemes||[];
+        var secs=_mfSectorListForChart();
+        var pkey={'1M':'1M','3M':'3M','6M':'6M','1Y':'1Y','3Y':'3Y','5Y':'5Y','ALL':'ALL'}[currentMfTimeframe]||'1M';
+        // Compute one value + caption per sector
+        var bars=[];
+        secs.forEach(function(sec){
+          var mem=_mfSectorMembers(schemes,sec);
+          if(!mem.length) return;
+          var val=null, cap='';
+          if(view==='ranks'){
+            var n=0,sum=0; mem.forEach(function(s){if(s.confidenceScore!=null){sum+=s.confidenceScore;n++;}});
+            if(n){val=sum/n;cap=val.toFixed(0)+' avg score';}
+          } else if(view==='aum'){
+            var n2=0,sum2=0; mem.forEach(function(s){var a=s.aumCr!=null?s.aumCr:(s.aum||null);if(a!=null){sum2+=a;n2++;}});
+            if(n2){val=sum2/n2;cap='₹'+Math.round(val).toLocaleString('en-IN')+' Cr avg AUM';}
+          } else if(view==='aumchange'){
+            var n3=0,sum3=0; mem.forEach(function(s){var c3=s.aumChange1M;if(c3&&c3.change!=null){sum3+=c3.change;n3++;}});
+            if(n3){val=sum3/n3;cap=(val>=0?'+':'')+'₹'+Math.abs(Math.round(val)).toLocaleString('en-IN')+' Cr avg 1M change';}
+          } else if(view==='gainers'||view==='losers'){
+            // Top gainer / loser fund within this sector for the selected period
+            var best=null;
+            mem.forEach(function(s){var r=s.returns&&s.returns[pkey];if(r==null)return;if(!best||(view==='gainers'?r>best.r:r<best.r))best={r:r,n:cleanSchemeTitle(s.schemeName)};});
+            if(best){val=best.r;cap=best.n;}
+          }
+          if(val!=null) bars.push({sec:sec,val:val,cap:cap});
+        });
+        if(!bars.length){if(legend)legend.innerHTML='';return;}
+        var dpr=window.devicePixelRatio||1;var rect=canvas.getBoundingClientRect();var H=window._mfChartExpanded?Math.max(400,Math.round(window.innerHeight*0.78)):220;
+        canvas.width=rect.width*dpr;canvas.height=H*dpr;canvas.style.height=H+'px';
+        var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+        var W=rect.width,pad=40,cw=W-pad-14,chH=H-pad-22;
+        ctx.clearRect(0,0,W,H);
+        var vals=bars.map(function(b){return b.val;});
+        var mx=Math.max.apply(null,vals),mn2=Math.min.apply(null,vals);
+        if(view==='aumchange'){var m2=Math.max(Math.abs(mx),Math.abs(mn2));mx=m2;mn2=-m2;}
+        else if(view!=='aum'){mn2=Math.min(mn2,0);}
+        else {mn2=0;}
+        if(mx===mn2)mx=mn2+1;
+        // light gridlines + y labels
+        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        var steps=4;
+        for(var i=0;i<=steps;i++){var v=mn2+(mx-mn2)*i/steps;var y=pad+chH-(v-mn2)/(mx-mn2)*chH;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-8,y);ctx.stroke();var lbl=view==='aum'?('₹'+Math.round(v/1000)+'k Cr'):((v>=0?'+':'')+Math.round(v)+(view==='ranks'?'':view==='aum'?'':'%'));ctx.fillText(lbl,pad-6,y+3);}
+        // bars
+        var bw=Math.min(64,cw/bars.length*0.55);
+        var _hitAreas=[];
+        bars.forEach(function(b,i2){
+          var cx=pad+(i2+0.5)/bars.length*cw;
+          var y0=pad+chH-(0-mn2)/(mx-mn2)*chH;
+          var y1=pad+chH-(b.val-mn2)/(mx-mn2)*chH;
+          var col=_MFCAT_COLORS[b.sec]||_MF_EXTRA_COLORS[i2%_MF_EXTRA_COLORS.length];
+          _hitAreas.push({sec:b.sec,val:b.val,cap:b.cap,x0:cx-bw/2-6,x1:cx+bw/2+6});
+          ctx.fillStyle=col;ctx.globalAlpha=0.85;
+          var top=Math.min(y0,y1),hh=Math.abs(y1-y0)||2;
+          ctx.fillRect(cx-bw/2,top,bw,hh);
+          ctx.globalAlpha=1;
+          // sector name below bar (light)
+          ctx.fillStyle='rgba(139,147,167,0.6)';ctx.font='10px sans-serif';ctx.textAlign='center';
+          ctx.fillText(b.sec,cx,H-16);
+          // value on top of bar
+          ctx.fillStyle=col;
+          var vtxt=view==='ranks'?Math.round(b.val)+(view==='ranks'?'':''):(view==='aum'?('₹'+Math.round(b.val).toLocaleString('en-IN')+'Cr'):((b.val>=0?'+':'')+b.val.toFixed(1)+'%'));
+          ctx.fillText(vtxt,cx,top-5);
+          // caption (gainer/loser fund name) — above the bar value, small light
+          if(b.cap&&(view==='gainers'||view==='losers')){
+            ctx.fillStyle='rgba(139,147,167,0.5)';
+            var ct2=b.cap.length>26?b.cap.slice(0,25)+'…':b.cap;
+            ctx.fillText(ct2,cx,top-17);
+          }
+        });
+        if(legend){legend.innerHTML=bars.map(function(b,i3){var col=_MFCAT_COLORS[b.sec]||_MF_EXTRA_COLORS[i3%_MF_EXTRA_COLORS.length];return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="width:10px;height:10px;border-radius:50%;background:'+col+';display:inline-block;"></span>'+b.sec+' <span style="color:var(--text-muted);font-weight:500;">'+b.cap+'</span></span>';}).join('');}
+        _mfAttachBarHover(canvas,_hitAreas,{W:W});
+      }
 
       // Fill Post-Report cells lazily from nav-history endpoint (mfapi) with cache
       window._prCache = window._prCache || {};
@@ -2615,9 +3107,19 @@ function _renderMfGridBody(grid, schemes) {
       document.addEventListener('click', function(e) {
         // Mutual-fund grid row -> fund detail modal
         var _mfRow = e.target.closest('#mfSchemesGrid .mf-table-row');
-        if (_mfRow) {
+        if (_mfRow && e.target.closest('.mf-fund-name')) {
           var _mfSid = _mfRow.getAttribute('data-id');
           if (_mfSid) { openMfDetailModal(_mfSid); return; }
+        }
+        // Chart fullscreen expand toggle
+        if (e.target.closest('#mfChartExpandBtn')) {
+          var _card = document.getElementById('mfChartCard');
+          window._mfChartExpanded = !window._mfChartExpanded;
+          if (_card) _card.classList.toggle('mf-chart-full', !!window._mfChartExpanded);
+          var _eb = document.getElementById('mfChartExpandBtn');
+          if (_eb) { _eb.innerHTML = window._mfChartExpanded ? '\u2715' : '\u26F6'; _eb.title = window._mfChartExpanded ? 'Exit fullscreen' : 'Expand chart'; }
+          drawMfCatChart();
+          return;
         }
         // View tab switching (Summary/Ranks/Risk vs Reward)
         var _vtab = e.target.closest('[data-vtab]');
@@ -3315,6 +3817,82 @@ function _renderMfGridBody(grid, schemes) {
       // ═══════════════════════════════════════════
       var _smCurrentTab = 'mf';
 
+      // Main pill switcher (Mutual Funds | Individual/Family | Foreign Funds)
+      function switchSmMain(tab) {
+        document.querySelectorAll('.sm-main-pill').forEach(function(b) {
+          var on = b.getAttribute('data-smtab') === tab;
+          b.style.background = on ? 'var(--accent)' : 'var(--bg-input)';
+          b.style.color = on ? '#fff' : 'var(--text-primary)';
+          b.style.border = on ? 'none' : '1px solid var(--line)';
+          b.style.fontWeight = on ? '700' : '600';
+        });
+        switchSmartMoneyTab(tab);
+      }
+      // Multi-select sector dropdown (Equity / Hybrid / Commodities / caps / ...)
+      window._mfSectors = []; // empty = All
+      var _MF_SECTOR_GROUPS = [
+        { label: 'Equity', items: ['Large Cap', 'Mid Cap', 'Small Cap', 'Large & Mid Cap', 'Multi Cap', 'Flexi Cap', 'ELSS', 'Dividend Yield', 'Thematic', 'Sectoral', 'Contra', 'Value Oriented', 'International'] },
+        { label: 'Commodities', items: ['Gold', 'Silver'] },
+        { label: 'Hybrid', items: ['Balanced Hybrid', 'Dynamic Asset Allocation', 'Equity Savings', 'Multi Asset Allocation', 'Aggressive Hybrid', 'Conservative Hybrid', 'Arbitrage'] }
+      ];
+      // Commodities splits into Gold/Silver on the chart
+      var _MF_COMMODITY_SPLIT = { 'Gold': /gold/i, 'Silver': /silver/i };
+      function _mfSectorMatches(scheme, sec) {
+        var cn = (scheme.category || '').toLowerCase();
+        var nm = (scheme.schemeName || '').toLowerCase();
+        return window.mfMatchCat(sec.toLowerCase(), nm, cn);
+      }
+      window._mfSchemeSectors = function(scheme) {
+        if (window._mfSectors.length === 0) return true;
+        for (var i = 0; i < window._mfSectors.length; i++) { if (_mfSectorMatches(scheme, window._mfSectors[i])) return true; }
+        return false;
+      };
+      function toggleMfSectorDD() {
+        var dd = document.getElementById('mfSectorDD');
+        if (!dd) return;
+        if (dd.style.display === 'none') { _renderSectorDD(); dd.style.display = 'block'; }
+        else dd.style.display = 'none';
+      }
+      function _renderSectorDD() {
+        var dd = document.getElementById('mfSectorDD');
+        if (!dd) return;
+        var h = '<div onclick="setMfSectors([])" style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:12.5px;font-weight:' + (window._mfSectors.length === 0 ? '800' : '500') + ';color:var(--text-primary);">'
+          + '<span style="width:16px;height:16px;flex:none;border-radius:4px;border:1.5px solid ' + (window._mfSectors.length === 0 ? 'var(--accent)' : 'var(--text-muted)') + ';background:' + (window._mfSectors.length === 0 ? 'var(--accent)' : 'transparent') + ';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;">' + (window._mfSectors.length === 0 ? '\u2713' : '') + '</span>All</div>';
+        _MF_SECTOR_GROUPS.forEach(function(g) {
+          h += '<div style="padding:5px 14px;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--text-muted);text-transform:uppercase;">' + g.label + '</div>';
+          g.items.forEach(function(s) {
+            var chk = window._mfSectors.indexOf(s) !== -1;
+            h += '<div onclick="toggleMfSector(\x27' + s.replace(/'/g, "\\'") + '\x27)" style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;font-size:12.5px;color:var(--text-primary);" onmouseenter="this.style.background=\'var(--bg-raised)\'" onmouseleave="this.style.background=\'transparent\'">'
+              + '<span style="width:16px;height:16px;flex:none;border-radius:4px;border:1.5px solid ' + (chk ? 'var(--accent)' : 'var(--text-muted)') + ';background:' + (chk ? 'var(--accent)' : 'transparent') + ';display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800;">' + (chk ? '\u2713' : '') + '</span>'
+              + '<span style="font-weight:' + (chk ? '700' : '500') + ';">' + s + '</span></div>';
+          });
+        });
+        dd.innerHTML = h;
+      }
+      function toggleMfSector(sec) {
+        var ix = window._mfSectors.indexOf(sec);
+        if (ix === -1) window._mfSectors.push(sec); else window._mfSectors.splice(ix, 1);
+        _syncSectorUI();
+        renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
+        if ((window._mfViewTab || 'summary') === 'summary') { setTimeout(function() { try { drawMfCatChart(); } catch (e) { } }, 0); }
+      }
+      function setMfSectors(arr) {
+        window._mfSectors = arr || [];
+        _syncSectorUI();
+        var dd = document.getElementById('mfSectorDD');
+        if (dd) dd.style.display = 'none';
+        renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
+        if ((window._mfViewTab || 'summary') === 'summary') { setTimeout(function() { try { drawMfCatChart(); } catch (e) { } }, 0); }
+      }
+      function _syncSectorUI() {
+        var btn = document.getElementById('mfSectorBtn');
+        if (btn) btn.innerHTML = (window._mfSectors.length === 0 ? 'Sectors' : (window._mfSectors.length === 1 ? window._mfSectors[0] : window._mfSectors.length + ' selected')) + ' <span style="font-size:8px;">\u25BC</span>';
+        var dd = document.getElementById('mfSectorDD');
+        if (dd && dd.style.display !== 'none') _renderSectorDD();
+      }
+      // Legacy single-select shim (older call sites)
+      function selectMfSector(sec) { setMfSectors(sec && sec !== 'All' ? [sec] : []); }
+
       function switchSmartMoneyTab(tab) {
         _smCurrentTab = tab;
         // Hide all content
@@ -3979,10 +4557,12 @@ function _renderMfGridBody(grid, schemes) {
       document.addEventListener('input', function(e) {
         if (e.target.id === 'mfSearchInput') {
           clearTimeout(searchTimeout);
-          currentMfSearch = e.target.value;
           searchTimeout = setTimeout(function() {
-            fetchMfSchemes(currentMfTimeframe, currentMfSearch);
-          }, 200);
+            // Route through searchMfSchemes — it sets _mfSearchText and
+            // re-filters the grid (fetchMfSchemes never applied the query).
+            if (typeof searchMfSchemes === 'function') searchMfSchemes(e.target.value);
+            else if (typeof window.searchMfSchemes === 'function') window.searchMfSchemes(e.target.value);
+          }, 150);
         } else if (e.target.id === 'modalHoldingSearchInput') {
           var q = e.target.value.trim().toLowerCase();
           if (!q) {
@@ -4037,6 +4617,34 @@ function _renderMfGridBody(grid, schemes) {
       window.filterMfAmc=filterMfAmc;
       window.searchAmcFilter=searchAmcFilter;
       window.filterMfCategory=filterMfCategory;
+      window.selectMfSector=selectMfSector;
+      window.toggleMfSectorDD=toggleMfSectorDD;
+      window._mfSingleSectorMatch=_mfSingleSectorMatch;
+      // Close any open MF dropdown when clicking outside it
+      (function(){
+        var DD_IDS = ['mfSectorDD', 'mfAmcDropdown', 'mfFundCatDD', 'mfCatDropdown'];
+        document.addEventListener('mousedown', function(e) {
+          DD_IDS.forEach(function(id) {
+            var dd = document.getElementById(id);
+            if (!dd || dd.style.display === 'none' || dd.style.display === '') return;
+            // keep open if the click is inside the dropdown or on its toggle button
+            var btn = document.getElementById(id === 'mfSectorDD' ? 'mfSectorBtn' : id === 'mfAmcDropdown' ? 'mfAmcBtn' : id === 'mfFundCatDD' ? null : 'mfCatBtn');
+            if (dd.contains(e.target)) return;
+            if (btn && btn.contains(e.target)) return;
+            dd.style.display = 'none';
+          });
+          // also remove search suggestions when clicking elsewhere
+          var sugg = document.getElementById('mfSearchSuggestions');
+          if (sugg && !sugg.contains(e.target)) {
+            var inp = document.getElementById('mfSearchInput') || document.getElementById('mfGridSearchInput');
+            if (!inp || !inp.contains(e.target)) sugg.remove();
+          }
+        });
+      })();
+      window.toggleMfSector=toggleMfSector;
+      window.setMfSectors=setMfSectors;
+      window.switchSmMain=switchSmMain;
+      window.switchSmartMoneyTab=switchSmartMoneyTab;
       window.renderMfGrid=renderMfGrid;
       window.searchMfSchemes=searchMfSchemes;
       window.openMfDetailFromTable=openMfDetailFromTable;
@@ -4052,7 +4660,29 @@ function _renderMfGridBody(grid, schemes) {
       window.openStockDetail=openStockDetail;
       window.sortStockTable=sortStockTable;
       var _mfViewTab = window._mfViewTab || "summary";
-      window.switchMfViewTab = function(t){ window._mfViewTab=t; var g=document.getElementById("mfSchemesGrid"); if(g && window._mfLastSchemes) _renderMfGridBody(g, window._mfLastSchemes); };
+      window.switchMfViewTab = function(t){ window._mfViewTab=t; var g=document.getElementById("mfSchemesGrid"); if(g && window._mfLastSchemes) _renderMfGridBody(g, window._mfLastSchemes); setTimeout(function(){try{drawMfCatChart();}catch(e){}},0); };
+
+      // Force mutual fund data refresh (Settings)
+      var _frBtn = document.getElementById('mfForceRefreshBtn');
+      if (_frBtn) {
+        _frBtn.addEventListener('click', function(){
+          var st = document.getElementById('mfRefreshStatus');
+          if (st) { st.textContent = 'Starting refresh...'; st.style.color = 'var(--accent)'; }
+          _frBtn.disabled = true;
+          fetch('/api/mutual-funds/force-refresh', { method: 'POST' })
+            .then(function(r){ return r.json(); })
+            .then(function(j){
+              if (!j.ok) throw new Error(j.error || 'failed');
+              if (st) st.textContent = 'Running in background — all funds 30+ days stale are being refreshed. This takes a few minutes; reload the MF page afterwards.';
+              var poll = setInterval(function(){
+                fetch('/api/mutual-funds/force-refresh/status').then(function(r){return r.json();}).then(function(s){
+                  if (!s.running) { clearInterval(poll); _frBtn.disabled = false; if (st) { st.textContent = '✅ Refresh complete. Reload the Mutual Funds page to see updated data.'; st.style.color = '#00B386'; } }
+                }).catch(function(){});
+              }, 5000);
+            })
+            .catch(function(e){ _frBtn.disabled = false; if (st) { st.textContent = '❌ ' + e.message; st.style.color = '#FF4D6D'; } });
+        });
+      }
     })();
   </script>
   <script type="module" src="/js/app.js?v=20260908e"></script>

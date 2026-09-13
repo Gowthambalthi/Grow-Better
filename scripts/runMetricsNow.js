@@ -38,8 +38,13 @@ function navCount(schemeId) {
 }
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
-db.exec('DROP TABLE IF EXISTS fund_metrics');
-db.exec(`CREATE TABLE fund_metrics (
+// Preserve existing rows: add the *_all columns if missing, then recreate rows on insert.
+try {
+  for (const c of ['alpha_all','beta_all','sharpe_all','sortino_all','treynor_all','stdDev_all']) {
+    db.exec('ALTER TABLE fund_metrics ADD COLUMN ' + c + ' REAL');
+  }
+} catch (e) { /* already added */ }
+db.exec(`CREATE TABLE IF NOT EXISTS fund_metrics (
   schemeId TEXT PRIMARY KEY,
   alpha_1m REAL, beta_1m REAL, sharpe_1m REAL, sortino_1m REAL, treynor_1m REAL, stdDev_1m REAL,
   alpha_3m REAL, beta_3m REAL, sharpe_3m REAL, sortino_3m REAL, treynor_3m REAL, stdDev_3m REAL,
@@ -48,6 +53,7 @@ db.exec(`CREATE TABLE fund_metrics (
   alpha_3y REAL, beta_3y REAL, sharpe_3y REAL, sortino_3y REAL, treynor_3y REAL, stdDev_3y REAL,
   alpha_5y REAL, beta_5y REAL, sharpe_5y REAL, sortino_5y REAL, treynor_5y REAL, stdDev_5y REAL,
   alpha_10y REAL, beta_10y REAL, sharpe_10y REAL, sortino_10y REAL, treynor_10y REAL, stdDev_10y REAL,
+  alpha_all REAL, beta_all REAL, sharpe_all REAL, sortino_all REAL, treynor_all REAL, stdDev_all REAL,
   benchmarkName TEXT,
   benchmark_1m REAL, benchmark_3m REAL, benchmark_6m REAL, benchmark_1y REAL,
   computedAt TEXT
@@ -359,12 +365,13 @@ const cols = ['alpha_1m', 'beta_1m', 'sharpe_1m', 'sortino_1m', 'treynor_1m', 's
   'alpha_3y', 'beta_3y', 'sharpe_3y', 'sortino_3y', 'treynor_3y', 'stdDev_3y',
   'alpha_5y', 'beta_5y', 'sharpe_5y', 'sortino_5y', 'treynor_5y', 'stdDev_5y',
   'alpha_10y', 'beta_10y', 'sharpe_10y', 'sortino_10y', 'treynor_10y', 'stdDev_10y',
+  'alpha_all', 'beta_all', 'sharpe_all', 'sortino_all', 'treynor_all', 'stdDev_all',
   'benchmarkName', 'benchmark_1m', 'benchmark_3m', 'benchmark_6m', 'benchmark_1y'];
 const placeholders = cols.map(() => '?').join(',');
 const insert = db.prepare(`INSERT OR REPLACE INTO fund_metrics (schemeId, ${cols.join(',')}, computedAt) VALUES (?, ${placeholders}, datetime('now'))`);
 
 // lookback calendar days per metric window
-const lookbacks = { '1m': 55, '3m': 120, '6m': 210, '1y': 390, '3y': 1150, '5y': 1900, '10y': 3750 };
+const lookbacks = { '1m': 55, '3m': 120, '6m': 210, '1y': 390, '3y': 1150, '5y': 1900, '10y': 3750, 'all': 99999 };
 const benchLookbacks = { '1m': 55, '3m': 120, '6m': 210, '1y': 390 };
 
 const schemes = db.prepare('SELECT id, schemeName, category FROM mutual_fund_schemes').all();
@@ -408,6 +415,7 @@ for (const s of schemes) {
       m('3y').alpha || null, m('3y').beta || null, m('3y').sharpe || null, m('3y').sortino || null, m('3y').treynor || null, m('3y').stdDev || null,
       m('5y').alpha || null, m('5y').beta || null, m('5y').sharpe || null, m('5y').sortino || null, m('5y').treynor || null, m('5y').stdDev || null,
       m('10y').alpha || null, m('10y').beta || null, m('10y').sharpe || null, m('10y').sortino || null, m('10y').treynor || null, m('10y').stdDev || null,
+      m('all').alpha || null, m('all').beta || null, m('all').sharpe || null, m('all').sortino || null, m('all').treynor || null, m('all').stdDev || null,
       benchLabel || null,
       benchVals['1m'] != null ? r4(benchVals['1m']) : null,
       benchVals['3m'] != null ? r4(benchVals['3m']) : null,

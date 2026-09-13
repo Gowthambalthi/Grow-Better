@@ -54,6 +54,15 @@ app.get('/', (req, res) => {
 const brokers = {}; // { angelone: Broker, groww: Broker }
 const brokerStatus = {}; // { angelone: { connected, loginTime, lastError }, groww: {...} }
 
+// Safety net: transient websocket/network errors (e.g. Angel One ECONNRESET)
+// must log, not kill the process.
+process.on('uncaughtException', (err) => {
+  console.error('[server] uncaughtException (server kept alive):', err && err.message);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('[server] unhandledRejection (server kept alive):', err && (err.message || err));
+});
+
 async function initBrokers() {
   if (env.angel.enabled()) {
     try {
@@ -63,6 +72,14 @@ async function initBrokers() {
       app.set('angelSession', angel.session);
       brokerStatus.angelone = { connected: true, loginTime: new Date().toISOString(), lastError: null };
       attachAutoRecording(angel, 'angelone');
+      // Always listen for broker errors — an unhandled 'error' event on an
+      // EventEmitter crashes the whole Node process (seen: ECONNRESET from
+      // the Angel One order websocket killing the server at startup).
+      angel.on('error', (e) => {
+        brokerStatus.angelone = brokerStatus.angelone || {};
+        brokerStatus.angelone.lastError = e && e.message;
+        console.error('[server] angelone broker error:', e && e.message);
+      });
       angel.subscribeOrderUpdates(); // start capturing fills immediately
       
       // Connect Live Market WebSocket Stream for indices and holding stocks
@@ -210,6 +227,20 @@ app.get('/api/:broker/funds', getBroker, async (req, res) => {
 
 // ---- Orders ----
 // Body: unified order shape from common/trading/orderTypes.js
+// Force-refresh mutual fund NAV data for all schemes 30+ days stale (any time of day).
+let _mfRefreshRunning = false;
+app.post('/api/mutual-funds/force-refresh', (req, res) => {
+  if (_mfRefreshRunning) return res.status(409).json({ ok: false, error: 'A refresh is already running' });
+  _mfRefreshRunning = true;
+  res.json({ ok: true, message: 'Refresh started in background' });
+  const { spawn } = require('child_process');
+  const proc = spawn(process.execPath, ['scripts/nightlyMfRefresh.js', '--now'], { cwd: __dirname, detached: false, stdio: 'ignore' });
+  proc.on('exit', (code) => { _mfRefreshRunning = false; console.log('[mf-refresh] forced refresh exited with code', code); });
+});
+app.get('/api/mutual-funds/force-refresh/status', (req, res) => {
+  res.json({ running: _mfRefreshRunning });
+});
+
 app.post('/api/:broker/orders', getBroker, async (req, res) => {
   try {
     const { brokerOptions, symbol, ...order } = req.body;
@@ -1189,6 +1220,74 @@ app.get('/api/mutual-funds/all-schemes-summary', (req, res) => {
   }
 });
 
+// GET /api/mutual-funds/category-series — average normalized NAV series per category (for the perf chart)
+app.get('/api/mutual-funds/category-series', (req, res) => {
+  try {
+    const { categories, range, sector, sectors } = req.query;
+    const matchers = require('./common/mf-engine/largeCapMatcher');
+    const allSchemes = hdfcMfDb.getAllSchemes(20000);
+    // Sector matchers — same rule as the frontend table filter. Multi-select capable.
+    const lc = s => s.toLowerCase();
+    const catMatchers = {
+      'Large Cap': matchers.isLargeCapName, 'Mid Cap': matchers.isMidCapName, 'Small Cap': matchers.isSmallCapName,
+      'Multi Cap': matchers.isMultiCapName, 'Large & Mid Cap': matchers.isLargeMidCapName, 'International': matchers.isInternationalName,
+      'Flexi Cap': (n) => /flexi.?cap/.test(n),
+      'ELSS': (n) => /elss/.test(n) || /tax|80c/.test(n),
+      'Dividend Yield': (n) => /dividend\s*yield/.test(n),
+      'Thematic': (n) => /thematic|theme|business\s*cycle|innovation|manufacturing|\bpsu\b|defen[cs]e|consumption|consumer|\besg\b|mnc|special\s*opportunit|rural|export/.test(n) && !/debt|gilt|bond|money\s*market|liquid/.test(n),
+      'Sectoral': (n) => (/sector|pharma|health\s*care|healthcare|banking|financial|technolog|digital|energy|power|metal|transport|real\s*estate|infrastructure|housing|fmcg/).test(n) && !/debt|gilt|bond|money\s*market|liquid/.test(n),
+      'Contra': (n) => /contra/.test(n),
+      'Value Oriented': (n) => /value/.test(n),
+      'Gold': (n) => /gold/.test(n),
+      'Silver': (n) => /silver/.test(n),
+      'Balanced Hybrid': (n) => /balanced/.test(n) && !/advantage/.test(n),
+      'Dynamic Asset Allocation': (n) => /dynamic\s*asset|balanced\s*advantage/.test(n),
+      'Equity Savings': (n) => /equity\s*saving/.test(n),
+      'Multi Asset Allocation': (n) => /multi\s*asset/.test(n),
+      'Aggressive Hybrid': (n) => /aggressive/.test(n),
+      'Conservative Hybrid': (n) => /conservative/.test(n),
+      'Arbitrage': (n) => /arbitrage/.test(n),
+      'Commodities': (n) => /commodit|gold|silver/.test(n)
+    };
+    const secList = (sectors ? sectors.split('|') : (sector && sector !== 'All' ? [sector] : [])).filter(Boolean);
+    // Chart series: one per selected category
+    const seriesDefs = [];
+    for (const sec of (secList.length ? secList : (categories || 'Large Cap,Mid Cap,Small Cap,Multi Cap,Flexi Cap').split(',').map(c => c.trim()).filter(Boolean))) {
+      const capFn = catMatchers[sec];
+      seriesDefs.push({ label: sec, filter: capFn ? (s => capFn(lc(s.schemeName || ''), lc(s.category || ''))) : (s => lc(s.category || '') === lc(sec)) });
+    }
+    // 'ALL' = full history (since inception) — handled below by passing the earliest possible cutoff
+    const days = range === '1M' ? 30 : range === '3M' ? 91 : range === '6M' ? 182 : range === '3Y' ? 1095 : range === '5Y' ? 1825 : range === 'ALL' ? null : 365;
+    const cutoff = days == null ? '0000-01-01' : new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+    const out = {};
+    for (const def of seriesDefs) {
+      const members = allSchemes.filter(def.filter);
+      if (!members.length) continue;
+      // Average normalized NAV across up to 60 sampled member schemes
+      const perDate = {};
+      const perDateN = {};
+      const sample = members.slice(0, 60);
+      for (const s of sample) {
+        const hist = hdfcMfDb.getNavHistoryRange(s.id, cutoff, '2099-12-31');
+        if (!hist || hist.length < 5) continue;
+        const base = hist[0].nav;
+        if (!base) continue;
+        for (const p of hist) {
+          const v = (p.nav - base) / base * 100;
+          perDate[p.navDate] = (perDate[p.navDate] || 0) + v;
+          perDateN[p.navDate] = (perDateN[p.navDate] || 0) + 1;
+        }
+      }
+      const series = Object.keys(perDate).sort().map(d => ({ date: d, pct: Math.round(perDate[d] / perDateN[d] * 100) / 100 }));
+      if (series.length >= 2) out[def.label] = { count: members.length, series };
+    }
+    res.json({ success: true, range: range || '1Y', categories: out });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // GET /api/mutual-funds/amcs — List all AMCs with scheme counts
 app.get('/api/mutual-funds/amcs', (req, res) => {
   try {
@@ -1337,7 +1436,14 @@ app.get('/api/mutual-funds/hdfc/:schemeId/holdings', (req, res) => {
     // Get available portfolio dates
     const dates = hdfcMfDb.getPortfolioDates(schemeId);
     if (!dates || dates.length === 0) {
-      return res.status(404).json({ success: false, error: `No portfolio data for '${schemeId}'` });
+      // Graceful fallback: many schemes (ETFs, FOFs, debt) don't publish monthly
+      // portfolios — return topHoldings from the summary so the modal shows what
+      // we have instead of throwing 404s in the console.
+      const scheme = hdfcMfDb.getScheme(schemeId);
+      if (scheme) {
+        return res.json({ success: true, schemeId, portfolioDate: null, availableMonths: [], holdings: [] });
+      }
+      return res.status(404).json({ success: false, error: `Scheme '${schemeId}' not found` });
     }
 
     // Determine which date to fetch
@@ -1352,7 +1458,7 @@ app.get('/api/mutual-funds/hdfc/:schemeId/holdings', (req, res) => {
 
     const portfolio = hdfcMfDb.getHoldingsByDate(schemeId, targetDate);
     if (!portfolio) {
-      return res.status(404).json({ success: false, error: `Portfolio not found for '${schemeId}' at date '${targetDate || 'latest'}'` });
+      return res.json({ success: true, schemeId, portfolioDate: null, availableMonths: [], holdings: [] });
     }
 
     res.json({
@@ -1772,7 +1878,7 @@ app.get('/api/debug/changes/:schemeId', (req, res) => {
   }
 });
 
-const port = process.env.PORT || env.server.port || 4000;
+const port = (process.env.PORT && process.env.PORT !== '0') ? process.env.PORT : (env.server.port || 4000);
   const host = '0.0.0.0';
   
 // TEMP: Dump Groww SSR keys for debugging folio data

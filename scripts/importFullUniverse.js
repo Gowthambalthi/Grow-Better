@@ -24,9 +24,13 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
 // ─── Card category detection (matches frontend card keys) ───────────────────
+const _matcher = require('../common/mf-engine/largeCapMatcher');
 const CARDS = [
   { key: 'Large Cap',   match: n => n.indexOf('large cap') !== -1 || n.indexOf('bluechip') !== -1 || n.indexOf('top 100') !== -1 },
   { key: 'Flexi Cap',   match: n => n.indexOf('flexi cap') !== -1 || n.indexOf('flexicap') !== -1 },
+  { key: 'Multi Cap',   match: n => _matcher.isMultiCapName(n) },
+  { key: 'Large & Mid Cap', match: n => _matcher.isLargeMidCapName(n) },
+  { key: 'International', match: n => _matcher.isInternationalName(n) },
   { key: 'Small Cap',   match: n => n.indexOf('small cap') !== -1 || n.indexOf('smallcap') !== -1 },
   { key: 'Index',       match: n => n.indexOf('index') !== -1 || n.indexOf('etf') !== -1 },
   { key: 'ELSS',        match: n => n.indexOf('elss') !== -1 || n.indexOf('tax saver') !== -1 || n.indexOf('80c') !== -1 },

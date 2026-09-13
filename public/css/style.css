@@ -18,10 +18,10 @@
   --text-muted: #94A3B8;
   --text-dim: #64748B;
 
-  --accent: #0055B8;           /* Classic Royal Blue Accent */
+  --accent: #00B386;           /* App teal-green accent */
   --accent-cyan: #38BDF8;
-  --accent-dim: rgba(0, 85, 184, 0.18);
-  --accent-dim-strong: rgba(0, 85, 184, 0.32);
+  --accent-dim: rgba(0, 179, 134, 0.14);
+  --accent-dim-strong: rgba(0, 179, 134, 0.28);
   --accent-ink: #FFFFFF;
 
   --gain: #00E699;             /* High contrast glowing green for Dark Mode */

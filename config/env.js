@@ -21,7 +21,7 @@ function bool(name, fallback = false) {
 const config = {
   server: {
     host: process.env.HOST || '0.0.0.0',
-    port: process.env.PORT || '4000',
+    port: (process.env.PORT && process.env.PORT !== '0') ? process.env.PORT : '4000',
     apiKey: () => process.env.SERVER_API_KEY || null,
   },
   angel: {
