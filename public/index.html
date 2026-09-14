@@ -20,6 +20,7 @@
 .mf-table-row{cursor:default;}
 .mf-vt-sticky{position:sticky;top:64px;z-index:60;background:var(--bg-panel,#fff);padding:4px 0;margin-bottom:8px;border-bottom:1px solid var(--line, #E2E8F0);}
 .mf-vt-sticky + div{margin-top:0;}
+#mfSchemesGrid table thead th{position:sticky;top:0;z-index:55;background:var(--bg-header,#f6f8fb);}
 #mfSchemesGrid table tbody tr{transition:background .12s ease;cursor:pointer;}
 #mfSchemesGrid table tbody tr:hover{background:rgba(74,158,255,0.08)!important;outline:1px solid rgba(74,158,255,0.35);outline-offset:-1px;}
 .mf-ter-tip{font-size:11px;color:var(--text-muted);white-space:nowrap;}
@@ -2656,7 +2657,7 @@ function _renderMfGridBody(grid, schemes) {
     // View tabs — BELOW the graph (user request)
 
     // Table header and rows depend on view tab
-    var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
+    var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:55;background:var(--bg-header);";
     var _head="", _body="";
 
     if((window._mfViewTab||"summary")==="ranks") {
@@ -2819,7 +2820,7 @@ function _renderMfGridBody(grid, schemes) {
     var _showAllBtn = (di.length > _maxRows)
       ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.mfEnsureFull().then(function(f){window.renderMfGrid(f||window._mfLastSchemes||[]);});" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
       : '';
-    grid.innerHTML=_pillHtml+_mfChartHtml+_catCardsHtml+'<div class="mf-vt-sticky">'+vtHtml+'</div>'+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=_pillHtml+_mfChartHtml+_catCardsHtml+'<div class="mf-vt-sticky">'+vtHtml+'</div>'+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;"><div style="overflow:auto;max-height:70vh;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head
       +"</tr></thead><tbody>"+_body+"</tbody></table></div>"+_showAllBtn+"</div>";
     if((window._mfViewTab||"summary")==="summary"){setTimeout(function(){try{drawMfCatChart();}catch(e){console.error('[MF Chart]',e);}},0);}
