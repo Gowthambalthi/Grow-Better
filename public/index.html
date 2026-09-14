@@ -2882,8 +2882,10 @@ function _renderMfGridBody(grid, schemes) {
       async function drawMfCatChart() {
         window.drawMfCatChart = drawMfCatChart;
         var _vt=window._mfViewTab||'summary';
-        // When a starred fund is on the graph, ALL views show only that fund's NAV performance
-        if(window._mfGraphFunds && window._mfGraphFunds.length && !window._mfChartExpanded){
+        // Starred fund NAV overlay takes over ONLY the Returns (summary) view;
+        // the bar-chart views (Ranks/AUM/Change in AUM/Gainers/Losers) stay
+        // visible but dimmed 40% while a fund is on the graph.
+        if(window._mfGraphFunds && window._mfGraphFunds.length && !window._mfChartExpanded && (_vt==='summary')){
           var _c=document.getElementById('mfCatChartCanvas');
           if(_c){ return _drawMfFundOnlyChart(_c, document.getElementById('mfCatChartLegend'), ++_mfChartFetchToken); }
         }
@@ -3215,6 +3217,8 @@ function _renderMfGridBody(grid, schemes) {
         var schemes=window._mfLastSchemes||[];
         var secs=_mfSectorListForChart();
         var pkey={'1M':'1M','3M':'3M','6M':'6M','1Y':'1Y','3Y':'3Y','5Y':'5Y','ALL':'ALL'}[currentMfTimeframe]||'1M';
+        // While a starred fund is on the graph, bar charts dim 40% so the fund stays the focus
+        var _fundDim=(window._mfGraphFunds&&window._mfGraphFunds.length)?0.6:1;
         // Compute one value + caption per sector
         var bars=[];
         secs.forEach(function(sec){
@@ -3226,12 +3230,17 @@ function _renderMfGridBody(grid, schemes) {
             if(n){val=sum/n;cap=val.toFixed(0)+' avg score';}
           } else if(view==='aum'){
             var n2=0,sum2=0; mem.forEach(function(s){var a=s.aumCr!=null?s.aumCr:(s.aum||null);if(a!=null){sum2+=a;n2++;}});
-            if(n2){val=sum2/n2;cap='₹'+Math.round(val).toLocaleString('en-IN')+' Cr avg AUM';}
+            if(n2){
+              val=sum2/n2;
+              // Direction: net 1M flow of this sector's funds tells increasing/decreasing
+              var flow=0,fmem=0; mem.forEach(function(s){if(s.aumChange1M&&s.aumChange1M.change!=null){flow+=s.aumChange1M.change;fmem++;}});
+              cap=(flow>=0?'\u25B2 increasing':'\u25BC decreasing')+' \u00b7 \u20b9'+Math.round(val).toLocaleString('en-IN')+' Cr avg AUM';
+            }
           } else if(view==='aumchange'){
             // Avg change-in-AUM for the selected timeframe (1M/3M/6M/1Y)
             var ck={'1M':'aumChange1M','3M':'aumChange3M','6M':'aumChange6M','1Y':'aumChange1Y'}[currentMfTimeframe]||'aumChange1M';
             var n3=0,sum3=0; mem.forEach(function(s){var c3=s[ck];if(c3&&c3.change!=null){sum3+=c3.change;n3++;}});
-            if(n3){val=sum3/n3;cap=(val>=0?'+':'')+'₹'+Math.abs(Math.round(val)).toLocaleString('en-IN')+' Cr avg '+currentMfTimeframe+' change';}
+            if(n3){val=sum3/n3;cap=(val>=0?'\u25B2 increasing':'\u25BC decreasing')+' \u00b7 avg '+(val>=0?'+':'')+'\u20b9'+Math.abs(Math.round(val)).toLocaleString('en-IN')+' Cr '+currentMfTimeframe;}
           } else if(view==='gainers'||view==='losers'){
             // Top gainer / loser fund within this sector for the selected period
             var best=null;
@@ -3265,25 +3274,27 @@ function _renderMfGridBody(grid, schemes) {
           var y1=pad+chH-(b.val-mn2)/(mx-mn2)*chH;
           var col=_MFCAT_COLORS[b.sec]||_MF_EXTRA_COLORS[i2%_MF_EXTRA_COLORS.length];
           _hitAreas.push({sec:b.sec,val:b.val,cap:b.cap,x0:cx-bw/2-6,x1:cx+bw/2+6});
-          ctx.fillStyle=col;ctx.globalAlpha=0.85;
+          ctx.fillStyle=col;ctx.globalAlpha=0.85*_fundDim;
           var top=Math.min(y0,y1),hh=Math.abs(y1-y0)||2;
           ctx.fillRect(cx-bw/2,top,bw,hh);
           ctx.globalAlpha=1;
           // sector name below bar (light)
-          ctx.fillStyle='rgba(139,147,167,0.6)';ctx.font='10px sans-serif';ctx.textAlign='center';
+          ctx.fillStyle='rgba(139,147,167,'+(0.6*_fundDim)+')';ctx.font='10px sans-serif';ctx.textAlign='center';
           ctx.fillText(b.sec,cx,H-16);
           // value on top of bar
+          ctx.globalAlpha=_fundDim;
           ctx.fillStyle=col;
           var vtxt=view==='ranks'?Math.round(b.val)+(view==='ranks'?'':''):(view==='aum'?('₹'+Math.round(b.val).toLocaleString('en-IN')+'Cr'):((b.val>=0?'+':'')+b.val.toFixed(1)+'%'));
           ctx.fillText(vtxt,cx,top-5);
-          // caption (gainer/loser fund name) — above the bar value, small light
-          if(b.cap&&(view==='gainers'||view==='losers')){
-            ctx.fillStyle='rgba(139,147,167,0.5)';
+          // caption (gainer/loser fund name / AUM direction) — above the bar value, small light
+          if(b.cap&&(view==='gainers'||view==='losers'||view==='aum'||view==='aumchange')){
+            ctx.fillStyle='rgba(139,147,167,'+(0.5*_fundDim)+')';
             var ct2=b.cap.length>26?b.cap.slice(0,25)+'…':b.cap;
             ctx.fillText(ct2,cx,top-17);
           }
+          ctx.globalAlpha=1;
         });
-        if(legend){legend.innerHTML=bars.map(function(b,i3){var col=_MFCAT_COLORS[b.sec]||_MF_EXTRA_COLORS[i3%_MF_EXTRA_COLORS.length];return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="width:10px;height:10px;border-radius:50%;background:'+col+';display:inline-block;"></span>'+b.sec+' <span style="color:var(--text-muted);font-weight:500;">'+b.cap+'</span></span>';}).join('');}
+        if(legend){legend.innerHTML=(window._mfGraphFunds&&window._mfGraphFunds.length?'<span style="font-size:11px;color:var(--text-muted);margin-right:8px;">(dimmed \u00b7 fund on graph)</span>':'')+bars.map(function(b,i3){var col=_MFCAT_COLORS[b.sec]||_MF_EXTRA_COLORS[i3%_MF_EXTRA_COLORS.length];return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="width:10px;height:10px;border-radius:50%;background:'+col+';display:inline-block;"></span>'+b.sec+' <span style="color:var(--text-muted);font-weight:500;">'+b.cap+'</span></span>';}).join('');}
         _mfAttachBarHover(canvas,_hitAreas,{W:W});
       }
 
