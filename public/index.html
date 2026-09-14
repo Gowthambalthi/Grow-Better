@@ -2509,6 +2509,13 @@ function _renderMfGridBody(grid, schemes) {
       { key:'International', label:'International', desc1:'Foreign Market Exposure', desc2:'US / Global / EM Diversification', desc3:'Currency risk', desc4:'Higher expense ratio', color:'#4A9EFF' },
       { key:'Gold', label:'Gold', desc1:'Inflation Hedge', desc2:'Safe-Haven Asset', desc3:'No income generation', desc4:'Price cycles', color:'#EAB308' },
       { key:'Silver', label:'Silver', desc1:'Industrial + Precious Metal', desc2:'Inflation Hedge', desc3:'More volatile than gold', desc4:'Smaller market', color:'#94A3B8' },
+      { key:'Balanced Hybrid', label:'Balanced Hybrid', desc1:'~65% Equity / 35% Debt', desc2:'Steady Compounding', desc3:'Moderate drawdowns', desc4:'Equity exposure risk', color:'#10B981' },
+      { key:'Dynamic Asset Allocation', label:'Dynamic Asset Allocation', desc1:'Auto Equity/Debt Switching', desc2:'Valuation-based Allocation', desc3:'Model-dependent', desc4:'Moderate returns', color:'#06B6D4' },
+      { key:'Equity Savings', label:'Equity Savings', desc1:'Equity + Arbitrage + Debt', desc2:'Tax-efficient Returns', desc3:'Limited upside', desc4:'Lock-in on units', color:'#22C55E' },
+      { key:'Multi Asset Allocation', label:'Multi Asset Allocation', desc1:'Equity + Debt + Gold', desc2:'True Diversification', desc3:'Diluted returns', desc4:'Rebalance risk', color:'#0EA5E9' },
+      { key:'Aggressive Hybrid', label:'Aggressive Hybrid', desc1:'~75% Equity / 25% Debt', desc2:'Equity-like Returns', desc3:'High volatility', desc4:'Equity risk', color:'#84CC16' },
+      { key:'Conservative Hybrid', label:'Conservative Hybrid', desc1:'~75% Debt / 25% Equity', desc2:'Stability First', desc3:'Lower returns', desc4:'Credit risk', color:'#64748B' },
+      { key:'Arbitrage', label:'Arbitrage', desc1:'Low Risk', desc2:'Equity Taxation', desc3:'Returns track interest rates', desc4:'Limited upside', color:'#14B8A6' }
     ];
     _catCardsHtml += _catDefs.map(function(cd){
       // Real count — same matcher as the grid filter, over the scheme list
@@ -2544,7 +2551,7 @@ function _renderMfGridBody(grid, schemes) {
     // Categories dropdown (right side, next to search) — Equity / Hybrid / Commodities only
     var cc={};for(var i=0;i<di.length;i++){var ct2=di[i].category||"Other";cc[ct2]=(cc[ct2]||0)+1;}
     var _selCats=window._mfSelCats=window._mfSelCats||[];
-    var _catOpts=["Equity","Commodities"];
+    var _catOpts=["Equity","Hybrid","Commodities"];
     var catTabs = '<div style="display:flex;gap:8px;align-items:center;">'
       + '<div style="position:relative;display:inline-block;">'
       + '<button id="mfCatBtn" onclick="toggleMfCatDropdown()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:6px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Categories'
@@ -2596,7 +2603,7 @@ function _renderMfGridBody(grid, schemes) {
       + '<div style="display:flex;gap:8px;align-items:center;">'+catTabs+searchBox+'</div>'
       + '</div>';
         // ─── Layout: title + active chips/FundCat right, chip row, chart, View row, table ───
-    var _chipCats=['ALL','Large Cap','Mid Cap','Small Cap','Large & Mid Cap','Multi Cap','Flexi Cap','ELSS','Dividend Yield','Thematic','Sectoral','Contra','Value Oriented','International','Gold','Silver'];
+    var _chipCats=['ALL','Large Cap','Mid Cap','Small Cap','Large & Mid Cap','Multi Cap','Flexi Cap','ELSS','Dividend Yield','Thematic','Sectoral','Contra','Value Oriented','International','Gold','Silver','Balanced Hybrid','Dynamic Asset Allocation','Equity Savings','Multi Asset Allocation','Aggressive Hybrid','Conservative Hybrid','Arbitrage'];
     var _sel=window._mfSelCats=window._mfSelCats||[];
     window._mfShowAllSel=window._mfShowAllSel||false;
     function _mfChipStyle(active){return 'background:'+(active?'var(--accent)':'var(--bg-input)')+';color:'+(active?'#fff':'var(--text-primary)')+';border:1px solid '+(active?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;';}
@@ -4134,6 +4141,7 @@ function _renderMfGridBody(grid, schemes) {
       var _MF_SECTOR_GROUPS = [
         { label: 'Equity', items: ['Large Cap', 'Mid Cap', 'Small Cap', 'Large & Mid Cap', 'Multi Cap', 'Flexi Cap', 'ELSS', 'Dividend Yield', 'Thematic', 'Sectoral', 'Contra', 'Value Oriented', 'International'] },
         { label: 'Commodities', items: ['Gold', 'Silver'] },
+        { label: 'Hybrid', items: ['Balanced Hybrid', 'Dynamic Asset Allocation', 'Equity Savings', 'Multi Asset Allocation', 'Aggressive Hybrid', 'Conservative Hybrid', 'Arbitrage'] }
       ];
       // Commodities splits into Gold/Silver on the chart
       var _MF_COMMODITY_SPLIT = { 'Gold': /gold/i, 'Silver': /silver/i };

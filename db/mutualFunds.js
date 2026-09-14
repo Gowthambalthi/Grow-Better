@@ -696,12 +696,11 @@ const helpers = {
       // HIDE DEAD SCHEMES — matured FMPs / closed funds whose NAV stopped > 45 days ago
       const lnd = lastNavDate[s.id];
       if (!lnd || (Date.now() - new Date(lnd + 'T00:00:00').getTime()) > 45 * 86400000) continue;
-      // EXCLUDE ALL DEBT AND ALL HYBRID — only equity + commodities are in scope
+      // EXCLUDE ONLY DEBT — any fund that can hold stocks (equity + hybrids) stays in scope
       const cat = (s.category || '').toLowerCase();
-      if (cat === 'debt' || cat === 'money market' || cat === 'hybrid') continue;
+      if (cat === 'debt' || cat === 'money market') continue;
       if (/bond|gilt|g-sec|treasury|debenture|\bsdl\b|state development|corporate bond|liquid|overnight|ultra short|low duration|short duration|money market|banking and psu|dynamic bond|credit risk|credit opportunities|floating rate|floater|maturity plan|\bfmp\b|income fund|conservative hybrid debt|nivesh|debt index/i.test(s.schemeName || '')) continue;
       if (/\bdebt\b/i.test(s.schemeName || '')) continue; // any fund with Debt in its name
-      if (/hybrid|balanced|equity\s*savings|arbitrage|asset\s*allocation|multi\s*asset|monthly\s*income|\bmip\b|retirement|conservative|aggressive/i.test(s.schemeName || '')) continue; // any hybrid/balanced/arbitrage-type fund
       const pl = (s.plan || '').toLowerCase();
       const op = (s.option || '').toLowerCase();
       let score = 0;
