@@ -394,7 +394,7 @@ const helpers = {
   getCardCounts() {
     // Keys must match the frontend card keys exactly (cd.key in index.html).
     // These tests replicate filterMfCategory() in index.html so the badge always equals the grid.
-    const keys = ['Large Cap', 'Mid Cap', 'Small Cap', 'Large & Mid Cap', 'Multi Cap', 'Flexi Cap', 'ELSS', 'Dividend Yield', 'Thematic', 'Sectoral', 'Contra', 'Value Oriented', 'International', 'Gold', 'Silver', 'Balanced Hybrid', 'Dynamic Asset Allocation', 'Equity Savings', 'Multi Asset Allocation', 'Aggressive Hybrid', 'Conservative Hybrid', 'Arbitrage'];
+    const keys = ['Large Cap', 'Mid Cap', 'Small Cap', 'Large & Mid Cap', 'Multi Cap', 'Flexi Cap', 'ELSS', 'Dividend Yield', 'Thematic', 'Sectoral', 'Contra', 'Value Oriented', 'International', 'Gold', 'Silver'];
     const counts = {};
     for (const k of keys) counts[k] = 0;
     const lcMatcher = require('../common/mf-engine/largeCapMatcher');
@@ -696,11 +696,12 @@ const helpers = {
       // HIDE DEAD SCHEMES — matured FMPs / closed funds whose NAV stopped > 45 days ago
       const lnd = lastNavDate[s.id];
       if (!lnd || (Date.now() - new Date(lnd + 'T00:00:00').getTime()) > 45 * 86400000) continue;
-      // EXCLUDE ALL DEBT — pure debt/money-market funds are out of scope (hybrids stay)
+      // EXCLUDE ALL DEBT AND ALL HYBRID — only equity + commodities are in scope
       const cat = (s.category || '').toLowerCase();
-      if (cat === 'debt' || cat === 'money market') continue;
+      if (cat === 'debt' || cat === 'money market' || cat === 'hybrid') continue;
       if (/bond|gilt|g-sec|treasury|debenture|\bsdl\b|state development|corporate bond|liquid|overnight|ultra short|low duration|short duration|money market|banking and psu|dynamic bond|credit risk|credit opportunities|floating rate|floater|maturity plan|\bfmp\b|income fund|conservative hybrid debt|nivesh|debt index/i.test(s.schemeName || '')) continue;
-      if (/\bdebt\b/i.test(s.schemeName || '')) continue; // any fund with Debt in its name (retirement debt plans, debt FoFs, debt-oriented hybrids)
+      if (/\bdebt\b/i.test(s.schemeName || '')) continue; // any fund with Debt in its name
+      if (/hybrid|balanced|equity\s*savings|arbitrage|asset\s*allocation|multi\s*asset|monthly\s*income|\bmip\b|retirement|conservative|aggressive/i.test(s.schemeName || '')) continue; // any hybrid/balanced/arbitrage-type fund
       const pl = (s.plan || '').toLowerCase();
       const op = (s.option || '').toLowerCase();
       let score = 0;
