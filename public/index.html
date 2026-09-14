@@ -206,6 +206,46 @@
                     <span class="w-change positive" id="popVixChange">▲ +0.49 (+4.15%)</span>
                   </div>
                 </div>
+                <div class="watch-row" data-symbol="GIFTNIFTY" data-region="global" id="popoverRowGiftnifty">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>GIFT NIFTY</span>
+                  </div>
+                  <div class="w-right">
+                    <span class="w-price positive" id="popGiftPrice">23,500.00</span>
+                    <span class="w-change positive" id="popGiftChange">▲ +120.00 (+0.50%)</span>
+                  </div>
+                </div>
+                <div class="watch-row" data-symbol="MCXGOLD" data-region="mcx" id="popoverRowMcxgold">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>MCX GOLD</span>
+                  </div>
+                  <div class="w-right">
+                    <span class="w-price positive" id="popGoldPrice">72,500.00</span>
+                    <span class="w-change positive" id="popGoldChange">▲ +250.00 (+0.35%)</span>
+                  </div>
+                </div>
+                <div class="watch-row" data-symbol="MCXSILVER" data-region="mcx" id="popoverRowMcxsilver">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>SILVER</span>
+                  </div>
+                  <div class="w-right">
+                    <span class="w-price negative" id="popSilverPrice">91,200.00</span>
+                    <span class="w-change negative" id="popSilverChange">▼ -150.00 (-0.16%)</span>
+                  </div>
+                </div>
+                <div class="watch-row" data-symbol="MCXCRUDE" data-region="mcx" id="popoverRowMcxcrude">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>MCX CRUDE</span>
+                  </div>
+                  <div class="w-right">
+                    <span class="w-price negative" id="popCrudePrice">6,450.00</span>
+                    <span class="w-change negative" id="popCrudeChange">▼ -45.00 (-0.69%)</span>
+                  </div>
+                </div>
                 <div class="watch-row" data-symbol="NIFTYNXT50" data-region="india" id="popoverRowNiftynxt50">
                   <div class="w-name">
                     <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
@@ -2411,6 +2451,19 @@ function _renderMfGridBody(grid, schemes) {
       });
     }
     window._mfLastSchemes = di;
+
+    // Live count in the subtitle — reflects search + caps + AMC filters combined
+    (function(){
+      var el=document.getElementById('mfSubtitleCount');
+      if(!el) return;
+      var base=window._mfSubText || (di.length+' Mutual Fund Schemes');
+      var filtered = (_mfSearchText || (window._mfSelCats&&window._mfSelCats.length) || (_mfActiveAmc && _mfActiveAmc!=='all'));
+      if(filtered){
+        el.textContent = di.length.toLocaleString('en-IN')+' matching funds' + (_mfSearchText?' for "'+_mfSearchText+'"':'') + (filtered?' \u00b7 filters applied':'');
+      } else {
+        el.textContent = base;
+      }
+    })();
 
     // Summary stats
     var tR=0,rC=0,tG=null,tL=null,tI=null;
