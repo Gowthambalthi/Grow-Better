@@ -2089,7 +2089,19 @@
           case 'aum': return Number(scheme.aumCr) || 0;
           case 'inv': return Number(scheme.investorCount) || 0;
           case 'cs': return Number(scheme.confidenceScore) || 0;
-          default: return 0;
+          case 'ter': { var t=scheme.expenseRatio!=null?Number(scheme.expenseRatio):(scheme.terPct!=null?Number(scheme.terPct):null); return t!=null?t:9999; }
+          case 'aumChange': { var ac=scheme.aumChange1Y&&scheme.aumChange1Y.change!=null?Number(scheme.aumChange1Y.change):(scheme.aumChange1M&&scheme.aumChange1M.change!=null?Number(scheme.aumChange1M.change):null); return ac!=null?ac:-9999; }
+          case 'pf': return Math.round((Number(scheme.confidenceScore)||50)*.25);
+          case 'po': return Math.round((Number(scheme.confidenceScore)||50)*.22);
+          case 'op': return Math.round((Number(scheme.confidenceScore)||50)*.26);
+          case 'rw': { var v=Number(scheme.confidenceScore)||50; return v-Math.round(v*.25)-Math.round(v*.22)-Math.round(v*.26); }
+          case '1D': return (scheme.returns && scheme.returns['1D'] != null) ? Number(scheme.returns['1D']) : -9999;
+          case '3Y': return (scheme.returns && scheme.returns['3Y'] != null) ? Number(scheme.returns['3Y']) : -9999;
+          case '5Y': return (scheme.returns && scheme.returns['5Y'] != null) ? Number(scheme.returns['5Y']) : -9999;
+          default:
+            if(key.indexOf('m:')===0){ var mv=scheme.metrics&&scheme.metrics[key.slice(2)]; return mv!=null?Number(mv):-9999; }
+            if(key.indexOf('r:')===0){ var rv2=scheme.returns&&scheme.returns[key.slice(2)]; return rv2!=null?Number(rv2):-9999; }
+            return 0;
         }
       }
 
@@ -2123,6 +2135,7 @@
         '</span>';
       }
 
+      window.mfSortArrow = mfSortArrow;
       window._mfSort = function(key) {
         if (!window._mfLastSchemes) return;
         var sorted = sortMfSchemes(window._mfLastSchemes, key);
@@ -2654,6 +2667,9 @@ function _renderMfGridBody(grid, schemes) {
     // View row: View label + tabs, search input parallel on the right (outside the graph card)
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
     var vtHtml='<div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">'
+      + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+      + vtDefs.map(function(vd){var on=((window._mfViewTab||'summary')===vd.k);return '<button onclick="switchMfViewTab(\x27'+vd.k+'\x27)" style="background:'+(on?'var(--accent)':'var(--bg-input)')+';color:'+(on?'#fff':'var(--text-primary)')+';border:1px solid '+(on?'var(--accent)':'var(--line)')+';padding:6px 16px;border-radius:8px;font-size:11.5px;font-weight:'+(on?'700':'600')+';cursor:pointer;transition:all .15s;">'+vd.l+'</button>';}).join('')
+      + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap;min-width:0;">'
       + '<input type="text" id="mfSearchInput" placeholder="Search schemes, AMCs, stocks..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:7px 12px;border-radius:8px;font-size:12px;width:190px;max-width:100%;flex:1 1 140px;">'
       + amcDD.replace('width:260px;max-height:400px','width:230px;max-height:400px').replace('padding:6px 14px;border-radius:20px;font-size:11px','padding:6px 12px;border-radius:8px;font-size:11.5px')
@@ -2664,15 +2680,17 @@ function _renderMfGridBody(grid, schemes) {
 
     // Table header and rows depend on view tab
     var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:55;background:var(--bg-header);";
+    // Header cell with dual sort arrows (▲▼); clicking toggles asc/desc via window._mfSort
+    function _sth(label,key,right){return '<th style="'+_th2+(right?'text-align:right;':'text-align:left;')+'cursor:pointer;user-select:none;" onclick="event.stopPropagation();window._mfSort(\x27'+key+'\x27)">'+label+window.mfSortArrow(key)+'</th>';}
     var _head="", _body="";
 
     if((window._mfViewTab||"summary")==="ranks") {
-      _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
-        +'<th style="'+_th2+'text-align:right;">Score / 100</th>'
-        +'<th style="'+_th2+'text-align:right;">Performance / 25</th>'
-        +'<th style="'+_th2+'text-align:right;">Portfolio / 25</th>'
-        +'<th style="'+_th2+'text-align:right;">Operational / 25</th>'
-        +'<th style="'+_th2+'text-align:right;">Risk & Reward / 25</th>';
+      _head='<th style="'+_th2+'width:28px;"></th>'+_sth('Scheme name','name')
+        +_sth('Score / 100','cs',true)
+        +_sth('Performance / 25','pf',true)
+        +_sth('Portfolio / 25','po',true)
+        +_sth('Operational / 25','op',true)
+        +_sth('Risk & Reward / 25','rw',true);
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         var sc=s.confidenceScore||50,pf=Math.round(sc*.25),po=Math.round(sc*.22),op=Math.round(sc*.26),rw=sc-pf-po-op;
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
@@ -2686,10 +2704,10 @@ function _renderMfGridBody(grid, schemes) {
 
     } else if((window._mfViewTab||"summary")==="risk") {
       var _rk=["Alpha","Beta","Sharpe","Sortino","Treynor","StdDev"],_rp=["1M","3M","6M","1Y","3Y","5Y","All"];
-      _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>';
-      for(var _i=0;_i<_rk.length;_i++)for(var _j=0;_j<_rp.length;_j++)_head+='<th style="'+_th2+'text-align:right;">'+_rk[_i]+' '+_rp[_j]+'</th>';
-// Read REAL risk metrics from backend (fund_metrics computed from NAV history)
       var _msuf={"1M":"1m","3M":"3m","6M":"6m","1Y":"1y","3Y":"3y","5Y":"5y","All":"all"};
+      _head='<th style="'+_th2+'width:28px;"></th>'+_sth('Scheme name','name');
+      for(var _i=0;_i<_rk.length;_i++)for(var _j=0;_j<_rp.length;_j++)_head+=_sth(_rk[_i]+' '+_rp[_j],'m:'+_rk[_i].toLowerCase()+'_'+_msuf[_rp[_j]],true);
+// Read REAL risk metrics from backend (fund_metrics computed from NAV history)
       function _mfCellPct(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var x=v*100;var cl=x>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+(x>=0?"+":"")+x.toFixed(2)+'%</td>';}
       function _mfCellNum(v,plus){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=plus?((v>=0)?"#00B386":"#EB5B56"):"var(--text-primary)";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-size:12px;font-weight:600;">'+v.toFixed(2)+'</td>';}
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
@@ -2713,9 +2731,9 @@ function _renderMfGridBody(grid, schemes) {
         var _bc2=b.aumChange1M&&b.aumChange1M.change!=null?b.aumChange1M.change:-1e18;
         return _bc2-_ac2;
       });
-      _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
-        +(_isAum?'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th>':'<th style="'+_th2+'text-align:right;">Change in AUM (1M)</th>')
-        +'<th style="'+_th2+'text-align:right;">Category</th><th style="'+_th2+'text-align:right;">Score /100</th>';
+      _head='<th style="'+_th2+'width:28px;"></th>'+_sth('Scheme name','name')
+        +(_isAum?_sth('AUM (\u20B9 Cr)','aum',true):_sth('Change in AUM (1M)','aumChange',true))
+        +_sth('Category','category',true)+_sth('Score /100','cs',true);
       _body=_sorted.slice(0,50).map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         var _cell;
         if(_isAum){_cell='<td style="padding:10px 12px;text-align:right;font-size:13px;color:var(--text-primary);font-weight:800;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>";}
@@ -2734,10 +2752,10 @@ function _renderMfGridBody(grid, schemes) {
       var _pkey={'1M':'1M','3M':'3M','6M':'6M','1Y':'1Y','3Y':'3Y','5Y':'5Y','ALL':'ALL'}[currentMfTimeframe]||'1M';
       var _withR=di.filter(function(s){return s.returns&&s.returns[_pkey]!=null;});
       _withR.sort(function(a,b){return _isG?(b.returns[_pkey]-a.returns[_pkey]):(a.returns[_pkey]-b.returns[_pkey]);});
-      _head='<th style="'+_th2+'width:36px;">#</th><th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
-        +'<th style="'+_th2+'text-align:right;">'+_pkey+' return</th>'
-        +'<th style="'+_th2+'text-align:right;">1M</th><th style="'+_th2+'text-align:right;">3M</th><th style="'+_th2+'text-align:right;">6M</th><th style="'+_th2+'text-align:right;">1Y</th>'
-        +'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th><th style="'+_th2+'text-align:right;">Score /100</th>';
+      _head='<th style="'+_th2+'width:36px;">#</th><th style="'+_th2+'width:28px;"></th>'+_sth('Scheme name','name')
+        +_sth(_pkey+' return','r:'+_pkey,true)
+        +_sth('1M','r:1M',true)+_sth('3M','r:3M',true)+_sth('6M','r:6M',true)+_sth('1Y','r:1Y',true)
+        +_sth('AUM (\u20B9 Cr)','aum',true)+_sth('Score /100','cs',true);
       _body=_withR.slice(0,25).map(function(s,i){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         function _rr(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
@@ -2750,21 +2768,21 @@ function _renderMfGridBody(grid, schemes) {
           +rn2(s.confidenceScore||50)+'</tr>';}).join("");
 
     } else {
-      _head='<th style="'+_th2+'width:28px;"></th><th style="'+_th2+'text-align:left;">Scheme name</th>'
-        +'<th style="'+_th2+'text-align:right;">Score /100</th>'
-        +'<th style="'+_th2+'text-align:right;">AUM (\u20B9 Cr)</th>'
-        +'<th style="'+_th2+'text-align:right;">Change in AUM</th>'
-        +'<th style="'+_th2+'text-align:right;">Net expense ratio</th>'
+      _head='<th style="'+_th2+'width:28px;"></th>'+_sth('Scheme name','name')
+        +_sth('Score /100','cs',true)
+        +_sth('AUM (\u20B9 Cr)','aum',true)
+        +_sth('Change in AUM','aumChange',true)
+        +_sth('Net expense ratio','ter',true)
         +'<th style="'+_th2+'text-align:right;">Post-Report %</th>'
 
 
-        +'<th style="'+_th2+'text-align:right;">Day change %</th>'
-        +'<th style="'+_th2+'text-align:right;">1M %</th>'
-        +'<th style="'+_th2+'text-align:right;">3M %</th>'
-        +'<th style="'+_th2+'text-align:right;">6M %</th>'
-        +'<th style="'+_th2+'text-align:right;">1Y %</th>'
-        +'<th style="'+_th2+'text-align:right;">3Y %</th>'
-        +'<th style="'+_th2+'text-align:right;">5Y %</th>'
+        +_sth('Day change %','r:1D',true)
+        +_sth('1M %','r:1M',true)
+        +_sth('3M %','r:3M',true)
+        +_sth('6M %','r:6M',true)
+        +_sth('1Y %','r:1Y',true)
+        +_sth('3Y %','r:3Y',true)
+        +_sth('5Y %','r:5Y',true)
         +'<th style="'+_th2+'text-align:right;">Vs Category</th>';
             var _catAvg1Y={};var _catCnt={};for(var _bi=0;_bi<di.length;_bi++){var _bs=di[_bi],_bc=_bs.category||'Other',_br=_bs.returns&&_bs.returns['1Y']!=null?_bs.returns['1Y']:null;if(_br!==null){_catAvg1Y[_bc]=(_catAvg1Y[_bc]||0)+_br;_catCnt[_bc]=(_catCnt[_bc]||0)+1;}}for(var _ck in _catAvg1Y)_catAvg1Y[_ck]/=_catCnt[_ck];
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
@@ -2846,6 +2864,11 @@ function _renderMfGridBody(grid, schemes) {
       async function drawMfCatChart() {
         window.drawMfCatChart = drawMfCatChart;
         var _vt=window._mfViewTab||'summary';
+        // When a starred fund is on the graph, ALL views show only that fund's NAV performance
+        if(window._mfGraphFunds && window._mfGraphFunds.length && !window._mfChartExpanded){
+          var _c=document.getElementById('mfCatChartCanvas');
+          if(_c){ return _drawMfFundOnlyChart(_c, document.getElementById('mfCatChartLegend'), ++_mfChartFetchToken); }
+        }
         if(_vt==='summary'){ return _drawMfReturnsChart(); }
         return _drawMfBarChart(_vt);
       }
@@ -3187,8 +3210,10 @@ function _renderMfGridBody(grid, schemes) {
             var n2=0,sum2=0; mem.forEach(function(s){var a=s.aumCr!=null?s.aumCr:(s.aum||null);if(a!=null){sum2+=a;n2++;}});
             if(n2){val=sum2/n2;cap='₹'+Math.round(val).toLocaleString('en-IN')+' Cr avg AUM';}
           } else if(view==='aumchange'){
-            var n3=0,sum3=0; mem.forEach(function(s){var c3=s.aumChange1M;if(c3&&c3.change!=null){sum3+=c3.change;n3++;}});
-            if(n3){val=sum3/n3;cap=(val>=0?'+':'')+'₹'+Math.abs(Math.round(val)).toLocaleString('en-IN')+' Cr avg 1M change';}
+            // Avg change-in-AUM for the selected timeframe (1M/3M/6M/1Y)
+            var ck={'1M':'aumChange1M','3M':'aumChange3M','6M':'aumChange6M','1Y':'aumChange1Y'}[currentMfTimeframe]||'aumChange1M';
+            var n3=0,sum3=0; mem.forEach(function(s){var c3=s[ck];if(c3&&c3.change!=null){sum3+=c3.change;n3++;}});
+            if(n3){val=sum3/n3;cap=(val>=0?'+':'')+'₹'+Math.abs(Math.round(val)).toLocaleString('en-IN')+' Cr avg '+currentMfTimeframe+' change';}
           } else if(view==='gainers'||view==='losers'){
             // Top gainer / loser fund within this sector for the selected period
             var best=null;
@@ -3206,8 +3231,8 @@ function _renderMfGridBody(grid, schemes) {
         var vals=bars.map(function(b){return b.val;});
         var mx=Math.max.apply(null,vals),mn2=Math.min.apply(null,vals);
         if(view==='aumchange'){var m2=Math.max(Math.abs(mx),Math.abs(mn2));mx=m2;mn2=-m2;}
-        else if(view!=='aum'){mn2=Math.min(mn2,0);}
-        else {mn2=0;}
+        else if(view==='aum'){mn2=0;}
+        else {mn2=Math.min(mn2,0);}
         if(mx===mn2)mx=mn2+1;
         // light gridlines + y labels
         ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
