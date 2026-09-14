@@ -21,3 +21,4 @@ data/amfi_*.json
 !.env.example
 *.log
 .DS_Store
+data/hdfc_mutual_funds.db
