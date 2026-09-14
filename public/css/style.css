@@ -304,7 +304,8 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px !important;
+  padding: 0 0 0 0 !important;
+  margin-left: 0 !important;
   background: #FFFFFF !important;
   border-bottom: 1px solid #E2E8F0 !important;
   height: 64px !important;
@@ -313,7 +314,9 @@ button { font-family: inherit; }
   top: 0;
   z-index: 90;
 }
-.topbar-left { display: flex; align-items: center; gap: 10px; }
+.topbar-left { display: flex; align-items: center; gap: 10px; padding-left: 0 !important; margin-left: 0 !important; }
+.topbar-left .topbar-brand-simple { padding-left: 0 !important; margin-left: 0 !important; }
+.topbar-left .topbar-brand-title { padding-left: 0 !important; margin-left: 0 !important; }
 .page-title-display {
   font-size: 15px;
   font-weight: 800;
@@ -2130,8 +2133,8 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 .funds-totals b { color: var(--text-primary); font-family: var(--font-mono); }
 
 .watch-row {
-  display: grid;
-  grid-template-columns: 105px 120px 135px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
@@ -2139,11 +2142,29 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
 }
 .watch-row:hover { background: var(--bg-raised); }
 .watch-row:last-child { border-bottom: none; }
-.watch-row span {
+.watch-row .w-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.watch-row .w-name span {
   font-size: 12px;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
+}
+.watch-row .w-diamond {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+.watch-row .w-diamond.filled {
+  color: var(--accent); /* blue accent for NIFTY/SENSEX */
+}
+.watch-row .w-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .watch-row .w-price {
   font-family: var(--font-mono);
@@ -2151,6 +2172,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   font-weight: 700;
   color: var(--text-primary);
   text-align: right;
+  min-width: 75px;
 }
 .watch-row .w-change {
   font-family: var(--font-mono);
@@ -2159,6 +2181,7 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator:hover {
   color: var(--text-muted);
   text-align: right;
   white-space: nowrap;
+  min-width: 90px;
 }
 .watch-row .w-change.up { color: var(--gain) !important; }
 .watch-row .w-change.down { color: var(--loss) !important; }
