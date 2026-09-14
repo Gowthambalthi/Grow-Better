@@ -253,6 +253,22 @@ app.get('/api/mutual-funds/data-quality', (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }); }
 });
 
+// GET /api/mutual-funds/scheme-nav-series/:schemeId — NAV series for a single scheme (graph overlay)
+app.get('/api/mutual-funds/scheme-nav-series/:schemeId', (req, res) => {
+  try {
+    const dbm = require('./db/mutualFunds');
+    const db = dbm.getDb();
+    const scheme = db.prepare('SELECT id, schemeCode, schemeName, category FROM mutual_fund_schemes WHERE id = ? OR schemeCode = ?').get(req.params.schemeId, req.params.schemeId);
+    if (!scheme) return res.status(404).json({ success: false, error: 'Scheme not found' });
+    const blob = db.prepare('SELECT points FROM mutual_fund_nav_blob WHERE schemeId = ?').get(scheme.id);
+    let series = [];
+    if (blob && blob.points) {
+      series = blob.points.split(',').map(p => { const i = p.lastIndexOf(':'); return { date: p.slice(0, i).replace(/"/g, ''), nav: parseFloat(p.slice(i + 1).replace(/"/g, '')) }; }).filter(p => !isNaN(p.nav) && /^\d{4}-\d{2}-\d{2}$/.test(p.date));
+    }
+    res.json({ success: true, schemeId: scheme.id, schemeName: scheme.schemeName, category: scheme.category, data: series });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 app.get('/api/mutual-funds/force-refresh/status', (req, res) => {
   res.json({ running: _mfRefreshRunning });
 });

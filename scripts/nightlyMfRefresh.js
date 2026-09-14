@@ -50,15 +50,25 @@ function navBlobToSeries(points) {
   return out;
 }
 
+// Target day (latest - days) may be a weekend/holiday — use the NEXT trading
+// day's NAV (first >= cutoff); fall back to previous trading day only if none.
 function trailingReturn(series, days) {
   if (!series || series.length < 2) return null;
   const last = series[series.length - 1];
   if (!last.nav || last.nav <= 0) return null;
-  const cutoff = new Date(new Date(last.navDate + 'T00:00:00').getTime() - days * 86400000).toISOString().slice(0, 10);
+  const [yy, mm, dd] = last.navDate.split('-').map(Number);
+  const cutoff = new Date(Date.UTC(yy, mm - 1, dd - days)).toISOString().slice(0, 10);
   let base = null;
-  for (let i = series.length - 1; i >= 0; i--) { if (series[i].navDate <= cutoff) { base = series[i]; break; } }
+  for (let i = 0; i < series.length; i++) { if (series[i].navDate >= cutoff) { base = series[i]; break; } }
+  if (!base) { for (let i = series.length - 1; i >= 0; i--) { if (series[i].navDate <= cutoff) { base = series[i]; break; } } }
   if (!base || !base.nav || base.nav <= 0 || base.navDate === last.navDate) return null;
-  return (last.nav - base.nav) / base.nav * 100;
+  const pct = (last.nav - base.nav) / base.nav * 100;
+  // 3Y/5Y shown annualised (CAGR), matching industry convention
+  if (days >= 1095) {
+    const yrs = days / 365;
+    return (Math.pow(1 + pct / 100, 1 / yrs) - 1) * 100;
+  }
+  return pct;
 }
 
 const WINDOWS = { '1D': 1, '1W': 7, '1M': 30, '3M': 91, '6M': 182, '1Y': 365, '3Y': 1095, '5Y': 1825, 'ALL': null };
@@ -113,31 +123,60 @@ async function refreshStaleNavs() {
     await sleep(200);
   }
   console.log(`[nightly] NAV refresh done: ${ok} updated, ${fail} failed`);
+  
+  // DUAL-SOURCE VERIFICATION (spec G-gates): sample cross-check against AMFI
+  // NAVAll.txt (primary) for a slice of just-refreshed schemes.
+  try {
+    const dq = require('../db/dataQuality');
+    const sample = targets.slice(0, 200);
+    let verified = 0, mismatch = 0;
+    for (const s of sample) {
+      const blob = db.prepare('SELECT points FROM mutual_fund_nav_blob WHERE schemeId=?').get(s.id);
+      if (!blob) continue;
+      const series = navBlobToSeries(blob.points);
+      const last = series[series.length - 1];
+      if (!last) continue;
+      const v = await dq.verifyNavCrossSource(s.id, s.schemeCode, last.nav, last.navDate);
+      if (v.ok) verified++; else mismatch++;
+    }
+    console.log(`[nightly] dual-source NAV verify: ${verified} ok, ${mismatch} mismatched of ${sample.length} sampled`);
+  } catch (e) { console.warn('[nightly] dual-source verify skipped:', e.message); }
 }
 
 // ── Step 2: recompute all period returns for every scheme ───────────────────
 function recomputeReturns() {
+  const dq = require('../db/dataQuality');
   const rows = db.prepare('SELECT schemeId, points FROM mutual_fund_nav_blob').all();
-  let updated = 0;
+  let updated = 0, flagged = 0;
   const tx = db.transaction(() => {
     for (const row of rows) {
       const series = navBlobToSeries(row.points);
       if (series.length < 2) continue;
       delRet.run(row.schemeId);
       const latest = series[series.length - 1].navDate;
+      const rets = {};
       for (const [period, days] of Object.entries(WINDOWS)) {
         let v;
         if (days === null) {
           const first = series[0], last = series[series.length - 1];
           if (first.nav > 0 && first.navDate !== last.navDate) v = (last.nav - first.nav) / first.nav * 100;
         } else v = trailingReturn(series, days);
-        if (v != null && isFinite(v)) insRet.run(row.schemeId, period, v, latest);
+        if (v != null && isFinite(v)) { insRet.run(row.schemeId, period, v, latest); rets[period] = v; }
       }
+      // VALIDATION GATES before values are used in scoring
+      const sch = db.prepare(`SELECT s.category, a.aum AS aumCr FROM mutual_fund_schemes s
+        LEFT JOIN mutual_fund_aum a ON a.schemeId = s.id
+        WHERE s.id = ?`).get(row.schemeId) || {};
+      const res = dq.validateSchemeMetrics(row.schemeId, {
+        returns: rets, category: sch.category, aumCr: sch.aumCr,
+        navDate: latest, source: 'nav-recomputed'
+      });
+      if (!res.valid) flagged++;
       updated++;
     }
   });
   tx();
-  console.log(`[nightly] returns recomputed for ${updated} schemes`);
+  console.log(`[nightly] returns recomputed for ${updated} schemes (${flagged} flagged by validation gates)`);
 }
 
 // ── Step 3: AUM + expense-ratio backfill from AMFI ──────────────────────────

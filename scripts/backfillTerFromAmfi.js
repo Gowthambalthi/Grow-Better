@@ -11,6 +11,8 @@
 'use strict';
 
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const dbm = require('../db/mutualFunds');
 const db = dbm.getDb();
 
@@ -28,14 +30,14 @@ function norm(s) {
 }
 
 function extractRows(j) {
-  // Shape 1: { data: [ { data: [rows], meta } ] }
+  // Shape A: { data: [rows] }  (current AMFI response)
+  if (j && Array.isArray(j.data)) return j.data;
+  // Shape B: [ { data: [rows] } ]
   if (Array.isArray(j) && j[0] && j[0].data) {
     const inner = j[0].data;
     if (Array.isArray(inner)) return inner;
     if (inner && Array.isArray(inner.data)) return inner.data;
   }
-  // Shape 2: { data: [rows] }
-  if (j && Array.isArray(j.data)) return j.data;
   return null; // request rejected / empty
 }
 
@@ -59,8 +61,12 @@ async function fetchTerForFund(mfId, month) {
       }
       if (!rows.length) break;
       for (const row of rows) {
-        const er = parseFloat(row.D_BER) || parseFloat(row.R_BER) || parseFloat(row.D_TER) || parseFloat(row.R_TER) || null;
-        if (er && row.Scheme_Name) out.push({ name: row.Scheme_Name, code: row.NSDLSchemeCode, er });
+        if (!row.Scheme_Name) continue;
+        // Use TOTAL TER (incl. brokerage/statutory levies) — matches what Groww/ET Money display
+        const d = parseFloat(row.D_TER) || parseFloat(row.D_BER) || null;
+        const r = parseFloat(row.R_TER) || parseFloat(row.R_BER) || null;
+        if (d == null && r == null) continue;
+        out.push({ name: row.Scheme_Name, code: row.NSDLSchemeCode, direct: d, regular: r });
       }
       page++;
       await sleep(700);
@@ -72,29 +78,37 @@ async function fetchTerForFund(mfId, month) {
 
 async function main() {
   const month = process.argv[2] || '08-2026';
-  const terByCode = {};
-  const terByName = {};
+  const overwriteAll = process.argv.includes('--all');
+  const terByCode = {};   // NSDL code -> {direct, regular}
+  const terByName = {};   // normalized name -> {direct, regular}
   let total = 0;
   for (const id of FUND_IDS_ITER()) {
     const rows = await fetchTerForFund(id, month);
     for (const r of rows) {
-      if (r.code) terByCode[r.code] = r.er;
-      terByName[norm(r.name)] = r.er;
+      const pair = { direct: r.direct, regular: r.regular };
+      if (r.code) terByCode[r.code] = pair;
+      terByName[norm(r.name)] = pair;
       total++;
     }
     if (rows.length) console.log(`[ter-backfill] MF_ID ${id}: ${rows.length} rows`);
   }
   console.log(`[ter-backfill] Total TER rows: ${total}`);
 
-  const schemes = db.prepare("SELECT id, schemeCode, schemeName FROM mutual_fund_schemes WHERE expenseRatio IS NULL").all();
-  console.log(`[ter-backfill] Schemes missing ER: ${schemes.length}`);
+  const schemes = overwriteAll
+    ? db.prepare("SELECT id, schemeCode, schemeName, plan FROM mutual_fund_schemes").all()
+    : db.prepare("SELECT id, schemeCode, schemeName, plan FROM mutual_fund_schemes WHERE expenseRatio IS NULL").all();
+  console.log(`[ter-backfill] Schemes to update: ${schemes.length}`);
 
-  const upd = db.prepare('UPDATE mutual_fund_schemes SET expenseRatio = ? WHERE id = ?');
+  const upd = db.prepare('UPDATE mutual_fund_schemes SET expenseRatio = ?, terDirect = ?, terRegular = ? WHERE id = ?');
   let filled = 0, unfilled = 0;
   const txn = db.transaction(() => {
     for (const s of schemes) {
-      let er = s.schemeCode ? terByCode[s.schemeCode] : null;
-      if (er == null) er = terByName[norm(s.schemeName)];
+      const isDirect = /direct/i.test(s.schemeName || '') || /direct/i.test(s.plan || '');
+      const pick = (p) => p ? (isDirect ? (p.direct != null ? p.direct : p.regular) : (p.regular != null ? p.regular : p.direct)) : null;
+      const pair = s.schemeCode ? terByCode[s.schemeCode] : null;
+      const pair2 = pair || terByName[norm(s.schemeName)] || null;
+      let er = pick(pair);
+      if (er == null) er = pick(terByName[norm(s.schemeName)]);
       if (er == null) {
         const key2 = norm((s.schemeName || '')
           .replace(/\s*-\s*direct plan.*$/i, '')
@@ -105,9 +119,9 @@ async function main() {
           .replace(/idcw option/gi, '')
           .replace(/\s*-\s*growth.*$/i, '')
           .replace(/\s*-\s*idcw.*$/i, ''));
-        er = terByName[key2];
+        er = pick(terByName[key2]);
       }
-      if (er != null) { upd.run(er, s.id); filled++; } else unfilled++;
+      if (er != null) { upd.run(er, pair2 ? pair2.direct : null, pair2 ? pair2.regular : null, s.id); filled++; } else unfilled++;
     }
   });
   txn();
@@ -115,6 +129,15 @@ async function main() {
 }
 
 function FUND_IDS_ITER() {
+  // Real house ids from AMFI's TER page (data/ter_mf_ids.json) — regenerate
+  // anytime with: node scripts/fetchTerHouseIds.js
+  const idsFile = path.join(__dirname, '..', 'data', 'ter_mf_ids.json');
+  if (fs.existsSync(idsFile)) {
+    const ids = JSON.parse(fs.readFileSync(idsFile, 'utf8')).map(h => h.id);
+    console.log(`[ter-backfill] Using ${ids.length} real house ids from ter_mf_ids.json`);
+    return ids;
+  }
+  console.log('[ter-backfill] WARNING: ter_mf_ids.json missing — run scripts/fetchTerHouseIds.js. Falling back to 1-120.');
   const ids = [];
   for (let i = 1; i <= 120; i++) ids.push(i);
   return ids;
