@@ -68,6 +68,7 @@ export function togglePopover(popoverId, buttonId) {
     popover.classList.add('show');
     if (btn) btn.classList.add('active');
     popoverOpen = true;
+    if (popoverId === 'watchlistPopover') applyRegionFilter();
     updateTickerData(); // lazy-load MCX + world quotes on open
   } else {
     popoverOpen = false;
@@ -103,10 +104,12 @@ function ensureWorldRows() {
 
 function applyRegionFilter() {
   document.querySelectorAll('#watchlistPopover .watch-row').forEach((row) => {
-    const isWorld = row.classList.contains('world-row');
     const rowRegion = row.getAttribute('data-region') || 'india';
-    row.style.display = rowRegion === activeRegion ? '' : 'none';
-    if (isWorld && rowRegion === activeRegion) row.style.display = '';
+    if (rowRegion === activeRegion) {
+      row.style.setProperty('display', 'flex', 'important');
+    } else {
+      row.style.setProperty('display', 'none', 'important');
+    }
   });
 }
 

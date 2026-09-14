@@ -322,148 +322,26 @@ button { font-family: inherit; }
 }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 
-/* Video-Like Animated Logo Badge in Topbar */
-.topbar-logo-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 10px;
-  transition: transform 0.18s ease, background 0.15s ease;
-}
-.topbar-logo-brand:hover {
-  background: rgba(15, 23, 42, 0.05);
-  transform: translateY(-1px);
+/* Clean Topbar Brand Logo & Title */
+.topbar-brand-simple {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  cursor: pointer !important;
 }
 
-.video-logo-badge {
-  position: relative;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: #0B0E14;
-  box-shadow: 0 4px 14px rgba(0, 179, 134, 0.35);
+.topbar-logo-simple {
+  width: 32px !important;
+  height: 32px !important;
+  object-fit: contain !important;
 }
 
-/* Pulsing ambient video glow */
-.video-logo-glow {
-  position: absolute;
-  inset: -6px;
-  background: conic-gradient(from 0deg, #00B386, #38BDF8, #6366F1, #EC4899, #00B386);
-  border-radius: 50%;
-  filter: blur(7px);
-  opacity: 0.65;
-  animation: videoGlowRotate 4s linear infinite;
-}
-
-/* Rotating gradient border ring */
-.video-logo-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 10px;
-  padding: 1.5px;
-  background: conic-gradient(from 0deg, #00B386, #38BDF8, #818CF8, #00B386);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: videoRingSpin 3s linear infinite;
-}
-
-.video-logo-img {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-  animation: videoLogoPulse 2.5s ease-in-out infinite alternate;
-}
-
-/* Video-like sweep shimmer overlay */
-.video-shimmer-sweep {
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 70%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 100%
-  );
-  transform: skewX(-25deg);
-  z-index: 3;
-  animation: videoShimmer 2.2s infinite ease-in-out;
-}
-
-.topbar-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.topbar-brand-text .brand-title {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: #0F172A;
-}
-
-.topbar-brand-text .brand-sub-badge {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #00B386;
-  letter-spacing: 0.06em;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.live-rec-dot {
-  color: #EF4444;
-  font-size: 8px;
-  animation: recBlink 1.2s infinite ease-in-out;
-}
-
-.topbar-divider {
-  width: 1px;
-  height: 24px;
-  background: #CBD5E1;
-  margin: 0 4px;
-}
-
-@keyframes videoGlowRotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes videoRingSpin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes videoLogoPulse {
-  0% { transform: scale(1); filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-  100% { transform: scale(1.06); filter: drop-shadow(0 4px 10px rgba(0,179,134,0.7)); }
-}
-
-@keyframes videoShimmer {
-  0% { left: -100%; }
-  40% { left: 200%; }
-  100% { left: 200%; }
-}
-
-@keyframes recBlink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(0.8); }
+.topbar-brand-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
+  letter-spacing: -0.01em !important;
 }
 
 /* Cash Breakdown Popover (Compact & Sleek Dark Match) */
@@ -658,13 +536,13 @@ button { font-family: inherit; }
 
 .watchlist-dropdown-popover {
   position: absolute !important;
-  top: calc(100% + 6px) !important;
+  top: calc(100% + 4px) !important;
   right: 0 !important;
-  width: 320px !important;
-  min-width: 320px !important;
-  max-width: 320px !important;
+  width: 270px !important;
+  min-width: 270px !important;
+  max-width: 270px !important;
   background: #0B0E14 !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   border: 1px solid #1E2638 !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4) !important;
   overflow: hidden !important;
@@ -677,12 +555,25 @@ button { font-family: inherit; }
   display: block !important;
 }
 
+.watchlist-dropdown-popover .popover-header {
+  padding: 8px 12px 6px !important;
+  background: #0B0E14 !important;
+  border-bottom: 1px solid #161C2A !important;
+}
+
+.watchlist-dropdown-popover .popover-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #E2E8F0 !important;
+}
+
 /* Region tabs */
 .watchlist-dropdown-popover .inder-region-tabs {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
-  padding: 10px 12px 10px 12px !important;
+  gap: 6px !important;
+  padding: 8px 10px 6px !important;
   background: #0B0E14 !important;
   border-bottom: 1px solid #161C2A !important;
   box-sizing: border-box !important;
@@ -692,13 +583,13 @@ button { font-family: inherit; }
   background: #141824 !important;
   color: #94A3B8 !important;
   border: 1px solid #1E2638 !important;
-  border-radius: 8px !important;
-  padding: 5px 14px !important;
+  border-radius: 6px !important;
+  padding: 3px 10px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 12.5px !important;
+  font-size: 11.5px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
+  transition: all 0.12s ease !important;
   outline: none !important;
 }
 
@@ -711,18 +602,18 @@ button { font-family: inherit; }
   background: #162035 !important;
   border-color: #2563EB !important;
   color: #38BDF8 !important;
-  box-shadow: 0 0 12px rgba(37, 99, 235, 0.25) !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.2) !important;
 }
 
 .watchlist-dropdown-popover .popover-body {
   background: #0B0E14 !important;
-  padding: 4px 0 !important;
-  max-height: 380px !important;
+  padding: 2px 0 !important;
+  max-height: 320px !important;
   overflow-y: auto !important;
 }
 
 .watchlist-dropdown-popover .popover-body::-webkit-scrollbar {
-  width: 5px !important;
+  width: 4px !important;
 }
 
 .watchlist-dropdown-popover .popover-body::-webkit-scrollbar-track {
@@ -739,7 +630,7 @@ button { font-family: inherit; }
   grid-template-columns: none !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 8px 14px !important;
+  padding: 6px 12px !important;
   border-bottom: 1px solid #131722 !important;
   cursor: pointer !important;
   transition: background 0.12s ease !important;
@@ -760,21 +651,22 @@ button { font-family: inherit; }
   background: #182030 !important;
 }
 
-.watchlist-dropdown-popover .w-name {
+.watchlist-dropdown-popover .w-name,
+.watchlist-dropdown-popover .w-name span {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
-  color: #FFFFFF !important;
+  gap: 6px !important;
+  color: #E2E8F0 !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
-  font-size: 13px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.02em !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
   white-space: nowrap !important;
 }
 
 .watchlist-dropdown-popover .w-diamond {
-  width: 12px !important;
-  height: 12px !important;
+  width: 10px !important;
+  height: 10px !important;
   flex-shrink: 0 !important;
 }
 
@@ -791,13 +683,13 @@ button { font-family: inherit; }
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-end !important;
-  gap: 6px !important;
+  gap: 5px !important;
 }
 
 .watchlist-dropdown-popover .w-price {
   font-family: 'JetBrains Mono', monospace !important;
-  font-size: 13px !important;
-  font-weight: 800 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   text-align: right !important;
   white-space: nowrap !important;
 }

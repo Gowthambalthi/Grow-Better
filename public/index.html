@@ -100,26 +100,15 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
-          <!-- Animated Video-like Logo & Brand Badge -->
-          <div class="topbar-logo-brand" data-nav="dashboard" title="Grow Better — Algo Terminal">
-            <div class="video-logo-badge">
-              <div class="video-logo-glow"></div>
-              <div class="video-logo-ring"></div>
-              <img src="/logo.png" alt="Grow Better" class="video-logo-img" />
-              <div class="video-shimmer-sweep"></div>
-            </div>
-            <div class="topbar-brand-text">
-              <span class="brand-title">GROW BETTER</span>
-              <span class="brand-sub-badge"><span class="live-rec-dot">●</span> LIVE ALGO</span>
-            </div>
+          <div class="topbar-brand-simple" data-nav="dashboard" title="Grow Better — Algo Terminal">
+            <img src="/logo.png" alt="Grow Better" class="topbar-logo-simple" />
+            <span class="topbar-brand-title">GROW BETTER</span>
           </div>
-          <div class="topbar-divider"></div>
-          <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW</div>
         </div>
 
         <div class="topbar-right">
 
-          <!-- Interactive Primary Index Ticker Pill + Chevron Button Dropdown (Screenshot 2) -->
+          <!-- Interactive Primary Index Ticker Pill + Chevron Button Dropdown -->
           <div class="popover-wrapper" id="indexPopoverWrapper">
             <div class="topbar-index-pill" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices">
               <div class="index-ticker-item" id="mainHeaderTickerItem">
@@ -135,8 +124,11 @@
               </div>
             </div>
 
-            <!-- Dropdown Popover (Exact Match to Image 1 Screenshot) -->
+            <!-- Dropdown Popover (Exact Compact Match to Reference Screenshot) -->
             <div class="dropdown-popover watchlist-dropdown-popover" id="watchlistPopover">
+              <div class="popover-header">
+                <span class="popover-title">Indices List</span>
+              </div>
               <div class="inder-region-tabs">
                 <button class="inder-region-tab active" data-region="india">India</button>
                 <button class="inder-region-tab" data-region="usa">USA</button>
@@ -151,7 +143,7 @@
                   </div>
                   <div class="w-right">
                     <span class="w-price negative" id="popNiftyPrice">23,398.10</span>
-                    <span class="w-change negative" id="popNiftyChange">▼ -79.70 (-0.34%)</span>
+                    <span class="w-change negative" id="popNiftyChange">▼ 79.70 (-0.34%)</span>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="SENSEX" data-region="india" id="popoverRowSensex">
@@ -161,7 +153,7 @@
                   </div>
                   <div class="w-right">
                     <span class="w-price negative" id="popSensexPrice">74,781.76</span>
-                    <span class="w-change negative" id="popSensexChange">▼ -120.83 (-0.16%)</span>
+                    <span class="w-change negative" id="popSensexChange">▼ 120.83 (-0.16%)</span>
                   </div>
                 </div>
                 <div class="watch-row" data-symbol="BANKNIFTY" data-region="india" id="popoverRowBanknifty">
@@ -225,6 +217,7 @@
                   </div>
                 </div>
               </div>
+              <div class="inder-viewall">VIEW ALL INDICES</div>
             </div>
           </div>
 
@@ -2513,7 +2506,7 @@ function _renderMfGridBody(grid, schemes) {
 
     var rows=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct3=s.category||"",sid=s.id.replace(/'/g,"\\");
       return '<tr class="mf-table-row" data-cat="'+ct3+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;" onclick="openMfDetailFromTable(\x27'+sid+'\x27)" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'
-      + '<td style="padding:10px 8px;width:28px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+      + '<td style="padding:10px 8px;width:28px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
       + '<td style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);max-width:320px;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+nm+'</div><div style="font-size:10px;color:var(--text-muted);font-weight:400;margin-top:2px;">'+ct3+"</div></td>"
       + rc2(s.returns&&s.returns["1M"]!=null?s.returns["1M"]:null)
       + rc2(s.returns&&s.returns["3M"]!=null?s.returns["3M"]:null)
@@ -2616,7 +2609,7 @@ function _renderMfGridBody(grid, schemes) {
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         var sc=s.confidenceScore||50,pf=Math.round(sc*.25),po=Math.round(sc*.22),op=Math.round(sc*.26),rw=sc-pf-po-op;
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
-          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(sc)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+pf+'/25</td>'
@@ -2636,7 +2629,7 @@ function _renderMfGridBody(grid, schemes) {
         var _m=(s && s.metrics)||{};
         function _g(k,p){return (_m[k+"_"+(_msuf[p]||"")])!=null?_m[k+"_"+(_msuf[p]||"")]:null;}
         var h='<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
-          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>';
         for(var _j=0;_j<_rp.length;_j++){
           var _p=_rp[_j];
@@ -2661,7 +2654,7 @@ function _renderMfGridBody(grid, schemes) {
         if(_isAum){_cell='<td style="padding:10px 12px;text-align:right;font-size:13px;color:var(--text-primary);font-weight:800;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>";}
         else{var _ca=s.aumChange1M;if(!_ca||_ca.change==null){_cell='<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';}else{var _cl=_ca.change>=0?"#00B386":"#EB5B56";var _ar=_ca.change>=0?"\u25B2":"\u25BC";_cell='<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:800;white-space:nowrap;">'+_ar+' \u20b9'+Math.abs(_ca.change).toLocaleString("en-IN",{maximumFractionDigits:1})+' Cr</span> <span style="color:var(--text-muted);font-size:10px;">('+(_ca.changePct||0>=0?"+":"")+(_ca.changePct||0).toFixed(1)+'%)</span></td>';}}
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
-          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +_cell
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-muted);">'+ct+'</td>'
@@ -2682,7 +2675,7 @@ function _renderMfGridBody(grid, schemes) {
         function _rr(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:12px;color:'+(i<3?'#F59E0B':'var(--text-muted)')+';">'+(i+1)+'</td>'
-          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +'<td style="padding:10px 12px;text-align:right;"><span style="display:inline-flex;align-items:center;gap:3px;background:'+((_isG?'rgba(0,179,134,0.15)':'rgba(235,91,86,0.15)'))+';color:'+(_isG?'#00B386':'#EB5B56')+';padding:3px 10px;border-radius:12px;font-size:12px;font-weight:800;">'+(_isG?'\u25B2':'\u25BC')+' '+(s.returns[_pkey]>=0?"+":"")+s.returns[_pkey].toFixed(2)+'%</span></td>'
           +_rr(s.returns&&s.returns["1M"])+_rr(s.returns&&s.returns["3M"])+_rr(s.returns&&s.returns["6M"])+_rr(s.returns&&s.returns["1Y"])
@@ -2715,7 +2708,7 @@ function _renderMfGridBody(grid, schemes) {
         function rc3(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
 
         return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
-          +'<td style="padding:10px 8px;"><span style="color:var(--text-muted);font-size:14px;">\u2606</span></td>'
+          +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(s.confidenceScore||50)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(function(){var _a=s.aumCr!=null?s.aumCr:(s.aum!=null?s.aum:null);return _a!=null?"\u20b9"+Number(_a).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-";})()+"</td>"
@@ -2887,9 +2880,52 @@ function _renderMfGridBody(grid, schemes) {
         if(legend){legend.innerHTML=cats.map(function(c){var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx2++%_MF_EXTRA_COLORS.length];return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="width:10px;height:10px;border-radius:50%;background:'+col+';display:inline-block;"></span>'+c+'</span>';}).join('');}
         // Hover tooltip: crosshair + per-category values at the hovered date
         _mfAttachLineHover(canvas,{xs:xs,pad:pad,cw:cw,chH:chH,series:_seriesMeta,mn:mn,mx:mx,H:H});
+        // Starred "Add to Graph" fund overlays (individual fund NAV % series)
+        if(window._mfGraphFunds && window._mfGraphFunds.length){
+          window._mfGraphFunds.forEach(function(g,gi){
+            fetch('/api/mutual-funds/scheme-nav-series/'+encodeURIComponent(g.id)).then(function(r){return r.json();}).then(function(d){
+              if(!d.success || !d.data || d.data.length<2) return;
+              // align on the chart's date window
+              var from=xs[0], to=xs[xs.length-1];
+              var pts=d.data.filter(function(p){return p.date>=from && p.date<=to;});
+              if(pts.length<2) return;
+              var base=pts[0].nav;
+              var meta={name:d.schemeName||g.name,col:_MF_EXTRA_COLORS[gi%_MF_EXTRA_COLORS.length],fund:true,data:pts.map(function(p){return {date:p.date,pct:(p.nav-base)/base*100};})};
+              // draw over existing canvas without clobbering category lines: redraw whole chart then overlay
+              window._mfFundOverlays=window._mfFundOverlays||[];
+              window._mfFundOverlays[gi]=meta;
+              _mfRedrawWithOverlays(canvas,{xs:xs,pad:pad,cw:cw,chH:chH,series:_seriesMeta,mn:mn,mx:mx,H:H});
+            }).catch(function(){});
+          });
+        } else { window._mfFundOverlays=[]; }
       }
 
       // Shared hover machinery — returns-chart crosshair + tooltip
+      function _mfRedrawWithOverlays(canvas,chart){
+        // Reproduce the base chart draw, then paint fund overlays on top
+        var ctx=canvas.getContext('2d');
+        var dpr=window.devicePixelRatio||1;
+        var W=chart.pad+chart.cw+14;
+        ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
+        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        var steps=4;
+        for(var i=0;i<=steps;i++){var v=chart.mn+(chart.mx-chart.mn)*i/steps;var y=chart.pad+chart.chH-(v-chart.mn)/(chart.mx-chart.mn)*chart.chH;ctx.beginPath();ctx.moveTo(chart.pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(v.toFixed(0)+'%',chart.pad-4,y+3);}
+        chart.series.forEach(function(sm){
+          ctx.strokeStyle=sm.col;ctx.lineWidth=1.8;ctx.beginPath();
+          for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+          ctx.stroke();
+        });
+        (window._mfFundOverlays||[]).filter(Boolean).forEach(function(ov){
+          ctx.strokeStyle=ov.col;ctx.lineWidth=2;ctx.setLineDash([6,3]);ctx.beginPath();
+          for(var i3=0;i3<ov.data.length;i3++){var p=ov.data[i3];
+            var xi=chart.xs.indexOf(p.date); if(xi<0) continue;
+            var x=chart.pad+xi/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(p.pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;
+            if(i3===0||xi===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+          }
+          ctx.stroke();ctx.setLineDash([]);
+        });
+        _mfAttachLineHover(canvas,chart);
+      }
       var _mfTip=null;
       function _mfTooltipEl(){
         if(_mfTip&&document.body.contains(_mfTip))return _mfTip;
@@ -3149,6 +3185,50 @@ function _renderMfGridBody(grid, schemes) {
         el.addEventListener('mousemove', show);
         el.addEventListener('mouseleave', function(){ tip.style.display='none'; });
       };
+
+      // Watchlist state + star popover (Add to Watchlist / Add to Graph)
+      window._mfWatchlist = [];
+      try { window._mfWatchlist = JSON.parse(localStorage.getItem('mfWatchlist')||'[]'); } catch(e){}
+      window._mfGraphFunds = window._mfGraphFunds || [];
+
+      window._mfShowStarMenu = function(el){
+        var old = document.getElementById('mfStarPopover'); if(old) old.remove();
+        var pop = document.createElement('div'); pop.id='mfStarPopover';
+        pop.style.cssText='position:fixed;z-index:99999;background:var(--card-bg,#161c26);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);padding:6px;min-width:170px;';
+        var id = el.getAttribute('data-id'), nm = el.getAttribute('data-name')||'';
+        var inWl = window._mfWatchlist.some(function(w){return w.id===id;});
+        var inG = window._mfGraphFunds.some(function(g){return g.id===id;});
+        function item(label, fn, disabled, active){
+          var d=document.createElement('div');
+          d.textContent = label + (active?' \u2713':'');
+          d.style.cssText='padding:8px 12px;font-size:12px;cursor:'+(disabled?'default':'pointer')+';border-radius:5px;color:'+(active?'var(--accent)':(disabled?'var(--text-muted)':'var(--text-primary)'))+';opacity:'+(disabled?'.55':'1')+';';
+          if(!disabled) d.onmouseover=function(){d.style.background='rgba(74,158,255,0.12)';};
+          if(!disabled) d.onmouseout=function(){d.style.background='transparent';};
+          if(!disabled) d.onclick=function(){ fn(); pop.remove(); };
+          pop.appendChild(d);
+        }
+        item('Add to Watchlist', function(){ window._mfWatchlist.push({id:id,name:nm}); localStorage.setItem('mfWatchlist', JSON.stringify(window._mfWatchlist)); }, inWl, inWl);
+        item('Add to Graph', function(){
+          window._mfGraphFunds = window._mfGraphFunds.filter(function(g){return g.id!==id;});
+          window._mfGraphFunds.push({id:id,name:nm});
+          drawMfCatChart();
+        }, false, inG);
+        if(inG) item('Remove from Graph', function(){
+          window._mfGraphFunds = window._mfGraphFunds.filter(function(g){return g.id!==id;});
+          drawMfCatChart();
+        }, false, false);
+        document.body.appendChild(pop);
+        var r = el.getBoundingClientRect();
+        pop.style.left = Math.min(r.left, window.innerWidth-190)+'px';
+        pop.style.top = Math.min(r.bottom+4, window.innerHeight-100)+'px';
+      };
+
+      document.addEventListener('click', function(e){
+        var star = e.target.closest('.mf-star');
+        if(star){ e.stopPropagation(); window._mfShowStarMenu(star); return; }
+        var sp = document.getElementById('mfStarPopover');
+        if(sp && !e.target.closest('#mfStarPopover')) sp.remove();
+      }, true);
 
       // Row expand on click — toggles a detail strip under the clicked row
       window._mfExpandRow = function(tr){
