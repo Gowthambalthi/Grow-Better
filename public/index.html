@@ -2615,8 +2615,10 @@ function _renderMfGridBody(grid, schemes) {
       + ic2(s.investorChange1M)+rn2(s.confidenceScore||50)+"</tr>";}).join("");
 
     var tH="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;";
-    // Build AMC dropdown
-    var amcC={};for(var ai=0;ai<di.length;ai++){var an=di[ai].parentAmc||di[ai].amc||'Other';amcC[an]=(amcC[an]||0)+1;}
+    // Build AMC dropdown — ALWAYS from the full universe, never from the
+    // filtered rows, so switching AMCs is possible after any selection
+    // (previously picking Bandhan left only Bandhan in the list).
+    var amcC={};var _amcSrc=window._mfFullSchemes||di;for(var ai=0;ai<_amcSrc.length;ai++){var an=_amcSrc[ai].parentAmc||_amcSrc[ai].amc||'Other';amcC[an]=(amcC[an]||0)+1;}
     var amcS=Object.entries(amcC).sort(function(a,b){return b[1]-a[1];});
     var amcIt='<div class="mf-amc-item" data-amc="all" onclick="filterMfAmc(\x27all\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;color:var(--accent);font-weight:700;font-size:12px;border-bottom:1px solid var(--line);">All AMCs<span style="color:var(--text-muted);font-weight:400;">'+di.length+'</span></div>';
     for(var ai2=0;ai2<amcS.length;ai2++){amcIt+='<div class="mf-amc-item" data-amc="'+amcS[ai2][0]+'" onclick="filterMfAmc(\x27'+amcS[ai2][0]+'\x27)" style="display:flex;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text-primary);border-bottom:1px solid var(--line);" onmouseenter="this.style.background=\x27var(--bg-raised)\x27" onmouseleave="this.style.background=\x27transparent\x27">'+amcS[ai2][0]+'<span style="color:var(--text-muted);font-size:11px;">'+amcS[ai2][1]+'</span></div>';}
