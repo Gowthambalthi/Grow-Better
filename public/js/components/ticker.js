@@ -7,10 +7,11 @@ import { api } from '../core/api.js';
 import { rawMoney, pct, plSign } from '../core/formatters.js';
 
 // Core symbols polled every tick — they feed the always-visible topbar ticker
-const CORE_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'FINNIFTY', 'MIDCPNIFTY', 'GIFTNIFTY'];
+// Core symbols polled every tick — they feed the always-visible topbar ticker
+const CORE_SYMBOLS = ['NIFTY', 'SENSEX', 'BANKNIFTY', 'FINNIFTY', 'BANKEX', 'MIDCPNIFTY', 'INDIAVIX', 'NIFTYNXT50'];
 // Extra rows (MCX + world indices) fetched ONLY while the Indices List popover is open (lazy)
 const EXTRA_SYMBOLS = ['GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'SPX', 'DJI', 'NASDAQ', 'VIX', 'NIKKEI', 'HANGSENG', 'SHANGHAI', 'KOSPI', 'FTSE', 'DAX', 'CAC', 'STOXX50'];
-// India rows shown in the popover (order matters)
+// India rows shown in the popover (order matches Image 1)
 const INDIA_SYMBOLS = [...CORE_SYMBOLS, 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
 // World rows per region tab
 const REGION_SYMBOLS = {
@@ -19,21 +20,23 @@ const REGION_SYMBOLS = {
   europe: ['FTSE', 'DAX', 'CAC', 'STOXX50'],
 };
 const DISPLAY_NAMES = {
-  NIFTY: 'NIFTY 50', BANKNIFTY: 'BANK NIFTY', SENSEX: 'SENSEX', FINNIFTY: 'FIN NIFTY',
-  MIDCPNIFTY: 'MIDCAP NIFTY', GIFTNIFTY: 'GIFT NIFTY', GOLD: 'MCX GOLD', SILVER: 'MCX SILVER',
-  CRUDEOIL: 'MCX CRUDE', NATURALGAS: 'MCX NATGAS',
+  NIFTY: 'NIFTY', SENSEX: 'SENSEX', BANKNIFTY: 'BANKNIFTY', FINNIFTY: 'FINNIFTY',
+  BANKEX: 'BANKEX', MIDCPNIFTY: 'MIDCPNIFTY', INDIAVIX: 'INDIA VIX', NIFTYNXT50: 'NIFTYNXT50',
+  GOLD: 'MCX GOLD', SILVER: 'MCX SILVER', CRUDEOIL: 'MCX CRUDE', NATURALGAS: 'MCX NATGAS',
   SPX: 'S&P 500', DJI: 'DOW JONES', NASDAQ: 'NASDAQ', VIX: 'US VIX',
   NIKKEI: 'NIKKEI 225', HANGSENG: 'HANG SENG', SHANGHAI: 'SHANGHAI', KOSPI: 'KOSPI',
   FTSE: 'FTSE 100', DAX: 'DAX', CAC: 'CAC 40', STOXX50: 'EURO STOXX 50',
 };
 const ALL_SYMBOLS = Array.from(new Set([...INDIA_SYMBOLS, ...EXTRA_SYMBOLS]));
 const tickerPrices = {
-  NIFTY: { price: 23772.85, prevPrice: 23897.70, change: -124.85, changePct: -0.52 },
-  BANKNIFTY: { price: 57045.75, prevPrice: 57369.65, change: -323.90, changePct: -0.56 },
-  SENSEX: { price: 76116.33, prevPrice: 76515.43, change: -399.10, changePct: -0.52 },
-  FINNIFTY: { price: 25935.30, prevPrice: 26051.00, change: -115.70, changePct: -0.44 },
-  MIDCPNIFTY: { price: 14661.00, prevPrice: 14713.65, change: -52.65, changePct: -0.36 },
-  GIFTNIFTY: { price: 24180.00, prevPrice: 24187.50, change: -7.50, changePct: -0.03 },
+  NIFTY: { price: 23398.10, prevPrice: 23477.80, change: -79.70, changePct: -0.34 },
+  SENSEX: { price: 74781.76, prevPrice: 74902.59, change: -120.83, changePct: -0.16 },
+  BANKNIFTY: { price: 56606.55, prevPrice: 56471.95, change: 134.60, changePct: 0.24 },
+  FINNIFTY: { price: 25545.40, prevPrice: 25520.30, change: 25.10, changePct: 0.10 },
+  BANKEX: { price: 64025.06, prevPrice: 63963.64, change: 61.42, changePct: 0.10 },
+  MIDCPNIFTY: { price: 14584.70, prevPrice: 14528.30, change: 56.40, changePct: 0.39 },
+  INDIAVIX: { price: 12.29, prevPrice: 11.80, change: 0.49, changePct: 4.15 },
+  NIFTYNXT50: { price: 72083.70, prevPrice: 72530.90, change: -447.20, changePct: -0.62 },
 };
 
 export function isIndianMarketOpen() {
@@ -86,8 +89,8 @@ function ensureWorldRows() {
       row.setAttribute('data-symbol', sym);
       row.setAttribute('data-region', region);
       row.style.display = 'none';
-      row.innerHTML = `<span class="w-name">${DISPLAY_NAMES[sym] || sym}</span>`
-        + `<div class="w-right"><div class="w-price">–</div><div class="w-change">…</div></div>`;
+      row.innerHTML = `<div class="w-name"><svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><span>${DISPLAY_NAMES[sym] || sym}</span></div>`
+        + `<div class="w-right"><span class="w-price">–</span><span class="w-change">…</span></div>`;
       row.addEventListener('click', () => {
         selectedSymbolOverride = sym;
         renderTickerUI();
@@ -105,8 +108,6 @@ function applyRegionFilter() {
     row.style.display = rowRegion === activeRegion ? '' : 'none';
     if (isWorld && rowRegion === activeRegion) row.style.display = '';
   });
-  const viewAll = document.querySelector('#watchlistPopover .inder-viewall');
-  if (viewAll) viewAll.style.display = activeRegion === 'india' ? '' : 'none';
 }
 
 export function initPopovers() {
@@ -263,14 +264,19 @@ function renderTickerUI() {
     if (!t || t.price == null) continue;
     const priceEl = row.querySelector('.w-price');
     const changeEl = row.querySelector('.w-change');
-    if (priceEl) priceEl.textContent = rawMoney(t.price);
     const change = t.change != null ? t.change : (t.prevPrice != null ? t.price - t.prevPrice : 0);
+    const changePct = t.changePct != null ? t.changePct : (t.prevPrice != null ? (change / t.prevPrice) * 100 : 0);
+    const chgVal = Number(change || 0);
+    const isPos = chgVal >= 0;
+
+    if (priceEl) {
+      priceEl.textContent = rawMoney(t.price);
+      priceEl.className = `w-price ${isPos ? 'positive' : 'negative'}`;
+    }
     if (changeEl) {
-      const changePct = t.changePct != null ? t.changePct : (t.prevPrice != null ? (change / t.prevPrice) * 100 : 0);
-      const chgVal = Number(change || 0);
-      const isPos = chgVal >= 0;
       const signPctStr = isPos ? `+${changePct.toFixed(2)}%` : `${changePct.toFixed(2)}%`;
-      changeEl.textContent = `${isPos ? '▲' : '▼'} ${Math.abs(chgVal).toFixed(2)} (${signPctStr})`;
+      const signValStr = isPos ? `+${Math.abs(chgVal).toFixed(2)}` : `-${Math.abs(chgVal).toFixed(2)}`;
+      changeEl.textContent = `${isPos ? '▲' : '▼'} ${signValStr} (${signPctStr})`;
       changeEl.className = `w-change ${isPos ? 'positive' : 'negative'}`;
     }
   }

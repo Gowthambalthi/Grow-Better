@@ -237,6 +237,22 @@ app.post('/api/mutual-funds/force-refresh', (req, res) => {
   const proc = spawn(process.execPath, ['scripts/nightlyMfRefresh.js', '--now'], { cwd: __dirname, detached: false, stdio: 'ignore' });
   proc.on('exit', (code) => { _mfRefreshRunning = false; console.log('[mf-refresh] forced refresh exited with code', code); });
 });
+// GET /api/mutual-funds/data-quality — open validation flags + source health
+app.get('/api/mutual-funds/data-quality', (req, res) => {
+  try {
+    const dbm = require('./db/mutualFunds');
+    const db = dbm.getDb();
+    const dq = require('./db/dataQuality');
+    dq.init(db);
+    const byGate = db.prepare("SELECT gate, COUNT(*) c FROM data_quality_flags WHERE status='open' GROUP BY gate").all();
+    const recent = db.prepare("SELECT schemeId, field, gate, rawValue, message, createdAt FROM data_quality_flags WHERE status='open' ORDER BY id DESC LIMIT 100").all();
+    const srcHealth = db.prepare(`SELECT source, field, SUM(ok) ok, COUNT(*) tot FROM source_log
+      WHERE createdAt > datetime('now','-1 day') GROUP BY source, field`).all();
+    const flaggedSchemes = db.prepare("SELECT DISTINCT schemeId FROM data_quality_flags WHERE status='open'").all().map(r=>r.schemeId);
+    res.json({ success: true, byGate, recent, srcHealth, flaggedSchemeCount: flaggedSchemes.length, flaggedSchemes: flaggedSchemes.slice(0,500) });
+  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+});
+
 app.get('/api/mutual-funds/force-refresh/status', (req, res) => {
   res.json({ running: _mfRefreshRunning });
 });
@@ -745,10 +761,10 @@ app.get('/api/mutual-funds/schemes', async (req, res) => {
   }
 });
 
-app.get('/api/mutual-funds/scheme-detail/:schemeId', (req, res) => {
+app.get('/api/mutual-funds/scheme-detail/:schemeId', async (req, res) => {
   try {
     const { schemeId } = req.params;
-    const result = mfService.getSchemeDetail(schemeId);
+    const result = await mfService.getSchemeDetail(schemeId);
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

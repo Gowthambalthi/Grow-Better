@@ -671,16 +671,45 @@ const helpers = {
     // DIRECT ONLY — collapse to one row per fund, preferring the Direct plan
     // (Regular rows are never shown; funds without a Direct plan fall back to
     // their best Growth-option variant).
-    const best = new Map(); // schemeName -> chosen scheme row
+    const best = new Map(); // cleaned base name -> chosen scheme row
+    const cleanKey = (t) => String(t || '')
+      .replace(/\s*\(erstwhile[^)]*\)/gi, '')
+      .replace(/\s*-\s*direct plan.*$/i, '')
+      .replace(/\s*-\s*regular plan.*$/i, '')
+      .replace(/\s*direct plan.*$/i, '')
+      .replace(/\s*regular plan.*$/i, '')
+      .replace(/\s*direct growth.*$/i, '')
+      .replace(/\s*direct idcw.*$/i, '')
+      .replace(/\s*-\s*growth.*$/i, '')
+      .replace(/\s*-\s*idcw.*$/i, '')
+      .replace(/\s+growth( option)?$/i, '')
+      .replace(/\s+idcw( option)?$/i, '')
+      .trim().toLowerCase();
+    const navRows = db.prepare('SELECT schemeId, points FROM mutual_fund_nav_blob').all();
+    const lastNavDate = {};
+    for (const r of navRows) {
+      const pts = String(r.points || '');
+      const lastPair = pts.substring(pts.lastIndexOf(',')).split(':')[0];
+      lastNavDate[r.schemeId] = lastPair.replace(',', '');
+    }
     for (const s of schemes) {
+      // HIDE DEAD SCHEMES — matured FMPs / closed funds whose NAV stopped > 45 days ago
+      const lnd = lastNavDate[s.id];
+      if (!lnd || (Date.now() - new Date(lnd + 'T00:00:00').getTime()) > 45 * 86400000) continue;
+      // EXCLUDE ALL DEBT — pure debt/money-market funds are out of scope (hybrids stay)
+      const cat = (s.category || '').toLowerCase();
+      if (cat === 'debt' || cat === 'money market') continue;
+      if (/bond|gilt|g-sec|treasury|debenture|\bsdl\b|state development|corporate bond|liquid|overnight|ultra short|low duration|short duration|money market|banking and psu|dynamic bond|credit risk|credit opportunities|floating rate|floater|maturity plan|\bfmp\b|income fund|conservative hybrid debt|nivesh|debt index/i.test(s.schemeName || '')) continue;
+      if (/\bdebt\b/i.test(s.schemeName || '')) continue; // any fund with Debt in its name (retirement debt plans, debt FoFs, debt-oriented hybrids)
       const pl = (s.plan || '').toLowerCase();
       const op = (s.option || '').toLowerCase();
       let score = 0;
       if (pl.indexOf('direct') !== -1) score += 100;             // Direct wins outright
       else if (pl.indexOf('regular') !== -1) score -= 100;       // Regular only if nothing better
       if (op.indexOf('growth') !== -1) score += 1; else if (op.indexOf('idcw') !== -1) score -= 1;
-      const prev = best.get(s.schemeName);
-      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) best.set(s.schemeName, { score, s });
+      const key = cleanKey(s.schemeName);
+      const prev = best.get(key);
+      if (!prev || score > prev.score || (score === prev.score && s.id < prev.s.id)) best.set(key, { score, s });
     }
     schemes = Array.from(best.values(), b => {
       b.s.variantCount = 1;
@@ -780,11 +809,6 @@ const helpers = {
         let oldest = null;
         for (const p of navs) { if (p.navDate >= target) { oldest = p; break; } }
         if (oldest && oldest.nav > 0) retPct = (last.nav - oldest.nav) / oldest.nav * 100;
-      }
-      const aum = aumMap[id];
-      if (retPct != null && aum && aum.aum > 0) {
-        const estChange = aum.aum * (retPct / 100);
-        return { current: aum.aum, previous: aum.aum - estChange, change: estChange, changePct: retPct, latestDate: 'estimated', historicalDate: 'estimated' };
       }
       return null;
     }

@@ -18,6 +18,12 @@
 <style>
 .mf-chart-full{position:fixed!important;inset:12px!important;z-index:9998;margin:0!important;padding:18px!important;box-shadow:0 24px 80px rgba(0,0,0,.6);background:var(--bg-panel)!important;overflow:auto;}
 .mf-table-row{cursor:default;}
+.mf-vt-sticky{position:sticky;top:64px;z-index:60;background:var(--bg-panel,#fff);padding:4px 0;margin-bottom:8px;border-bottom:1px solid var(--line, #E2E8F0);}
+.mf-vt-sticky + div{margin-top:0;}
+#mfSchemesGrid table tbody tr{transition:background .12s ease;cursor:pointer;}
+#mfSchemesGrid table tbody tr:hover{background:rgba(74,158,255,0.08)!important;outline:1px solid rgba(74,158,255,0.35);outline-offset:-1px;}
+.mf-ter-tip{font-size:11px;color:var(--text-muted);white-space:nowrap;}
+.mf-row-expanded{background:rgba(74,158,255,0.08)!important;outline:1px solid rgba(74,158,255,0.45);outline-offset:-1px;}
 </style>
 </head>
 <body>
@@ -94,6 +100,20 @@
       <!-- ============ TOPBAR ============ -->
       <header class="topbar">
         <div class="topbar-left">
+          <!-- Animated Video-like Logo & Brand Badge -->
+          <div class="topbar-logo-brand" data-nav="dashboard" title="Grow Better — Algo Terminal">
+            <div class="video-logo-badge">
+              <div class="video-logo-glow"></div>
+              <div class="video-logo-ring"></div>
+              <img src="/logo.png" alt="Grow Better" class="video-logo-img" />
+              <div class="video-shimmer-sweep"></div>
+            </div>
+            <div class="topbar-brand-text">
+              <span class="brand-title">GROW BETTER</span>
+              <span class="brand-sub-badge"><span class="live-rec-dot">●</span> LIVE ALGO</span>
+            </div>
+          </div>
+          <div class="topbar-divider"></div>
           <div class="page-title-display" id="topbarPageTitle">DASHBOARD OVERVIEW</div>
         </div>
 
@@ -115,101 +135,96 @@
               </div>
             </div>
 
-            <!-- Dropdown Popover (Exact Match to User's Market Watchlist Screenshot) -->
+            <!-- Dropdown Popover (Exact Match to Image 1 Screenshot) -->
             <div class="dropdown-popover watchlist-dropdown-popover" id="watchlistPopover">
-              <div class="popover-header">
-                <div style="display:flex; flex-direction:column; line-height: 1.15;">
-                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #E2E8F0;">Indices</span>
-                  <span style="font-family:'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 800; color: #E2E8F0;">List</span>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items: flex-end; font-family:'Plus Jakarta Sans', sans-serif; font-size: 11.5px; font-weight: 500; color: #94A3B8; line-height: 1.3;">
-                  <div style="display:flex; align-items:center; gap: 4px;">
-                    <span style="color:#10B981; font-size: 10px;">●</span> LIVE (NSE <span class="live-clock" id="popoverLiveClock" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#94A3B8; font-weight:600; margin-left:2px;">11:08:14</span>
-                  </div>
-                  <div>
-                    IST) <span class="live-ampm" id="popoverLiveAmPm" style="font-family:'JetBrains Mono', monospace; font-size: 11.5px; color:#94A3B8; font-weight:600;">am</span>
-                  </div>
-                </div>
-              </div>
               <div class="inder-region-tabs">
                 <button class="inder-region-tab active" data-region="india">India</button>
                 <button class="inder-region-tab" data-region="usa">USA</button>
                 <button class="inder-region-tab" data-region="asia">Asia</button>
                 <button class="inder-region-tab" data-region="europe">Europe</button>
               </div>
-              <div class="popover-body" style="padding:0;">
-                <div class="watch-row active" data-symbol="NIFTY" id="popoverRowNifty">
-                  <span class="w-name">NIFTY 50</span>
+              <div class="popover-body">
+                <div class="watch-row active" data-symbol="NIFTY" data-region="india" id="popoverRowNifty">
+                  <div class="w-name">
+                    <svg class="w-diamond filled" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L2 12l10 10 10-10L12 2z"/></svg>
+                    <span>NIFTY</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price" id="popNiftyPrice">23,772.85</div>
-                    <div class="w-change negative" id="popNiftyChange">▼ 124.85 (-0.52%)</div>
+                    <span class="w-price negative" id="popNiftyPrice">23,398.10</span>
+                    <span class="w-change negative" id="popNiftyChange">▼ -79.70 (-0.34%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="BANKNIFTY" id="popoverRowBanknifty">
-                  <span class="w-name">BANK NIFTY</span>
+                <div class="watch-row" data-symbol="SENSEX" data-region="india" id="popoverRowSensex">
+                  <div class="w-name">
+                    <svg class="w-diamond filled" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L2 12l10 10 10-10L12 2z"/></svg>
+                    <span>SENSEX</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price" id="popBankPrice">57,045.75</div>
-                    <div class="w-change negative" id="popBankChange">▼ 323.90 (-0.56%)</div>
+                    <span class="w-price negative" id="popSensexPrice">74,781.76</span>
+                    <span class="w-change negative" id="popSensexChange">▼ -120.83 (-0.16%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="SENSEX" id="popoverRowSensex">
-                  <span class="w-name">SENSEX</span>
+                <div class="watch-row" data-symbol="BANKNIFTY" data-region="india" id="popoverRowBanknifty">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>BANKNIFTY</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price" id="popSensexPrice">76,116.33</div>
-                    <div class="w-change negative" id="popSensexChange">▼ 399.10 (-0.52%)</div>
+                    <span class="w-price positive" id="popBankPrice">56,606.55</span>
+                    <span class="w-change positive" id="popBankChange">▲ +134.60 (+0.24%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="FINNIFTY" id="popoverRowFinnifty">
-                  <span class="w-name">FIN NIFTY</span>
+                <div class="watch-row" data-symbol="FINNIFTY" data-region="india" id="popoverRowFinnifty">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>FINNIFTY</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price" id="popFinPrice">25,935.30</div>
-                    <div class="w-change negative" id="popFinChange">▼ 115.70 (-0.44%)</div>
+                    <span class="w-price positive" id="popFinPrice">25,545.40</span>
+                    <span class="w-change positive" id="popFinChange">▲ +25.10 (+0.10%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="MIDCPNIFTY" id="popoverRowMidcpnifty">
-                  <span class="w-name">MIDCAP NIFTY</span>
+                <div class="watch-row" data-symbol="BANKEX" data-region="india" id="popoverRowBankex">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>BANKEX</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price" id="popMidPrice">14,661.00</div>
-                    <div class="w-change negative" id="popMidChange">▼ 52.65 (-0.36%)</div>
+                    <span class="w-price positive" id="popBankexPrice">64,025.06</span>
+                    <span class="w-change positive" id="popBankexChange">▲ +61.42 (+0.10%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="GIFTNIFTY" id="popoverRowGiftnifty">
-                  <span class="w-name">GIFT NIFTY</span>
+                <div class="watch-row" data-symbol="MIDCPNIFTY" data-region="india" id="popoverRowMidcpnifty">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>MIDCPNIFTY</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price" id="popGiftPrice">24,180.00</div>
-                    <div class="w-change negative" id="popGiftChange">▼ 7.50 (-0.03%)</div>
+                    <span class="w-price positive" id="popMidPrice">14,584.70</span>
+                    <span class="w-change positive" id="popMidChange">▲ +56.40 (+0.39%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="GOLD">
-                  <span class="w-name">MCX GOLD</span>
+                <div class="watch-row" data-symbol="INDIAVIX" data-region="india" id="popoverRowIndiavix">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>INDIA VIX</span>
+                  </div>
                   <div class="w-right">
-                    <div class="w-price">–</div>
-                    <div class="w-change">…</div>
+                    <span class="w-price positive" id="popVixPrice">12.29</span>
+                    <span class="w-change positive" id="popVixChange">▲ +0.49 (+4.15%)</span>
                   </div>
                 </div>
-                <div class="watch-row" data-symbol="SILVER">
-                  <span class="w-name">MCX SILVER</span>
-                  <div class="w-right">
-                    <div class="w-price">–</div>
-                    <div class="w-change">…</div>
+                <div class="watch-row" data-symbol="NIFTYNXT50" data-region="india" id="popoverRowNiftynxt50">
+                  <div class="w-name">
+                    <svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+                    <span>NIFTYNXT50</span>
                   </div>
-                </div>
-                <div class="watch-row" data-symbol="CRUDEOIL">
-                  <span class="w-name">MCX CRUDE</span>
                   <div class="w-right">
-                    <div class="w-price">–</div>
-                    <div class="w-change">…</div>
-                  </div>
-                </div>
-                <div class="watch-row" data-symbol="NATURALGAS">
-                  <span class="w-name">MCX NATGAS</span>
-                  <div class="w-right">
-                    <div class="w-price">–</div>
-                    <div class="w-change">…</div>
+                    <span class="w-price negative" id="popNiftyNxtPrice">72,083.70</span>
+                    <span class="w-change negative" id="popNiftyNxtChange">▼ -447.20 (-0.62%)</span>
                   </div>
                 </div>
               </div>
-              <div class="inder-viewall">VIEW ALL INDICES</div>
             </div>
           </div>
 
@@ -220,30 +235,28 @@
               <span class="pill-main-val" id="topbarCashValue" style="font-family:'Plus Jakarta Sans', sans-serif;font-size:14.5px;font-weight:600;color:var(--ink);">₹234.42</span>
             </div>
 
-            <!-- Cash Available Breakdown Popover Dropdown (Exact Match to Screenshot) -->
-            <div class="dropdown-popover cash-breakdown-popover" id="cashPopover" style="width:280px;padding:18px 20px;border-radius:18px;background:#FFFFFF;box-shadow:0 12px 32px rgba(0,0,0,0.15);border:1px solid #E2E8F0;">
-              <div style="font-size:15px;font-weight:700;color:#0F172A;padding-bottom:10px;border-bottom:1px solid #F1F5F9;margin-bottom:12px;">
-                Cash Available
-              </div>
-              <div class="popover-body" style="padding:0;">
-                <div class="fund-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                  <div class="broker-label" style="display:flex;align-items:center;gap:8px;">
-                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2563EB;"></span>
-                    <span style="font-size:13.5px;font-weight:600;color:#0F172A;">Angel One Cash</span>
+            <!-- Cash Available Breakdown Popover Dropdown (Compact Sleek Match) -->
+            <div class="dropdown-popover cash-breakdown-popover" id="cashPopover">
+              <div class="cash-popover-header">Cash Available</div>
+              <div class="popover-body">
+                <div class="fund-row">
+                  <div class="broker-label">
+                    <span class="broker-dot angel"></span>
+                    <span>Angel One Cash</span>
                   </div>
-                  <span class="fund-val" id="angelCashFundVal" style="font-size:14px;font-weight:700;color:#00B386;font-family:'Plus Jakarta Sans', sans-serif;">₹78.32</span>
+                  <span class="fund-val" id="angelCashFundVal">₹78.32</span>
                 </div>
-                <div class="fund-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                  <div class="broker-label" style="display:flex;align-items:center;gap:8px;">
-                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00B386;"></span>
-                    <span style="font-size:13.5px;font-weight:600;color:#0F172A;">Groww Cash</span>
+                <div class="fund-row">
+                  <div class="broker-label">
+                    <span class="broker-dot groww"></span>
+                    <span>Groww Cash</span>
                   </div>
-                  <span class="fund-val" id="growwCashFundVal" style="font-size:14px;font-weight:700;color:#00B386;font-family:'Plus Jakarta Sans', sans-serif;">₹134.21</span>
+                  <span class="fund-val" id="growwCashFundVal">₹134.21</span>
                 </div>
-                <div style="border-bottom:1px solid #E2E8F0;margin:12px 0;"></div>
-                <div class="fund-row total-fund-row" style="display:flex;justify-content:space-between;align-items:center;">
-                  <span style="font-size:14px;font-weight:800;color:#0F172A;">Total Cash</span>
-                  <span class="fund-val-total" id="totalCashFundVal" style="font-size:15px;font-weight:800;color:#00B386;font-family:'Plus Jakarta Sans', sans-serif;">₹212.53</span>
+                <div class="cash-popover-divider"></div>
+                <div class="fund-row total-fund-row">
+                  <span class="total-label">Total Cash</span>
+                  <span class="fund-val-total" id="totalCashFundVal">₹212.53</span>
                 </div>
               </div>
             </div>
@@ -882,24 +895,20 @@
             <button class="sm-main-pill" data-smtab="foreign" onclick="switchSmMain('foreign')" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:8px 22px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;">Foreign Funds</button>
           </div>
 
-          <!-- Summary Cards -->
-          <div id="smartMoneySummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;"></div>
-
           <!-- Mutual Funds Content -->
           <div id="smContentMf" style="display:block;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:12px;">
               <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
                 <div>
                   <div style="font-size:20px;font-weight:800;color:var(--text-primary);">Mutual Funds</div>
-                  <div id="mfSubtitleCount" style="font-size:12px;color:var(--text-muted);margin-top:2px;">Loading schemes...</div>
-                </div>
-                <!-- Single-select Equity / Hybrid / Commodities dropdown -->
-                <div style="position:relative;display:inline-block;">
-                  <button id="mfSectorBtn" onclick="toggleMfSectorDD()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Sectors <span style="font-size:8px;">&#9660;</span></button>
-                  <div id="mfSectorDD" style="display:none;position:absolute;top:100%;left:0;z-index:160;width:230px;max-height:420px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;padding:6px 0;"></div>
+                  <div id="mfSubtitleCount" style="font-size:11.5px;color:var(--text-muted);margin-top:1px;"></div>
                 </div>
               </div>
-              <div style="display:none;"></div>
+              <!-- Single-select Equity / Hybrid / Commodities dropdown — right side of screen -->
+              <div style="position:relative;display:inline-block;margin-left:auto;">
+                <button id="mfSectorBtn" onclick="toggleMfSectorDD()" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--line);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">Sectors <span style="font-size:8px;">&#9660;</span></button>
+                <div id="mfSectorDD" style="display:none;position:absolute;top:100%;right:0;z-index:160;width:230px;max-height:420px;overflow-y:auto;background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-top:4px;padding:6px 0;"></div>
+              </div>
             </div>
             <div id="mfSchemesGrid" style="display:block;width:100%;">
               <div style="padding:20px;text-align:center;color:var(--text-muted);background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;">Loading Mutual Fund Schemes...</div>
@@ -1930,11 +1939,13 @@
             return Promise.resolve(window._mfFullSchemes);
           };
 
-          if (subTitle) {
+          {
             var total = allSchemes.length;
             var amcCount = (amcSet && amcSet.size != null) ? amcSet.size : 0;
             var totalAll = (allAmcData && allAmcData.totalSchemes) ? allAmcData.totalSchemes : total;
-            subTitle.textContent = totalAll.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
+            window._mfSubText = totalAll.toLocaleString('en-IN') + ' Mutual Fund Schemes across ' + amcCount + ' AMCs';
+            var _subEl = document.getElementById('mfSubtitleCount');
+            if (_subEl) _subEl.textContent = window._mfSubText;
           }
 
           renderMfGrid(allSchemes);
@@ -2233,6 +2244,10 @@
         // Re-render from the FULL universe so chips + table reflect the selection
         renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
       }
+      function clearMfCatSelection(){
+        window._mfSelCats=[];
+        renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
+      }
       function toggleMfFundCatDD() {
         var dd = document.getElementById('mfFundCatDD');
         if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
@@ -2406,7 +2421,16 @@ function _renderMfGridBody(grid, schemes) {
 
     // Category Cards (Large Cap, Flexi Cap, Small Cap, Index, Tax Saver, Money Market, Commodities)
     // All 7 in ONE row — horizontal scroll on narrow screens
-    var _catCardsHtml = '<div style="display:flex;gap:12px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;">';
+    // Default cap selection on first open: Large/Mid/Small/Multi/Flexi Cap
+    if(!window._mfCatsInitialized){
+      window._mfCatsInitialized=true;
+      window._mfSelCats=['Large Cap','Mid Cap','Small Cap','Multi Cap','Flexi Cap'];
+    }
+    // "Clear all" chip — small, light colored, next to the cap cards
+    var _clearChip = (window._mfSelCats&&window._mfSelCats.length)
+      ? '<div style="display:flex;justify-content:flex-end;margin:-6px 0 8px 0;"><span onclick="clearMfCatSelection()" style="font-size:11px;color:var(--text-muted);cursor:pointer;padding:3px 10px;border-radius:12px;border:1px solid var(--line);background:var(--bg-panel);transition:all .15s;" onmouseenter="this.style.color=\'var(--accent)\';this.style.borderColor=\'var(--accent)\'" onmouseleave="this.style.color=\'var(--text-muted)\';this.style.borderColor=\'var(--line)\'">\u2715 Clear all</span></div>'
+      : '';
+    var _catCardsHtml = _clearChip+'<div style="display:grid;grid-template-columns:repeat(11,1fr);gap:12px;margin-bottom:16px;">';
     var _catDefs = [
       { key:'Large Cap', label:'Large Cap', desc1:'Stability', desc2:'Long-term suitability', desc3:'Lower growth potential', desc4:'Market risk', color:'#00B386' },
       { key:'Mid Cap', label:'Mid Cap', desc1:'Higher Growth Potential', desc2:'Fast-Growing Mid-Size Companies', desc3:'High volatility', desc4:'Market risk', color:'#6366F1' },
@@ -2450,7 +2474,7 @@ function _renderMfGridBody(grid, schemes) {
       // otherwise prefer the server's full-universe count.
       var shownCnt = (window._mfSectors && window._mfSectors.length) ? cnt : ((window._mfCardCounts && window._mfCardCounts[cd.key] != null) ? window._mfCardCounts[cd.key] : cnt);
       var _cardActive = (function(){ var _s=window._mfSelCats||[]; return _s.length? _s.indexOf(cd.key)!==-1 : ((_mfActiveCategory||'all')===cd.key); })();
-      return '<div data-mfcard="' + cd.key + '" onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:var(--bg-panel);border:' + (_cardActive?'2px solid #00B386':'1px solid var(--line)') + ';border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;flex:1 1 150px;min-width:150px;">'
+      return '<div data-mfcard="' + cd.key + '" onclick="filterMfCategory(\x27' + cd.key + '\x27)" style="background:var(--bg-panel);opacity:'+(_cardActive||!(window._mfSelCats&&window._mfSelCats.length)?'1':'0.45')+';filter:'+(_cardActive||!(window._mfSelCats&&window._mfSelCats.length)?'none':'saturate(0.5) brightness(0.85)')+';border:' + (_cardActive?'2px solid #00B386':'1px solid var(--line)') + ';border-radius:12px;padding:18px 16px;cursor:pointer;transition:all .2s;flex:1 1 150px;min-width:150px;">'
         + '<div style="margin-bottom:10px;"><svg width="28" height="28" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="'+cd.color+'" stroke-width="3"/><path d="M20 4 A16 16 0 0 1 36 20 L20 20 Z" fill="'+cd.color+'" opacity="0.5"/><path d="M20 20 L36 20 A16 16 0 0 1 27.07 33.86 Z" fill="'+cd.color+'" opacity="0.3"/><circle cx="20" cy="20" r="5" fill="'+cd.color+'" opacity="0.2"/></svg></div>'
         + '<div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">'+cd.label+'</div>'
         + (cd.desc1?'<div style="font-size:11px;color:#00B386;font-weight:600;margin-bottom:4px;">&#10004; '+cd.desc1+'</div>':'')
@@ -2675,18 +2699,18 @@ function _renderMfGridBody(grid, schemes) {
 
 
         +'<th style="'+_th2+'text-align:right;">Day change %</th>'
-        +'<th style="'+_th2+'text-align:right;">Aug-Sep %</th>'
-        +'<th style="'+_th2+'text-align:right;">Jun-Sep %</th>'
-        +'<th style="'+_th2+'text-align:right;">Mar-Sep %</th>'
-        +'<th style="'+_th2+'text-align:right;">1 year %</th>'
-        +'<th style="'+_th2+'text-align:right;">3 year %</th>'
-        +'<th style="'+_th2+'text-align:right;">5 year %</th>'
-        +'<th style="'+_th2+'text-align:right;">All (since inception) %</th>'
+        +'<th style="'+_th2+'text-align:right;">1M %</th>'
+        +'<th style="'+_th2+'text-align:right;">3M %</th>'
+        +'<th style="'+_th2+'text-align:right;">6M %</th>'
+        +'<th style="'+_th2+'text-align:right;">1Y %</th>'
+        +'<th style="'+_th2+'text-align:right;">3Y %</th>'
+        +'<th style="'+_th2+'text-align:right;">5Y %</th>'
         +'<th style="'+_th2+'text-align:right;">Benchmark %</th>'
         +'<th style="'+_th2+'text-align:right;">Vs Benchmark</th>'
         +'<th style="'+_th2+'text-align:right;">Vs Category</th>';
             var _catAvg1Y={};var _catCnt={};for(var _bi=0;_bi<di.length;_bi++){var _bs=di[_bi],_bc=_bs.category||'Other',_br=_bs.returns&&_bs.returns['1Y']!=null?_bs.returns['1Y']:null;if(_br!==null){_catAvg1Y[_bc]=(_catAvg1Y[_bc]||0)+_br;_catCnt[_bc]=(_catCnt[_bc]||0)+1;}}for(var _ck in _catAvg1Y)_catAvg1Y[_ck]/=_catCnt[_ck];
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
+        var _r=s.returns||{};var _newFund=(s.inceptionDate?((Date.now()-new Date(s.inceptionDate+'T00:00:00').getTime())<60*86400000):(_r['3M']!=null&&_r['1M']!=null&&Math.abs(_r['3M']-_r['1M'])<1e-9&&_r['6M']!=null&&Math.abs(_r['6M']-_r['1M'])<1e-9));function _rv(k){return _newFund?null:(_r[k]!=null?_r[k]:null);}
 
         function rc3(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
 
@@ -2695,19 +2719,18 @@ function _renderMfGridBody(grid, schemes) {
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+(s.metrics&&s.metrics.benchmarkName?' &middot; '+s.metrics.benchmarkName:'')+'</div></td>'
           +rn2(s.confidenceScore||50)
           +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);font-weight:700;white-space:nowrap;">'+(function(){var _a=s.aumCr!=null?s.aumCr:(s.aum!=null?s.aum:null);return _a!=null?"\u20b9"+Number(_a).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-";})()+"</td>"
-          +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_est=_ca.latestDate==='estimated'?' <span style="color:var(--text-muted);font-size:9px;font-weight:500;">est</span>':'',_vs=(_ch>=0?"+":"-")+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+'%)</span>'+_est+'</td>';})()
-          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);">'+(function(){var _t=s.expenseRatio!=null?s.expenseRatio:s.terPct;return _t!=null?Number(_t).toFixed(2)+"%":"-";})()+"</td>"
+          +(function(){var _ca=s.aumChange1Y;if(!_ca||_ca.change==null||_ca.change===0&&_ca.changePct==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _ch=_ca.change,_pc=_ca.changePct||0,_cl=_ch>=0?"#00B386":"#EB5B56",_ar=_ch>=0?"\u25B2":"\u25BC",_vs=(_ch>=0?"+":"-")+Math.abs(_ch).toLocaleString("en-IN",{maximumFractionDigits:1})+" Cr";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;white-space:nowrap;">'+_ar+' '+_vs+'</span> <span style="color:var(--text-muted);font-size:10px;">('+(_pc>=0?"+":"")+_pc.toFixed(1)+'%)</span></td>';})()
+          +'<td style="padding:10px 12px;text-align:right;font-size:12px;color:var(--text-primary);" onmouseenter="window._mfTerTip(this)" data-td="'+(s.terDirect!=null?s.terDirect:'')+'" data-tr="'+(s.terRegular!=null?s.terRegular:'')+'">'+(function(){var _t=s.expenseRatio!=null?s.expenseRatio:s.terPct;return _t!=null?Number(_t).toFixed(2)+"%":"-";})()+"</td>"
           +(function(){var _lpd=s.latestPortfolioDate||s.lastPortfolioDate||null;var _pr=(window._prCache&&window._prCache[s.id]!=null)?window._prCache[s.id]:null;if(_pr!=null&&_pr.complete&&_pr.val!=null){var _cl=_pr.val>=0?"#00B386":"#EB5B56";return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" style=\"padding:10px 12px;text-align:right;font-size:12px;\"><span style=\"color:'+_cl+';font-weight:700;\">'+(_pr.val>=0?"+":"")+_pr.val.toFixed(2)+'%</span></td>';}return '<td class=\"pr-cell\" data-sid=\"'+s.id+'\" data-lpd=\"'+( _lpd||'')+'\" style=\"padding:10px 12px;text-align:right;color:var(--text-muted);font-size:11px;\">'+( _lpd?'since '+String(_lpd).substring(0,10):'…')+'</td>';})()
 
 
-          +rc3(s.returns&&s.returns["1D"]!=null?s.returns["1D"]:null)
-          +rc3(s.returns&&s.returns["1M"]!=null?s.returns["1M"]:null)
-          +rc3(s.returns&&s.returns["3M"]!=null?s.returns["3M"]:null)
-          +rc3(s.returns&&s.returns["6M"]!=null?s.returns["6M"]:null)
-          +rc3(s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null)
-          +rc3(s.returns&&s.returns["3Y"]!=null?s.returns["3Y"]:null)
-          +rc3(s.returns&&s.returns["5Y"]!=null?s.returns["5Y"]:null)
-          +rc3(s.returns&&s.returns["ALL"]!=null?s.returns["ALL"]:null)
+          +rc3(_rv("1D"))
+          +rc3(_rv("1M"))
+          +rc3(_rv("3M"))
+          +rc3(_rv("6M"))
+          +rc3(_rv("1Y"))
+          +rc3(_rv("3Y"))
+          +rc3(_rv("5Y"))
           // Benchmark % — actual 1Y return of the scheme's official benchmark index (TRI, via matching index-fund proxy)
           +(function(){var _bm=s.metrics&&s.metrics.benchmark_1y;if(_bm==null) return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _v=_bm*100;var _cl=_v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;">'+(_v>=0?"+":"")+_v.toFixed(2)+'%</span></td>';})()
           // Vs Benchmark — fund 1Y return minus its official benchmark return
@@ -2743,7 +2766,7 @@ function _renderMfGridBody(grid, schemes) {
     var _showAllBtn = (di.length > _maxRows)
       ? '<div style="padding:12px;text-align:center;border-top:1px solid var(--line);"><button onclick="window.mfDisplayCount=20000;window.mfEnsureFull().then(function(f){window.renderMfGrid(f||window._mfLastSchemes||[]);});" style="background:var(--accent);color:#fff;border:none;padding:8px 22px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;">Show all ' + di.length + ' schemes</button></div>'
       : '';
-    grid.innerHTML=sum+_pillHtml+_mfChartHtml+vtHtml+_catCardsHtml+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
+    grid.innerHTML=_pillHtml+_mfChartHtml+_catCardsHtml+'<div class="mf-vt-sticky">'+vtHtml+'</div>'+'<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;"><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--bg-header);border-bottom:2px solid var(--line);">'
       +_head
       +"</tr></thead><tbody>"+_body+"</tbody></table></div>"+_showAllBtn+"</div>";
     if((window._mfViewTab||"summary")==="summary"){setTimeout(function(){try{drawMfCatChart();}catch(e){console.error('[MF Chart]',e);}},0);}
@@ -2777,7 +2800,9 @@ function _renderMfGridBody(grid, schemes) {
         var range={'1M':'1M','3M':'3M','6M':'6M','1Y':'1Y','3Y':'3Y','5Y':'5Y','ALL':'ALL'}[currentMfTimeframe]||'1Y';
         var _fetchToken=++_mfChartFetchToken;
         var _mfSecs=(window._mfSectors&&window._mfSectors.length)?window._mfSectors:[];
+        var _mfCats=(window._mfSelCats&&window._mfSelCats.length)?window._mfSelCats:[];
         var _qs=_mfSecs.length?('&sectors='+encodeURIComponent(_mfSecs.join('|'))):'';
+        if(_mfCats.length){ _qs+=('&categories='+encodeURIComponent(_mfCats.join(','))); }
         var res=await fetch('/api/mutual-funds/category-series?range='+range+_qs);
         var json=await res.json();
         // If the view tab changed while fetching, discard — a bar chart owns the canvas now
@@ -3104,9 +3129,69 @@ function _renderMfGridBody(grid, schemes) {
       function getMfFallbackData() { return []; }
 
       // Event Listeners
+      // TER tooltip — hover on expense-ratio cell shows Direct & Regular separately
+      window._mfTerTip = function(el){
+        if(!el || el._terTipBound) return; el._terTipBound = true;
+        var tip = document.createElement('div');
+        tip.className='mf-ter-tip';
+        tip.style.cssText='position:fixed;z-index:400;pointer-events:none;background:var(--bg-panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,0.25);padding:5px 9px;font-size:10.5px;color:var(--text-primary);display:none;';
+        document.body.appendChild(tip);
+        var show = function(ev){
+          var d = el.getAttribute('data-td'), r = el.getAttribute('data-tr');
+          if(!d && !r){ tip.style.display='none'; return; }
+          tip.innerHTML = (d? 'Direct '+Number(d).toFixed(2)+'%':'') + (d&&r? ' &middot; ':'') + (r? 'Regular '+Number(r).toFixed(2)+'%':'');
+          tip.style.display='block';
+          var rect = el.getBoundingClientRect();
+          tip.style.left = Math.min(ev.clientX+10, window.innerWidth-150)+'px';
+          tip.style.top = (rect.bottom+6)+'px';
+        };
+        el.addEventListener('mouseenter', show);
+        el.addEventListener('mousemove', show);
+        el.addEventListener('mouseleave', function(){ tip.style.display='none'; });
+      };
+
+      // Row expand on click — toggles a detail strip under the clicked row
+      window._mfExpandRow = function(tr){
+        var wasOpen = tr.classList.contains('mf-row-expanded');
+        var tb = tr.parentNode;
+        var old = tb.querySelector('tr.mf-expand-detail');
+        if(old){ old.remove(); }
+        tb.querySelectorAll('tr.mf-row-expanded').forEach(function(x){ x.classList.remove('mf-row-expanded'); });
+        if(wasOpen) return;
+        tr.classList.add('mf-row-expanded');
+        var idRaw = tr.querySelector('.mf-fund-name') && tr.querySelector('.mf-fund-name').getAttribute('data-id');
+        var id = idRaw ? (String(idRaw).match(/(\d+)\s*$/) ? RegExp.$1 : idRaw) : null;
+        var cols = tr.children.length;
+        var detail = document.createElement('tr');
+        detail.className='mf-expand-detail';
+        var td = document.createElement('td');
+        td.colSpan = cols;
+        td.style.cssText='background:rgba(74,158,255,0.04);padding:14px 18px;border-bottom:2px solid rgba(74,158,255,0.3);';
+        td.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Loading fund details…</div>';
+        detail.appendChild(td);
+        tr.after(detail);
+        fetch('/api/mutual-funds/scheme-detail/'+id).then(function(r){return r.json();}).then(function(d){
+          var m = (d && d.scheme) || {};
+          var _nav = m.currentNav!=null?m.currentNav:m.nav;
+          var _aum = m.aumCr!=null?m.aumCr:m.aum;
+          var _ter = m.terPct!=null?m.terPct:m.expenseRatio;
+          var _mgr = m.manager||m.fundManager;
+          td.innerHTML = '<div style="display:flex;gap:26px;flex-wrap:wrap;font-size:11.5px;align-items:center;">'
+            +'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">NAV</div><div style="font-weight:700;font-size:14px;color:var(--text-primary);">'+(_nav!=null?'₹'+Number(_nav).toFixed(2):'-')+'</div></div>'
+            +'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">AUM</div><div style="font-weight:700;font-size:14px;color:var(--text-primary);">'+(_aum!=null?'₹'+Number(_aum).toLocaleString('en-IN',{maximumFractionDigits:0})+' Cr':'-')+'</div></div>'
+            +'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Expense Ratio</div><div style="font-weight:700;font-size:14px;color:var(--text-primary);">'+(_ter!=null?Number(_ter).toFixed(2)+'%':'-')+'</div></div>'
+            +'<div><div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Fund Manager</div><div style="font-weight:600;font-size:12px;color:var(--text-primary);">'+(_mgr||'-')+'</div></div>'
+            +'<button onclick="window.openMfDetailModal('+id+')" style="margin-left:auto;background:var(--accent);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">Full details &rarr;</button>'
+            +'</div>';
+        }).catch(function(){ td.innerHTML='<div style="font-size:11.5px;color:var(--text-muted);padding:6px;">Details unavailable</div>'; });
+      };
+
       document.addEventListener('click', function(e) {
-        // Mutual-fund grid row -> fund detail modal
+        // Mutual-fund grid row -> expand detail strip (fund name opens the full modal)
         var _mfRow = e.target.closest('#mfSchemesGrid .mf-table-row');
+        if (_mfRow && !e.target.closest('.mf-fund-name') && !e.target.closest('button') && !_mfRow.parentNode.querySelector('tr.mf-expand-detail')) {
+          window._mfExpandRow(_mfRow); return;
+        }
         if (_mfRow && e.target.closest('.mf-fund-name')) {
           var _mfSid = _mfRow.getAttribute('data-id');
           if (_mfSid) { openMfDetailModal(_mfSid); return; }
@@ -3925,23 +4010,8 @@ function _renderMfGridBody(grid, schemes) {
         }
       }
 
-      // ── Smart Money Summary ──
-      function loadSmartMoneySummary() {
-        var cards = document.getElementById('smartMoneySummary');
-        if (!cards) return;
-        fetch('/api/mutual-funds/all-schemes-summary?limit=1')
-          .then(function(r) { return r.json(); })
-          .then(function(d) {
-            var schemes = (d && d.schemes) ? d.schemes : [];
-            cards.innerHTML = '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;padding:14px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Mutual Fund AUM</div><div style="font-size:18px;font-weight:800;color:var(--accent);">₹' + formatCr(d.totalAum || 0) + '</div></div>' +
-              '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;padding:14px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Foreign Investment</div><div style="font-size:18px;font-weight:800;color:#3B82F6;">Coming Soon</div></div>' +
-              '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;padding:14px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Individual / Family</div><div style="font-size:18px;font-weight:800;color:#F59E0B;">Coming Soon</div></div>' +
-              '<div style="background:var(--bg-panel);border:1px solid var(--line);border-radius:10px;padding:14px;"><div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;">Stocks Tracked</div><div style="font-size:18px;font-weight:800;color:var(--profit);">' + (d.totalStocks || '3,144') + '</div></div>';
-          })
-          .catch(function() {
-            cards.innerHTML = '<div style="grid-column:1/5;text-align:center;color:var(--text-muted);font-size:12px;padding:16px;">Summary loading...</div>';
-          });
-      }
+      // ── Smart Money Summary — removed from the page (cards no longer shown).
+      function loadSmartMoneySummary() { return; }
 
       function formatCr(val) {
         if (val >= 100000) return (val / 100000).toFixed(1) + 'L Cr';
@@ -4617,6 +4687,7 @@ function _renderMfGridBody(grid, schemes) {
       window.filterMfAmc=filterMfAmc;
       window.searchAmcFilter=searchAmcFilter;
       window.filterMfCategory=filterMfCategory;
+      window.clearMfCatSelection=clearMfCatSelection;
       window.selectMfSector=selectMfSector;
       window.toggleMfSectorDD=toggleMfSectorDD;
       window._mfSingleSectorMatch=_mfSingleSectorMatch;
