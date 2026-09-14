@@ -783,6 +783,8 @@ const helpers = {
     function normDate(d) { try { return new Date(d).toISOString().slice(0, 10); } catch (e) { return d; } }
     function snapChange(snaps, monthsBack, valKey) {
       if (!snaps || snaps.length < 2) return null;
+      // REPORT-TO-REPORT change: latest published value minus the report closest to
+      // `monthsBack` earlier. Never returns a returns-derived estimate.
       const targetDate = new Date();
       targetDate.setMonth(targetDate.getMonth() - monthsBack);
       const targetStr = targetDate.toISOString().slice(0, 10);
@@ -798,20 +800,36 @@ const helpers = {
       return { current: latest[valKey], previous: historical[valKey], change, changePct, latestDate: latest.snapshotDate, historicalDate: historical.snapshotDate };
     }
     function aumChange(id, monthsBack) {
-      const snap = snapChange(aumSnapMap[id], monthsBack, 'aum');
-      if (snap) return snap;
-      const periodMap = { 1: '1M', 3: '3M', 6: '6M', 12: '1Y' };
-      let retPct = retMap[id] && retMap[id][periodMap[monthsBack]] ? retMap[id][periodMap[monthsBack]].returnValue : null;
-      // Fallback: derive the period return from NAV history when the returns table lacks it
-      if (retPct == null && navHistMap[id] && navHistMap[id].length > 2) {
-        const navs = navHistMap[id];
-        const last = navs[navs.length - 1];
-        const target = new Date(new Date(last.navDate + 'T00:00:00').getTime() - monthsBack * 30 * 86400000).toISOString().slice(0, 10);
-        let oldest = null;
-        for (const p of navs) { if (p.navDate >= target) { oldest = p; break; } }
-        if (oldest && oldest.nav > 0) retPct = (last.nav - oldest.nav) / oldest.nav * 100;
+      // Latest AUM report (mutual_fund_aum) combined with monthly snapshots:
+      // change = latest report − month-ago report. Null (NA) when we don't have both.
+      const snaps = aumSnapMap[id];
+      const latestAum = aumMap[id]; // { aum, asOfDate }
+      if (latestAum && latestAum.aum > 0 && snaps && snaps.length >= 1) {
+        const targetDate = new Date();
+        targetDate.setMonth(targetDate.getMonth() - monthsBack);
+        const targetStr = targetDate.toISOString().slice(0, 10);
+        // find the most recent snapshot at or before the target month (skip ones too close to latest)
+        let historical = null;
+        for (let i = 0; i < snaps.length; i++) {
+          const d = normDate(snaps[i].snapshotDate);
+          if (d <= targetStr) { historical = snaps[i]; break; }
+        }
+        if (historical && historical.aum > 0) {
+          const change = latestAum.aum - historical.aum;
+          const changePct = historical.aum > 0 ? ((change / historical.aum) * 100) : null;
+          return { current: latestAum.aum, previous: historical.aum, change, changePct, latestDate: latestAum.asOfDate, historicalDate: historical.snapshotDate };
+        }
+        // no snapshot that far back yet — for 1M, fall back to the two closest reports
+        if (monthsBack === 1 && snaps.length >= 1) {
+          const prev = snaps[0];
+          if (prev && prev.aum > 0 && normDate(prev.snapshotDate) < normDate(latestAum.asOfDate || '')) {
+            const change = latestAum.aum - prev.aum;
+            const changePct = prev.aum > 0 ? ((change / prev.aum) * 100) : null;
+            return { current: latestAum.aum, previous: prev.aum, change, changePct, latestDate: latestAum.asOfDate, historicalDate: prev.snapshotDate };
+          }
+        }
       }
-      return null;
+      return snapChange(snaps, monthsBack, 'aum');
     }
     function invChange(id, monthsBack) {
       const snap = snapChange(invSnapMap[id], monthsBack, 'investorCount');

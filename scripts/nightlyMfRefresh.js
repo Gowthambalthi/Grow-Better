@@ -195,6 +195,19 @@ async function backfillAumAndTer() {
     }
   } catch (e) { console.log('[nightly] AUM backfill error:', e.message); }
 
+  // Monthly AUM snapshot — once per day, store today's AUM as a dated snapshot so
+  // Change-in-AUM becomes a true report-to-report month-over-month difference.
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = db.prepare('SELECT schemeId, aum, asOfDate FROM mutual_fund_aum WHERE aum > 0').all();
+    const ins = db.prepare("INSERT OR IGNORE INTO aum_snapshots (schemeId, aum, snapshotDate, source) VALUES (?, ?, ?, 'nightly-monthly')");
+    const have = new Set(db.prepare("SELECT schemeId FROM aum_snapshots WHERE snapshotDate = ?").all(today).map(r => r.schemeId));
+    let n = 0;
+    const tx = db.transaction(() => { for (const r of rows) { if (!have.has(r.schemeId)) { ins.run(r.schemeId, r.aum, today); n++; } } });
+    tx();
+    console.log(`[nightly] AUM snapshot: ${n} new (${have.size} already stored today)`);
+  } catch (e) { console.log('[nightly] AUM snapshot error:', e.message); }
+
   // Expense ratio — only in the 4 PM..midnight half ( TER API is slow; once is enough)
   try {
     const missingEr = db.prepare('SELECT COUNT(*) c FROM mutual_fund_schemes WHERE expenseRatio IS NULL').get().c;
