@@ -2095,6 +2095,7 @@
           case 'po': return Math.round((Number(scheme.confidenceScore)||50)*.22);
           case 'op': return Math.round((Number(scheme.confidenceScore)||50)*.26);
           case 'rw': { var v=Number(scheme.confidenceScore)||50; return v-Math.round(v*.25)-Math.round(v*.22)-Math.round(v*.26); }
+          case 'vsbench': { var f=(scheme.returns&&scheme.returns['1Y']!=null)?Number(scheme.returns['1Y']):null; var b=(scheme.metrics&&scheme.metrics.benchmark_1y!=null)?Number(scheme.metrics.benchmark_1y)*100:null; return (f!=null&&b!=null)?(f-b):-9999; }
           case '1D': return (scheme.returns && scheme.returns['1D'] != null) ? Number(scheme.returns['1D']) : -9999;
           case '3Y': return (scheme.returns && scheme.returns['3Y'] != null) ? Number(scheme.returns['3Y']) : -9999;
           case '5Y': return (scheme.returns && scheme.returns['5Y'] != null) ? Number(scheme.returns['5Y']) : -9999;
@@ -2129,7 +2130,7 @@
         var isActive = mfSortKey === key;
         var upColor = isActive && mfSortDir === 'asc' ? '#00B386' : 'var(--text-muted)';
         var downColor = isActive && mfSortDir === 'desc' ? '#00B386' : 'var(--text-muted)';
-        return '<span style="display:inline-flex;flex-direction:column;margin-left:3px;cursor:pointer;line-height:1;" onclick="event.stopPropagation();window._mfSort(\'' + key + '\')">' +
+        return '<span style="display:inline-flex;flex-direction:column;justify-content:center;margin:0 0 0 4px;cursor:pointer;line-height:1;vertical-align:middle;" onclick="event.stopPropagation();window._mfSort(\'' + key + '\')">' +
           '<span style="font-size:8px;color:' + upColor + ';">&#9650;</span>' +
           '<span style="font-size:8px;color:' + downColor + ';margin-top:-2px;">&#9660;</span>' +
         '</span>';
@@ -2699,7 +2700,7 @@ function _renderMfGridBody(grid, schemes) {
     // Table header and rows depend on view tab
     var _th2="padding:10px 12px;font-size:10px;color:var(--text-muted);font-weight:700;white-space:nowrap;position:sticky;top:0;z-index:55;background:var(--bg-header);";
     // Header cell with dual sort arrows (▲▼); clicking toggles asc/desc via window._mfSort
-    function _sth(label,key,right){return '<th style="'+_th2+(right?'text-align:right;':'text-align:left;')+'cursor:pointer;user-select:none;" onclick="event.stopPropagation();window._mfSort(\x27'+key+'\x27)">'+label+window.mfSortArrow(key)+'</th>';}
+    function _sth(label,key,right){return '<th style="'+_th2+(right?'text-align:right;':'text-align:left;')+'cursor:pointer;user-select:none;" onclick="event.stopPropagation();window._mfSort(\x27'+key+'\x27)"><span style="display:inline-flex;align-items:center;justify-content:center;gap:0;">'+label+window.mfSortArrow(key)+'</span></th>';}
     var _head="", _body="";
 
     if((window._mfViewTab||"summary")==="ranks") {
@@ -2801,6 +2802,7 @@ function _renderMfGridBody(grid, schemes) {
         +_sth('1Y %','r:1Y',true)
         +_sth('3Y %','r:3Y',true)
         +_sth('5Y %','r:5Y',true)
+        +_sth('Vs Benchmark','vsbench',true)
         +'<th style="'+_th2+'text-align:right;">Vs Category</th>';
             var _catAvg1Y={};var _catCnt={};for(var _bi=0;_bi<di.length;_bi++){var _bs=di[_bi],_bc=_bs.category||'Other',_br=_bs.returns&&_bs.returns['1Y']!=null?_bs.returns['1Y']:null;if(_br!==null){_catAvg1Y[_bc]=(_catAvg1Y[_bc]||0)+_br;_catCnt[_bc]=(_catCnt[_bc]||0)+1;}}for(var _ck in _catAvg1Y)_catAvg1Y[_ck]/=_catCnt[_ck];
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
@@ -2825,6 +2827,8 @@ function _renderMfGridBody(grid, schemes) {
           +rc3(_rv("1Y"))
           +rc3(_rv("3Y"))
           +rc3(_rv("5Y"))
+          // Vs Benchmark — fund 1Y return minus its official benchmark (TRI) 1Y return
+          +(function(){var _f1y=s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null;var _bm=(s.metrics&&s.metrics.benchmark_1y!=null)?Number(s.metrics.benchmark_1y)*100:null;if(_f1y==null||_bm==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _d=_f1y-_bm;var _cl=_d>=0?"#00B386":"#EB5B56";var _ar=_d>=0?"\u25B2":"\u25BC";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;">'+_ar+' '+(_d>=0?"+":"")+_d.toFixed(2)+'%</span><span style="color:var(--text-muted);font-size:10px;margin-left:3px;">'+((s.metrics&&s.metrics.benchmarkName)?s.metrics.benchmarkName:'')+'</span></td>';})()
           // Vs Category — fund 1Y return minus the category average
           +(function(){var _f1y=s.returns&&s.returns["1Y"]!=null?s.returns["1Y"]:null;var _bavg=_catAvg1Y[s.category||"Other"]||null;if(_f1y==null||_bavg==null) return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var _diff=_f1y-_bavg;var _cl=_diff>=0?"#00B386":"#EB5B56";var _arr=_diff>=0?"\u25B2":"\u25BC";return '<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:700;">'+_arr+' '+(_diff>=0?"+":"")+_diff.toFixed(2)+'%</span><span style="color:var(--text-muted);font-size:10px;margin-left:3px;">vs avg</span></td>';})()+"</tr>";}).join("");
 
