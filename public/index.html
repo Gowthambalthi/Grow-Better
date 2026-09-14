@@ -2880,7 +2880,7 @@ function _renderMfGridBody(grid, schemes) {
         var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
         var W=rect.width,pad=40,cw=W-pad-14,chH=H-pad-22;
         ctx.clearRect(0,0,W,H);
-        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
         var steps=4;
         for(var i=0;i<=steps;i++){var v=mn+(mx-mn)*i/steps;var y=pad+chH-(v-mn)/(mx-mn)*chH;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(Math.round(v)+'%',pad-6,y+3);}
         // X-axis tick marks, time-appropriate per range:
@@ -2893,7 +2893,7 @@ function _renderMfGridBody(grid, schemes) {
           var d0=new Date(xs[0]), dN=new Date(xs[xs.length-1]);
           var spanDays=(dN-d0)/86400000;
           function xOf(d){return pad+(d-d0)/((dN-d0)||1)*cw;}
-          function lightLabel(txt,x){ctx.fillStyle='rgba(139,147,167,0.45)';ctx.fillText(txt,x,H-6);}
+          function lightLabel(txt,x){ctx.fillStyle='rgba(170,178,200,0.9)';ctx.fillText(txt,x,H-6);}
           // month boundaries (vertical light marks)
           ctx.strokeStyle='rgba(128,128,128,0.10)';
           var _multiYear=spanDays>800;
@@ -2921,14 +2921,20 @@ function _renderMfGridBody(grid, schemes) {
           if(range==='1Y'){
             // month names only — nothing extra
           } else if(range==='6M'){
-            // 15-day light tick dots (no text, keep months as Y labels)
-            marksEvery(15,function(x){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);});
+            // 15-day marks with day-number labels
+            marksEvery(15,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(String(d.getDate())+'/'+String(d.getMonth()+1),x);});
           } else if(range==='3M'){
-            // week marks with small light week labels
-            marksEvery(7,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);if(d.getDate()<=7){lightLabel('wk',x);} });
+            // week marks with week-start date labels
+            marksEvery(7,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(String(d.getDate())+'/'+String(d.getMonth()+1),x);});
           } else if(range==='1M'){
-            // day labels (every 5 days), light
-            marksEvery(5,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(String(d.getDate()),x);});
+            // ALL dates in the month
+            marksEvery(1,function(x,d){ctx.fillStyle='rgba(139,147,167,0.25)';ctx.fillRect(x-0.5,pad+chH,1,3);lightLabel(d.getDate(),x);});
+          } else if(range==='3Y'){
+            // quarter boundaries — every 3 months with month+year label
+            marksEvery(91,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2),x);});
+          } else if(range==='5Y'||range==='ALL'){
+            // every 6 months
+            marksEvery(182,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2),x);});
           }
           ctx.textAlign='center';
         })();
@@ -2938,9 +2944,9 @@ function _renderMfGridBody(grid, schemes) {
           var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx++%_MF_EXTRA_COLORS.length];
           var s=json.categories[c].series;
           _seriesMeta.push({name:c,col:col,data:s});
-          ctx.strokeStyle=col;ctx.lineWidth=1.8;ctx.beginPath();
+          ctx.strokeStyle=col;ctx.globalAlpha=0.55;ctx.lineWidth=1.6;ctx.beginPath();
           for(var i2=0;i2<s.length;i2++){var x=pad+i2/(xs.length-1)*cw;var y=pad+chH-(s[i2].pct-mn)/(mx-mn)*chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-          ctx.stroke();
+          ctx.stroke();ctx.globalAlpha=1;
         });
         var _extraIx2=0;
         if(legend){legend.innerHTML=cats.map(function(c){var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx2++%_MF_EXTRA_COLORS.length];return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-primary);"><span style="width:10px;height:10px;border-radius:50%;background:'+col+';display:inline-block;"></span>'+c+'</span>';}).join('');}
@@ -3013,7 +3019,7 @@ function _renderMfGridBody(grid, schemes) {
         var W=rect.width,pad=40,cw=W-pad-14,chH=H-pad-22;
         ctx.clearRect(0,0,W,H);
         // grid + y labels
-        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
         var steps=4;
         for(var i=0;i<=steps;i++){var v=mn+(mx-mn)*i/steps;var y=pad+chH-(v-mn)/(mx-mn)*chH;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(v.toFixed(0)+'%',pad-4,y+3);}
         // x month labels (light)
@@ -3048,13 +3054,13 @@ function _renderMfGridBody(grid, schemes) {
         var dpr=window.devicePixelRatio||1;
         var W=chart.pad+chart.cw+14;
         ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
-        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
         var steps=4;
         for(var i=0;i<=steps;i++){var v=chart.mn+(chart.mx-chart.mn)*i/steps;var y=chart.pad+chart.chH-(v-chart.mn)/(chart.mx-chart.mn)*chart.chH;ctx.beginPath();ctx.moveTo(chart.pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(v.toFixed(0)+'%',chart.pad-4,y+3);}
         chart.series.forEach(function(sm){
-          ctx.strokeStyle=sm.col;ctx.lineWidth=1.8;ctx.beginPath();
+          ctx.strokeStyle=sm.col;ctx.globalAlpha=0.55;ctx.lineWidth=1.6;ctx.beginPath();
           for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-          ctx.stroke();
+          ctx.stroke();ctx.globalAlpha=1;
         });
         (window._mfFundOverlays||[]).filter(Boolean).forEach(function(ov){
           ctx.strokeStyle=ov.col;ctx.lineWidth=2;ctx.setLineDash([6,3]);ctx.beginPath();
@@ -3088,7 +3094,7 @@ function _renderMfGridBody(grid, schemes) {
           var W=chart.pad+chart.cw+14;
           ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
           // grid + y labels
-          ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+          ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
           var steps=4;
           for(var i=0;i<=steps;i++){var v=chart.mn+(chart.mx-chart.mn)*i/steps;var y=chart.pad+chart.chH-(v-chart.mn)/(chart.mx-chart.mn)*chart.chH;ctx.beginPath();ctx.moveTo(chart.pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(Math.round(v)+'%',chart.pad-6,y+3);}
           // crosshair at hovered x
@@ -3097,9 +3103,9 @@ function _renderMfGridBody(grid, schemes) {
           // series lines
           var vals=[];
           chart.series.forEach(function(sm){
-            ctx.strokeStyle=sm.col;ctx.lineWidth=1.8;ctx.beginPath();
+            ctx.strokeStyle=sm.col;ctx.globalAlpha=0.55;ctx.lineWidth=1.6;ctx.beginPath();
             for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-            ctx.stroke();
+            ctx.stroke();ctx.globalAlpha=1;
             // point value at ix if series has data there
             var pt=null;
             for(var k=0;k<sm.data.length;k++){ if(sm.data[k].date===date){pt=sm.data[k].pct;break;} }
@@ -3204,7 +3210,7 @@ function _renderMfGridBody(grid, schemes) {
         else {mn2=0;}
         if(mx===mn2)mx=mn2+1;
         // light gridlines + y labels
-        ctx.strokeStyle='rgba(128,128,128,0.12)';ctx.fillStyle='rgba(139,147,167,0.55)';ctx.font='10px sans-serif';ctx.textAlign='right';
+        ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
         var steps=4;
         for(var i=0;i<=steps;i++){var v=mn2+(mx-mn2)*i/steps;var y=pad+chH-(v-mn2)/(mx-mn2)*chH;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(W-8,y);ctx.stroke();var lbl=view==='aum'?('₹'+Math.round(v/1000)+'k Cr'):((v>=0?'+':'')+Math.round(v)+(view==='ranks'?'':view==='aum'?'':'%'));ctx.fillText(lbl,pad-6,y+3);}
         // bars
