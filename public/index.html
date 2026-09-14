@@ -2594,8 +2594,6 @@ function _renderMfGridBody(grid, schemes) {
     // View row: View label + tabs, search input parallel on the right (outside the graph card)
     var vtDefs=[{k:"summary",l:"Summary"},{k:"ranks",l:"Ranks"},{k:"risk",l:"Risk vs Reward"}];
     var vtHtml='<div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">'
-      + '<div style="display:flex;gap:6px;align-items:center;flex:none;"><span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-right:6px;">View:</span>';
-    for(var _vi=0;_vi<vtDefs.length;_vi++){var _vt=vtDefs[_vi],_ia=((window._mfViewTab||"summary")===_vt.k);vtHtml+='<button data-vtab="'+_vt.k+'" style="background:'+(_ia?'var(--accent)':'var(--bg-input)')+';color:'+(_ia?'#fff':'var(--text-muted)')+';border:1px solid '+(_ia?'var(--accent)':'var(--line)')+';padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;">'+_vt.l+'</button>';}vtHtml+='</div>'
       + '<div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap;min-width:0;">'
       + '<input type="text" id="mfSearchInput" placeholder="Search schemes, AMCs, stocks..." style="background:var(--bg-input);border:1px solid var(--line);color:var(--text-primary);padding:7px 12px;border-radius:8px;font-size:12px;width:190px;max-width:100%;flex:1 1 140px;">'
       + amcDD.replace('width:260px;max-height:400px','width:230px;max-height:400px').replace('padding:6px 14px;border-radius:20px;font-size:11px','padding:6px 12px;border-radius:8px;font-size:11.5px')
@@ -3283,15 +3281,15 @@ function _renderMfGridBody(grid, schemes) {
       window._mfShowStarMenu = function(el){
         var old = document.getElementById('mfStarPopover'); if(old) old.remove();
         var pop = document.createElement('div'); pop.id='mfStarPopover';
-        pop.style.cssText='position:fixed;z-index:99999;background:var(--card-bg,#161c26);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);padding:6px;min-width:170px;';
+        pop.style.cssText='position:fixed;z-index:99999;background:#ffffff;border:1px solid #e2e6ee;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:6px;min-width:170px;';
         var id = el.getAttribute('data-id'), nm = el.getAttribute('data-name')||'';
         var inWl = window._mfWatchlist.some(function(w){return w.id===id;});
         var inG = window._mfGraphFunds.some(function(g){return g.id===id;});
         function item(label, fn, disabled, active){
           var d=document.createElement('div');
           d.textContent = label + (active?' \u2713':'');
-          d.style.cssText='padding:8px 12px;font-size:12px;cursor:'+(disabled?'default':'pointer')+';border-radius:5px;color:'+(active?'var(--accent)':(disabled?'var(--text-muted)':'var(--text-primary)'))+';opacity:'+(disabled?'.55':'1')+';';
-          if(!disabled) d.onmouseover=function(){d.style.background='rgba(74,158,255,0.12)';};
+          d.style.cssText='padding:8px 12px;font-size:12px;cursor:'+(disabled?'default':'pointer')+';border-radius:5px;color:'+(active?'#00897B':(disabled?'#a7adba':'#1c2430'))+';opacity:'+(disabled?'.55':'1')+';font-weight:600;';
+          if(!disabled) d.onmouseover=function(){d.style.background='rgba(0,137,123,0.10)';};
           if(!disabled) d.onmouseout=function(){d.style.background='transparent';};
           if(!disabled) d.onclick=function(){ fn(); pop.remove(); };
           pop.appendChild(d);
