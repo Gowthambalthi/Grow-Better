@@ -37,10 +37,6 @@
         <div class="brand-logo-icon" style="background:transparent;box-shadow:none;border:none;padding:0;width:44px;height:44px;">
           <img src="/logo.png" alt="Grow Better" style="width:44px;height:44px;object-fit:contain;">
         </div>
-        <div class="brand-text-wrap">
-          <span class="brand-title" style="font-size:16px;font-weight:800;color:#FFFFFF;">GROW</span>
-          <span class="brand-subtitle">BETTER GB</span>
-        </div>
       </div>
 
       <nav class="sidebar-nav">
@@ -102,7 +98,7 @@
       <header class="topbar">
         <div class="topbar-left">
           <div class="topbar-brand-simple" data-nav="dashboard" title="Grow Better — Algo Terminal">
-            <span class="topbar-brand-title">GROW BETTER</span>
+            <span class="topbar-brand-title"><span style="color:#00B386;">GROW</span> <span style="color:#1a1d26;">BETTER</span></span>
           </div>
         </div>
 
@@ -2951,37 +2947,43 @@ function _renderMfGridBody(grid, schemes) {
           // align to a labeled boundary
           if(_multiYear){ m=new Date(d0.getFullYear(),0,1); if(m<d0) m.setFullYear(m.getFullYear()+1); }
           ctx.textAlign='left';
-          while(m<=dN){
-            var mx2=xOf(m);
-            if(mx2>pad+6&&mx2<W-14){
-              ctx.beginPath();ctx.moveTo(mx2,pad);ctx.lineTo(mx2,pad+chH);ctx.stroke();
-              lightLabel(_multiYear?String(m.getFullYear()):(MO[m.getMonth()]+' '+String(m.getFullYear()).slice(2)),mx2+2);
+          // Only draw month-boundary labels for ranges longer than ~3 months —
+          // on 1M/3M charts they collide with the day-number tick labels.
+          if(spanDays>100){
+            while(m<=dN){
+              var mx2=xOf(m);
+              if(mx2>pad+6&&mx2<W-14){
+                ctx.beginPath();ctx.moveTo(mx2,pad);ctx.lineTo(mx2,pad+chH);ctx.stroke();
+                lightLabel(_multiYear?String(m.getFullYear()):(MO[m.getMonth()]+' '+String(m.getFullYear()).slice(2)),mx2+2);
+              }
+              if(_multiYear)m.setFullYear(m.getFullYear()+1); else m.setMonth(m.getMonth()+1);
             }
-            if(_multiYear)m.setFullYear(m.getFullYear()+1); else m.setMonth(m.getMonth()+1);
-            // skip-ahead guard for dense multi-year month stepping (not used when _multiYear)
-            if(!_multiYear && m.getMonth()!==((m.getMonth()))) break;
           }
           function marksEvery(days,labelFn){
             var d=new Date(d0); d.setDate(d.getDate()+days);
             while(d<=dN){ var x=xOf(d); if(x>pad+4&&x<W-10) labelFn(x,d); d.setDate(d.getDate()+days); }
           }
+          // Adaptive tick stepping: aim for ~10-12 evenly-spaced labels no
+          // matter the range, so day numbers never overlap.
+          function spacedTicks(stepDays,labelFn){
+            var total=Math.max(1,Math.round(spanDays/stepDays));
+            var every=Math.max(1,Math.ceil(total/11));
+            var d=new Date(d0); var n=0;
+            while(d<=dN){ if(n%every===0) labelFn(xOf(d),d); d.setDate(d.getDate()+stepDays); n++; }
+          }
           if(range==='1Y'){
-            // month names only — nothing extra
+            // month names already drawn via boundaries
           } else if(range==='6M'){
-            // 15-day marks with day-number labels
-            marksEvery(15,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(String(d.getDate())+'/'+String(d.getMonth()+1),x);});
+            spacedTicks(15,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(d.getDate()+'/'+(d.getMonth()+1),x);});
           } else if(range==='3M'){
-            // week marks with week-start date labels
-            marksEvery(7,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(String(d.getDate())+'/'+String(d.getMonth()+1),x);});
+            spacedTicks(7,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(d.getDate()+'/'+(d.getMonth()+1),x);});
           } else if(range==='1M'){
-            // ALL dates in the month
-            marksEvery(1,function(x,d){ctx.fillStyle='rgba(139,147,167,0.25)';ctx.fillRect(x-0.5,pad+chH,1,3);lightLabel(d.getDate(),x);});
+            // day numbers, evenly spaced (~every 2-3 days) — never overlapping
+            spacedTicks(1,function(x,d){ctx.fillStyle='rgba(139,147,167,0.25)';ctx.fillRect(x-0.5,pad+chH,1,3);lightLabel(String(d.getDate()),x);});
           } else if(range==='3Y'){
-            // quarter boundaries — every 3 months with month+year label
-            marksEvery(91,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2),x);});
+            spacedTicks(91,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2),x);});
           } else if(range==='5Y'||range==='ALL'){
-            // every 6 months
-            marksEvery(182,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2),x);});
+            spacedTicks(182,function(x,d){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);lightLabel(MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2),x);});
           }
           ctx.textAlign='center';
         })();
