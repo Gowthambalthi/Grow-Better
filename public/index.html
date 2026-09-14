@@ -2155,7 +2155,21 @@
         }
         var grid = document.getElementById("mfSchemesGrid");
         if (!grid) return;
-        _renderMfGridBody(grid, schemes);
+        // Small loading indicator pinned at the bottom while the table rebuilds
+        var host = grid.parentElement;
+        var bar = document.getElementById('mfLoadingBar');
+        if (!bar && host) {
+          bar = document.createElement('div');
+          bar.id = 'mfLoadingBar';
+          bar.style.cssText = 'display:none;padding:8px;text-align:center;font-size:11px;color:var(--text-muted);border-top:1px solid var(--line);';
+          bar.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;vertical-align:-2px;margin-right:6px;animation:mfSpin .8s linear infinite;"></span>Loading funds\u2026';
+          host.appendChild(bar);
+        }
+        if (bar) bar.style.display = 'block';
+        setTimeout(function() {
+          try { _renderMfGridBody(grid, schemes); }
+          finally { if (bar) bar.style.display = 'none'; }
+        }, 15);
       }
 
       // AMC dropdown + search + combined filter
@@ -2171,7 +2185,9 @@
         if (btn) btn.innerHTML = (amc === 'all' ? 'All AMCs' : amc) + ' <span style="font-size:8px;">\u25BC</span>';
         var dd = document.getElementById('mfAmcDropdown');
         if (dd) dd.style.display = 'none';
-        applyMfFilters();
+        // Full re-render from the universe so AMC + cap-card + search filters
+        // always compose correctly (data-level filtering in _renderMfGridBody).
+        renderMfGrid(window._mfFullSchemes || window._mfLastSchemes || []);
       }
       function toggleAmcDropdown() {
         var dd = document.getElementById('mfAmcDropdown');
@@ -2693,7 +2709,7 @@ function _renderMfGridBody(grid, schemes) {
         +_sth('Risk & Reward / 25','rw',true);
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         var sc=s.confidenceScore||50,pf=Math.round(sc*.25),po=Math.round(sc*.22),op=Math.round(sc*.26),rw=sc-pf-po-op;
-        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +rn2(sc)
@@ -2713,7 +2729,7 @@ function _renderMfGridBody(grid, schemes) {
       _body=di.map(function(s){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         var _m=(s && s.metrics)||{};
         function _g(k,p){return (_m[k+"_"+(_msuf[p]||"")])!=null?_m[k+"_"+(_msuf[p]||"")]:null;}
-        var h='<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+        var h='<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>';
         for(var _j=0;_j<_rp.length;_j++){
@@ -2738,7 +2754,7 @@ function _renderMfGridBody(grid, schemes) {
         var _cell;
         if(_isAum){_cell='<td style="padding:10px 12px;text-align:right;font-size:13px;color:var(--text-primary);font-weight:800;white-space:nowrap;">'+(s.aumCr!=null?"\u20b9"+Number(s.aumCr).toLocaleString("en-IN",{maximumFractionDigits:0})+" Cr":"-")+"</td>";}
         else{var _ca=s.aumChange1M;if(!_ca||_ca.change==null){_cell='<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';}else{var _cl=_ca.change>=0?"#00B386":"#EB5B56";var _ar=_ca.change>=0?"\u25B2":"\u25BC";_cell='<td style="padding:10px 12px;text-align:right;font-size:12px;"><span style="color:'+_cl+';font-weight:800;white-space:nowrap;">'+_ar+' \u20b9'+Math.abs(_ca.change).toLocaleString("en-IN",{maximumFractionDigits:1})+' Cr</span> <span style="color:var(--text-muted);font-size:10px;">('+(_ca.changePct||0>=0?"+":"")+(_ca.changePct||0).toFixed(1)+'%)</span></td>';}}
-        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +_cell
@@ -2758,7 +2774,7 @@ function _renderMfGridBody(grid, schemes) {
         +_sth('AUM (\u20B9 Cr)','aum',true)+_sth('Score /100','cs',true);
       _body=_withR.slice(0,25).map(function(s,i){var nm=cleanSchemeTitle(s.schemeName),ct=s.category||"";
         function _rr(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
-        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 12px;text-align:right;font-weight:800;font-size:12px;color:'+(i<3?'#F59E0B':'var(--text-muted)')+';">'+(i+1)+'</td>'
           +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
@@ -2790,7 +2806,7 @@ function _renderMfGridBody(grid, schemes) {
 
         function rc3(v){if(v==null)return '<td style="padding:10px 12px;text-align:right;color:var(--text-muted);font-size:12px;">-</td>';var cl=v>=0?"#00B386":"#EB5B56";return '<td style="padding:10px 12px;text-align:right;color:'+cl+';font-weight:700;font-size:12px;">'+(v>=0?"+":"")+v.toFixed(2)+"%</td>";}
 
-        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
+        return '<tr class="mf-table-row" data-cat="'+ct+'" data-id="'+s.id+'" data-amc="'+(s.parentAmc||s.amc||'Other')+'" style="border-bottom:1px solid var(--line);cursor:pointer;">'
           +'<td style="padding:10px 8px;"><span class="mf-star" data-id="'+s.id+'" data-name="'+cleanSchemeTitle(s.schemeName).replace(/"/g,'&quot;')+'" style="color:var(--text-muted);font-size:14px;cursor:pointer;user-select:none;">\u2606</span></td>'
           +'<td class="mf-fund-name" data-id="'+s.id+'" style="padding:10px 12px;font-weight:700;font-size:12px;color:var(--text-primary);cursor:pointer;"><div>'+nm+'</div><div style="font-size:10px;color:var(--text-muted);">'+ct+'</div></td>'
           +rn2(s.confidenceScore||50)
