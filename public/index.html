@@ -2989,11 +2989,12 @@ function _renderMfGridBody(grid, schemes) {
         })();
         var _extraIx=0;
         var _seriesMeta=[];
+        var _la=window._mfChartExpanded?0.95:0.55, _lw=window._mfChartExpanded?2.4:1.6;
         cats.forEach(function(c){
           var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx++%_MF_EXTRA_COLORS.length];
           var s=json.categories[c].series;
           _seriesMeta.push({name:c,col:col,data:s});
-          ctx.strokeStyle=col;ctx.globalAlpha=0.55;ctx.lineWidth=1.6;ctx.beginPath();
+          ctx.strokeStyle=col;ctx.globalAlpha=_la;ctx.lineWidth=_lw;ctx.beginPath();
           for(var i2=0;i2<s.length;i2++){var x=pad+i2/(xs.length-1)*cw;var y=pad+chH-(s[i2].pct-mn)/(mx-mn)*chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
           ctx.stroke();ctx.globalAlpha=1;
         });
@@ -3077,12 +3078,14 @@ function _renderMfGridBody(grid, schemes) {
         var m=new Date(d0);m.setDate(1);if(m<d0)m.setMonth(m.getMonth()+1);
         ctx.fillStyle='rgba(139,147,167,0.45)';ctx.textAlign='left';
         while(m<=dN){var mxx=pad+(m-d0)/((dN-d0)||1)*cw;if(mxx>pad+6&&mxx<W-14)ctx.fillText(MO[m.getMonth()],mxx+2,H-6);m.setMonth(m.getMonth()+1);}
-        // fund lines
+        // fund lines (brighter + thicker when expanded)
         ctx.textAlign='center';
+        var _fla=window._mfChartExpanded?1:0.7, _flw=window._mfChartExpanded?2.8:2;
         _seriesMeta.forEach(function(sm){
-          ctx.strokeStyle=sm.col;ctx.lineWidth=2;ctx.beginPath();
+          ctx.strokeStyle=sm.col;ctx.globalAlpha=_fla;ctx.lineWidth=_flw;ctx.beginPath();
           for(var i2=0;i2<sm.data.length;i2++){var x=pad+i2/(xs.length-1)*cw;var y=pad+chH-(sm.data[i2].pct-mn)/(mx-mn)*chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
           ctx.stroke();
+          ctx.globalAlpha=1;
         });
         window._mfFundOverlays=_seriesMeta;
         if(legend){legend.innerHTML=_seriesMeta.map(function(sm){return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);"><span style="width:14px;height:3px;border-radius:2px;background:'+sm.col+';display:inline-block;"></span>'+sm.name+'</span>';}).join('');}
@@ -3101,13 +3104,15 @@ function _renderMfGridBody(grid, schemes) {
         // Reproduce the base chart draw, then paint fund overlays on top
         var ctx=canvas.getContext('2d');
         var dpr=window.devicePixelRatio||1;
+        ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
         var W=chart.pad+chart.cw+14;
         ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
         ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
         var steps=4;
         for(var i=0;i<=steps;i++){var v=chart.mn+(chart.mx-chart.mn)*i/steps;var y=chart.pad+chart.chH-(v-chart.mn)/(chart.mx-chart.mn)*chart.chH;ctx.beginPath();ctx.moveTo(chart.pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(v.toFixed(0)+'%',chart.pad-4,y+3);}
+        var _la2=window._mfChartExpanded?0.95:0.55, _lw2=window._mfChartExpanded?2.4:1.6;
         chart.series.forEach(function(sm){
-          ctx.strokeStyle=sm.col;ctx.globalAlpha=0.55;ctx.lineWidth=1.6;ctx.beginPath();
+          ctx.strokeStyle=sm.col;ctx.globalAlpha=_la2;ctx.lineWidth=_lw2;ctx.beginPath();
           for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
           ctx.stroke();ctx.globalAlpha=1;
         });
@@ -3135,11 +3140,14 @@ function _renderMfGridBody(grid, schemes) {
           var rect=canvas.getBoundingClientRect();
           var mxp=ev.clientX-rect.left;
           var ix=Math.round((mxp-chart.pad)/chart.cw*(chart.xs.length-1));
+          // brighter + thicker in fullscreen
+          var _la=window._mfChartExpanded?0.95:0.55, _lw=window._mfChartExpanded?2.4:1.6;
           if(ix<0)ix=0; if(ix>chart.xs.length-1)ix=chart.xs.length-1;
           var date=chart.xs[ix];
           // redraw with crosshair
           var ctx=canvas.getContext('2d');
           var dpr=window.devicePixelRatio||1;
+          ctx.setTransform(1,0,0,1,0,0);ctx.scale(dpr,dpr);
           var W=chart.pad+chart.cw+14;
           ctx.clearRect(0,0,canvas.width/dpr,canvas.height/dpr);
           // grid + y labels
@@ -3152,7 +3160,7 @@ function _renderMfGridBody(grid, schemes) {
           // series lines
           var vals=[];
           chart.series.forEach(function(sm){
-            ctx.strokeStyle=sm.col;ctx.globalAlpha=0.55;ctx.lineWidth=1.6;ctx.beginPath();
+            ctx.strokeStyle=sm.col;ctx.globalAlpha=_la;ctx.lineWidth=_lw;ctx.beginPath();
             for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
             ctx.stroke();ctx.globalAlpha=1;
             // point value at ix if series has data there
@@ -3394,6 +3402,18 @@ function _renderMfGridBody(grid, schemes) {
       };
 
       // Watchlist state + star popover (Add to Watchlist / Add to Graph)
+      // Esc exits chart fullscreen
+      document.addEventListener('keydown', function(ev){
+        if(ev.key==='Escape' && window._mfChartExpanded){
+          window._mfChartExpanded=false;
+          var _card=document.getElementById('mfChartCard');
+          if(_card)_card.classList.remove('mf-chart-full');
+          var _eb=document.getElementById('mfChartExpandBtn');
+          if(_eb){_eb.innerHTML='\u26F6';_eb.title='Expand chart';}
+          drawMfCatChart();
+        }
+      });
+
       window._mfWatchlist = [];
       try { window._mfWatchlist = JSON.parse(localStorage.getItem('mfWatchlist')||'[]'); } catch(e){}
       window._mfGraphFunds = window._mfGraphFunds || [];
@@ -3490,7 +3510,7 @@ function _renderMfGridBody(grid, schemes) {
           window._mfChartExpanded = !window._mfChartExpanded;
           if (_card) _card.classList.toggle('mf-chart-full', !!window._mfChartExpanded);
           var _eb = document.getElementById('mfChartExpandBtn');
-          if (_eb) { _eb.innerHTML = window._mfChartExpanded ? '\u2715' : '\u26F6'; _eb.title = window._mfChartExpanded ? 'Exit fullscreen' : 'Expand chart'; }
+          if (_eb) { _eb.innerHTML = window._mfChartExpanded ? '\u2715' : '\u26F6'; _eb.title = window._mfChartExpanded ? 'Exit fullscreen (Esc)' : 'Expand chart'; }
           drawMfCatChart();
           return;
         }
