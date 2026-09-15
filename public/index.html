@@ -2989,7 +2989,7 @@ function _renderMfGridBody(grid, schemes) {
         })();
         var _extraIx=0;
         var _seriesMeta=[];
-        var _la=window._mfChartExpanded?1:1, _lw=window._mfChartExpanded?2.8:2.2;
+        var _la=window._mfChartExpanded?1:1, _lw=window._mfChartExpanded?3.2:2.6;
         cats.forEach(function(c){
           var col=_MFCAT_COLORS[c]||_MF_EXTRA_COLORS[_extraIx++%_MF_EXTRA_COLORS.length];
           var s=json.categories[c].series;
@@ -3075,12 +3075,28 @@ function _renderMfGridBody(grid, schemes) {
         // x month labels (light)
         var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
         var d0=new Date(xs[0]),dN=new Date(xs[xs.length-1]);
-        var m=new Date(d0);m.setDate(1);if(m<d0)m.setMonth(m.getMonth()+1);
-        ctx.fillStyle='rgba(139,147,167,0.45)';ctx.textAlign='left';
-        while(m<=dN){var mxx=pad+(m-d0)/((dN-d0)||1)*cw;if(mxx>pad+6&&mxx<W-14)ctx.fillText(MO[m.getMonth()],mxx+2,H-6);m.setMonth(m.getMonth()+1);}
+        var spanDays=(dN-d0)/86400000;
+        // Adaptive x ticks — same scheme as the category chart, no label pileups
+        ctx.fillStyle='rgba(170,178,200,0.95)';ctx.textAlign='center';
+        (function(){
+          function xOf(d){return pad+(d-d0)/((dN-d0)||1)*cw;}
+          function tick(x,txt){ctx.fillStyle='rgba(139,147,167,0.3)';ctx.fillRect(x-0.5,pad+chH,1,4);ctx.fillStyle='rgba(170,178,200,0.95)';ctx.fillText(txt,x,H-6);}
+          function spacedTicks(stepDays,labelFn){
+            var total=Math.max(1,Math.round(spanDays/stepDays));
+            var every=Math.max(1,Math.ceil(total/11));
+            var d=new Date(d0); var n=0;
+            while(d<=dN){ if(n%every===0) labelFn(xOf(d),d); d.setDate(d.getDate()+stepDays); n++; }
+          }
+          if(spanDays<=35) spacedTicks(3,function(x,d){tick(x,d.getDate()+'/'+(d.getMonth()+1));});
+          else if(spanDays<=100) spacedTicks(7,function(x,d){tick(x,d.getDate()+'/'+(d.getMonth()+1));});
+          else if(spanDays<=200) spacedTicks(15,function(x,d){tick(x,d.getDate()+'/'+(d.getMonth()+1));});
+          else if(spanDays<=400) spacedTicks(30,function(x,d){tick(x,MO[d.getMonth()]);});
+          else if(spanDays<=800) spacedTicks(91,function(x,d){tick(x,MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2));});
+          else spacedTicks(182,function(x,d){tick(x,MO[d.getMonth()]+' '+String(d.getFullYear()).slice(2));});
+        })();
         // fund lines (brighter + thicker when expanded)
         ctx.textAlign='center';
-        var _fla=window._mfChartExpanded?1:0.9, _flw=window._mfChartExpanded?3.2:2.4;
+        var _fla=window._mfChartExpanded?1:0.9, _flw=window._mfChartExpanded?3.6:2.8;
         _seriesMeta.forEach(function(sm){
           ctx.strokeStyle=sm.col;ctx.globalAlpha=_fla;ctx.lineWidth=_flw;ctx.beginPath();
           for(var i2=0;i2<sm.data.length;i2++){var x=pad+i2/(xs.length-1)*cw;var y=pad+chH-(sm.data[i2].pct-mn)/(mx-mn)*chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
@@ -3110,7 +3126,7 @@ function _renderMfGridBody(grid, schemes) {
         ctx.strokeStyle='rgba(128,128,128,0.10)';ctx.fillStyle='rgba(170,178,200,0.95)';ctx.font='10px sans-serif';ctx.textAlign='right';
         var steps=4;
         for(var i=0;i<=steps;i++){var v=chart.mn+(chart.mx-chart.mn)*i/steps;var y=chart.pad+chart.chH-(v-chart.mn)/(chart.mx-chart.mn)*chart.chH;ctx.beginPath();ctx.moveTo(chart.pad,y);ctx.lineTo(W-8,y);ctx.stroke();ctx.fillText(v.toFixed(0)+'%',chart.pad-4,y+3);}
-        var _la2=window._mfChartExpanded?1:1, _lw2=window._mfChartExpanded?2.8:2.2;
+        var _la2=window._mfChartExpanded?1:1, _lw2=window._mfChartExpanded?3.2:2.6;
         chart.series.forEach(function(sm){
           ctx.strokeStyle=sm.col;ctx.globalAlpha=_la2;ctx.lineWidth=_lw2;ctx.beginPath();
           for(var i2=0;i2<sm.data.length;i2++){var x=chart.pad+i2/(chart.xs.length-1)*chart.cw;var y=chart.pad+chart.chH-(sm.data[i2].pct-chart.mn)/(chart.mx-chart.mn)*chart.chH;if(i2===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
@@ -3141,7 +3157,7 @@ function _renderMfGridBody(grid, schemes) {
           var mxp=ev.clientX-rect.left;
           var ix=Math.round((mxp-chart.pad)/chart.cw*(chart.xs.length-1));
           // brighter + thicker in fullscreen
-          var _la=window._mfChartExpanded?1:1, _lw=window._mfChartExpanded?2.8:2.2;
+          var _la=window._mfChartExpanded?1:1, _lw=window._mfChartExpanded?3.2:2.6;
           if(ix<0)ix=0; if(ix>chart.xs.length-1)ix=chart.xs.length-1;
           var date=chart.xs[ix];
           // redraw with crosshair
