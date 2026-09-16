@@ -1252,8 +1252,13 @@
 
         <!-- ---- Terminal ---- -->
         <section class="view" id="view-terminal">
-          <h1 class="view-title">Trading Terminal</h1>
-          <div class="empty-state" style="margin-top:16px;">Advanced trading terminal view.</div>
+          <h1 class="view-title">GB Terminal — Strategy 1 Scanner</h1>
+          <div class="gb-scan-bar" style="display:flex;align-items:center;gap:14px;margin:12px 0 16px;flex-wrap:wrap;">
+            <button id="gbScanBtn" class="btn btn-primary" style="padding:10px 22px;font-size:15px;">▶ Scan All Stocks</button>
+            <span id="gbScanStatus" style="color:var(--text-dim,#8b93a7);font-size:13px;">Scans ~2,700 NSE stocks for fresh BUY setups (GB Strategy 1: 5 engines + trap filter + fresh-entry check).</span>
+          </div>
+          <div id="gbSummary" style="display:none;display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
+          <div id="gbTableWrap" style="overflow:auto;max-height:70vh;"></div>
         </section>
 
         <!-- ---- Alerts ---- -->
@@ -3677,7 +3682,113 @@ function _renderMfGridBody(grid, schemes) {
               loadSmForeignData();
             }
           }
+          if (target === 'terminal') {
+            gbAutoLoad();
+          }
         }
+
+        // ---- GB Terminal: Strategy 1 scanner ----
+        var gbLoaded = false;
+        var gbRows = [];
+        var gbSortKey = 'score';
+        var gbSortDir = -1;
+
+        function gbAutoLoad() {
+          if (gbLoaded) return;
+          gbLoaded = true;
+          gbScan();
+        }
+
+        async function gbScan() {
+          var btn = document.getElementById('gbScanBtn');
+          var status = document.getElementById('gbScanStatus');
+          if (!btn || !status) return;
+          btn.disabled = true;
+          btn.textContent = '⟳ Scanning…';
+          status.textContent = 'Scanning ~2,700 NSE stocks (5 engines + trap filter + fresh-entry check)…';
+          try {
+            var r = await fetch('/api/gb/scan');
+            var j = await r.json();
+            if (j.error) { status.textContent = '❌ ' + j.error; btn.disabled = false; btn.textContent = '▶ Scan All Stocks'; return; }
+            gbRows = j.rows || [];
+            gbRenderSummary(j);
+            gbRenderTable();
+            var bt = j.backtest ? (' · backtest 1Y: ' + j.backtest.totalSignals + ' signals, ' + j.backtest.winRate + '% win, avg ' + j.backtest.avgRR + 'R, ' + j.backtest.avgHoldDays + 'd hold') : '';
+            status.textContent = '✅ Scanned ' + j.scanned.toLocaleString('en-IN') + ' stocks · ' + j.freshBuys + ' fresh buys' + bt + ' · data: ' + (j.generatedAt || '').slice(0, 10);
+          } catch (e2) {
+            status.textContent = '❌ Scan failed: ' + e2.message;
+          }
+          btn.disabled = false;
+          btn.textContent = '▶ Rescan';
+        }
+
+        function gbRenderSummary(j) {
+          var el = document.getElementById('gbSummary');
+          if (!el) return;
+          var cards = [
+            ['Scanned', j.scanned.toLocaleString('en-IN'), 'stocks across NSE mainboard'],
+            ['Fresh Buys', String(j.freshBuys), 'engineRate ≥7 + no traps + fresh entry'],
+          ];
+          if (j.backtest) {
+            cards.push(['Backtest Win Rate', j.backtest.winRate + '%', j.backtest.totalSignals.toLocaleString('en-IN') + ' signals (1Y)']);
+            cards.push(['Avg R:R', j.backtest.avgRR + 'R', 'avg hold ' + j.backtest.avgHoldDays + ' trading days']);
+          }
+          el.style.display = 'flex';
+          el.innerHTML = cards.map(function(c) {
+            return '<div style="background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;padding:14px 20px;min-width:170px;">' +
+              '<div style="font-size:12px;color:var(--text-muted,#8b93a7);text-transform:uppercase;letter-spacing:0.5px;">' + c[0] + '</div>' +
+              '<div style="font-size:26px;font-weight:700;color:var(--accent,#00B386);margin:4px 0 2px;">' + c[1] + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted,#8b93a7);">' + c[2] + '</div></div>';
+          }).join('');
+        }
+
+        function gbRenderTable() {
+          var wrap = document.getElementById('gbTableWrap');
+          if (!wrap) return;
+          if (!gbRows.length) { wrap.innerHTML = '<div class="empty-state">No fresh buys right now.</div>'; return; }
+          var key = gbSortKey, dir = gbSortDir;
+          var sorted = gbRows.slice().sort(function(a, b) {
+            var va = a[key], vb = b[key];
+            if (typeof va === 'string') return dir * va.localeCompare(vb);
+            return dir * ((va || 0) - (vb || 0));
+          });
+          var cols = [
+            ['symbol', 'Symbol'], ['engine', 'Engine'], ['score', 'Score'], ['close', 'Close'],
+            ['entry', 'Entry'], ['stopLoss', 'Stop Loss'], ['target1', 'Target 1'], ['target2', 'Target 2'],
+            ['rsi', 'RSI'], ['adx', 'ADX'], ['volRatio', 'Vol ×']
+          ];
+          var head = cols.map(function(c) {
+            var active = key === c[0];
+            return '<th data-gbsort="' + c[0] + '" style="cursor:pointer;position:sticky;top:0;background:var(--bg-card,#161b22);white-space:nowrap;padding:8px 12px;' + (active ? 'color:var(--accent,#00B386);' : '') + '">' + c[1] + (active ? (dir < 0 ? ' ▼' : ' ▲') : '') + '</th>';
+          }).join('');
+          var body = sorted.map(function(r) {
+            var cls = r.score >= 12 ? '#00e091' : r.score >= 9 ? '#00B386' : r.score >= 8 ? '#f59e0b' : 'var(--text,#e6e9f0)';
+            return '<tr style="border-top:1px solid var(--border,#232a36);">' +
+              '<td style="padding:7px 12px;font-weight:600;white-space:nowrap;">' + r.symbol + '</td>' +
+              '<td style="padding:7px 12px;white-space:nowrap;">' + r.engine + '</td>' +
+              '<td style="padding:7px 12px;font-weight:700;color:' + cls + ';">' + r.score + '</td>' +
+              ['close', 'entry', 'stopLoss', 'target1', 'target2'].map(function(k) {
+                var col = k === 'stopLoss' ? '#ff4d6d' : k === 'target1' || k === 'target2' ? '#00B386' : 'var(--text,#e6e9f0)';
+                return '<td style="padding:7px 12px;color:' + col + ';">' + (r[k] != null ? r[k].toLocaleString('en-IN') : '-') + '</td>';
+              }).join('') +
+              ['rsi', 'adx', 'volRatio'].map(function(k) {
+                return '<td style="padding:7px 12px;">' + (r[k] != null ? r[k] : '-') + '</td>';
+              }).join('') + '</tr>';
+          }).join('');
+          wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+        }
+
+        var gbBtn = document.getElementById('gbScanBtn');
+        if (gbBtn) gbBtn.addEventListener('click', gbScan);
+
+        var gbWrap = document.getElementById('gbTableWrap');
+        if (gbWrap) gbWrap.addEventListener('click', function(e) {
+          var th = e.target.closest('[data-gbsort]');
+          if (!th) return;
+          var k = th.getAttribute('data-gbsort');
+          if (gbSortKey === k) gbSortDir = -gbSortDir; else { gbSortKey = k; gbSortDir = -1; }
+          gbRenderTable();
+        });
 
         var tfBtn = e.target.closest('.mf-tf-btn');
         if (tfBtn) {

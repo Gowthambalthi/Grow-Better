@@ -193,6 +193,30 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// ---- GB Terminal: Strategy 1 scanner ----
+// Serves the precomputed engine-score pipeline results.
+app.get('/api/gb/scan', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const tight = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'trade_table_tight.json'), 'utf8'));
+    let backtest = null;
+    try {
+      const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'backtest_results.json'), 'utf8'));
+      backtest = { totalSignals: bt.totalSignals, winRate: bt.winRate, avgRR: bt.avgRR, avgHoldDays: bt.avgHoldDays };
+    } catch (_) {}
+    res.json({
+      generatedAt: tight.generatedAt,
+      scanned: tight.scanned,
+      freshBuys: tight.freshBuys,
+      backtest,
+      rows: tight.rows,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Scan data not available: ' + e.message });
+  }
+});
+
 // ---- Holdings / positions ----
 app.get('/api/:broker/holdings', getBroker, async (req, res) => {
   try {
@@ -1296,10 +1320,10 @@ app.get('/api/mutual-funds/category-series', (req, res) => {
     for (const def of seriesDefs) {
       const members = allSchemes.filter(def.filter);
       if (!members.length) continue;
-      // Average normalized NAV across up to 60 sampled member schemes
+      // Average normalized NAV across ALL member schemes (true category average)
       const perDate = {};
       const perDateN = {};
-      const sample = members.slice(0, 60);
+      const sample = members;
       for (const s of sample) {
         const hist = hdfcMfDb.getNavHistoryRange(s.id, cutoff, '2099-12-31');
         if (!hist || hist.length < 5) continue;
