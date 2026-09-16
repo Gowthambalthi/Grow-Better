@@ -22,7 +22,7 @@
  */
 'use strict';
 
-const { detectSupportZones } = require('./zones');
+const { detectSupportZones, pivotLows, atrSeries: zoneAtrSeries } = require('./zones');
 const { structureState, findSwings } = require('./swings');
 
 const DEFAULTS = {
@@ -50,6 +50,21 @@ const DEFAULTS = {
   // evaluate every historical touch (walk-forward backtest)
   recencyMode: 'recent',
   recencyBars: 5,
+  // C1 — look-ahead protection: when true (used by backtests), zones are
+  // RECOMPUTED as of each candidate touch bar so validity never uses future
+  // bars. Slower; mandatory for honest backtests.
+  asOfZones: false,
+  // C3 — merge overlapping zones after clustering (post-ATR-buffer overlaps)
+  mergeOverlappingZones: true,
+  // C4 — recency-decayed zone strength (half-life in bars)
+  zoneStrengthHalfLife: 30,
+  // S3 — liquidity gate: min average daily turnover (price × volume) over 20 bars
+  minAvgTurnover: 2e7, // ₹2 Cr default
+  // S2 — market regime gate ('auto' | 'on' | 'off'): block bounce signals when
+  // the benchmark (Nifty) is in a downtrend regime at signal time
+  regimeFilter: 'auto',
+  // S6 — per-stock cooldown: bars to wait after a signal before the next one
+  cooldownBars: 10,
 };
 
 // ---------- indicators ----------
@@ -84,6 +99,71 @@ function relativeStrengthOk(stockCandles, niftyCandles, bar, opts) {
   if (stockRet == null) return { ok: false, reason: 'insufficient history for RS' };
   const rs = stockRet - (niftyRet || 0);
   return { ok: rs >= 0, rs, stockRet, niftyRet, reason: rs >= 0 ? null : `RS ${ (rs * 100).toFixed(1) }% < 0 over ${opts.rsBars} bars` };
+}
+
+// ---------- C3 — merge overlapping zones (after clustering, before validation) ----------
+function mergeOverlappingZones(zones) {
+  if (!zones.length) return zones;
+  const sorted = [...zones].sort((a, b) => a.price_low - b.price_low);
+  const merged = [sorted[0]];
+  for (const z of sorted.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (z.price_low <= last.price_high) {
+      last.price_high = Math.max(last.price_high, z.price_high);
+      last.price_low = Math.min(last.price_low, z.price_low);
+      last.touch_indices = [...new Set([...last.touch_indices, ...z.touch_indices])].sort((a, b) => a - b);
+    } else merged.push(z);
+  }
+  return merged;
+}
+
+// ---------- C4 — recency-decayed zone strength ----------
+function zoneStrengthScore(zone, currentIdx, halfLifeBars = 30) {
+  if (!zone.valid_touch_indices || !zone.valid_touch_indices.length) return 0;
+  return zone.valid_touch_indices.reduce(
+    (s, t) => s + Math.pow(0.5, (currentIdx - t) / halfLifeBars), 0);
+}
+
+// ---------- S2 — market regime ----------
+/**
+ * Regime of the benchmark at bar `bar`: 'uptrend' if close > 50MA > 100MA,
+ * 'sideways' if close > 50MA or 50MA > 100MA (partial alignment), else
+ * 'downtrend'. Bounce signals should only fire in up/sideways.
+ */
+function marketRegime(niftyCandles, bar, opts = {}) {
+  if (!niftyCandles || niftyCandles.length < 100) return 'unknown';
+  const closes = niftyCandles.map(c => c[4]);
+  const sma = (end, p) => {
+    if (end + 1 < p) return null;
+    let s = 0;
+    for (let i = end - p + 1; i <= end; i++) s += closes[i];
+    return s / p;
+  };
+  const ma50 = sma(bar, 50), ma100 = sma(bar, 100);
+  if (ma50 == null || ma100 == null) return 'unknown';
+  const c = closes[bar];
+  if (c > ma50 && ma50 > ma100) return 'uptrend';
+  if (c > ma50 || ma50 > ma100) return 'sideways';
+  return 'downtrend';
+}
+
+function regimeOk(niftyCandles, bar, opts) {
+  if (opts.regimeFilter === 'off' || !niftyCandles) return { ok: true, regime: 'unknown' };
+  const regime = marketRegime(niftyCandles, bar, opts);
+  if (regime === 'unknown') return { ok: true, regime }; // no data → don't block
+  const ok = regime !== 'downtrend';
+  return { ok, regime, reason: ok ? null : `market regime ${regime} (Nifty below 50/100 MA)` };
+}
+
+// ---------- S3 — liquidity ----------
+function liquidityOk(candles, bar, opts) {
+  if (!opts.minAvgTurnover) return { ok: true, turnover: null };
+  if (bar < 19) return { ok: false, reason: 'insufficient history for turnover' };
+  let s = 0;
+  for (let i = bar - 19; i <= bar; i++) s += candles[i][4] * candles[i][5];
+  const avg = s / 20;
+  const ok = avg >= opts.minAvgTurnover;
+  return { ok, turnover: avg, reason: ok ? null : `avg turnover ₹${(avg / 1e7).toFixed(2)} Cr < ₹${(opts.minAvgTurnover / 1e7).toFixed(2)} Cr` };
 }
 
 // ---------- Task 2.3 ----------
@@ -219,30 +299,136 @@ function evaluateZoneTouch(zone, candles, touchBar, niftyCandles, opts) {
   };
 }
 
+// ---------- C1 — as-of zone validity (no look-ahead) ----------
+/**
+ * Recompute a zone's validity using ONLY data up to asOfIdx: touches after
+ * the as-of bar are excluded, reaction windows are clipped at the as-of bar,
+ * and the broken check runs over the as-of window only. Returns null when the
+ * zone had no known touches yet.
+ */
+function getZoneAsOf(zone, candles, atrs, asOfIdx, opts = {}) {
+  const reactionBars = opts.bounceBars || 3;
+  const minReactionAtr = opts.bounceAtrMult || 1.0;
+  const known = zone.touch_indices.filter(i => i < asOfIdx);
+  if (!known.length) return null;
+
+  const valid = [];
+  for (const t of known) {
+    const atr = atrs[t];
+    if (atr == null || atr <= 0) continue;
+    const windowEnd = Math.min(t + reactionBars, asOfIdx - 1);
+    const threshold = zone.price_high + minReactionAtr * atr;
+    let reacted = false;
+    for (let k = t + 1; k <= windowEnd; k++) {
+      if (candles[k][4] >= threshold) { reacted = true; break; } // C2: plain loop, no iterator overhead
+    }
+    if (reacted) valid.push(t);
+  }
+
+  // broken check over the as-of window only (2 consecutive closes below low)
+  let broken = false;
+  let consecutive = 0;
+  for (let i = known[0]; i < asOfIdx; i++) {
+    if (candles[i][4] < zone.price_low) {
+      consecutive++;
+      if (consecutive >= 2) { broken = true; break; }
+    } else consecutive = 0;
+  }
+
+  return {
+    ...zone,
+    touch_indices: known,
+    valid_touch_indices: valid,
+    valid_touch_count: valid.length,
+    status: broken ? 'broken' : 'pending',
+    strength: zoneStrengthScore({ valid_touch_indices: valid }, asOfIdx, opts.zoneStrengthHalfLife || 30), // C4
+  };
+}
+
 // ---------- main ----------
 /**
  * Scan a stock's candles for Phase-2-qualified bounce signals on Phase-1 zones.
  *
  * recencyMode (default 'recent'): only touches within recencyBars (default 5)
  * of the last candle are actionable — live-scanner semantics.
- * recencyMode 'all': EVERY valid touch on every zone is evaluated —
- * walk-forward backtest semantics (used by scripts/backtestPhases.js).
- * Each signal carries `actionable` (near the present) either way.
+ * recencyMode 'all' (or asOfZones: true): EVERY historical touch is evaluated
+ * with zones recomputed AS OF that touch (no look-ahead) — walk-forward
+ * backtest semantics used by scripts/backtestPhases.js.
  */
 function detectBounceSignals(stockCandles, niftyCandles, userOpts = {}) {
   const opts = { ...DEFAULTS, ...userOpts };
-  const { zones, rejected_zones } = detectSupportZones(stockCandles, opts.zoneOpts);
-  const signals = [], rejected = [];
+  const walkForward = opts.asOfZones || opts.recencyMode === 'all';
   const lastBar = stockCandles.length - 1;
+  const signals = [], rejected = [];
+  let zones = [], rejected_zones = [];
 
-  for (const zone of zones) {
-    for (const t of zone.valid_touch_indices) {
-      if (opts.recencyMode !== 'all' && lastBar - t > opts.recencyBars + 3) continue;
-      const r = evaluateZoneTouch(zone, stockCandles, t, niftyCandles, opts);
-      if (r.ok) {
-        r.actionable = (lastBar - r.trigger.bounceBar) <= (opts.recencyBars || 5);
-        signals.push({ symbol: null, ...r });
-      } else rejected.push({ touchBar: t, date: stockCandles[t][0], reason: r.reason, detail: r });
+  if (!walkForward) {
+    // live scanner: zones over the full history (all data is known "now")
+    const z = detectSupportZones(stockCandles, opts.zoneOpts);
+    zones = z.zones; rejected_zones = z.rejected_zones;
+    for (const zone of zones) {
+      for (const t of zone.valid_touch_indices) {
+        if (lastBar - t > opts.recencyBars + 3) continue;
+        const r = evaluateZoneTouch(zone, stockCandles, t, niftyCandles, opts);
+        if (r.ok) {
+          r.actionable = (lastBar - r.trigger.bounceBar) <= (opts.recencyBars || 5);
+          r.zone_strength = zoneStrengthScore(zone, lastBar, opts.zoneStrengthHalfLife);
+          signals.push({ symbol: null, ...r });
+        } else rejected.push({ touchBar: t, date: stockCandles[t][0], reason: r.reason, detail: r });
+      }
+    }
+    return { signals, rejected, zones, rejected_zones };
+  }
+
+  // ----- walk-forward: as-of evaluation at every candidate touch (C1) -----
+  const atrs = zoneAtrSeries(stockCandles, (opts.zoneOpts && opts.zoneOpts.atrPeriod) || 14);
+  const allPivots = pivotLows(stockCandles,
+    (opts.zoneOpts && opts.zoneOpts.pivotLeft) || 3,
+    (opts.zoneOpts && opts.zoneOpts.pivotRight) || 3).map(p => p.index);
+  const lookback = (opts.zoneOpts && opts.zoneOpts.lookback) || 75;
+  const minValidTouches = (opts.zoneOpts && opts.zoneOpts.minValidTouches) || 3;
+
+  let lastSignalBar = -Infinity; // S6 — cooldown
+  for (const t of allPivots) {
+    if (lastBar - t > lookback) continue; // same live-window as the scanner
+    if (t - lastSignalBar < opts.cooldownBars) continue; // S6
+
+    // C1 — build zones from STRICTLY the history before t, but count the
+    // current touch as a zone touch (a live scanner at bar t would see the
+    // just-printed pivot). detectSupportZones on slice(0, t] = up to and
+    // INCLUDING t, then getZoneAsOf clips validation windows to < t.
+    const histSlice = stockCandles.slice(0, t + 1);
+    if (histSlice.length < lookback + 4) continue;
+    const zr = detectSupportZones(histSlice, opts.zoneOpts);
+    let candZones = [...zr.zones, ...zr.rejected_zones.filter(z => z.status !== 'broken' && z.valid_touch_count >= minValidTouches - 1)];
+    if (opts.mergeOverlappingZones) candZones = mergeOverlappingZones(candZones);
+    if (!candZones.length) continue;
+
+    // evaluate each as-of zone for a bounce at THIS touch
+    for (const zone of candZones) {
+      // the touch must actually be at/near this zone
+      if (stockCandles[t][3] < zone.price_low - 0.5 * (atrs[t] || 0) || stockCandles[t][3] > zone.price_high + 1.0 * (atrs[t] || 0)) continue;
+      const asOfZone = getZoneAsOf(zone, stockCandles, atrs, t, { ...opts, ...opts.zoneOpts });
+      if (!asOfZone || asOfZone.status === 'broken') continue;
+      if (asOfZone.valid_touch_count < minValidTouches - 1) continue; // current touch makes the Nth
+      const r = evaluateZoneTouch(asOfZone, stockCandles, t, niftyCandles, opts);
+      if (!r.ok) { rejected.push({ touchBar: t, date: stockCandles[t][0], reason: r.reason, detail: r }); continue; }
+
+      // S2 — regime gate at signal time
+      const reg = regimeOk(niftyCandles, r.trigger.bounceBar, opts);
+      if (!reg.ok) { rejected.push({ touchBar: t, date: stockCandles[t][0], reason: reg.reason, detail: r }); continue; }
+
+      // S3 — liquidity gate
+      const liq = liquidityOk(stockCandles, r.trigger.bounceBar, opts);
+      if (!liq.ok) { rejected.push({ touchBar: t, date: stockCandles[t][0], reason: liq.reason, detail: r }); continue; }
+
+      r.actionable = (lastBar - r.trigger.bounceBar) <= (opts.recencyBars || 5);
+      r.zone_strength = +asOfZone.strength.toFixed(2);
+      r.regime = reg.regime;
+      r.turnover_cr = liq.turnover != null ? +(liq.turnover / 1e7).toFixed(2) : null;
+      signals.push({ symbol: null, ...r });
+      lastSignalBar = r.trigger.bounceBar;
+      break; // one signal per touch
     }
   }
   return { signals, rejected, zones, rejected_zones };
@@ -251,5 +437,6 @@ function detectBounceSignals(stockCandles, niftyCandles, userOpts = {}) {
 module.exports = {
   detectBounceSignals, evaluateZoneTouch,
   relativeStrengthOk, volumeSignatureOk, entryTriggerOk, stopTarget,
+  marketRegime, regimeOk, liquidityOk, mergeOverlappingZones, zoneStrengthScore, getZoneAsOf,
   DEFAULTS,
 };
