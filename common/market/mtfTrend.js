@@ -38,6 +38,7 @@
 'use strict';
 
 const { structureState, findSwings } = require('./swings');
+const { isValidBuySignal } = require('./candleQuality');
 const { atrSeries } = require('./zones');
 const { detectBases } = require('./breakout');
 
@@ -66,6 +67,14 @@ const DEFAULTS = {
   // scanning
   lookbackBars: 120,        // scan trigger candidates within recent bars
   recencyBars: 5,           // actionable = trigger within N bars of last candle
+  // E.4 — candle-quality gate on the trigger candle. Default OFF: backtest
+  // showed the strict full-bodied gate HURTS MTF (reclaim-style wick candles
+  // outperform: 52% vs 44% win). Kept as an option for A/B.
+  candleQuality: false,
+  // E-exits — tuned exit rules (see scripts/tuneMtfE.js sweep results)
+  breakevenAtR: 1.0,        // E.1: move stop to entry at +1R
+  targetRMfePct: 65,        // E.2: target = p65 of MFE distribution (1.11R)
+  stallBars: 6,             // E.3: no new high above entry in N bars → exit
 };
 
 // ---------- weekly resample ----------
@@ -259,12 +268,23 @@ function findTrigger(candles, pullback, startBar, atrs, opts) {
     if (i < 20) continue;
     let vs = 0;
     for (let k = i - 20; k < i; k++) vs += candles[k][5];
-    const volMult = candles[i][5] / (vs / 20);
+    const volAvg = vs / 20;
+    const volMult = candles[i][5] / volAvg;
     if (volMult < opts.volMult) continue;
+
+    // E.4 — candle-quality gate (Task 2.8): the trigger candle must be
+    // full-bodied AND confirmed by a genuine reaction or three soldiers.
+    if (opts.candleQuality) {
+      const atr = atrs[i];
+      if (atr == null) continue;
+      const cq = isValidBuySignal(candles, i, atr, volAvg);
+      if (!cq.ok) continue;
+    }
 
     // C.3 — stop: entry-frame swing low (pullback low) − 0.3×ATR
     const atr = atrs[i];
     if (atr == null) continue;
+    const _atr = atr; // (shadow-safe)
     const stop = pullback.low - opts.stopAtrMult * atr;
     const risk = c - stop;
     if (risk <= 0) continue;
