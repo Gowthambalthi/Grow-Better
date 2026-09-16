@@ -138,13 +138,24 @@ function validateTouches(zone, candles, atrs, opts) {
 
 // ---------- Task 1.3: invalidation ----------
 /**
- * Zone is 'broken' if at any bar after the zone formed (last touch), price
- * CLOSES below zone_low for breakBars consecutive bars.
+ * Zone is 'broken' if at any point after it formed, price CLOSES below the
+ * zone low for breakBars consecutive bars — evaluated CHRONOLOGICALLY against
+ * the running zone low (the min of pivot lows seen so far). This prevents
+ * breaking bars from being absorbed into the zone and masking the break.
  */
 function checkBroken(zone, candles, opts) {
+  const pivots = [...zone.touch_indices].sort((a, b) => a - b);
+  let runningLow = Infinity;
+  let nextPivot = 0;
   let consecutive = 0;
-  for (let i = zone.last_touch + 1; i < candles.length; i++) {
-    if (candles[i][4] < zone.price_low) { // close below zone low
+  for (let i = pivots[0]; i < candles.length; i++) {
+    // incorporate pivots confirmed by bar i (need pivotRight bars after them)
+    while (nextPivot < pivots.length && pivots[nextPivot] + opts.pivotRight <= i) {
+      runningLow = Math.min(runningLow, candles[pivots[nextPivot]][3]);
+      nextPivot++;
+      consecutive = 0; // a fresh touch resets the break count
+    }
+    if (runningLow < Infinity && candles[i][4] < runningLow) {
       consecutive++;
       if (consecutive >= opts.breakBars) return true;
     } else {
