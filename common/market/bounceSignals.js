@@ -46,6 +46,10 @@ const DEFAULTS = {
   minRR: 2.0,
   // zone passthrough (Phase 1 defaults)
   zoneOpts: {},
+  // scanning mode: 'recent' = live scanner (touch near last bar), 'all' =
+  // evaluate every historical touch (walk-forward backtest)
+  recencyMode: 'recent',
+  recencyBars: 5,
 };
 
 // ---------- indicators ----------
@@ -118,13 +122,19 @@ function entryTriggerOk(candle, zone, atr, opts) {
   const closeAboveZone = c > zone.price_high;
   const upperHalf = (c - l) / range >= (1 - opts.maxUpperWick); // close in upper 60% (default)
   const lowerWick = (Math.min(o, c) - l) / range >= opts.minLowerWickPct;
-  const ok = closeAboveZone && upperHalf && lowerWick;
+  // Rejection evidence = lower wick OR a gap-up open above the zone (price
+  // opened clear of the zone — the rejection already happened intrabar on the
+  // touch bar; demanding a visible lower wick here kills gap-up follow-through
+  // bars, which are the strongest kind).
+  const gapUpOpen = o > zone.price_high;
+  const rejection = lowerWick || gapUpOpen;
+  const ok = closeAboveZone && upperHalf && rejection;
   return {
     ok,
-    closeAboveZone, upperHalf, lowerWick,
+    closeAboveZone, upperHalf, lowerWick, gapUpOpen,
     reason: !closeAboveZone ? 'close not above zone high'
       : !upperHalf ? 'close not in upper half of range'
-      : !lowerWick ? 'no lower wick (rejection) present' : null,
+      : !rejection ? 'no lower wick and no gap-up open (no rejection evidence)' : null,
   };
 }
 
@@ -212,8 +222,12 @@ function evaluateZoneTouch(zone, candles, touchBar, niftyCandles, opts) {
 // ---------- main ----------
 /**
  * Scan a stock's candles for Phase-2-qualified bounce signals on Phase-1 zones.
- * Only touches NEAR the current price are considered actionable: the signal's
- * bounce bar must be within `recencyBars` (default 5) of the last candle.
+ *
+ * recencyMode (default 'recent'): only touches within recencyBars (default 5)
+ * of the last candle are actionable — live-scanner semantics.
+ * recencyMode 'all': EVERY valid touch on every zone is evaluated —
+ * walk-forward backtest semantics (used by scripts/backtestPhases.js).
+ * Each signal carries `actionable` (near the present) either way.
  */
 function detectBounceSignals(stockCandles, niftyCandles, userOpts = {}) {
   const opts = { ...DEFAULTS, ...userOpts };
@@ -223,11 +237,12 @@ function detectBounceSignals(stockCandles, niftyCandles, userOpts = {}) {
 
   for (const zone of zones) {
     for (const t of zone.valid_touch_indices) {
-      // only fresh touches can be actionable entries
-      if (lastBar - t > 5 + 3) continue; // touch + bounce window must reach near present
+      if (opts.recencyMode !== 'all' && lastBar - t > opts.recencyBars + 3) continue;
       const r = evaluateZoneTouch(zone, stockCandles, t, niftyCandles, opts);
-      if (r.ok) signals.push({ symbol: null, ...r });
-      else rejected.push({ touchBar: t, date: stockCandles[t][0], reason: r.reason, detail: r });
+      if (r.ok) {
+        r.actionable = (lastBar - r.trigger.bounceBar) <= (opts.recencyBars || 5);
+        signals.push({ symbol: null, ...r });
+      } else rejected.push({ touchBar: t, date: stockCandles[t][0], reason: r.reason, detail: r });
     }
   }
   return { signals, rejected, zones, rejected_zones };

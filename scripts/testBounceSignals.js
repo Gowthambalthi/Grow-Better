@@ -65,8 +65,10 @@ function run() {
   const zA = { price_low: 100, price_high: 101.2 };
   const goodCandle = bar('', 100.5, 102.6, 99.9, 102.2);
   check('Trigger: strong bounce candle passes', entryTriggerOk(goodCandle, zA, 1.5, DEFAULTS).ok);
-  const noWickCandle = bar('', 101.8, 102.4, 101.75, 102.2);
+  const noWickCandle = bar('', 100.6, 102.4, 100.55, 102.2); // opens INSIDE the zone, no lower wick
   check('Trigger: no-lower-wick candle rejected', !entryTriggerOk(noWickCandle, zA, 1.5, DEFAULTS).ok);
+  const gapUpNoWick = bar('', 101.8, 102.4, 101.75, 102.2); // opens above zone high → gap-up rejection evidence
+  check('Trigger: gap-up open above zone compensates for no wick', entryTriggerOk(gapUpNoWick, zA, 1.5, DEFAULTS).ok);
   const lowClose = bar('', 100.5, 102.6, 99.9, 100.8);
   check('Trigger: close in lower half rejected', !entryTriggerOk(lowClose, zA, 1.5, DEFAULTS).ok);
 
