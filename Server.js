@@ -199,7 +199,13 @@ app.get('/api/gb/scan', (req, res) => {
   const fs = require('fs');
   const path = require('path');
   try {
-    const tight = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'trade_table_tight.json'), 'utf8'));
+    // Stocks-only table (ETFs excluded via AMFI ISIN cross-check)
+    let tight;
+    try {
+      tight = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'trade_table_stocks.json'), 'utf8'));
+    } catch (_) {
+      tight = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'trade_table_tight.json'), 'utf8'));
+    }
     let backtest = null;
     try {
       const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'backtest_results.json'), 'utf8'));
