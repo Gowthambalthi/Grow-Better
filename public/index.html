@@ -3763,9 +3763,8 @@ function _renderMfGridBody(grid, schemes) {
           }).join('');
           var body = sorted.map(function(r) {
             var cls = r.score >= 12 ? '#00e091' : r.score >= 9 ? '#00B386' : r.score >= 8 ? '#f59e0b' : 'var(--text,#e6e9f0)';
-            return '<tr style="border-top:1px solid var(--border,#232a36);">' +
-              '<td style="padding:7px 12px;font-weight:600;white-space:nowrap;">' + r.symbol + '</td>' +
-              '<td style="padding:7px 12px;white-space:nowrap;">' + r.engine + '</td>' +
+            return '<tr data-gbsym="' + r.symbol + '" style="border-top:1px solid var(--border,#232a36);cursor:pointer;">' +
+              '<td style="padding:7px 12px;font-weight:600;white-space:nowrap;color:var(--accent,#00B386);">' + r.symbol + '</td>' +
               '<td style="padding:7px 12px;font-weight:700;color:' + cls + ';">' + r.score + '</td>' +
               ['close', 'entry', 'stopLoss', 'target1', 'target2'].map(function(k) {
                 var col = k === 'stopLoss' ? '#ff4d6d' : k === 'target1' || k === 'target2' ? '#00B386' : 'var(--text,#e6e9f0)';
@@ -3784,11 +3783,87 @@ function _renderMfGridBody(grid, schemes) {
         var gbWrap = document.getElementById('gbTableWrap');
         if (gbWrap) gbWrap.addEventListener('click', function(e) {
           var th = e.target.closest('[data-gbsort]');
-          if (!th) return;
-          var k = th.getAttribute('data-gbsort');
-          if (gbSortKey === k) gbSortDir = -gbSortDir; else { gbSortKey = k; gbSortDir = -1; }
-          gbRenderTable();
+          if (th) {
+            var k = th.getAttribute('data-gbsort');
+            if (gbSortKey === k) gbSortDir = -gbSortDir; else { gbSortKey = k; gbSortDir = -1; }
+            gbRenderTable();
+            return;
+          }
+          var tr = e.target.closest('tr[data-gbsym]');
+          if (tr) gbToggleDetail(tr.getAttribute('data-gbsym'), tr);
         });
+
+        var gbDetailCache = {};
+        var gbOpenSym = null;
+
+        function gbToggleDetail(sym, tr) {
+          // collapse existing panel
+          var existing = document.getElementById('gbDetailRow');
+          if (gbOpenSym === sym && existing) { existing.remove(); gbOpenSym = null; return; }
+          if (existing) existing.remove();
+          gbOpenSym = sym;
+
+          var panel = document.createElement('tr');
+          panel.id = 'gbDetailRow';
+          panel.innerHTML = '<td colspan="11" style="padding:0;border-top:2px solid var(--accent,#00B386);background:var(--bg-card,#161b22);"><div style="padding:14px 18px;color:var(--text-muted,#8b93a7);font-size:13px;">Loading ' + sym + ' detail…</div></td>';
+          tr.after(panel);
+
+          fetch('/api/gb/detail/' + encodeURIComponent(sym)).then(function(r2) { return r2.json(); }).then(function(d) {
+            if (d.error) { panel.querySelector('div > div').textContent = '❌ ' + d.error; return; }
+            gbDetailCache[sym] = d;
+            panel.querySelector('td > div').innerHTML = gbDetailHtml(d);
+          }).catch(function(err) {
+            panel.querySelector('td > div').textContent = '❌ ' + err.message;
+          });
+        }
+
+        function gbMav(v, digits) {
+          return v != null ? Number(v).toLocaleString('en-IN', { maximumFractionDigits: digits || 2 }) : '-';
+        }
+
+        function gbTfBlock(name, t) {
+          if (!t) return '';
+          var maRow = function(lbl, val, close) {
+            var col = val == null ? 'var(--text-muted)' : val > close ? '#ff4d6d' : '#00B386';
+            return '<div style="display:flex;justify-content:space-between;gap:12px;"><span>' + lbl + '</span><span style="color:' + col + ';font-weight:600;">' + gbMav(val) + '</span></div>';
+          };
+          var lastClose = t.candles15.length ? t.candles15[t.candles15.length - 1].c : null;
+          var candleRows = t.candles15.map(function(c) {
+            var up = c.c >= c.o;
+            var col = up ? '#00e091' : '#ff4d6d';
+            return '<tr style="border-top:1px solid var(--border,#232a36);">' +
+              '<td style="padding:3px 8px;color:var(--text-muted);">' + c.date.slice(5) + '</td>' +
+              '<td style="padding:3px 8px;">' + gbMav(c.o) + '</td>' +
+              '<td style="padding:3px 8px;">' + gbMav(c.h) + '</td>' +
+              '<td style="padding:3px 8px;">' + gbMav(c.l) + '</td>' +
+              '<td style="padding:3px 8px;color:' + col + ';font-weight:600;">' + gbMav(c.c) + '</td>' +
+              '<td style="padding:3px 8px;text-align:right;color:var(--text-muted);">' + (c.v / 1000).toFixed(0) + 'K</td>' +
+              '</tr>';
+          }).join('');
+          return '<div style="flex:1;min-width:300px;background:var(--bg,#0d1117);border:1px solid var(--border,#232a36);border-radius:10px;padding:12px 14px;">' +
+            '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent,#00B386);margin-bottom:8px;">' + name + '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;font-size:12px;margin-bottom:10px;">' +
+              maRow('MA 7', t.ma7, lastClose) + maRow('MA 20', t.ma20, lastClose) +
+              maRow('MA 50', t.ma50, lastClose) +
+              '<div style="display:flex;justify-content:space-between;gap:12px;"><span>RSI 14</span><span style="font-weight:600;">' + (t.rsi != null ? t.rsi.toFixed(1) : '-') + '</span></div>' +
+              '<div style="display:flex;justify-content:space-between;gap:12px;"><span>Volume</span><span style="font-weight:600;">' + (t.volume != null ? (t.volume / 1000).toFixed(0) + 'K' : '-') + '</span></div>' +
+              '<div style="display:flex;justify-content:space-between;gap:12px;"><span>Vol Avg 20</span><span style="font-weight:600;">' + (t.volAvg20 != null ? (t.volAvg20 / 1000).toFixed(0) + 'K' : '-') + '</span></div>' +
+              '<div style="display:flex;justify-content:space-between;gap:12px;"><span>RVOL</span><span style="font-weight:600;color:' + (t.rvol >= 1.5 ? '#00e091' : t.rvol < 0.7 ? '#ff4d6d' : 'var(--text)') + ';">' + (t.rvol != null ? t.rvol + '×' : '-') + '</span></div>' +
+              '<div style="display:flex;justify-content:space-between;gap:12px;"><span>ATR 14</span><span style="font-weight:600;">' + gbMav(t.atr) + '</span></div>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Last 15 candles</div>' +
+            '<table style="width:100%;border-collapse:collapse;font-size:11.5px;"><thead><tr style="color:var(--text-muted);">' +
+              '<th style="text-align:left;padding:2px 8px;">Date</th><th style="text-align:left;padding:2px 8px;">O</th><th style="text-align:left;padding:2px 8px;">H</th><th style="text-align:left;padding:2px 8px;">L</th><th style="text-align:left;padding:2px 8px;">C</th><th style="text-align:right;padding:2px 8px;">Vol</th>' +
+            '</tr></thead><tbody>' + candleRows + '</tbody></table>' +
+            '</div>';
+        }
+
+        function gbDetailHtml(d) {
+          return '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
+            gbTfBlock('Daily', d.daily) +
+            gbTfBlock('Weekly', d.weekly) +
+            '</div>';
+        }
 
         var tfBtn = e.target.closest('.mf-tf-btn');
         if (tfBtn) {

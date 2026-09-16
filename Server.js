@@ -193,6 +193,23 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// ---- GB Terminal: per-stock multi-timeframe detail ----
+app.get('/api/gb/detail/:symbol', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  try {
+    const sym = String(req.params.symbol || '').toUpperCase().replace(/[^A-Z0-9&_-]/g, '');
+    const f = path.join(__dirname, 'data', 'ohlcv', sym + '.json');
+    const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+    const { buildDetail } = require('./common/market/gbStockDetail');
+    const detail = buildDetail(j.candles);
+    if (!detail) return res.status(404).json({ error: 'Not enough history for ' + sym });
+    res.json({ symbol: sym, ...detail });
+  } catch (e) {
+    res.status(404).json({ error: 'No data for ' + req.params.symbol + ': ' + e.message });
+  }
+});
+
 // ---- GB Terminal: Strategy 1 scanner ----
 // Serves the precomputed engine-score pipeline results.
 app.get('/api/gb/scan', (req, res) => {
