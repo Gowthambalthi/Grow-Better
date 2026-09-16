@@ -319,6 +319,9 @@ function main() {
     let j;
     try { j = JSON.parse(fs.readFileSync(f, 'utf8')); }
     catch (_) { missing++; continue; }
+    // Liquidity/quality floor: stocks priced below ₹100 are excluded from
+    // the entire application (user requirement).
+    if (j.candles[j.candles.length - 1][4] < 100) { skipped++; continue; }
     if (!Array.isArray(j.candles) || j.candles.length < 60) { skipped++; continue; }
     const r = evaluate(j.candles);
     if (!r) { skipped++; continue; }
