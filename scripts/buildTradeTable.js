@@ -130,7 +130,32 @@ function main() {
         };
       }
 
-      const stopLoss = +Math.min(i.support30, low - i.atr14).toFixed(2);
+      // Candle-structure stop: use the RECENT swing low from the last 10
+      // candles (the low of the pullback that launched the move), floored at
+      // 1×ATR below the latest low, capped so risk never exceeds 4% of close.
+      // The old min(support30, low−ATR) put stops 6-11% away — structurally
+      // meaningful only for the 30-bar swing, not the entry setup.
+      let stopLoss;
+      let stopBasis;
+      if (candles && candles.length >= 12) {
+        const recent = candles.slice(-10);
+        const swingLow = Math.min(...recent.map(c => c[3]));
+        const atrFloor = low - i.atr14;
+        const raw = Math.min(swingLow - i.atr14 * 0.25, Math.max(swingLow, atrFloor));
+        // risk cap: never wider than 4% of close; if the candle structure is
+        // wider than that, fall back to 2×ATR below close
+        const maxRisk = r.close * 0.04;
+        if (r.close - raw > maxRisk) {
+          stopLoss = +(r.close - Math.min(2 * i.atr14, maxRisk)).toFixed(2);
+          stopBasis = '2xATR (structure too wide)';
+        } else {
+          stopLoss = +raw.toFixed(2);
+          stopBasis = '10-bar swing low';
+        }
+      } else {
+        stopLoss = +(low - i.atr14).toFixed(2);
+        stopBasis = 'low - ATR';
+      }
       const risk = Math.max(r.close - stopLoss, i.atr14 * 0.5);
       rows.push({
         symbol: r.symbol,
@@ -139,8 +164,9 @@ function main() {
         close: +r.close.toFixed(2),
         entry: +zone.toFixed(2),
         stopLoss,
+        stopBasis,
         target1: +(r.close + risk * 1.5).toFixed(2),
-        target2: +(r.close + risk * 4).toFixed(2),
+        target2: +(r.close + risk * 2.5).toFixed(2),
         rsi: i.rsi14,
         adx: i.adx14,
         volRatio: +i.volRatio.toFixed(2),

@@ -261,10 +261,17 @@ function todayReport() {
 
 // ---------- public API ----------
 
-async function tick() {
-  // one engine step per tick: pipeline when stale, then scan+track
+async function tick(opts = {}) {
+  // scan + track are cheap (quote fetches) and run every tick.
+  // The heavy pipeline (candle fetch + scoring, minutes) runs only when the
+  // data is stale AND at most once per hour — NOT on manual clicks. Pass
+  // { forcePipeline: true } to override (used by the nightly refresh).
   const t0 = Date.now();
-  await runPipeline().catch(() => {});
+  const now = Date.now();
+  const hourly = !state.lastPipelineRun || (now - new Date(state.lastPipelineRun).getTime()) > 3600e3;
+  if (opts.forcePipeline || (hourly && await ohlcvStale().catch(() => false))) {
+    await runPipeline().catch(() => {});
+  }
   try {
     await scanForNewCalls();
     await trackCalls();

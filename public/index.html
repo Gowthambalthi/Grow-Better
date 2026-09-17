@@ -1263,7 +1263,7 @@
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
             <span id="gbCallsStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">auto-scans every minute</span>
-            <button id="gbCallsTickBtn" class="btn" style="padding:4px 12px;font-size:12px;margin-left:auto;">⟳ Tick now</button>
+            <button id="gbCallsTickBtn" class="btn" style="padding:4px 12px;font-size:12px;margin-left:auto;">⟳ Refresh prices</button>
           </div>
           <div id="gbTodayPnl" style="display:flex;gap:12px;margin:0 0 12px;flex-wrap:wrap;"></div>
           <div id="gbCallsWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
@@ -3922,7 +3922,7 @@ function _renderMfGridBody(grid, schemes) {
           gbTickBtn.disabled = true; gbTickBtn.textContent = '⟳…';
           try { await fetch('/api/gb/calls/tick', { method: 'POST' }); } catch (_) {}
           await gbRefreshCalls();
-          gbTickBtn.disabled = false; gbTickBtn.textContent = '⟳ Tick now';
+          gbTickBtn.disabled = false; gbTickBtn.textContent = '⟳ Refresh prices';
         });
 
         // initial load + auto-refresh every 60s while the terminal view is open
