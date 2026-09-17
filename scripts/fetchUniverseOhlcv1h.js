@@ -20,7 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { refresh, search } = require('../common/instruments/angelInstruments');
+const { refresh, search, findBySymbol } = require('../common/instruments/angelInstruments');
 const { getCandleData } = require('../angelone/historical');
 
 const UNIVERSE_FILE = path.join(__dirname, '..', 'data', 'universe_filtered.json');
@@ -126,10 +126,22 @@ async function main() {
   let unresolved = [];
   for (const sym of symbols) {
     const hits = search(sym) || [];
-    const pick =
-      hits.find(h => h.exch_seg === 'NSE' && h.symbol === `${sym}-EQ`) ||
-      hits.find(h => h.exch_seg === 'NSE' && h.symbol === sym) ||
-      hits.find(h => h.exch_seg === 'NSE');
+    // search() is fuzzy and can miss short symbols entirely (e.g. search('LT')
+    // returns 20 partial matches but not LT-EQ itself). Fall back to a direct
+    // exact-symbol scan of the master before giving up.
+    // Exact-symbol lookup FIRST (search() is fuzzy — search('LT') returns
+    // 20 partials like 'Nifty Realty' and the old third-fallback would grab
+    // an index with zero volume instead of LT itself).
+    let pick = null;
+    const exact = findBySymbol('NSE', `${sym}-EQ`) || findBySymbol('NSE', sym);
+    if (exact) pick = exact;
+    if (!pick) {
+      const hits = search(sym) || [];
+      pick =
+        hits.find(h => h.exch_seg === 'NSE' && h.symbol === `${sym}-EQ`) ||
+        hits.find(h => h.exch_seg === 'NSE' && h.symbol === sym) ||
+        hits.find(h => h.exch_seg === 'NSE');
+    }
     if (pick) tokenMap.set(sym, pick.token);
     else unresolved.push(sym);
   }
