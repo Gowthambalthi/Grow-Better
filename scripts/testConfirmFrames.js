@@ -9,7 +9,7 @@
  *  - Extension: known MA/ATR distance
  */
 const { frameWeeklyStructure, frameRelativeStrength, frameVolumeQuality,
-        frameBaseQuality, frameExtension } = require('../common/market/confirmFrames');
+        frameBaseQuality, frameExtension, frameIntradayClose, frameIntradayHold } = require('../common/market/confirmFrames');
 
 let passed = 0, failed = 0;
 function ok(name, cond, extra = '') {
@@ -121,6 +121,54 @@ console.log('F5 extension');
   ok('vertical bar flagged extended', f2.pass === false, JSON.stringify(f2));
   const f3 = frameExtension(c, 5);
   ok('short history → null', f3.pass === null, JSON.stringify(f3));
+}
+
+console.log('F6 intraday close');
+{
+  // strong close: rises all day, closes at highs, heavy last hour
+  const strong = [];
+  for (let i = 0; i < 25; i++) {
+    const cl = 100 + i * 0.4;
+    strong.push([`09:${String(15 + i).padStart(2, '0')}`, cl - 0.2, cl + 0.3, cl - 0.4, cl, i < 4 ? 3000 : 4000 + i * 100]);
+  }
+  const f = frameIntradayClose(strong);
+  ok('rising day, building volume → pass', f.pass === true, JSON.stringify(f));
+
+  // fake: pops early, fades all afternoon on dying volume
+  const fake = [];
+  for (let i = 0; i < 25; i++) {
+    const cl = i < 4 ? 100 + i * 0.5 : 102 - (i - 4) * 0.05; // early spike then flat-drift
+    fake.push([`09:${String(15 + i).padStart(2, '0')}`, cl - 0.2, cl + 0.3, cl - 0.4, cl, i < 4 ? 5000 : Math.max(500, 5000 - i * 200)]);
+  }
+  const f2 = frameIntradayClose(fake);
+  ok('fading close → fail', f2.pass === false, JSON.stringify(f2));
+
+  const f3 = frameIntradayClose(null);
+  ok('no intraday data → null', f3.pass === null, JSON.stringify(f3));
+  const f4 = frameIntradayClose(strong.slice(0, 8));
+  ok('too few bars → null', f4.pass === null, JSON.stringify(f4));
+}
+
+console.log('F7 intraday hold');
+{
+  const level = 100, atr = 2;
+  const holds = Array.from({ length: 25 }, (_, i) => {
+    const cl = 100.5 + Math.sin(i / 3) * 0.3; // oscillates just above level
+    return [`t${i}`, cl - 0.2, cl + 0.3, cl - 0.5, cl, 1000];
+  });
+  const f = frameIntradayHold(holds, level, atr);
+  ok('level held all day → pass', f.pass === true && f.dips === 0, JSON.stringify(f));
+
+  // intraday breakdown: several 15-min closes well below the level, recover at close
+  const breaks = Array.from({ length: 25 }, (_, i) => {
+    const cl = i >= 8 && i < 16 ? 99.2 : 100.6; // 8 bars below, −0.8% deep vs 0.25×ATR=0.5%
+    return [`t${i}`, cl - 0.2, cl + 0.3, cl - 0.5, cl, 1000];
+  });
+  const f2 = frameIntradayHold(breaks, level, atr);
+  ok('intraday breakdown → fail', f2.pass === false, JSON.stringify(f2));
+
+  const f3 = frameIntradayHold(null, level, atr);
+  ok('no next-day data → null', f3.pass === null, JSON.stringify(f3));
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

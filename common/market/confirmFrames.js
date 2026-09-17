@@ -19,6 +19,12 @@
  *   F5 extension       — |close − MA20| in ATR units; passed through
  *                        neutrally (measured, not assumed — it has shown
  *                        context-dependent behavior in prior backtests).
+ *   F6 intradayClose   — 15-min close quality on the breakout day: close in
+ *                        the top third of the day range, last-hour closes
+ *                        rising, volume building into the close.
+ *   F7 intradayHold    — 15-min hold of the level the day after the break:
+ *                        few/no 15-min closes below the level, none deeply so.
+ *                        The daily bar hides intraday breakdowns; F7 catches them.
  *
  * Candles are [date, open, high, low, close, volume] arrays.
  */
@@ -122,6 +128,70 @@ function frameExtension(candles, bar) {
   return { pass: ext <= 2.5, ext: +ext.toFixed(2), reason: null };
 }
 
+// ---------- F6: intraday close quality (15-min bars, breakout day) ----------
+
+/**
+ * How did the breakout day END? Slice the day's 15-min bars and check the
+ * last hour: a genuine breakout closes near its high with rising 15-min
+ * closes and expanding volume; a fake drifts up on fading participation.
+ *
+ * intradayCandles: 15-min bars for the breakout day (or the day containing
+ * the breakout close). pass = all of:
+ *   - last-15min close in the top third of the day's range
+ *   - mean of last 4 (1h of) 15-min closes >= mean of prior 4
+ *   - last-hour volume >= first-hour volume (participation building, not fading)
+ */
+function frameIntradayClose(intradayCandles) {
+  if (!intradayCandles || intradayCandles.length < 12) {
+    return { pass: null, closePos: null, lastHourUp: null, volBuilding: null, reason: 'insufficient intraday bars' };
+  }
+  const n = intradayCandles.length;
+  const dayHigh = Math.max(...intradayCandles.map(c => c[2]));
+  const dayLow = Math.min(...intradayCandles.map(c => c[3]));
+  const range = dayHigh - dayLow;
+  const lastClose = intradayCandles[n - 1][4];
+  const closePos = range > 0 ? (lastClose - dayLow) / range : null;
+
+  const last4 = intradayCandles.slice(-4);
+  const prior4 = intradayCandles.slice(-8, -4);
+  const m = a => a.reduce((s, c) => s + c[4], 0) / a.length;
+  const lastHourUp = prior4.length ? m(last4) >= m(prior4) : null;
+
+  const firstHourVol = intradayCandles.slice(0, 4).reduce((s, c) => s + c[5], 0);
+  const lastHourVol = last4.reduce((s, c) => s + c[5], 0);
+  const volBuilding = firstHourVol > 0 ? lastHourVol >= firstHourVol : null;
+
+  const pass = closePos != null && closePos >= 2 / 3 && lastHourUp === true && volBuilding === true;
+  return { pass, closePos: closePos != null ? +closePos.toFixed(2) : null, lastHourUp, volBuilding, reason: null };
+}
+
+// ---------- F7: intraday hold after breakout (15-min bars, next day) ----------
+
+/**
+ * Did price HOLD the breakout level on 15-min bars the day after the break?
+ * Fakes: intraday dips back BELOW the level that only recover at close —
+ * the daily bar hides this. pass = on the day AFTER the breakout, no more
+ * than maxDipBelowLevel 15-min closes were strictly below the level, and
+ * none closed more than dipAtrFrac × daily ATR below it.
+ */
+function frameIntradayHold(nextDayCandles, level, dailyAtr, opts = {}) {
+  const { maxDipBelowLevel = 2, dipAtrFrac = 0.25 } = opts;
+  if (!nextDayCandles || !nextDayCandles.length) {
+    return { pass: null, dips: null, deepest: null, reason: 'no next-day intraday data' };
+  }
+  let dips = 0, deepest = 0;
+  for (const c of nextDayCandles) {
+    if (c[4] < level) {
+      dips++;
+      const depth = level > 0 ? (level - c[4]) / level : 0;
+      if (depth > deepest) deepest = depth;
+    }
+  }
+  const deepOk = dailyAtr > 0 && level > 0 ? deepest <= dipAtrFrac * (dailyAtr / level) : true;
+  const pass = dips <= maxDipBelowLevel && deepOk;
+  return { pass, dips, deepest: +deepest.toFixed(4), reason: null };
+}
+
 // ---------- aggregate ----------
 
 /**
@@ -150,6 +220,6 @@ function scoreFrames({ stockCandles, sig, benchmarkCandles }) {
 module.exports = {
   scoreFrames,
   frameWeeklyStructure, frameRelativeStrength, frameVolumeQuality,
-  frameBaseQuality, frameExtension,
+  frameBaseQuality, frameExtension, frameIntradayClose, frameIntradayHold,
   atrAt, smaClose, retN,
 };
