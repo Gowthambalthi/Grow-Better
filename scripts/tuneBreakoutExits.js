@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 const { detectBreakoutSignals } = require('../common/market/breakoutEntry');
 
-const OHLCV_DIR = path.join(__dirname, '..', 'data', 'ohlcv');
+const OHLCV_DIR = process.env.OHLCV_DIR || path.join(__dirname, '..', 'data', 'ohlcv');
 const FILTERED_FILE = path.join(__dirname, '..', 'data', 'universe_filtered.json');
 const OUT_FILE = path.join(__dirname, '..', 'data', 'breakout_exit_tuning.json');
 
