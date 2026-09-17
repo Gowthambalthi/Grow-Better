@@ -32,7 +32,9 @@ const BAN_FILE = path.join(__dirname, '..', 'data', 'banned_symbols.txt');
 
 // ---------- configurable gates ----------
 const CONFIG = {
-  minBars: 180,          // F5: minimum valid bars for EMA200/ADX reliability
+  minBars: 205,          // F5: EMA200 is load-bearing in scoreEngines (alignment, TREND,
+                         // ACCUMULATION) — 205 bars gives the EMA200 ~5 bars to warm up
+                         // so alignment comparisons near the end of history are valid.
   maxStaleDays: 3,       // F5: last candle older than this many calendar days ≈ 2 trading days
   minPrice: 100,         // F1
   minTurnoverCr: 5,      // F2: ₹ Cr average daily turnover (close × volume), 20-day
@@ -40,8 +42,12 @@ const CONFIG = {
   maxDeadDays: 5,        // F4: max dead/circuit days allowed in last 60
   deadWindow: 60,
   minVolume: 1000,       // F4: below this = effectively not trading
-  maxAtrPct: 8,          // F7: reject above this ATR% (ATR/close, 20-day)
-  highAtrPct: 2,         // F7: tag volBand 'high' above this
+  minAtrPct: 1.5,        // F7 floor: ATR% below this = stock barely moves (dead money
+                         // intraday — spreads and churn eat any edge)
+  maxAtrPct: 8,          // F7 ceiling: reject above this ATR% (ATR/close, 20-day)
+  highAtrPct: 4,         // F7: tag volBand 'high' above this (2–8% was too wide to
+                         // discriminate — 93% of passers landed in one band; 4–8% is
+                         // the genuinely-hot tail)
 };
 
 // ---------- gate helpers ----------
@@ -113,6 +119,9 @@ function gateF7_volatility(candles) {
   const atr = trs.reduce((a, b) => a + b, 0) / 20;
   const close = candles[n - 1][4];
   const atrPct = (atr / close) * 100;
+  if (atrPct < CONFIG.minAtrPct) {
+    return { fail: `ATR% ${atrPct.toFixed(2)} < ${CONFIG.minAtrPct}% (dead money)`, value: atrPct };
+  }
   if (atrPct > CONFIG.maxAtrPct) {
     return { fail: `ATR% ${atrPct.toFixed(1)} > ${CONFIG.maxAtrPct}%`, value: atrPct };
   }
@@ -198,6 +207,9 @@ function main() {
 
   console.log(`Universe: ${symbols.length} → passed ${stocks.length}, rejected ${rejected.length} (${counts.missing} missing files)`);
   console.log(`Rejections: F6 integrity=${counts.integrity}  F5 stale=${counts.stale}  F1 price=${counts.price}  F2 turnover=${counts.turnover}  F4 dead=${counts.dead}  F7 volat=${counts.volatility}  F8 banned=${counts.banned}`);
+  const bands = { normal: 0, high: 0 };
+  for (const s of stocks) bands[s.volBand]++;
+  console.log(`volBand: normal(<${CONFIG.highAtrPct}%)=${bands.normal}  high(${CONFIG.highAtrPct}-${CONFIG.maxAtrPct}%)=${bands.high}`);
   console.log(`Output: ${OUT_FILTERED}`);
 }
 
