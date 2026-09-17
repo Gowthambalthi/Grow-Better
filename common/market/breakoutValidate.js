@@ -157,6 +157,130 @@ function scanBreakout(candles, opts = {}) {
   return validateBreakout(candles, direction, level, opts);
 }
 
+// ---------- D2: independent check set (anti-correlation redesign) ----------
+// The 5 spec checks measured 99-100% correlated with volume_roc at daily
+// resolution (11,325-trade backtest, PF 0.95) — 5 checks = 1 signal. This
+// alternative set uses genuinely different signal sources, reusing engines
+// already validated in this codebase:
+//   C1 volume_roc        — keep (the core participation signal)
+//   C2 htf_trend         — MTF weekly structure (swings.js), must not be downtrend
+//   C3 relative_strength — stock vs Nifty-proxy over 15 bars, must be >= 0
+//   C4 breakout_quality  — close clears the level by >= 0.3xATR AND closes in
+//                          upper third of its range (was Phase 4.1 logic)
+//   C5 atf_extension     — close < 2.5xATR above its own 20EMA (not chasing a
+//                          blow-off; the GRANULES guard from Frame A.3)
+function emaSeries(values, period) {
+  const k = 2 / (period + 1);
+  const out = new Array(values.length).fill(null);
+  if (values.length < period) return out;
+  let prev = 0;
+  for (let i = 0; i < period; i++) prev += values[i];
+  prev /= period;
+  out[period - 1] = prev;
+  for (let i = period; i < values.length; i++) {
+    prev = values[i] * k + prev * (1 - k);
+    out[i] = prev;
+  }
+  return out;
+}
+
+function atrAtIdx(candles, i, period = 14) {
+  if (i < period + 1) return null;
+  let s = 0;
+  for (let k = i - period + 1; k <= i; k++) {
+    const h = candles[k][2], l = candles[k][3], pc = candles[k - 1][4];
+    s += Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
+  }
+  return s / period;
+}
+
+function checkHtfTrend(candles) {
+  // weekly resample of last ~130 daily bars (~26 weeks), then structure via
+  // swing comparison: uptrend if last weekly close > prior swing high and
+  // higher lows dominate; downtrend if lower highs dominate.
+  const n = candles.length;
+  if (n < 60) return { ok: null, reason: 'insufficient history' };
+  const weeks = [];
+  let cur = null;
+  for (let i = Math.max(0, n - 130); i < n; i++) {
+    const d = new Date(candles[i][0] + 'T00:00:00Z');
+    const monday = new Date(d);
+    monday.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    const key = monday.toISOString().slice(0, 10);
+    if (!cur || cur.key !== key) { cur = { key, close: candles[i][4], high: candles[i][2], low: candles[i][3] }; weeks.push(cur); }
+    else { cur.close = candles[i][4]; cur.high = Math.max(cur.high, candles[i][2]); cur.low = Math.min(cur.low, candles[i][3]); }
+  }
+  if (weeks.length < 10) return { ok: null, reason: 'few weekly bars' };
+  let higherLows = 0, lowerHighs = 0;
+  for (let i = 1; i < weeks.length; i++) {
+    if (weeks[i].low > weeks[i - 1].low) higherLows++;
+    if (weeks[i].high < weeks[i - 1].high) lowerHighs++;
+  }
+  const bull = higherLows >= lowerHighs * 1.5 && weeks[weeks.length - 1].close > weeks[0].close;
+  const bear = lowerHighs >= higherLows * 1.5;
+  return { ok: bull ? true : bear ? false : true, detail: { higherLows, lowerHighs } }; // sideways passes
+}
+
+function checkRelativeStrength(candles, niftyCandles, bars = 15) {
+  const n = candles.length;
+  if (n < bars + 1) return { ok: null, reason: 'insufficient history' };
+  const stockRet = candles[n - 1][4] / candles[n - 1 - bars][4] - 1;
+  if (!niftyCandles || niftyCandles.length < bars + 1) return { ok: true, stockRet }; // no benchmark: don't block
+  const m = niftyCandles.length;
+  const niftyRet = niftyCandles[m - 1][4] / niftyCandles[m - 1 - bars][4] - 1;
+  const rs = stockRet - niftyRet;
+  return { ok: rs >= 0, rs: +rs.toFixed(4), stockRet: +stockRet.toFixed(4), niftyRet: +niftyRet.toFixed(4) };
+}
+
+function checkBreakoutQuality(candles, level) {
+  const n = candles.length;
+  const last = candles[n - 1];
+  const atr = atrAtIdx(candles, n - 1);
+  if (!atr) return { ok: null, reason: 'no ATR' };
+  const range = last[2] - last[3];
+  const closePos = range > 0 ? (last[4] - last[3]) / range : 0;
+  const clears = (last[4] - level) >= 0.3 * atr;
+  const upperThird = closePos >= 0.667;
+  return { ok: clears && upperThird, clears, closePos: +closePos.toFixed(2) };
+}
+
+function checkAtrExtension(candles, maxExt = 2.5) {
+  const n = candles.length;
+  const closes = candles.map(c => c[4]);
+  const e20 = emaSeries(closes, 20)[n - 1];
+  const atr = atrAtIdx(candles, n - 1);
+  if (e20 == null || !atr) return { ok: null, reason: 'no EMA20/ATR' };
+  const ext = (candles[n - 1][4] - e20) / atr;
+  return { ok: ext < maxExt, ext: +ext.toFixed(2) };
+}
+
+/**
+ * Independent-check validation. Same verdict thresholds (>=70% REAL,
+ * <=30% FAKE) but over 5 genuinely-different signal sources.
+ */
+function validateBreakoutIndependent(candles, direction, breakoutLevel, opts = {}) {
+  const checks = {
+    volume_roc: checkVolumeROC(candles, opts.volumeRocThreshold),
+    htf_trend: checkHtfTrend(candles),
+    relative_strength: checkRelativeStrength(candles, opts.niftyCandles, opts.rsBars),
+    breakout_quality: checkBreakoutQuality(candles, breakoutLevel),
+    atr_extension: checkAtrExtension(candles, opts.maxExtension),
+  };
+  const entries = Object.entries(checks);
+  const active = entries.filter(([, v]) => v && v.ok != null);
+  const score = active.filter(([, v]) => v.ok).length;
+  const total = active.length;
+  let verdict;
+  if (score >= Math.ceil(total * 0.7)) verdict = 'REAL';
+  else if (score <= Math.floor(total * 0.3)) verdict = 'FAKE';
+  else verdict = 'UNCLEAR';
+  return {
+    verdict, direction, score, total,
+    fadeDirection: verdict === 'FAKE' ? (direction === 'BULLISH_BREAKOUT' ? 'SHORT' : 'LONG') : null,
+    checks, breakoutLevel,
+  };
+}
+
 module.exports = {
   detectBreakout,
   checkVolumeROC,
@@ -167,4 +291,9 @@ module.exports = {
   checkRecentCandleStructure,
   validateBreakout,
   scanBreakout,
+  validateBreakoutIndependent,
+  checkHtfTrend,
+  checkRelativeStrength,
+  checkBreakoutQuality,
+  checkAtrExtension,
 };

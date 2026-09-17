@@ -16,7 +16,22 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { scanBreakout } = require('../common/market/breakoutValidate');
+const { scanBreakout, validateBreakoutIndependent } = require('../common/market/breakoutValidate');
+
+// Nifty proxy for RS checks: largest-liquidity ETF in the filtered universe
+let NIFTY_CANDLES = null;
+function loadNiftyProxy() {
+  if (NIFTY_CANDLES) return NIFTY_CANDLES;
+  for (const cand of ['NIFTYBEES', 'SETFNIF50', 'NIFTYIETF']) {
+    try {
+      NIFTY_CANDLES = JSON.parse(fs.readFileSync(path.join(OHLCV_DIR, cand + '.json'), 'utf8')).candles;
+      console.log(`Nifty proxy: ${cand}`);
+      return NIFTY_CANDLES;
+    } catch (_) { /* try next */ }
+  }
+  console.log('Nifty proxy: none found (RS check will not block)');
+  return null;
+}
 
 const OHLCV_DIR = path.join(__dirname, '..', 'data', 'ohlcv');
 const FILTERED_FILE = path.join(__dirname, '..', 'data', 'universe_filtered.json');
@@ -25,12 +40,13 @@ const OUT_FILE = path.join(__dirname, '..', 'data', 'breakout_validator_backtest
 const CFG = {
   lookback: 20,
   warmup: 30,          // bars before signals start
-  maxHold: 35,
+  maxHold: 35,         // overridden by --hold N
   targetR: 2.0,
   breakevenR: 1.0,
   cooldownBars: 5,
   maxPerStock: Infinity, // backtest sample size: uncapped. Reintroduce a cap
                           // for LIVE risk management only, not backtests.
+  independentChecks: false, // --ind: redesigned non-correlated check set
 };
 
 function atrAt(candles, i, period = 14) {
@@ -91,7 +107,16 @@ function backtestStock(symbol, candles, verdicts) {
   for (let t = CFG.warmup; t < candles.length - 1; t++) {
     if (t - lastSignalBar < CFG.cooldownBars) continue;
     const slice = candles.slice(0, t + 1); // as-of: no look-ahead
-    const r = scanBreakout(slice, { lookback: CFG.lookback });
+    let r;
+    if (CFG.independentChecks) {
+      r = validateBreakoutIndependent(slice, ...(() => {
+        const d = require('../common/market/breakoutValidate').detectBreakout(slice, CFG.lookback);
+        return [d.direction, d.level];
+      })(), { niftyCandles: NIFTY_CANDLES ? NIFTY_CANDLES.slice(0, t + 1) : null, lookback: CFG.lookback });
+      if (!r.direction) { lastSignalBar = t; continue; }
+    } else {
+      r = scanBreakout(slice, { lookback: CFG.lookback });
+    }
     if (!['REAL', 'FAKE'].includes(r.verdict)) continue;
 
     const tradeDir = r.verdict === 'REAL'
@@ -136,19 +161,19 @@ function summarize(trades) {
 
 function main() {
   const args = process.argv.slice(2);
-  let symbols;
-  if (args[0] === '--limit') {
-    const filtered = JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8'));
-    symbols = filtered.stocks.slice(0, parseInt(args[1], 10)).map(s => s.symbol);
-  } else if (args.length) {
-    symbols = args;
-  } else {
-    const filtered = JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8'));
-    symbols = filtered.stocks.slice(0, 3).map(s => s.symbol);
+  // flags: --hold N (bars), --ind (independent check set), --limit N, symbols...
+  let symbols = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--limit') { const f = JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8')); symbols = f.stocks.slice(0, parseInt(args[++i], 10)).map(s => s.symbol); }
+    else if (args[i] === '--hold') CFG.maxHold = parseInt(args[++i], 10);
+    else if (args[i] === '--ind') CFG.independentChecks = true;
+    else symbols.push(args[i]);
   }
+  if (!symbols.length) { const f = JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8')); symbols = f.stocks.slice(0, 3).map(s => s.symbol); }
 
   const all = [];
   const t0 = Date.now();
+  if (CFG.independentChecks) loadNiftyProxy();
   for (let i = 0; i < symbols.length; i++) {
     const sym = symbols[i];
     const f = path.join(OHLCV_DIR, sym + '.json');
