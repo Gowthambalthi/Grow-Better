@@ -29,6 +29,8 @@ const UNIVERSE_FILE = path.join(__dirname, '..', 'data', 'nse_universe_3000.txt'
 const OUT_FILTERED = path.join(__dirname, '..', 'data', 'universe_filtered.json');
 const OUT_REJECTED = path.join(__dirname, '..', 'data', 'universe_rejected.json');
 const BAN_FILE = path.join(__dirname, '..', 'data', 'banned_symbols.txt');
+const HISTORY_FILE = path.join(__dirname, '..', 'data', 'universe_history.ndjson');
+const HISTORY_FILE_REJ = path.join(__dirname, '..', 'data', 'universe_history_rejected.ndjson');
 
 // ---------- configurable gates ----------
 const CONFIG = {
@@ -128,6 +130,47 @@ function gateF7_volatility(candles) {
   return { pass: atrPct };
 }
 
+// ---------- history logging (append-only, one row per stock per day) ----------
+// Passers → universe_history.ndjson; rejected → universe_history_rejected.ndjson
+// (with ATR% where computable). Purpose: track the volatility distribution of
+// BOTH populations over time, to answer whether the 4-8% ATR cluster is a
+// market regime or a selection artifact of F1/F2. Review discipline: treat
+// 2-3 weeks as a first checkpoint, 2-3 months before drawing real conclusions
+// (NSE regimes shift with budget/RBI/earnings events).
+function tradeDateOf(candles) {
+  return candles[candles.length - 1][0];
+}
+
+function computeAtrPct(candles) {
+  const n = candles.length;
+  if (n < 22) return null;
+  let s = 0;
+  for (let i = n - 20; i < n; i++) {
+    const h = candles[i][2], l = candles[i][3], pc = candles[i - 1][4];
+    s += Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
+  }
+  const close = candles[n - 1][4];
+  return close > 0 ? +(((s / 20) / close) * 100).toFixed(2) : null;
+}
+
+function appendHistory(file, rows) {
+  if (!rows.length) return;
+  fs.appendFileSync(file, rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+}
+
+// Idempotent per trading date: drop any existing rows for `date` (re-run after
+// market close) and append the fresh set, so history never duplicates a day.
+function rewriteDateRows(file, date, rows) {
+  let existing = [];
+  if (fs.existsSync(file)) {
+    existing = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean)
+      .map(line => { try { return JSON.parse(line); } catch (_) { return null; } })
+      .filter(r => r && r.date !== date);
+  }
+  const all = [...existing, ...rows];
+  fs.writeFileSync(file, all.map(r => JSON.stringify(r)).join('\n') + (all.length ? '\n' : ''));
+}
+
 // ---------- main ----------
 function main() {
   const symbols = fs.readFileSync(UNIVERSE_FILE, 'utf8').trim().split(/\r?\n/).map(s => s.trim()).filter(Boolean);
@@ -150,6 +193,7 @@ function main() {
     else if (gate === 'F7') counts.volatility++;
   };
 
+  const candleMap = new Map(); // symbol → candles, for rejected-history ATR logging
   for (const sym of symbols) {
     if (banned.has(sym)) { counts.banned++; rejected.push({ symbol: sym, gate: 'F8', value: null, reason: 'on manual ban list' }); continue; }
     const f = path.join(OHLCV_DIR, sym + '.json');
@@ -158,6 +202,7 @@ function main() {
     catch (_) { counts.missing++; continue; }
     const candles = j.candles;
     if (!Array.isArray(candles) || candles.length === 0) { counts.missing++; continue; }
+    candleMap.set(sym, candles);
 
     // Gate order: F6 → F5 → F1 → F2 → F4 → F7
     let g = gateF6_integrity(candles);
@@ -204,6 +249,18 @@ function main() {
   };
   fs.writeFileSync(OUT_FILTERED, JSON.stringify(out));
   fs.writeFileSync(OUT_REJECTED, JSON.stringify({ generatedAt: out.generatedAt, rejected }));
+
+  // Idempotent per trading date: if history already has rows for this date
+  // (re-run after market close), replace that date's rows instead of duplicating.
+  const date = stocks.length ? tradeDateOf(stocks[0] ? candleMap.get(stocks[0].symbol) : null) : null;
+  if (date) rewriteDateRows(HISTORY_FILE, date, stocks.map(s => ({
+    date, symbol: s.symbol, atrPct: s.atrPct, close: s.close,
+    turnoverCr: s.avgTurnoverCr, volBand: s.volBand,
+  })));
+  if (date) rewriteDateRows(HISTORY_FILE_REJ, date, rejected.map(r => {
+    const c = candleMap.get(r.symbol);
+    return { date, symbol: r.symbol, gate: r.gate, atrPct: c ? computeAtrPct(c) : null, close: c ? c[c.length - 1][4] : null };
+  }));
 
   console.log(`Universe: ${symbols.length} → passed ${stocks.length}, rejected ${rejected.length} (${counts.missing} missing files)`);
   console.log(`Rejections: F6 integrity=${counts.integrity}  F5 stale=${counts.stale}  F1 price=${counts.price}  F2 turnover=${counts.turnover}  F4 dead=${counts.dead}  F7 volat=${counts.volatility}  F8 banned=${counts.banned}`);
