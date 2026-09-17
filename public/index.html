@@ -1258,6 +1258,17 @@
             <span id="gbScanStatus" style="color:var(--text-dim,#8b93a7);font-size:13px;">Scans ~2,700 NSE stocks for fresh BUY setups (GB Strategy 1: 5 engines + trap filter + fresh-entry check).</span>
           </div>
           <div id="gbSummary" style="display:none;display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
+
+          <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
+          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
+            <span id="gbCallsStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">auto-scans every minute</span>
+            <button id="gbCallsTickBtn" class="btn" style="padding:4px 12px;font-size:12px;margin-left:auto;">⟳ Tick now</button>
+          </div>
+          <div id="gbTodayPnl" style="display:flex;gap:12px;margin:0 0 12px;flex-wrap:wrap;"></div>
+          <div id="gbCallsWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+
+          <h2 style="font-size:16px;margin:8px 0;color:var(--text,#e6e9f0);">Scanner Results</h2>
           <div id="gbTableWrap" style="overflow:auto;max-height:70vh;"></div>
         </section>
 
@@ -3779,6 +3790,144 @@ function _renderMfGridBody(grid, schemes) {
 
         var gbBtn = document.getElementById('gbScanBtn');
         if (gbBtn) gbBtn.addEventListener('click', gbScan);
+
+        // ---- Live Buy Calls ----
+        var gbCallsData = null;
+        var gbOpenCallSym = null;
+
+        function gbRenderPnl(report) {
+          var el = document.getElementById('gbTodayPnl');
+          if (!el || !report) return;
+          var cards = [
+            ['Calls Today', report.totalCalls, report.active + ' active · ' + report.closed + ' closed'],
+            ['Open P&L', (report.unrealizedPnlPct >= 0 ? '+' : '') + report.unrealizedPnlPct + '%', 'unrealized across active calls'],
+            ['Booked P&L', (report.realizedPnlPct >= 0 ? '+' : '') + report.realizedPnlPct + '%', report.wins + 'W / ' + report.losses + 'L closed today'],
+          ];
+          el.innerHTML = cards.map(function(c) {
+            var num = parseFloat(c[1]);
+            var col = c[0].indexOf('P&L') >= 0 ? (num > 0 ? '#00e091' : num < 0 ? '#ff4d6d' : 'var(--text,#e6e9f0)') : 'var(--accent,#00B386)';
+            return '<div style="background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;padding:10px 18px;min-width:150px;">' +
+              '<div style="font-size:11px;color:var(--text-muted,#8b93a7);text-transform:uppercase;letter-spacing:0.5px;">' + c[0] + '</div>' +
+              '<div style="font-size:22px;font-weight:700;color:' + col + ';margin:2px 0;">' + c[1] + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted,#8b93a7);">' + c[2] + '</div></div>';
+          }).join('');
+        }
+
+        function gbRenderCalls() {
+          var wrap = document.getElementById('gbCallsWrap');
+          if (!wrap || !gbCallsData) return;
+          var calls = gbCallsData.calls || [];
+          if (!calls.length) { wrap.innerHTML = '<div class="empty-state">No live calls yet — engine is scanning; confirmed buys appear here automatically.</div>'; return; }
+          var head = '<tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' +
+            ['Time','Symbol','Engine','Entry','LTP','Stop','T1','T2','P&L','Status'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('') + '</tr>';
+          var body = calls.map(function(c) {
+            var closed = c.status === 'CLOSED';
+            var op = closed ? 'opacity:0.45;' : '';
+            var pnl = closed ? c.pnlPct : c.unrealPct;
+            var pnlCol = pnl == null ? 'var(--text-muted)' : pnl > 0 ? '#00e091' : pnl < 0 ? '#ff4d6d' : 'var(--text)';
+            var ltpCol = closed ? 'inherit' : (c.lastLtp >= c.entry ? '#00e091' : '#ff4d6d');
+            var t1 = c.t1Hit ? ' ✓' : '';
+            return '<tr data-callsym="' + c.symbol + '" style="border-top:1px solid var(--border,#232a36);cursor:pointer;' + op + '">' +
+              '<td style="padding:5px 10px;font-size:12px;color:var(--text-muted);white-space:nowrap;">' + (c.time || '').slice(11, 16) + '</td>' +
+              '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + c.symbol + '</td>' +
+              '<td style="padding:5px 10px;font-size:12px;">' + c.engine + ' (' + c.score + ')</td>' +
+              '<td style="padding:5px 10px;">' + c.entry + '</td>' +
+              '<td style="padding:5px 10px;color:' + ltpCol + ';font-weight:600;">' + (c.lastLtp || '-') + '</td>' +
+              '<td style="padding:5px 10px;color:#ff4d6d;">' + c.stopLoss + '</td>' +
+              '<td style="padding:5px 10px;color:#00B386;">' + c.target1 + t1 + '</td>' +
+              '<td style="padding:5px 10px;color:#00B386;">' + c.target2 + '</td>' +
+              '<td style="padding:5px 10px;font-weight:700;color:' + pnlCol + ';">' + (pnl != null ? (pnl > 0 ? '+' : '') + pnl + '%' : '-') + '</td>' +
+              '<td style="padding:5px 10px;font-size:12px;">' + (closed ? c.exitReason : 'ACTIVE') + '</td>' +
+              '</tr>';
+          }).join('');
+          wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+        }
+
+        function gbRenderCallDetail(d) {
+          var c = d.call;
+          var rows = (d.candles || []).map(function(x) {
+            var up = x.c >= x.o;
+            var col = up ? '#00e091' : '#ff4d6d';
+            var isEntry = x.date === c.date;
+            return '<tr style="border-top:1px solid var(--border,#232a36);' + (isEntry ? 'background:rgba(0,179,134,0.12);' : '') + '">' +
+              '<td style="padding:3px 8px;color:var(--text-muted);">' + x.date.slice(5) + '</td>' +
+              '<td style="padding:3px 8px;">' + x.o + '</td>' +
+              '<td style="padding:3px 8px;">' + x.h + '</td>' +
+              '<td style="padding:3px 8px;">' + x.l + '</td>' +
+              '<td style="padding:3px 8px;color:' + col + ';font-weight:600;">' + x.c + '</td>' +
+              '<td style="padding:3px 8px;text-align:right;color:var(--text-muted);">' + (x.v / 1000).toFixed(0) + 'K</td>' +
+              '</tr>';
+          }).join('');
+          var chg = d.candles && d.candles.length ? (((d.candles[d.candles.length - 1].c - c.entry) / c.entry) * 100).toFixed(2) : null;
+          var pnlCol = chg == null ? 'var(--text)' : chg > 0 ? '#00e091' : '#ff4d6d';
+          var s = '<div style="display:flex;gap:14px;flex-wrap:wrap;padding:14px 18px;background:var(--bg-card,#161b22);border-top:2px solid var(--accent,#00B386);">' +
+            '<div style="min-width:280px;">' +
+              '<div style="font-weight:700;font-size:15px;color:var(--accent,#00B386);margin-bottom:6px;">' + c.symbol + ' — call inspection</div>' +
+              '<div style="font-size:13px;line-height:1.9;">' +
+                'Called: <b>' + (c.time || '').slice(0, 16).replace('T', ' ') + '</b> at <b>' + c.entry + '</b><br>' +
+                'Engine: ' + c.engine + ' (score ' + c.score + ')<br>' +
+                'Frames: ' + (c.confirm ? (c.confirm.framesPassed + '/4' + (c.confirm.extAtr != null ? ' · ext ' + c.confirm.extAtr + ' ATR' : '') + (c.confirm.rsVsNifty != null ? ' · RS ' + (c.confirm.rsVsNifty * 100).toFixed(1) + '%' : '')) : '-') + '<br>' +
+                'SL ' + c.stopLoss + ' · T1 ' + c.target1 + (c.t1Hit ? ' ✓hit' : '') + ' · T2 ' + c.target2 + '<br>' +
+                'Status: <b>' + c.status + (c.exitReason ? ' (' + c.exitReason + ')' : '') + '</b><br>' +
+                'Since call: <b style="color:' + pnlCol + '">' + (chg != null ? (chg > 0 ? '+' : '') + chg + '%' : '-') + '</b>' +
+              '</div>';
+              if (c.intraday) {
+                s += '<div style="margin-top:8px;font-size:12px;color:var(--text-muted);line-height:1.6;">' +
+                  'R3 ' + c.intraday.r3 + ' · R4 ' + c.intraday.r4 + ' · S3 ' + c.intraday.s3 + '<br>' + c.intraday.plan + '</div>';
+              }
+              s += '</div>' +
+            '<div style="flex:1;min-width:320px;">' +
+              '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent,#00B386);margin-bottom:6px;">Movement since call (highlighted = call day)</div>' +
+              '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="color:var(--text-muted);">' +
+              '<th style="text-align:left;padding:2px 8px;">Date</th><th style="text-align:left;padding:2px 8px;">O</th><th style="text-align:left;padding:2px 8px;">H</th><th style="text-align:left;padding:2px 8px;">L</th><th style="text-align:left;padding:2px 8px;">C</th><th style="text-align:right;padding:2px 8px;">Vol</th>' +
+              '</tr></thead><tbody>' + rows + '</tbody></table>' +
+            '</div></div>';
+          return s;
+        }
+
+        async function gbRefreshCalls() {
+          try {
+            var r = await fetch('/api/gb/calls');
+            var j = await r.json();
+            if (j.error) { var st = document.getElementById('gbCallsStatus'); if (st) st.textContent = '❌ ' + j.error; return; }
+            gbCallsData = j;
+            gbRenderPnl(j.report);
+            gbRenderCalls();
+            var st2 = document.getElementById('gbCallsStatus');
+            if (st2) st2.textContent = 'auto: ' + (j.report.lastScan || '').slice(11, 19) + ' UTC · engine tick every 60s';
+          } catch (e) {}
+        }
+
+        var gbCallsWrap = document.getElementById('gbCallsWrap');
+        if (gbCallsWrap) gbCallsWrap.addEventListener('click', function(e) {
+          var tr = e.target.closest('tr[data-callsym]');
+          if (!tr) return;
+          var sym = tr.getAttribute('data-callsym');
+          var existing = document.getElementById('gbCallDetailRow');
+          if (gbOpenCallSym === sym && existing) { existing.remove(); gbOpenCallSym = null; return; }
+          if (existing) existing.remove();
+          gbOpenCallSym = sym;
+          var panel = document.createElement('tr');
+          panel.id = 'gbCallDetailRow';
+          panel.innerHTML = '<td colspan="10" style="padding:0;"><div style="padding:14px 18px;color:var(--text-muted);font-size:13px;">Loading ' + sym + '…</div></td>';
+          tr.after(panel);
+          fetch('/api/gb/calls/' + encodeURIComponent(sym)).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.error) { panel.querySelector('div > div').textContent = '❌ ' + d.error; return; }
+            panel.querySelector('td > div').innerHTML = gbRenderCallDetail(d);
+          }).catch(function(err) { panel.querySelector('td > div').textContent = '❌ ' + err.message; });
+        });
+
+        var gbTickBtn = document.getElementById('gbCallsTickBtn');
+        if (gbTickBtn) gbTickBtn.addEventListener('click', async function() {
+          gbTickBtn.disabled = true; gbTickBtn.textContent = '⟳…';
+          try { await fetch('/api/gb/calls/tick', { method: 'POST' }); } catch (_) {}
+          await gbRefreshCalls();
+          gbTickBtn.disabled = false; gbTickBtn.textContent = '⟳ Tick now';
+        });
+
+        // initial load + auto-refresh every 60s while the terminal view is open
+        gbRefreshCalls();
+        setInterval(gbRefreshCalls, 60000);
 
         var gbWrap = document.getElementById('gbTableWrap');
         if (gbWrap) gbWrap.addEventListener('click', function(e) {
