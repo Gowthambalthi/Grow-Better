@@ -240,6 +240,37 @@ app.get('/api/gb/scan', (req, res) => {
   }
 });
 
+// ---- Live buy calls ----
+app.get('/api/gb/calls', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    res.json(liveCalls.getCalls({ includeClosed: req.query.all !== '0' }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/gb/calls/:symbol', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    const d = liveCalls.getCallDetail(String(req.params.symbol || '').toUpperCase().replace(/[^A-Z0-9&_-]/g, ''));
+    if (!d) return res.status(404).json({ error: 'No call found for ' + req.params.symbol });
+    res.json(d);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/gb/calls/tick', async (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    const ms = await liveCalls.tick();
+    res.json({ ok: true, tookMs: ms });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---- Holdings / positions ----
 app.get('/api/:broker/holdings', getBroker, async (req, res) => {
   try {
@@ -1993,7 +2024,16 @@ app.get('/api/debug/groww', async (req, res) => {
   } catch (err) { res.json({ error: err.message }); }
 });
 
-app.listen(port, host, () => {
+  // ---- Live Buy-Call engine (auto: data refresh → score → calls → minute tracking) ----
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    liveCalls.start(60000); // every minute; first tick fires immediately
+    console.log('[server] live call engine started (60s tick)');
+  } catch (e) {
+    console.log('[server] live call engine failed to start:', e.message);
+  }
+
+  app.listen(port, host, () => {
     console.log(`[server] listening on http://${host}:${port}`);
     console.log(`[server] active brokers: ${Object.keys(brokers).join(', ') || '(none — check ANGEL_ENABLED/GROWW_ENABLED)'}`);
   });
