@@ -29,7 +29,8 @@ const CFG = {
   targetR: 2.0,
   breakevenR: 1.0,
   cooldownBars: 5,
-  maxPerStock: 3,      // sanity cap for the first runs
+  maxPerStock: Infinity, // backtest sample size: uncapped. Reintroduce a cap
+                          // for LIVE risk management only, not backtests.
 };
 
 function atrAt(candles, i, period = 14) {
@@ -147,12 +148,14 @@ function main() {
   }
 
   const all = [];
-  for (const sym of symbols) {
+  const t0 = Date.now();
+  for (let i = 0; i < symbols.length; i++) {
+    const sym = symbols[i];
     const f = path.join(OHLCV_DIR, sym + '.json');
     let j;
     try { j = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (_) { continue; }
     all.push(...backtestStock(sym, j.candles, CFG));
-    console.log(`${sym}: ${all.filter(t => t.symbol === sym).length} trades`);
+    if (i % 100 === 0) console.log(`[${i + 1}/${symbols.length}] ${sym} — total trades: ${all.length} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
   }
 
   const out = { generatedAt: new Date().toISOString(), config: CFG, symbols, summary: summarize(all), trades: all };
