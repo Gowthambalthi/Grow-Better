@@ -17,6 +17,24 @@ const path = require('path');
 const OHLCV_DIR = path.join(__dirname, '..', 'data', 'ohlcv');
 const UNIVERSE_FILE = path.join(__dirname, '..', 'data', 'nse_universe_3000.txt');
 const OUT_FILE = path.join(__dirname, '..', 'data', 'engine_scores.json');
+const FILTERED_FILE = path.join(__dirname, '..', 'data', 'universe_filtered.json');
+const { execSync } = require('child_process');
+
+// Load the post-close filtered universe (scripts/filterUniverse.js output).
+// If missing or older than 1 day, regenerate it first so scoring always runs
+// against the current quality-filtered list.
+function loadFilteredUniverse() {
+  let fresh = false;
+  if (fs.existsSync(FILTERED_FILE)) {
+    const age = Date.now() - fs.statSync(FILTERED_FILE).mtimeMs;
+    fresh = age < 24 * 3600 * 1000;
+  }
+  if (!fresh) {
+    console.log('universe_filtered.json missing/stale — running filterUniverse...');
+    execSync('node "' + path.join(__dirname, 'filterUniverse.js') + '"', { stdio: 'inherit' });
+  }
+  return JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8'));
+}
 
 // ---------- indicator helpers ----------
 function ema(values, period) {
@@ -310,7 +328,11 @@ function evaluate(candles) {
 
 // ---------- main ----------
 function main() {
-  const symbols = fs.readFileSync(UNIVERSE_FILE, 'utf8').trim().split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  // Universe = post-close filtered list (F6 integrity → F5 staleness → F1 price
+  // → F2 turnover → F4 dead → F7 volatility → F8 ban). Quality gating happens
+  // once in filterUniverse.js; scoring never sees a rejected stock.
+  const filtered = loadFilteredUniverse();
+  const symbols = filtered.stocks.map(s => s.symbol);
   const results = [];
   let skipped = 0, missing = 0;
 
@@ -319,9 +341,6 @@ function main() {
     let j;
     try { j = JSON.parse(fs.readFileSync(f, 'utf8')); }
     catch (_) { missing++; continue; }
-    // Liquidity/quality floor: stocks priced below ₹100 are excluded from
-    // the entire application (user requirement).
-    if (j.candles[j.candles.length - 1][4] < 100) { skipped++; continue; }
     if (!Array.isArray(j.candles) || j.candles.length < 60) { skipped++; continue; }
     const r = evaluate(j.candles);
     if (!r) { skipped++; continue; }
@@ -332,7 +351,8 @@ function main() {
   results.sort((a, b) => b.engineRate - a.engineRate);
   const out = {
     generatedAt: new Date().toISOString(),
-    universe: symbols.length,
+    universe: filtered.universe,
+    filteredPassed: filtered.passed,
     scanned: results.length,
     skippedShortHistory: skipped,
     missingFiles: missing,
