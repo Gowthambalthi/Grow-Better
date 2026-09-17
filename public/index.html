@@ -3859,10 +3859,43 @@ function _renderMfGridBody(grid, schemes) {
         }
 
         function gbDetailHtml(d) {
+          // confirmation frames + intraday execution plan (from trade-table row)
+          var row = (gbRows || []).find(function(x) { return x.symbol === d.symbol; });
+          var confirmBlock = '';
+          if (row && row.confirm) {
+            var c = row.confirm;
+            var chip = function(lbl, val, ok) {
+              var col = ok === true ? '#00e091' : ok === false ? '#ff4d6d' : 'var(--text-muted,#8b93a7)';
+              return '<span style="display:inline-block;background:var(--bg,#0d1117);border:1px solid var(--border,#232a36);border-radius:6px;padding:3px 10px;margin:2px 4px 2px 0;font-size:11.5px;">' +
+                '<span style="color:var(--text-muted,#8b93a7);">' + lbl + '</span> <span style="color:' + col + ';font-weight:700;">' + val + '</span></span>';
+            };
+            confirmBlock = '<div style="margin-top:12px;width:100%;">' +
+              '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent,#00B386);margin-bottom:6px;">Confirmation Frames (' + c.framesPassed + '/4 passed)</div>' +
+              chip('Extension', c.extAtr != null ? c.extAtr + ' ATR' : '-', c.extAtr != null && c.extAtr <= 2.5) +
+              chip('RS vs Nifty', c.rsVsNifty != null ? (c.rsVsNifty * 100).toFixed(1) + '%' : '-', c.rsVsNifty != null && c.rsVsNifty >= 0) +
+              chip('Vol-at-price', c.volAtPrice != null ? (c.volAtPrice * 100).toFixed(0) + '% of range' : '-', c.volAtPrice != null && c.volAtPrice >= 0.7) +
+              chip('Nifty trend', c.niftyDir || '-', c.niftyDir === 'up') +
+              '</div>';
+          }
+          var intradayBlock = '';
+          if (row && row.intraday) {
+            var iv = row.intraday;
+            var lvl = function(lbl, v, col) {
+              return '<div style="display:flex;justify-content:space-between;gap:14px;"><span style="color:var(--text-muted,#8b93a7);">' + lbl + '</span><span style="font-weight:700;color:' + col + ';">' + gbMav(v) + '</span></div>';
+            };
+            intradayBlock = '<div style="margin-top:12px;width:100%;max-width:420px;background:var(--bg,#0d1117);border:1px solid var(--border,#232a36);border-radius:10px;padding:12px 14px;">' +
+              '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent,#00B386);margin-bottom:8px;">Intraday Plan (prev-day Camarilla)</div>' +
+              lvl('R4 (add / partial)', iv.r4, '#00e091') +
+              lvl('R3 (breakout trigger)', iv.r3, '#00B386') +
+              lvl('Pivot', iv.pivot, 'var(--text,#e6e9f0)') +
+              lvl('S3 (intraday SL ref)', iv.s3, '#ff4d6d') +
+              '<div style="font-size:11px;color:var(--text-muted,#8b93a7);margin-top:8px;line-height:1.5;">' + iv.plan + '</div>' +
+              '</div>';
+          }
           return '<div style="display:flex;gap:14px;flex-wrap:wrap;">' +
             gbTfBlock('Daily', d.daily) +
             gbTfBlock('Weekly', d.weekly) +
-            '</div>';
+            '</div>' + confirmBlock + intradayBlock;
         }
 
         var tfBtn = e.target.closest('.mf-tf-btn');

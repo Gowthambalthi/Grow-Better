@@ -126,6 +126,8 @@ function main() {
           f1: frames.f1.pass, f2: frames.f2.pass, f3: frames.f3.pass, f4: frames.f4.pass, f5: frames.f5.pass,
           confirm: frames.confirm, confirmMax: frames.confirmMax,
           f2_rs: frames.f2.rs, f3_ratio: frames.f3.ratio, f4_score: frames.f4.score, f5_ext: frames.f5.ext,
+          f8: frames.f8.pass, f8_dir: frames.f8.direction, f8_slope: frames.f8.slope,
+          f9: frames.f9.pass, f9_upper: frames.f9.upperShare,
         });
       }
     }
@@ -149,7 +151,7 @@ function main() {
   // ---- frame marginal-contribution report (baseline config) ----
   const base = collected.baseline;
   console.log('\n=== FRAME MARGINAL CONTRIBUTION (baseline, net R) ===');
-  for (const f of ['f1', 'f2', 'f3', 'f4', 'f5']) {
+  for (const f of ['f1', 'f2', 'f3', 'f4', 'f5', 'f8', 'f9']) {
     const pass = base.filter(t => t[f] === true);
     const fail = base.filter(t => t[f] === false);
     const fmt = rows => rows.length ? `n=${String(rows.length).padStart(3)} win=${String(summarize(rows).winRate).padStart(5)}% avgR=${summarize(rows).avgR}` : 'n=  0';
@@ -164,6 +166,11 @@ function main() {
     f1_f2_f3: t => t.f1 === true && t.f2 === true && t.f3 === true,
     f1_f2_f4: t => t.f1 === true && t.f2 === true && t.f4 === true,
     confirm4: t => t.confirmMax >= 4 && t.confirm >= 4,
+    f8_only: t => t.f8 === true,
+    f9_only: t => t.f9 === true,
+    gate3_f8: t => t.f5 === true && t.f2 === true && t.f3 === true && t.f8 === true,
+    gate3_f9: t => t.f5 === true && t.f2 === true && t.f3 === true && t.f9 === true,
+    gate3_f8_f9: t => t.f5 === true && t.f2 === true && t.f3 === true && t.f8 === true && t.f9 === true,
   };
   for (const [g, fn] of Object.entries(gates)) {
     const rows = base.filter(fn);

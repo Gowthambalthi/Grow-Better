@@ -9,7 +9,8 @@
  *  - Extension: known MA/ATR distance
  */
 const { frameWeeklyStructure, frameRelativeStrength, frameVolumeQuality,
-        frameBaseQuality, frameExtension, frameIntradayClose, frameIntradayHold } = require('../common/market/confirmFrames');
+        frameBaseQuality, frameExtension, frameIntradayClose, frameIntradayHold,
+        frameNiftyDirection, frameVolumeAtPrice } = require('../common/market/confirmFrames');
 
 let passed = 0, failed = 0;
 function ok(name, cond, extra = '') {
@@ -169,6 +170,44 @@ console.log('F7 intraday hold');
 
   const f3 = frameIntradayHold(null, level, atr);
   ok('no next-day data → null', f3.pass === null, JSON.stringify(f3));
+}
+
+console.log('F8 Nifty direction');
+{
+  // rising benchmark: accelerating uptrend linear → close > EMA20, EMA5 > EMA20
+  const up = linear(60, 100, 0.5);
+  const f = frameNiftyDirection(up, up[59][0]);
+  ok('rising Nifty → up, pass', f.pass === true && f.direction === 'up', JSON.stringify(f));
+  const dn = linear(60, 200, -0.5);
+  const f2 = frameNiftyDirection(dn, dn[59][0]);
+  ok('falling Nifty → down, fail', f2.pass === false && f2.direction === 'down', JSON.stringify(f2));
+  // sideways: alternating steps around a flat mean → 'side'
+  const flat = [];
+  const dsf = mkDates(60);
+  for (let i = 0; i < 60; i++) {
+    const cl = 100 + ((i % 10) < 5 ? (i % 5) : 5 - (i % 5));
+    flat.push([dsf[i], cl - 0.5, cl + 0.6, cl - 1.0, cl, 1000]);
+  }
+  const f3 = frameNiftyDirection(flat, flat[59][0]);
+  ok('sideways Nifty → side, fail (long-only)', f3.pass === false && f3.direction === 'side', JSON.stringify(f3));
+  const f4 = frameNiftyDirection(up, '2024-01-15'); // too early for EMA20
+  ok('early date → null', f4.pass === null, JSON.stringify(f4));
+  const f5 = frameNiftyDirection(null, up[59][0]);
+  ok('no benchmark → null', f5.pass === null, JSON.stringify(f5));
+}
+
+console.log('F9 volume-at-price proxy');
+{
+  const ds = mkDates(10);
+  const strong = [[ds[9], 99, 110, 98.5, 109.5, 50000]];   // close at top of range
+  const f = frameVolumeAtPrice(strong, 0);
+  ok('close at high → pass', f.pass === true && f.upperShare >= 0.9, JSON.stringify(f));
+  const weak = [[ds[9], 95, 110, 94.5, 102, 50000]];       // close mid-range
+  const f2 = frameVolumeAtPrice(weak, 0);
+  ok('close mid-range → fail', f2.pass === false, JSON.stringify(f2));
+  const flat2 = [[ds[9], 100, 100, 100, 100, 50000]];      // zero range
+  const f3 = frameVolumeAtPrice(flat2, 0);
+  ok('zero-range bar → null', f3.pass === null, JSON.stringify(f3));
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

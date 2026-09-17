@@ -192,6 +192,58 @@ function frameIntradayHold(nextDayCandles, level, dailyAtr, opts = {}) {
   return { pass, dips, deepest: +deepest.toFixed(4), reason: null };
 }
 
+// ---------- F8: Nifty direction frame ----------
+
+/**
+ * Which direction is the INDEX moving, and does the stock follow it?
+ * Stocks breakout more reliably in the direction the benchmark is already
+ * moving. Measured on the benchmark's own 5/20-bar EMA slope + position:
+ *   'up'   = Nifty close > EMA20 AND EMA5 > EMA20
+ *   'down' = Nifty close < EMA20 AND EMA5 < EMA20
+ *   'side' = otherwise
+ * pass = nifty direction is 'up' (long-only book) — but the RAW direction
+ * is always reported so the marginal contribution of side/down can be
+ * measured rather than assumed.
+ */
+function frameNiftyDirection(benchCandles, asOfDate, fast = 5, slow = 20) {
+  if (!benchCandles || !benchCandles.length) return { pass: null, direction: null, slope: null, reason: 'no benchmark data' };
+  let bIdx = -1;
+  for (let k = benchCandles.length - 1; k >= 0; k--) {
+    if (benchCandles[k][0] <= asOfDate) { bIdx = k; break; }
+  }
+  if (bIdx < slow) return { pass: null, direction: null, slope: null, reason: 'insufficient benchmark history' };
+  const ema = (period, end) => {
+    const k = 2 / (period + 1);
+    let e = benchCandles[end - period + 1][4];
+    for (let i = end - period + 2; i <= end; i++) e = benchCandles[i][4] * k + e * (1 - k);
+    return e;
+  };
+  const e5 = ema(fast, bIdx), e20 = ema(slow, bIdx), c = benchCandles[bIdx][4];
+  const slope = e20 > 0 ? (e5 - e20) / e20 : 0;
+  const direction = c > e20 && e5 > e20 ? 'up' : c < e20 && e5 < e20 ? 'down' : 'side';
+  return { pass: direction === 'up', direction, slope: +slope.toFixed(4), reason: null };
+}
+
+// ---------- F9: volume-at-price proxy ----------
+
+/**
+ * True volume-at-price needs tick data; this is the daily-bar proxy: where
+ * did the breakout day trade INSIDE its own range? Estimate via typical
+ * price weighting across the bar's 3 sub-ranges (approximating a
+ * triangular distribution — close-biased when the close is at an extreme):
+ *   vpHigh  ≈ share of volume assumed traded in the upper third
+ * Formula: upper-third weight = (close − low) / range if range > 0.
+ * A breakout closing near the day's high concentrated buying up there —
+ * conviction. Closing mid-range = absorption/no conviction.
+ */
+function frameVolumeAtPrice(candles, bar) {
+  const c = candles[bar];
+  const range = c[2] - c[3];
+  if (range <= 0) return { pass: null, upperShare: null, reason: 'zero-range bar' };
+  const upperShare = (c[4] - c[3]) / range; // 0..1, where in the range the close sits
+  return { pass: upperShare >= 0.7, upperShare: +upperShare.toFixed(2), reason: null };
+}
+
 // ---------- aggregate ----------
 
 /**
@@ -210,8 +262,10 @@ function scoreFrames({ stockCandles, sig, benchmarkCandles }) {
   const frames = [f1, f2, f3, f4, f5];
   const nonNull = frames.filter(f => f.pass !== null);
   const confirm = nonNull.filter(f => f.pass).length;
+  const f8 = frameNiftyDirection(benchmarkCandles, stockCandles[bar][0]);
+  const f9 = frameVolumeAtPrice(stockCandles, bar);
   return {
-    f1, f2, f3, f4, f5,
+    f1, f2, f3, f4, f5, f8, f9,
     confirm,
     confirmMax: nonNull.length,
   };
@@ -221,5 +275,6 @@ module.exports = {
   scoreFrames,
   frameWeeklyStructure, frameRelativeStrength, frameVolumeQuality,
   frameBaseQuality, frameExtension, frameIntradayClose, frameIntradayHold,
+  frameNiftyDirection, frameVolumeAtPrice,
   atrAt, smaClose, retN,
 };

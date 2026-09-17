@@ -16,7 +16,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { scoreFrames } = require('../common/market/confirmFrames');
+const { scoreFrames, frameVolumeAtPrice, frameNiftyDirection } = require('../common/market/confirmFrames');
 
 const SCORES = path.join(__dirname, '..', 'data', 'engine_scores.json');
 const OHLCV = path.join(__dirname, '..', 'data', 'ohlcv');
@@ -92,8 +92,43 @@ function main() {
       const f5ok = frames?.f5?.pass !== false;   // not over-extended
       const f2ok = frames?.f2?.pass !== false;   // RS vs Nifty >= 0
       const f3ok = (i.volRatio >= 1.5);          // volume quality
-      const confirmCount = [f5ok, f2ok, f3ok].filter(Boolean).length;
-      if (!(f5ok && f2ok && f3ok)) { confirmDropped++; continue; }
+      // F9 volume-at-price: close in the top 30% of the bar's range (buying
+      // conviction at the highs). In backtest the bar IS the breakout bar; live,
+      // today may be a pullback day after the signal bar, so measure on the
+      // most recent of the last 5 bars that shows the conviction (the signal
+      // bar). If none of the last 5 show it, the setup lacks conviction — drop.
+      let f9 = { pass: false, upperShare: null }; // no conviction bar in last 5 → fail
+      if (candles) {
+        for (let k = candles.length - 1; k >= Math.max(0, candles.length - 5); k--) {
+          const f = frameVolumeAtPrice(candles, k);
+          if (f.pass) { f9 = f; break; }
+        }
+      }
+      const f9ok = f9.pass === true;
+      const f8 = frames?.f8 ?? frameNiftyDirection(bench, (candles ? candles[candles.length - 1][0] : null));
+      const confirmCount = [f5ok, f2ok, f3ok, f9ok].filter(Boolean).length;
+      if (!(f5ok && f2ok && f3ok && f9ok)) { confirmDropped++; continue; }
+
+      // ---- Intraday execution plan (Camarilla-style levels from prev day) ----
+      // For each confirmed swing, compute tradeable intraday levels off the
+      // previous day's H/L/C: R3/R4 (breakout targets), S3 (intraday stop
+      // reference), plus pivot. The 9:15-10:00 opening range gives the entry
+      // trigger; direction must agree with the daily setup (long-only).
+      let intraday = null;
+      if (candles && candles.length >= 2) {
+        const pd = candles[candles.length - 2]; // previous day: [d,o,h,l,c,v]
+        const pdH = pd[2], pdL = pd[3], pdC = pd[4];
+        const rng = pdH - pdL;
+        intraday = {
+          r3: +(pdC + rng * 1.1 / 4).toFixed(2),
+          r4: +(pdC + rng * 1.1 / 2).toFixed(2),
+          pivot: +((pdH + pdL + pdC) / 3).toFixed(2),
+          s3: +(pdC - rng * 1.1 / 4).toFixed(2),
+          // execution rule text shown in Terminal
+          plan: 'Long above R3 with volume; add/partial at R4. Intraday SL below S3. ' +
+                'If price opens above R4, wait for a retest of R3 to enter — do not chase.',
+        };
+      }
 
       const stopLoss = +Math.min(i.support30, low - i.atr14).toFixed(2);
       const risk = Math.max(r.close - stopLoss, i.atr14 * 0.5);
@@ -113,7 +148,10 @@ function main() {
           framesPassed: confirmCount,
           extAtr: frames?.f5?.ext ?? null,
           rsVsNifty: frames?.f2?.rs ?? null,
+          volAtPrice: f9.upperShare ?? null,
+          niftyDir: f8?.direction ?? null,
         },
+        intraday,
       });
     }
 
