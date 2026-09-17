@@ -221,7 +221,7 @@ function checkHtfTrend(candles) {
   return { ok: bull ? true : bear ? false : true, detail: { higherLows, lowerHighs } }; // sideways passes
 }
 
-function checkRelativeStrength(candles, niftyCandles, bars = 15) {
+function checkRelativeStrength(candles, niftyCandles, bars = 15, rsMin = 0) {
   const n = candles.length;
   if (n < bars + 1) return { ok: null, reason: 'insufficient history' };
   const stockRet = candles[n - 1][4] / candles[n - 1 - bars][4] - 1;
@@ -229,7 +229,9 @@ function checkRelativeStrength(candles, niftyCandles, bars = 15) {
   const m = niftyCandles.length;
   const niftyRet = niftyCandles[m - 1][4] / niftyCandles[m - 1 - bars][4] - 1;
   const rs = stockRet - niftyRet;
-  return { ok: rs >= 0, rs: +rs.toFixed(4), stockRet: +stockRet.toFixed(4), niftyRet: +niftyRet.toFixed(4) };
+  // rsMin: minimum outperformance required. Default 0 was too lenient at
+  // daily resolution (99.6% pass rate, n=5 fails = untested, not validated).
+  return { ok: rs >= rsMin, rs: +rs.toFixed(4), stockRet: +stockRet.toFixed(4), niftyRet: +niftyRet.toFixed(4) };
 }
 
 function checkBreakoutQuality(candles, level) {
@@ -262,7 +264,7 @@ function validateBreakoutIndependent(candles, direction, breakoutLevel, opts = {
   const checks = {
     volume_roc: checkVolumeROC(candles, opts.volumeRocThreshold),
     htf_trend: checkHtfTrend(candles),
-    relative_strength: checkRelativeStrength(candles, opts.niftyCandles, opts.rsBars),
+    relative_strength: checkRelativeStrength(candles, opts.niftyCandles, opts.rsBars, opts.rsMin),
     breakout_quality: checkBreakoutQuality(candles, breakoutLevel),
     atr_extension: checkAtrExtension(candles, opts.maxExtension),
   };

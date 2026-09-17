@@ -47,6 +47,7 @@ const CFG = {
   maxPerStock: Infinity, // backtest sample size: uncapped. Reintroduce a cap
                           // for LIVE risk management only, not backtests.
   independentChecks: false, // --ind: redesigned non-correlated check set
+  rsMin: 0.02,               // RS check: require 2% outperformance vs benchmark
   // -- NET-R cost model: all reported R is net of round-trip costs.
   // costR = round-trip cost as a fraction of the trade's 1R unit, computed
   // per trade from its entry price: (costBpsEntry + costBpsExit) / risk%.
@@ -131,7 +132,7 @@ function backtestStock(symbol, candles, verdicts) {
       r = validateBreakoutIndependent(slice, ...(() => {
         const d = require('../common/market/breakoutValidate').detectBreakout(slice, CFG.lookback);
         return [d.direction, d.level];
-      })(), { niftyCandles: NIFTY_CANDLES ? NIFTY_CANDLES.slice(0, t + 1) : null, lookback: CFG.lookback });
+      })(), { niftyCandles: NIFTY_CANDLES ? NIFTY_CANDLES.slice(0, t + 1) : null, lookback: CFG.lookback, rsMin: CFG.rsMin });
       if (!r.direction) { lastSignalBar = t; continue; }
     } else {
       r = scanBreakout(slice, { lookback: CFG.lookback });
@@ -186,6 +187,7 @@ function main() {
     if (args[i] === '--limit') { const f = JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8')); symbols = f.stocks.slice(0, parseInt(args[++i], 10)).map(s => s.symbol); }
     else if (args[i] === '--hold') CFG.maxHold = parseInt(args[++i], 10);
     else if (args[i] === '--ind') CFG.independentChecks = true;
+    else if (args[i] === '--rsmin') CFG.rsMin = parseFloat(args[++i]);
     else symbols.push(args[i]);
   }
   if (!symbols.length) { const f = JSON.parse(fs.readFileSync(FILTERED_FILE, 'utf8')); symbols = f.stocks.slice(0, 3).map(s => s.symbol); }
