@@ -36,6 +36,7 @@ const TIME_EXIT_BARS = 35;
 const state = {
   running: false,
   lastPipelineRun: null,   // Date ISO of last full data+score run
+  lastPipelineSteps: null, // per-step ok/error for diagnosis
   lastScan: null,          // Date ISO of last minute scan
   pipelineRunning: false,
   timer: null,
@@ -62,9 +63,13 @@ function todayKey(d = new Date()) {
 function runScript(script, args = []) {
   return new Promise((resolve) => {
     execFile(process.execPath, [path.join(SCRIPTS, script), ...args],
-      { cwd: path.join(SCRIPTS, '..'), timeout: 10 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 },
+      { cwd: path.join(SCRIPTS, '..'), timeout: 25 * 60 * 1000, maxBuffer: 16 * 1024 * 1024 },
       (err, stdout, stderr) => resolve({ err, stdout, stderr }));
   });
+}
+
+function hasAngelCreds() {
+  return !!(process.env.ANGEL_API_KEY && process.env.ANGEL_CLIENT_CODE && process.env.ANGEL_TOTP_SECRET);
 }
 
 async function ohlcvStale() {
@@ -81,17 +86,38 @@ async function ohlcvStale() {
 async function runPipeline() {
   if (state.pipelineRunning) return { skipped: true };
   state.pipelineRunning = true;
+  const steps = {};
   try {
-    // 1. refresh candles if stale (fetchUniverseOhlcv is resume-safe; only
-    //    symbols lacking a current file/candle get fetched)
+    // 1. refresh candles if stale — only when Angel credentials exist.
+    //    Without creds (e.g. Render free tier) skip fetching and serve the
+    //    committed data instead of crashing the pipeline.
     const stale = await ohlcvStale();
-    if (stale) await runScript('fetchUniverseOhlcv.js');
-    // 2. filter → score → trade table (scoreEngines auto-runs filterUniverse
-    //    when the filtered file is stale)
-    await runScript('scoreEngines.js');
-    await runScript('buildTradeTable.js');
+    if (stale && hasAngelCreds()) {
+      const r = await runScript('fetchUniverseOhlcv.js');
+      steps.fetch = r.err ? 'error: ' + String(r.err.message || r.err).slice(0, 80) : 'ok';
+    } else {
+      steps.fetch = stale ? 'skipped (no Angel creds)' : 'fresh';
+    }
+    // 2. filter → score → trade table; each step independent so one failure
+    //    doesn't stop the rest. CRITICAL: buildTradeTable must not run when
+    //    scoring produced nothing (no candles on a fresh clone) — it would
+    //    overwrite the committed trade table with an empty one.
+    let r = await runScript('scoreEngines.js');
+    steps.score = r.err ? 'error: ' + String(r.err.message || r.err).slice(0, 80) : 'ok';
+    let scoresUsable = false;
+    try {
+      const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
+      scoresUsable = es.scanned > 0 && Array.isArray(es.results) && es.results.length > 0;
+    } catch (_) {}
+    if (scoresUsable) {
+      r = await runScript('buildTradeTable.js');
+      steps.build = r.err ? 'error: ' + String(r.err.message || r.err).slice(0, 80) : 'ok';
+    } else {
+      steps.build = 'skipped (scores empty — keeping committed trade table)';
+    }
     state.lastPipelineRun = new Date().toISOString();
-    return { ok: true };
+    state.lastPipelineSteps = steps;
+    return { ok: true, steps };
   } finally {
     state.pipelineRunning = false;
   }
