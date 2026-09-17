@@ -47,6 +47,12 @@ const CFG = {
   maxPerStock: Infinity, // backtest sample size: uncapped. Reintroduce a cap
                           // for LIVE risk management only, not backtests.
   independentChecks: false, // --ind: redesigned non-correlated check set
+  // -- NET-R cost model: all reported R is net of round-trip costs.
+  // costR = round-trip cost as a fraction of the trade's 1R unit, computed
+  // per trade from its entry price: (costBpsEntry + costBpsExit) / risk%.
+  // 12 bps round trip = brokerage+STT+exchange fees+slippage, typical NSE
+  // delivery intraday-ish assumption. Applied on entry+exit in simulate().
+  costBpsRoundTrip: 12,
 };
 
 function atrAt(candles, i, period = 14) {
@@ -76,6 +82,17 @@ function simulate(candles, entryBar, direction, entry) {
   if (risk <= 0) return null;
   const target = isLong ? entry + CFG.targetR * risk : entry - CFG.targetR * risk;
 
+  // Net-R cost model: round-trip cost expressed in R units. Cost scales with
+  // price, R scales with risk — a tight stop makes the SAME ₹-cost a bigger
+  // R-drag, which is exactly the effect a net-R backtest must capture.
+  const riskPct = risk / entry;
+  const costR = riskPct > 0 ? (CFG.costBpsRoundTrip / 10000) / riskPct : 0;
+
+  const rUnit = risk;
+  const signedR = (exitPrice, label) => {
+    const gross = (isLong ? exitPrice - entry : entry - exitPrice) / rUnit;
+    return { gross, net: gross - costR };
+  };
   let stopLevel = stop, beArmed = false;
   const end = Math.min(candles.length - 1, entryBar + CFG.maxHold);
   for (let i = entryBar + 1; i <= end; i++) {
@@ -90,15 +107,17 @@ function simulate(candles, entryBar, direction, entry) {
     const hitStop = isLong ? l <= stopLevel : h >= stopLevel;
     const hitTgt = isLong ? h >= target : l <= target;
     if (hitStop) {
-      const exitPrice = stopLevel;
-      return { exitDate: candles[i][0], exit: exitPrice, outcome: beArmed ? 'BE' : 'SL', r: (isLong ? exitPrice - entry : entry - exitPrice) / risk, bars: i - entryBar, beArmed };
+      const { gross, net } = signedR(stopLevel, 'stop');
+      return { exitDate: candles[i][0], exit: stopLevel, outcome: beArmed ? 'BE' : 'SL', r: +net.toFixed(3), grossR: +gross.toFixed(3), costR: +costR.toFixed(3), bars: i - entryBar, beArmed };
     }
     if (hitTgt) {
-      return { exitDate: candles[i][0], exit: target, outcome: 'TGT', r: CFG.targetR, bars: i - entryBar, beArmed };
+      const { gross, net } = signedR(target, 'tgt');
+      return { exitDate: candles[i][0], exit: target, outcome: 'TGT', r: +(CFG.targetR - costR).toFixed(3), grossR: CFG.targetR, costR: +costR.toFixed(3), bars: i - entryBar, beArmed };
     }
   }
   const lastC = candles[end][4];
-  return { exitDate: candles[end][0], exit: lastC, outcome: 'TIME', r: (isLong ? lastC - entry : entry - lastC) / risk, bars: end - entryBar, beArmed };
+  const { gross, net } = signedR(lastC, 'time');
+  return { exitDate: candles[end][0], exit: lastC, outcome: 'TIME', r: +net.toFixed(3), grossR: +gross.toFixed(3), costR: +costR.toFixed(3), bars: end - entryBar, beArmed };
 }
 
 function backtestStock(symbol, candles, verdicts) {
