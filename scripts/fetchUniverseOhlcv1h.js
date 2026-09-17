@@ -38,7 +38,7 @@ const RETRIES = 4;
 // Chunking: Angel intraday caps bars/request; ~30 calendar days ≈ 20 trading
 // days ≈ 125 hourly bars — right at the edge, so use 25-calendar-day windows.
 const WINDOW_DAYS = 25;
-const TO_DATE = '2026-09-15 15:30';
+const TO_DATE = '2026-09-15 15:15'; // last FULL hourly bar (15:15 stub is dropped downstream)
 
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -61,6 +61,26 @@ function dateWindows(days) {
     cur = to;
   }
   return windows;
+}
+
+// Truncated-session bar handling: the 15:15 bar spans only 15 minutes
+// (15:15-15:30) — 1/4 the duration of a real hourly bar, and often zero-volume
+// at the close. Volume ROC/acceleration and any volume-relative check are
+// silently distorted by duration mismatch. Policy: DROP bars stamped 15:15
+// (and any zero-volume bar), and log the drop counts so coverage is auditable.
+const DROP_TIMES = new Set(['15:15']);
+function filterTruncated(candles, symbol) {
+  const kept = [];
+  let droppedTime = 0, droppedZeroVol = 0;
+  for (const c of candles) {
+    if (DROP_TIMES.has(c[0].slice(11))) { droppedTime++; continue; }
+    if (c[5] === 0) { droppedZeroVol++; continue; }
+    kept.push(c);
+  }
+  if (droppedTime || droppedZeroVol) {
+    log(`  ${symbol}: dropped ${droppedTime} close-stub (15:15) + ${droppedZeroVol} zero-vol bars → ${kept.length} kept`);
+  }
+  return kept;
 }
 
 async function fetchOne(symbol, token, windows) {
@@ -88,9 +108,10 @@ async function fetchOne(symbol, token, windows) {
       }
     }
   }
-  const out = { symbol, token, interval: 'ONE_HOUR', from: windows[0][0], to: windows[windows.length - 1][1], candles };
+  const kept = filterTruncated(candles, symbol);
+  const out = { symbol, token, interval: 'ONE_HOUR', from: windows[0][0], to: windows[windows.length - 1][1], candles: kept };
   fs.writeFileSync(path.join(OUT_DIR, `${symbol}.json`), JSON.stringify(out));
-  return { ok: true, n: candles.length };
+  return { ok: true, n: kept.length };
 }
 
 async function main() {
