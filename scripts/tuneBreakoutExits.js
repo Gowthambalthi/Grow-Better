@@ -115,12 +115,14 @@ function main() {
     for (const sig of r.signals) {
       for (const [name, cfg] of Object.entries(CONFIGS)) {
         const sim = simConfig(candles, sig, cfg);
-        if (sim) collected[name].push({ symbol: sym, entry_type: sig.entry_type, ...sim });
+        if (sim) collected[name].push({ symbol: sym, entry_date: candles[sig.entry_bar][0], entry_type: sig.entry_type, ...sim });
       }
     }
   }
 
   const out = { generatedAt: new Date().toISOString(), scanned, costBps: COST_R_BPS, configs: {} };
+  // persist trades with dates for downstream slicing (per-year etc.)
+  out.trades = collected.baseline.map(t => ({ ...t }));
   console.log(`Scanned ${scanned} stocks (filtered universe)\n`);
   for (const [name, rows] of Object.entries(collected)) {
     out.configs[name] = { summary: summarize(rows), byEntryType: {} };
