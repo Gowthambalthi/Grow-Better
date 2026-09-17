@@ -28,9 +28,9 @@ const path = require('path');
 const { refresh, search, findBySymbol } = require('../common/instruments/angelInstruments');
 const { getCandleData } = require('../angelone/historical');
 
-const UNIVERSE_FILE = path.join(__dirname, '..', 'data', 'nse_universe_3000.txt');
-const OUT_DIR = path.join(__dirname, '..', 'data', 'ohlcv');
-const LOG_FILE = path.join(__dirname, '..', '.freebuff', 'ohlcv-progress.log');
+const UNIVERSE_FILE = process.env.UNIVERSE_FILE || path.join(__dirname, '..', 'data', 'nse_universe_3000.txt');
+const OUT_DIR = process.env.OUT_DIR || path.join(__dirname, '..', 'data', 'ohlcv');
+const LOG_FILE = process.env.LOG_FILE || path.join(__dirname, '..', '.freebuff', 'ohlcv-progress.log');
 
 const FORCE = process.argv.includes('--force');
 const LIMIT_ARG = process.argv.find(a => a.startsWith('--limit='));
@@ -38,8 +38,8 @@ const LIMIT = LIMIT_ARG ? Number(LIMIT_ARG.split('=')[1]) : Infinity;
 
 const CONCURRENCY = 4;
 const RETRIES = 4;
-const TO_DATE = '2026-09-15 15:30';
-const FROM_DATE = '2025-09-15 09:15';
+const TO_DATE = process.env.TO_DATE || '2026-09-15 15:30';
+const FROM_DATE = process.env.FROM_DATE || '2025-09-15 09:15';
 
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
