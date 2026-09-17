@@ -203,7 +203,9 @@ function checkHtfTrend(candles) {
   const weeks = [];
   let cur = null;
   for (let i = Math.max(0, n - 130); i < n; i++) {
-    const d = new Date(candles[i][0] + 'T00:00:00Z');
+    // candle date may be 'YYYY-MM-DD' (daily) or 'YYYY-MM-DD HH:MM' (intraday)
+    const d = new Date(candles[i][0].slice(0, 10) + 'T00:00:00Z');
+    if (isNaN(d.getTime())) continue; // skip malformed stamps
     const monday = new Date(d);
     monday.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
     const key = monday.toISOString().slice(0, 10);
@@ -234,16 +236,27 @@ function checkRelativeStrength(candles, niftyCandles, bars = 15, rsMin = 0) {
   return { ok: rs >= rsMin, rs: +rs.toFixed(4), stockRet: +stockRet.toFixed(4), niftyRet: +niftyRet.toFixed(4) };
 }
 
-function checkBreakoutQuality(candles, level) {
+/**
+ * Breakout candle quality, DIRECTION-AWARE: bullish breakouts must clear the
+ * level by ≥0.3×ATR and close in the upper third of their range; bearish
+ * breakouts mirror (clear below level, close in the LOWER third). The
+ * original long-only version failed ~100% of bearish breakouts (closePos is
+ * near 0 on a down bar by construction), silently excluding the short side
+ * and colliding with the RS check.
+ */
+function checkBreakoutQuality(candles, level, direction) {
   const n = candles.length;
   const last = candles[n - 1];
   const atr = atrAtIdx(candles, n - 1);
   if (!atr) return { ok: null, reason: 'no ATR' };
   const range = last[2] - last[3];
   const closePos = range > 0 ? (last[4] - last[3]) / range : 0;
-  const clears = (last[4] - level) >= 0.3 * atr;
-  const upperThird = closePos >= 0.667;
-  return { ok: clears && upperThird, clears, closePos: +closePos.toFixed(2) };
+  const isBull = direction !== 'BEARISH_BREAKOUT';
+  const clears = isBull
+    ? (last[4] - level) >= 0.3 * atr
+    : (level - last[4]) >= 0.3 * atr;
+  const strongClose = isBull ? closePos >= 0.667 : closePos <= 0.333;
+  return { ok: clears && strongClose, clears, closePos: +closePos.toFixed(2) };
 }
 
 function checkAtrExtension(candles, maxExt = 2.5) {
@@ -265,7 +278,7 @@ function validateBreakoutIndependent(candles, direction, breakoutLevel, opts = {
     volume_roc: checkVolumeROC(candles, opts.volumeRocThreshold),
     htf_trend: checkHtfTrend(candles),
     relative_strength: checkRelativeStrength(candles, opts.niftyCandles, opts.rsBars, opts.rsMin),
-    breakout_quality: checkBreakoutQuality(candles, breakoutLevel),
+    breakout_quality: checkBreakoutQuality(candles, breakoutLevel, direction),
     atr_extension: checkAtrExtension(candles, opts.maxExtension),
   };
   const entries = Object.entries(checks);
