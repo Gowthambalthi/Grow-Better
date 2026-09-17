@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const { detectBreakoutSignals } = require('../common/market/breakoutEntry');
+const { scoreFrames } = require('../common/market/confirmFrames');
 
 const OHLCV_DIR = process.env.OHLCV_DIR || path.join(__dirname, '..', 'data', 'ohlcv');
 const FILTERED_FILE = path.join(__dirname, '..', 'data', 'universe_filtered.json');
@@ -103,6 +104,10 @@ function main() {
   const collected = {}; // cfgName → rows
   for (const k of Object.keys(CONFIGS)) collected[k] = [];
 
+  // benchmark candles for the RS frame (same dir as the OHLCV data)
+  let bench = null;
+  try { bench = JSON.parse(fs.readFileSync(path.join(OHLCV_DIR, 'SETFNIF50.json'), 'utf8')).candles; } catch (_) { bench = null; }
+
   let scanned = 0;
   for (const sym of symbols) {
     let j;
@@ -113,9 +118,15 @@ function main() {
     let r;
     try { r = detectBreakoutSignals(candles, null, { retestEntry: true }); } catch (_) { continue; }
     for (const sig of r.signals) {
+      const frames = scoreFrames({ stockCandles: candles, sig, benchmarkCandles: bench });
       for (const [name, cfg] of Object.entries(CONFIGS)) {
         const sim = simConfig(candles, sig, cfg);
-        if (sim) collected[name].push({ symbol: sym, entry_date: candles[sig.entry_bar][0], entry_type: sig.entry_type, ...sim });
+        if (sim) collected[name].push({
+          symbol: sym, entry_date: candles[sig.entry_bar][0], entry_type: sig.entry_type, ...sim,
+          f1: frames.f1.pass, f2: frames.f2.pass, f3: frames.f3.pass, f4: frames.f4.pass, f5: frames.f5.pass,
+          confirm: frames.confirm, confirmMax: frames.confirmMax,
+          f2_rs: frames.f2.rs, f3_ratio: frames.f3.ratio, f4_score: frames.f4.score, f5_ext: frames.f5.ext,
+        });
       }
     }
   }
@@ -134,6 +145,31 @@ function main() {
   }
   fs.writeFileSync(OUT_FILE, JSON.stringify(out));
   console.log(`\nOutput: ${OUT_FILE}`);
+
+  // ---- frame marginal-contribution report (baseline config) ----
+  const base = collected.baseline;
+  console.log('\n=== FRAME MARGINAL CONTRIBUTION (baseline, net R) ===');
+  for (const f of ['f1', 'f2', 'f3', 'f4', 'f5']) {
+    const pass = base.filter(t => t[f] === true);
+    const fail = base.filter(t => t[f] === false);
+    const fmt = rows => rows.length ? `n=${String(rows.length).padStart(3)} win=${String(summarize(rows).winRate).padStart(5)}% avgR=${summarize(rows).avgR}` : 'n=  0';
+    console.log(`${f}  PASS ${fmt(pass)}   | FAIL ${fmt(fail)}`);
+  }
+  // combined gates
+  console.log('\n=== COMBINED GATES ===');
+  const gates = {
+    f1_f2: t => t.f1 === true && t.f2 === true,
+    f1_f3: t => t.f1 === true && t.f3 === true,
+    f2_f3: t => t.f2 === true && t.f3 === true,
+    f1_f2_f3: t => t.f1 === true && t.f2 === true && t.f3 === true,
+    f1_f2_f4: t => t.f1 === true && t.f2 === true && t.f4 === true,
+    confirm4: t => t.confirmMax >= 4 && t.confirm >= 4,
+  };
+  for (const [g, fn] of Object.entries(gates)) {
+    const rows = base.filter(fn);
+    const s = summarize(rows);
+    console.log(`${g.padEnd(10)} n=${String(s.n).padStart(3)} win=${String(s.winRate).padStart(5)}% avgR=${s.avgR} PF=${s.profitFactor} top10=${s.top10SharePct}% exTop=${s.exTop10AvgR}`);
+  }
 }
 
 main();
