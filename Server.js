@@ -241,6 +241,37 @@ app.get('/api/gb/scan', (req, res) => {
 });
 
 // ---- Live buy calls ----
+app.get('/api/gb/watchlist', (req, res) => {
+  try {
+    // Stocks to watch for tomorrow: top confirmed fresh buys + top engine
+    // scores (>= 8), deduped, ranked by score. Served from today's scan
+    // artifacts — no live fetching, instant.
+    const fs = require('fs');
+    const path = require('path');
+    const out = [];
+    const seen = new Set();
+    try {
+      const tt = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'trade_table_stocks.json'), 'utf8'));
+      for (const r of tt.rows || []) {
+        if (seen.has(r.symbol)) continue;
+        seen.add(r.symbol);
+        out.push({ symbol: r.symbol, engine: r.engine, score: r.score, close: r.close, entry: r.entry,
+          stopLoss: r.stopLoss, target1: r.target1, target2: r.target2, source: 'FRESH BUY', confirm: r.confirm });
+      }
+    } catch (_) {}
+    try {
+      const es = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'engine_scores.json'), 'utf8'));
+      for (const r of es.results || []) {
+        if (seen.has(r.symbol) || (r.engineRate || 0) < 8) continue;
+        seen.add(r.symbol);
+        out.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate, close: r.close,
+          source: 'ENGINE >= 8' });
+      }
+    } catch (_) {}
+    res.json({ generatedAt: new Date().toISOString(), watchlist: out.slice(0, 40) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/gb/calls', (req, res) => {
   try {
     const liveCalls = require('./common/market/liveCallEngine');

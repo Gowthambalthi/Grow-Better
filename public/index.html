@@ -1259,6 +1259,13 @@
           </div>
           <div id="gbSummary" style="display:none;display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
 
+          <!-- Stocks to watch tomorrow: today's top confirmed setups -->
+          <div style="display:flex;align-items:center;gap:12px;margin:0 0 8px;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Stocks to Watch Tomorrow</h2>
+            <span style="font-size:12px;color:var(--text-dim,#8b93a7);">today's confirmed fresh buys + top engine scores — plan entries at open</span>
+          </div>
+          <div id="gbWatchWrap" style="overflow:auto;max-height:35vh;margin-bottom:20px;"></div>
+
           <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
@@ -3843,7 +3850,7 @@ function _renderMfGridBody(grid, schemes) {
           var calls = gbCallsData.calls || [];
           if (!calls.length) { wrap.innerHTML = '<div class="empty-state">No live calls yet — engine is scanning; confirmed buys appear here automatically.</div>'; return; }
           var head = '<tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' +
-            ['Time','Symbol','Engine','Entry','LTP','Stop','T1','T2','P&L','Status'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('') + '</tr>';
+            ['Time','Symbol','Engine','Entry','LTP','1-min','2-min','5-min','Stop','T1','T2','P&L','Status'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('') + '</tr>';
           var body = calls.map(function(c) {
             var closed = c.status === 'CLOSED';
             var op = closed ? 'opacity:0.45;' : '';
@@ -3851,12 +3858,22 @@ function _renderMfGridBody(grid, schemes) {
             var pnlCol = pnl == null ? 'var(--text-muted)' : pnl > 0 ? '#00e091' : pnl < 0 ? '#ff4d6d' : 'var(--text)';
             var ltpCol = closed ? 'inherit' : (c.lastLtp >= c.entry ? '#00e091' : '#ff4d6d');
             var t1 = c.t1Hit ? ' ✓' : '';
+            // live 1/2/5-min change from the movers scan (real values, refreshed every tick)
+            var mv = (gbMvData && gbMvData.bySymbol) ? gbMvData.bySymbol[c.symbol] : null;
+            function mvCell(v) {
+              if (v == null) return '<td style="padding:5px 10px;color:var(--text-muted);">–</td>';
+              var col = v > 0 ? '#00e091' : v < 0 ? '#ff4d6d' : 'inherit';
+              return '<td style="padding:5px 10px;font-weight:700;color:' + col + '">' + (v > 0 ? '+' : '') + v + '%</td>';
+            }
             return '<tr data-callsym="' + c.symbol + '" style="border-top:1px solid var(--border,#232a36);cursor:pointer;' + op + '">' +
               '<td style="padding:5px 10px;font-size:12px;color:var(--text-muted);white-space:nowrap;">' + (c.time || '').slice(11, 16) + '</td>' +
               '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + c.symbol + '</td>' +
               '<td style="padding:5px 10px;font-size:12px;">' + c.engine + ' (' + c.score + ')</td>' +
               '<td style="padding:5px 10px;">' + c.entry + '</td>' +
               '<td style="padding:5px 10px;color:' + ltpCol + ';font-weight:600;">' + (c.lastLtp || '-') + '</td>' +
+              mvCell(mv ? mv.m1 : null) +
+              mvCell(mv ? mv.m2 : null) +
+              mvCell(mv ? mv.m5 : null) +
               '<td style="padding:5px 10px;color:#ff4d6d;">' + c.stopLoss + '</td>' +
               '<td style="padding:5px 10px;color:#00B386;">' + c.target1 + t1 + '</td>' +
               '<td style="padding:5px 10px;color:#00B386;">' + c.target2 + '</td>' +
@@ -3991,8 +4008,11 @@ function _renderMfGridBody(grid, schemes) {
             var r = await fetch('/api/gb/movers' + (gbMvMode === 'all' ? '?all=1' : ''));
             var j = await r.json();
             if (j.error) return;
+            j.bySymbol = {};
+            (j.stocks || []).forEach(function(s) { j.bySymbol[s.symbol] = s; });
             gbMvData = j;
             gbRenderMovers();
+            if (typeof gbRenderCalls === 'function') gbRenderCalls();
             var st = document.getElementById('gbMvStatus');
             if (st) st.textContent = (j.marketOpen ? '● market open' : '○ market closed') + ' · ' + j.movers + ' movers of ' + j.stocks.length;
           } catch (e) {}
@@ -4015,6 +4035,41 @@ function _renderMfGridBody(grid, schemes) {
         Array.prototype.forEach.call(document.querySelectorAll('.gbSigF'), function(b) {
           b.addEventListener('click', function() { gbSigFilter = b.getAttribute('data-f') || ''; gbRenderSignals(); });
         });
+
+        // ---- Stocks to Watch Tomorrow ----
+        function gbRenderWatch() {
+          var wrap = document.getElementById('gbWatchWrap');
+          if (!wrap) return;
+          var d = gbWatchData;
+          if (!d || !(d.watchlist || []).length) { wrap.innerHTML = '<div class="empty-state">Run the scan to build tomorrow\'s watchlist.</div>'; return; }
+          var head = ['Symbol','Engine','Score','Close','Entry','Stop','T1','T2','Source'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('');
+          var body = d.watchlist.map(function(w) {
+            var fresh = w.source === 'FRESH BUY';
+            return '<tr style="border-top:1px solid var(--border,#232a36);' + (fresh ? 'font-weight:700;' : 'opacity:0.85;') + '">' +
+              '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + w.symbol + '</td>' +
+              '<td style="padding:5px 10px;font-size:12px;">' + (w.engine || '-') + '</td>' +
+              '<td style="padding:5px 10px;">' + w.score + '</td>' +
+              '<td style="padding:5px 10px;">' + (w.close != null ? w.close : '-') + '</td>' +
+              '<td style="padding:5px 10px;">' + (w.entry != null ? w.entry : '-') + '</td>' +
+              '<td style="padding:5px 10px;color:#ff4d6d;">' + (w.stopLoss != null ? w.stopLoss : '-') + '</td>' +
+              '<td style="padding:5px 10px;color:#00B386;">' + (w.target1 != null ? w.target1 : '-') + '</td>' +
+              '<td style="padding:5px 10px;color:#00B386;">' + (w.target2 != null ? w.target2 : '-') + '</td>' +
+              '<td style="padding:5px 10px;font-size:12px;color:' + (fresh ? '#00e091' : 'var(--text-muted)') + '">' + w.source + '</td>' +
+              '</tr>';
+          }).join('');
+          wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' + d.watchlist.length + ' stocks · built from scan ' + (d.generatedAt || '').slice(0, 10) + ' — FRESH BUY rows are the confirmed entries; ENGINE rows are high-score names to monitor at open.</div>' +
+            '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+        }
+        var gbWatchData = null;
+        async function gbRefreshWatch() {
+          try {
+            var r = await fetch('/api/gb/watchlist');
+            gbWatchData = await r.json();
+            gbRenderWatch();
+          } catch (e) {}
+        }
+        gbRefreshWatch();
+        setInterval(gbRefreshWatch, 300000);
 
         var gbCallsWrap = document.getElementById('gbCallsWrap');
         if (gbCallsWrap) gbCallsWrap.addEventListener('click', function(e) {

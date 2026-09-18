@@ -430,7 +430,7 @@ async function scanForNewCalls() {
       // wider pool: any engine >= 7, not trapped — the confirmed table is a subset
       const i = r.indicators || {};
       if ((r.engineRate || 0) >= 7 && !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18)) {
-        candidates.push({ symbol: r.symbol, engine: r.engine, score: r.engineRate, source: 'ENGINE', i });
+        candidates.push({ symbol: r.symbol, engine: r.winningEngine || r.engine, score: r.engineRate, source: 'ENGINE', i });
       }
     }
   } catch (_) {}
