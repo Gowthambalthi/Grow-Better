@@ -470,9 +470,23 @@ async function scanForNewCalls() {
     const buyerGate = newBuyerCheck(cQuote);
     if (!buyerGate.ok) continue;
 
-    // INTRADAY levels: tight stop (max 0.6% below entry), T1 +2R, T2 +4R.
-    let stop = c.stopLoss && (c.ltp - c.stopLoss) / c.ltp <= 0.01 ? c.stopLoss : +(c.ltp * 0.994).toFixed(2);
-    stop = Math.max(stop, +(c.ltp * 0.994).toFixed(2)); // never wider than 0.6%
+    // INTRADAY levels: candle-based stop from the live 1-min series — 10-bar
+    // swing low (the pullback low the move launched from) with 0.1% buffer,
+    // clamped to a 0.25%-0.6% risk band. Falls back to 0.6% below entry when
+    // no series is available. T1 +2R, T2 +4R.
+    let stop = +(c.ltp * 0.994).toFixed(2);
+    let stopBasis = 'cap0.6pct';
+    try {
+      const recent = (c.series && c.series.length >= 12) ? c.series.slice(-11, -1) : null; // last 10 completed 1-min bars
+      if (recent && c.ltp) {
+        const swing = Math.min(...recent.map(b => b[3]));
+        let cand = swing * 0.999;
+        const riskPct = (c.ltp - cand) / c.ltp;
+        if (riskPct < 0.0025) cand = c.ltp * (1 - 0.0025);   // min 0.25% risk
+        if (riskPct > 0.006) cand = c.ltp * (1 - 0.006);     // max 0.6% risk
+        if (cand > stop) { stop = +(cand.toFixed(2)); stopBasis = 'candles10'; }
+      }
+    } catch (_) {}
     const risk = c.ltp - stop;
     db.calls.push({
       id: today + '-' + c.symbol + '-' + Date.now(),
@@ -489,6 +503,7 @@ async function scanForNewCalls() {
       target2: +(c.ltp + risk * 4).toFixed(2),
       confirm: c.confirm || null,
       intraday: c.intraday || null,
+      stopBasis,
       status: 'ACTIVE',
       closedAt: null,
       exitPrice: null,
@@ -610,10 +625,18 @@ async function tick(opts = {}) {
     await runPipeline().catch(() => {});
   }
   try {
+    // Fast loop (5s): call tracking runs EVERY tick so SL/T1/T2 exits fire
+    // within seconds of price touching the level. Heavy scans (candidate
+    // velocity ranking + signal board + movers, minutes of API budget) stay
+    // on a 60s throttle.
+    const heavyDue = !state.lastHeavyTick || (Date.now() - state.lastHeavyTick) >= 60000;
     if (isMarketOpen()) {
-      await scanForNewCalls();
-      await scanSignals();          // per-minute ROC + buyer-structure board
-      await scanMovers();           // real-time movers board (1%/5% flags)
+      if (heavyDue) {
+        state.lastHeavyTick = Date.now();
+        await scanForNewCalls();
+        await scanSignals();        // per-minute ROC + buyer-structure board
+        await scanMovers();         // real-time movers board (1%/5% flags)
+      }
       await trackCalls();
     }
     if (state.todayKey !== todayKey()) await dailyTrack();

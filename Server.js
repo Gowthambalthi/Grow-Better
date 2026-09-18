@@ -2059,7 +2059,7 @@ app.get('/api/debug/groww', async (req, res) => {
   // ---- Live Buy-Call engine (auto: data refresh → score → calls → minute tracking) ----
   try {
     const liveCalls = require('./common/market/liveCallEngine');
-    liveCalls.start(60000); // every minute; first tick fires immediately
+    liveCalls.start(5000); // fast loop: tracking every 5s, heavy scans throttled to 60s inside
     console.log('[server] live call engine started (60s tick)');
   } catch (e) {
     console.log('[server] live call engine failed to start:', e.message);
