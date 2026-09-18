@@ -318,9 +318,11 @@ function computeMove(series) {
   const bars = series.bars;
   const last = bars[bars.length - 1].c;
   const prev1 = bars[bars.length - 2].c;
+  const prev2 = bars[bars.length - 3] ? bars[bars.length - 3].c : null;
   const prev5 = bars[bars.length - 6] ? bars[bars.length - 6].c : null;
   const prevClose = series.prevClose || 0;
   const m1 = prev1 > 0 ? ((last - prev1) / prev1) * 100 : 0;
+  const m2 = prev2 > 0 ? ((last - prev2) / prev2) * 100 : null;
   const m5 = prev5 > 0 ? ((last - prev5) / prev5) * 100 : null;
   const mDay = prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : null;
   // direction trail: last 5 one-min closes up/down pattern
@@ -328,7 +330,7 @@ function computeMove(series) {
   for (let i = Math.max(1, bars.length - 5); i < bars.length; i++) {
     trail.push(bars[i].c >= bars[i - 1].c ? 'up' : 'down');
   }
-  return { ltp: last, m1: +m1.toFixed(2), m5: m5 == null ? null : +m5.toFixed(2), mDay: mDay == null ? null : +mDay.toFixed(2), trail };
+  return { ltp: last, m1: +m1.toFixed(2), m2: m2 == null ? null : +m2.toFixed(2), m5: m5 == null ? null : +m5.toFixed(2), mDay: mDay == null ? null : +mDay.toFixed(2), trail };
 }
 
 async function scanMovers() {
@@ -349,7 +351,7 @@ async function scanMovers() {
       if (!series) return null;
       const mv = computeMove(series);
       if (!mv || mv.ltp == null || mv.ltp < MIN_PRICE) return null;
-      const isMover = Math.abs(mv.m1) >= MOVER_TH || Math.abs(mv.m5 || 0) >= MOVER_TH;
+      const isMover = Math.abs(mv.m1) >= MOVER_TH || Math.abs(mv.m2 || 0) >= MOVER_TH || Math.abs(mv.m5 || 0) >= MOVER_TH;
       return { symbol: c.symbol, engine: c.engine, score: c.score, time: now, ...mv, isMover };
     }));
     out.push(...res.filter(Boolean));

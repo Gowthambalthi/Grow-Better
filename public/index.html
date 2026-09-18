@@ -3966,7 +3966,7 @@ function _renderMfGridBody(grid, schemes) {
           if (!wrap) return;
           if (!gbMvData || !(gbMvData.stocks || []).length) { wrap.innerHTML = '<div class="empty-state">Movers board refreshes every tick — live during 09:15–15:15 IST.</div>'; return; }
           var stocks = gbMvData.stocks.filter(function(s) { return gbMvMode === 'all' || s.isMover; });
-          var head = ['Time','Symbol','LTP','1-min','5-min','Day %','Trail (last 5 min)','Engine'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var head = ['Time','Symbol','LTP','1-min','2-min','5-min','Day %','Trail (last 5 min)','Engine'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
           var body = stocks.slice(0, 120).map(function(s) {
             var m1c = s.m1 > 0.99 ? '#00e091' : s.m1 < -0.99 ? '#ff4d6d' : s.m1 > 0 ? '#7ab8ff' : '#ffb86b';
             var trail = (s.trail || []).map(function(t){ return t === 'up' ? '<span style="color:#00e091;">↑</span>' : '<span style="color:#ff4d6d;">↓</span>'; }).join('');
@@ -3975,6 +3975,7 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
               '<td style="padding:4px 10px;">' + (s.ltp != null && s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp) + '</td>' +
               '<td style="padding:4px 10px;font-weight:800;color:' + m1c + ';">' + (s.m1 > 0 ? '+' : '') + s.m1 + '%</td>' +
+              '<td style="padding:4px 10px;font-weight:700;color:' + ((s.m2 || 0) > 0 ? '#00e091' : (s.m2 || 0) < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.m2 != null ? (s.m2 > 0 ? '+' : '') + s.m2 + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;color:' + ((s.m5 || 0) > 0 ? '#00e091' : (s.m5 || 0) < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.m5 != null ? (s.m5 > 0 ? '+' : '') + s.m5 + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;color:' + ((s.mDay || 0) > 0 ? '#00e091' : (s.mDay || 0) < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.mDay != null ? (s.mDay > 0 ? '+' : '') + s.mDay + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;letter-spacing:2px;">' + trail + '</td>' +
@@ -4046,9 +4047,9 @@ function _renderMfGridBody(grid, schemes) {
         gbRefreshCalls();
         gbRefreshSignals();
         gbRefreshMovers();
-        setInterval(gbRefreshCalls, 60000);
-        setInterval(gbRefreshSignals, 60000);
-        setInterval(gbRefreshMovers, 60000);
+        setInterval(gbRefreshCalls, 15000);
+        setInterval(gbRefreshSignals, 15000);
+        setInterval(gbRefreshMovers, 5000);
 
         var gbWrap = document.getElementById('gbTableWrap');
         if (gbWrap) gbWrap.addEventListener('click', function(e) {
