@@ -264,14 +264,46 @@ function scoreFrames({ stockCandles, sig, benchmarkCandles }) {
   const confirm = nonNull.filter(f => f.pass).length;
   const f8 = frameNiftyDirection(benchmarkCandles, stockCandles[bar][0]);
   const f9 = frameVolumeAtPrice(stockCandles, bar);
+  const f10 = volumeRocFrame({ stockCandles, sig: { entryIdx: bar } });
+  const f11 = closePositionFrame({ stockCandles, sig: { entryIdx: bar } });
   return {
-    f1, f2, f3, f4, f5, f8, f9,
+    f1, f2, f3, f4, f5, f8, f9, f10, f11,
     confirm,
     confirmMax: nonNull.length,
   };
 }
 
+
+// ---------- F10: volume rate-of-change trend (daily) ----------
+// Volume expanding across the 3 bars before the signal (vol[i] and vol[i-1]
+// both above 20-day avg, rising) = institutional participation, not one spike.
+function volumeRocFrame({ stockCandles, sig }) {
+  const i = sig.entryIdx;
+  if (i < 25) return { pass: null, value: null };
+  const v = stockCandles.map(c => c[5]);
+  const avg20 = v.slice(i - 20, i).reduce((s, x) => s + x, 0) / 20;
+  const expanding = v[i] > avg20 && v[i - 1] > avg20;
+  const rising = v[i] >= v[i - 1];
+  return { pass: expanding && rising, value: avg20 > 0 ? +(v[i] / avg20).toFixed(2) : null };
+}
+
+// ---------- F11: close position in daily range (volume-at-price proxy) ----------
+// Close in the top 30% of the day's range on the signal bar = buyers paid up
+// at the highs. Mid-range close = absorption / potential fake.
+function closePositionFrame(stockCandles, barIdx) {
+  // supports both (candles, barIdx) and ({ stockCandles, sig }) call styles
+  const i = barIdx != null ? barIdx : (arguments[0] && arguments[0].sig ? arguments[0].sig.entryIdx : null);
+  const cnd = Array.isArray(stockCandles) ? stockCandles : (stockCandles && stockCandles.stockCandles);
+  if (i == null || !Array.isArray(cnd) || i < 1) return { pass: null, value: null };
+  const [, o, h, l, c] = cnd[i];
+  if (h <= l) return { pass: null, value: null };
+  const pos = ((c - l) / (h - l)) * 100;
+  return { pass: pos >= 70, value: +pos.toFixed(0) };
+}
+
 module.exports = {
+  volumeRocFrame,
+  closePositionFrame,
   scoreFrames,
   frameWeeklyStructure, frameRelativeStrength, frameVolumeQuality,
   frameBaseQuality, frameExtension, frameIntradayClose, frameIntradayHold,

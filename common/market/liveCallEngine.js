@@ -184,9 +184,20 @@ function computeRoc(series) {
   let pv15 = 0, vv15 = 0;
   for (const b of bars.slice(-15)) { pv15 += b.c * b.v; vv15 += b.v; }
   const vwap15 = vv15 > 0 ? pv15 / vv15 : last;
+  // volume ROC: rate of change of VOLUME (vol now vs 5 bars ago)
+  const volNow = vols[vols.length - 1];
+  const volPrev5 = vols[vols.length - 6] || 0;
+  const volRoc = volPrev5 > 0 ? +(((volNow - volPrev5) / volPrev5) * 100).toFixed(1) : null;
+  // volume-at-price position: where the LTP sits in the last-5-min range —
+  // near the high = buyers lifting the offer (real demand), mid/low = absorption
+  const last5 = bars.slice(-5);
+  let hi5 = -Infinity, lo5 = Infinity;
+  for (const b of last5) { if (b.c > hi5) hi5 = b.c; if (b.c < lo5) lo5 = b.c; }
+  const posInRange = hi5 > lo5 ? +(((last - lo5) / (hi5 - lo5)) * 100).toFixed(0) : 50;
   return {
     roc5, roc15,
     volX: dayAvg > 0 ? +(recentAvg / dayAvg).toFixed(2) : 1,
+    volRoc, posInRange,
     vwap: +vwap.toFixed(2),
     vwapDrift: vwap > 0 ? +(((vwap15 - vwap) / vwap) * 100).toFixed(2) : 0,
   };
@@ -267,16 +278,21 @@ async function scanSignals(candidatesOverride) {
       const buyer = newBuyerCheck(q);
       const valid = open.ok;                 // failed = INVALID: no BUY recommendation
       let signal = sig.signal;
+      const volRocOk = roc && (roc.volRoc == null || roc.volRoc >= -10);
+      const posOk = roc && roc.posInRange != null ? roc.posInRange >= 40 : true;
       if (signal === 'BUY' && (!valid || !buyer.ok)) signal = 'WAIT';
+      if (signal === 'BUY' && !volRocOk) signal = 'WAIT';
+      if (signal === 'BUY' && !posOk) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
+        volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
         vwap: roc ? roc.vwap : null, vwapDrift: roc ? roc.vwapDrift : null,
         structure: struct.structure, structNote: struct.note,
         volume: q.volume || null, totBuy: q.totBuy || null, totSell: q.totSell || null,
         dayValue: q.volume && q.ltp ? Math.round(q.volume * q.ltp) : null,
         openCheck: valid ? 'OK' : 'INVALID', openReason: open.reason,
         newBuyer: buyer.ok, buyerReason: buyer.reason,
-        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : 'WAIT: ' + buyer.reason) : sig.reason,
+        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
         inPosition: !!openCall, entry: openCall ? openCall.entry : null,
         stopLoss: openCall ? openCall.stopLoss : null,
         time: now };

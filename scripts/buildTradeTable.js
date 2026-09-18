@@ -16,7 +16,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { scoreFrames, frameVolumeAtPrice, frameNiftyDirection } = require('../common/market/confirmFrames');
+const { scoreFrames, frameVolumeAtPrice, frameNiftyDirection, closePositionFrame } = require('../common/market/confirmFrames');
 
 const SCORES = path.join(__dirname, '..', 'data', 'engine_scores.json');
 const OHLCV = path.join(__dirname, '..', 'data', 'ohlcv');
@@ -105,9 +105,22 @@ function main() {
         }
       }
       const f9ok = f9.pass === true;
+      // F11 close-position (3y-validated): signal-bar close must sit in the top
+      // 30% of its daily range — buyers paid up at the highs. Mid-range closes
+      // averaged +0.06% vs +0.50% for top-30% closes (n=6,944 breakouts) — the
+      // biggest single discriminator since F5. Measured on the same recent-5
+      // window as F9 (today may be a pullback day).
+      let f11 = { pass: false, value: null };
+      if (candles) {
+        for (let k = candles.length - 1; k >= Math.max(0, candles.length - 5); k--) {
+          const fr = closePositionFrame(candles, k);
+          if (fr.pass) { f11 = fr; break; }
+        }
+      }
+      const f11ok = f11.pass === true;
       const f8 = frames?.f8 ?? frameNiftyDirection(bench, (candles ? candles[candles.length - 1][0] : null));
-      const confirmCount = [f5ok, f2ok, f3ok, f9ok].filter(Boolean).length;
-      if (!(f5ok && f2ok && f3ok && f9ok)) { confirmDropped++; continue; }
+      const confirmCount = [f5ok, f2ok, f3ok, f9ok, f11ok].filter(Boolean).length;
+      if (!(f5ok && f2ok && f3ok && f9ok && f11ok)) { confirmDropped++; continue; }
 
       // ---- Intraday execution plan (Camarilla-style levels from prev day) ----
       // For each confirmed swing, compute tradeable intraday levels off the
@@ -175,6 +188,7 @@ function main() {
           extAtr: frames?.f5?.ext ?? null,
           rsVsNifty: frames?.f2?.rs ?? null,
           volAtPrice: f9.upperShare ?? null,
+          closePos: f11.value ?? null,
           niftyDir: f8?.direction ?? null,
         },
         intraday,
