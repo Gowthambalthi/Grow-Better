@@ -8,3 +8,26 @@ services:
     envVars:
       - key: PORT
         value: 4000
+      # Live broker data (holdings, LTP, quotes, order feeds).
+      # Set the SECRET VALUES in Render Dashboard -> Environment — never commit
+      # them to git. Names must match config/env.js exactly.
+      - key: ANGEL_ENABLED
+        value: "true"
+      - key: ANGEL_API_KEY
+        sync: false
+      - key: ANGEL_CLIENT_CODE
+        sync: false
+      - key: ANGEL_PASSWORD
+        sync: false
+      - key: ANGEL_TOTP_SECRET
+        sync: false
+      - key: ANGEL_BASE_URL
+        value: https://apiconnect.angelone.in
+      - key: GROWW_ENABLED
+        value: "true"
+      - key: GROWW_TOTP_TOKEN
+        sync: false
+      - key: GROWW_TOTP_SECRET
+        sync: false
+      - key: GROWW_BASE_URL
+        value: https://api.groww.in
