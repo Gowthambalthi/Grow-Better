@@ -23,7 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
-const { fetchLiveStockQuote } = require('./liveStockQuoteService');
+const { fetchLiveStockQuote, fetchIntradaySeries } = require('./liveStockQuoteService');
 
 const DATA = path.join(__dirname, '..', '..', 'data');
 const CALLS_FILE = path.join(DATA, 'live_calls.json');
@@ -70,6 +70,13 @@ function runScript(script, args = []) {
 
 function hasAngelCreds() {
   return !!(process.env.ANGEL_API_KEY && process.env.ANGEL_CLIENT_CODE && process.env.ANGEL_TOTP_SECRET);
+}
+
+function isMarketOpen(d = new Date()) {
+  // NSE session 09:15–15:30 IST, Mon–Fri (approx; ignores holidays)
+  const ist = new Date(d.getTime() + (5.5 * 60 + d.getTimezoneOffset()) * 60000);
+  const day = ist.getDay(); const mins = ist.getHours() * 60 + ist.getMinutes();
+  return day >= 1 && day <= 5 && mins >= 555 && mins <= 930;
 }
 
 async function ohlcvStale() {
@@ -125,48 +132,114 @@ async function runPipeline() {
 
 // ---------- call creation ----------
 
+// ---------- intraday velocity ----------
+
+// Momentum/velocity score from the live 1-minute series (0-100):
+//   60% last-15-min move % (current burst) + 40% volume burst vs day average.
+// Higher = faster mover right NOW — what you asked to prioritize.
+function velocityScore(series) {
+  if (!series || !series.bars || series.bars.length < 20) return 0;
+  const bars = series.bars;
+  const last = bars[bars.length - 1].c;
+  const n15 = bars[Math.max(0, bars.length - 16)].c;
+  const burstPct = n15 > 0 ? ((last - n15) / n15) * 100 : 0;
+  const vols = bars.map(b => b.v);
+  const dayAvg = vols.reduce((s, v) => s + v, 0) / vols.length;
+  const recentAvg = vols.slice(-15).reduce((s, v) => s + v, 0) / 15;
+  const volBurst = dayAvg > 0 ? recentAvg / dayAvg : 1;
+  // map: 0.3% burst ≈ 50, 1%+ ≈ 90+; vol 2x ≈ 70
+  const pScore = Math.max(0, Math.min(100, 50 + burstPct * 40));
+  const vScore = Math.max(0, Math.min(100, volBurst * 35));
+  return +(0.6 * pScore + 0.4 * vScore).toFixed(1);
+}
+
+const MIN_CALL_GAP_MIN = 30;    // same symbol can re-call after 30 min
+const MAX_CALLS_PER_TICK = 8;   // cap per minute tick
+
 async function scanForNewCalls() {
-  let table;
-  try { table = JSON.parse(fs.readFileSync(TRADE_TABLE, 'utf8')); }
-  catch (_) { return { newCalls: 0, reason: 'no trade table yet' }; }
+  // Candidate pool: the confirmed trade table (4-frame gate) PLUS the wider
+  // engine-score list, so minute scans can surface fresh movers beyond the
+  // few daily fresh buys.
+  let candidates = [];
+  try {
+    const tt = JSON.parse(fs.readFileSync(TRADE_TABLE, 'utf8'));
+    candidates = (tt.rows || []).map(r => ({ symbol: r.symbol, engine: r.engine, score: r.score,
+      stopLoss: r.stopLoss, target1: r.target1, target2: r.target2, confirm: r.confirm, intraday: r.intraday, source: 'FRESH BUY' }));
+  } catch (_) {}
+  try {
+    const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
+    const known = new Set(candidates.map(c => c.symbol));
+    for (const r of es.results || []) {
+      if (known.has(r.symbol)) continue;
+      // wider pool: any engine >= 7, not trapped — the confirmed table is a subset
+      const i = r.indicators || {};
+      if ((r.engineRate || 0) >= 7 && !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18)) {
+        candidates.push({ symbol: r.symbol, engine: r.engine, score: r.engineRate, source: 'ENGINE', i });
+      }
+    }
+  } catch (_) {}
+  if (!candidates.length) return { newCalls: 0, reason: 'no candidates' };
 
   const db = loadCalls();
   const openSyms = new Set(db.calls.filter(c => c.status === 'ACTIVE').map(c => c.symbol));
   const today = todayKey();
   if (state.todayKey !== today) { state.todayKey = today; state.todayCalls = 0; }
 
+  // measure live velocity for every candidate (parallel, capped)
+  const CONC = 12;
+  const scored = [];
+  for (let i = 0; i < candidates.length; i += CONC) {
+    const batch = candidates.slice(i, i + CONC);
+    const res = await Promise.all(batch.map(async c => {
+      const series = await fetchIntradaySeries(c.symbol);
+      const q = await fetchLiveStockQuote(c.symbol);
+      return { ...c, ltp: q && q.ltp, vel: velocityScore(series), series };
+    }));
+    scored.push(...res);
+  }
+
+  // rank by velocity — fastest movers first
+  scored.sort((a, b) => b.vel - a.vel);
+
   let created = 0;
-  for (const row of table.rows || []) {
-    if (openSyms.has(row.symbol)) continue;                 // one open call per symbol
-    if (db.calls.some(c => c.symbol === row.symbol && c.date === today)) continue; // one call/symbol/day
+  for (const c of scored) {
+    if (created >= MAX_CALLS_PER_TICK) break;
+    if (!c.ltp || c.ltp <= 0) continue;
+    if (c.vel < 35) continue;                       // moving too slow — skip
+    if (openSyms.has(c.symbol)) continue;           // one open call per symbol
+    // re-call gap: same symbol not re-called within 30 min of ANY prior call
+    const lastCall = db.calls.filter(x => x.symbol === c.symbol).sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
+    if (lastCall && (Date.now() - new Date(lastCall.time).getTime()) < MIN_CALL_GAP_MIN * 60000) continue;
 
-    const quote = await fetchLiveStockQuote(row.symbol);
-    const ltp = quote && quote.ltp;
-    if (!ltp || ltp <= 0) continue;
-
+    // stop/target: confirmed table levels when present, else velocity-scan defaults (2x/4x of 2% risk)
+    const stop = c.stopLoss || +(c.ltp * 0.98).toFixed(2);
+    const risk = c.ltp - stop;
     db.calls.push({
-      id: today + '-' + row.symbol,
+      id: today + '-' + c.symbol + '-' + Date.now(),
       date: today,
       time: new Date().toISOString(),
-      symbol: row.symbol,
-      engine: row.engine,
-      score: row.score,
-      entry: ltp,                       // live price at call time
-      stopLoss: row.stopLoss,
-      target1: row.target1,
-      target2: row.target2,
-      confirm: row.confirm,
-      intraday: row.intraday,
+      symbol: c.symbol,
+      engine: c.engine,
+      score: c.score,
+      velocity: c.vel,
+      source: c.source,
+      entry: c.ltp,
+      stopLoss: stop,
+      target1: c.target1 || +(c.ltp + risk * 2).toFixed(2),
+      target2: c.target2 || +(c.ltp + risk * 4).toFixed(2),
+      confirm: c.confirm || null,
+      intraday: c.intraday || null,
       status: 'ACTIVE',
       closedAt: null,
       exitPrice: null,
       exitReason: null,
       pnlPct: null,
       barsHeld: 0,
-      lastLtp: ltp,
+      lastLtp: c.ltp,
     });
     created++;
     state.todayCalls++;
+    openSyms.add(c.symbol);
   }
   if (created) saveCalls(db);
   state.lastScan = new Date().toISOString();
@@ -268,13 +341,19 @@ async function tick(opts = {}) {
   // { forcePipeline: true } to override (used by the nightly refresh).
   const t0 = Date.now();
   const now = Date.now();
+  // The heavy pipeline runs ONLY when the daily candle data is genuinely
+  // stale (once per day effectively) — never on an hourly loop. On hosts
+  // without Angel creds (Render) fetch is skipped inside runPipeline, so
+  // staleness would stay true forever and re-run every hour for nothing.
   const hourly = !state.lastPipelineRun || (now - new Date(state.lastPipelineRun).getTime()) > 3600e3;
-  if (opts.forcePipeline || (hourly && await ohlcvStale().catch(() => false))) {
+  if (opts.forcePipeline || (hourly && hasAngelCreds() && await ohlcvStale().catch(() => false))) {
     await runPipeline().catch(() => {});
   }
   try {
-    await scanForNewCalls();
-    await trackCalls();
+    if (isMarketOpen()) {
+      await scanForNewCalls();      // velocity-ranked fresh calls, throttled per symbol
+      await trackCalls();
+    }
     if (state.todayKey !== todayKey()) await dailyTrack();
   } catch (_) {}
   return Date.now() - t0;
@@ -313,4 +392,4 @@ function getCallDetail(symbol) {
   return { call, candles };
 }
 
-module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, state };
+module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, isMarketOpen, state };

@@ -56,6 +56,31 @@ async function fetchLiveStockQuote(symbol) {
   };
 }
 
+/**
+ * Fetch today's 1-minute series for a symbol (for velocity/momentum).
+ * Returns { bars: [{t, c, v}], dayVol, last } or null.
+ */
+async function fetchIntradaySeries(symbol) {
+  const cleanSym = String(symbol || '').replace(/-EQ$/i, '').trim().toUpperCase();
+  try {
+    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${cleanSym}.NS?interval=1m&range=1d`;
+    const res = await axios.get(url, { headers: uHeaders, timeout: 3000 });
+    const r = res.data?.chart?.result?.[0];
+    const ts = r?.timestamp; const q = r?.indicators?.quote?.[0];
+    if (!ts || !q) return null;
+    const bars = [];
+    for (let i = 0; i < ts.length; i++) {
+      const c = q.close?.[i]; const v = q.volume?.[i];
+      if (c == null) continue;
+      bars.push({ t: ts[i] * 1000, c, v: v || 0 });
+    }
+    if (bars.length < 20) return null;
+    return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c };
+  } catch (_) { return null; }
+}
+
 module.exports = {
-  fetchLiveStockQuote
+  fetchLiveStockQuote,
+  fetchIntradaySeries
 };
