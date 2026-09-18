@@ -148,7 +148,7 @@ async function fetchIntradaySeries(symbol) {
       const ist = new Date(tMs + (5.5 * 60 + new Date(tMs).getTimezoneOffset()) * 60000);
       const mins = ist.getHours() * 60 + ist.getMinutes();
       if (mins < 555 || mins >= 915) continue;
-      bars.push({ t: tMs, c, v: v || 0 });
+      bars.push({ t: tMs, o: q.open?.[i] ?? c, h: q.high?.[i] ?? c, l: q.low?.[i] ?? c, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
@@ -220,7 +220,7 @@ async function fetchIntradaySeries(symbol) {
       const ist = new Date(tMs + (5.5 * 60 + new Date(tMs).getTimezoneOffset()) * 60000);
       const mins = ist.getHours() * 60 + ist.getMinutes();
       if (mins < 555 || mins >= 915) continue;
-      bars.push({ t: tMs, c, v: v || 0 });
+      bars.push({ t: tMs, o: q.open?.[i] ?? c, h: q.high?.[i] ?? c, l: q.low?.[i] ?? c, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
