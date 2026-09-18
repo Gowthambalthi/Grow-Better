@@ -186,6 +186,10 @@ function computeRoc(series) {
   let pv15 = 0, vv15 = 0;
   for (const b of bars.slice(-15)) { pv15 += b.c * b.v; vv15 += b.v; }
   const vwap15 = vv15 > 0 ? pv15 / vv15 : last;
+  // 5-bar VWAP: fastest confirmation frame
+  let pv5 = 0, vv5 = 0;
+  for (const b of bars.slice(-5)) { pv5 += b.c * b.v; vv5 += b.v; }
+  const vwap5 = vv5 > 0 ? pv5 / vv5 : last;
   // volume ROC: rate of change of VOLUME (vol now vs 5 bars ago)
   const volNow = vols[vols.length - 1];
   const volPrev5 = vols[vols.length - 6] || 0;
@@ -217,7 +221,21 @@ function computeRoc(series) {
     roc5, roc15,
     volX: dayAvg > 0 ? +(recentAvg / dayAvg).toFixed(2) : 1,
     volRoc, posInRange, volAtPrice,
+    // Multi-timeframe VWAP stack + previous-day levels (confirmation context,
+    // NOT hard gates): 5-bar, 15-bar and day VWAPs; PDH/PDL/PDC.
+    vwap5, vwap15,
+    vwapStack: (vwap5 != null && vwap15 != null)
+      ? (last > vwap5 && last > vwap15 && last > vwap) ? 'ABOVE ALL'
+        : (last < vwap5 && last < vwap15 && last < vwap) ? 'BELOW ALL' : 'MIXED'
+      : null,
+    dayHigh: series.dayHigh || null,
+    dayLow: (series.dayLow != null && series.dayLow !== Infinity) ? series.dayLow : null,
+    posVsPD: (series.dayHigh && series.dayLow != null && series.dayLow !== Infinity)
+      ? (last > series.dayHigh ? 'AT DAY HIGH' : last < series.dayLow ? 'AT DAY LOW' : 'INSIDE RANGE')
+      : null,
     vwap: +vwap.toFixed(2),
+    vwap5: +vwap5.toFixed(2),
+    vwap15: +vwap15.toFixed(2),
     vwapDrift: vwap > 0 ? +(((vwap15 - vwap) / vwap) * 100).toFixed(2) : 0,
   };
 }
@@ -311,6 +329,10 @@ async function scanSignals(candidatesOverride) {
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
         volAtPrice: roc ? roc.volAtPrice : null,
+        vwap5: roc ? roc.vwap5 : null, vwap15: roc ? roc.vwap15 : null,
+        vwapStack: roc ? roc.vwapStack : null,
+        dayHigh: roc ? roc.dayHigh : null, dayLow: roc ? roc.dayLow : null,
+        posVsPD: roc ? roc.posVsPD : null,
         vwap: roc ? roc.vwap : null, vwapDrift: roc ? roc.vwapDrift : null,
         structure: struct.structure, structNote: struct.note,
         volume: q.volume || null, totBuy: q.totBuy || null, totSell: q.totSell || null,

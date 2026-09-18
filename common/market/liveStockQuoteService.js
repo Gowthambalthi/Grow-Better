@@ -152,7 +152,9 @@ async function fetchIntradaySeries(symbol) {
     }
     if (bars.length < 20) return null;
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
-      prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0) };
+      prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0),
+      dayHigh: bars.reduce((m, b) => Math.max(m, b.h ?? b.c), 0),
+      dayLow: bars.reduce((m, b) => Math.min(m, b.l ?? b.c), Infinity) };
   } catch (_) { return null; }
 }
 
@@ -224,7 +226,9 @@ async function fetchIntradaySeries(symbol) {
     }
     if (bars.length < 20) return null;
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
-      prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0) };
+      prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0),
+      dayHigh: bars.reduce((m, b) => Math.max(m, b.h ?? b.c), 0),
+      dayLow: bars.reduce((m, b) => Math.min(m, b.l ?? b.c), Infinity) };
   } catch (_) { return null; }
 }
 
