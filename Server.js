@@ -261,11 +261,27 @@ app.get('/api/gb/watchlist', (req, res) => {
     } catch (_) {}
     try {
       const es = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'engine_scores.json'), 'utf8'));
-      for (const r of es.results || []) {
-        if (seen.has(r.symbol) || (r.engineRate || 0) < 8) continue;
+      // Strict watchlist rules — cut the 500+ engine>=8 pool down to a
+      // tradeable short list (~10-20 names):
+      //   1. score >= 9 and no traps (RSI<=80, vol>=0.8, ADX>=18)
+      //   2. RSI 55-75 (trending, not overbought)
+      //   3. ADX >= 20 (real trend strength)
+      //   4. volume ratio >= 1.2 (participation above normal)
+      //   5. cap at 15, ranked by score then volume ratio
+      const pool = (es.results || [])
+        .filter(r => {
+          const i = r.indicators || {};
+          return (r.engineRate || 0) >= 9 && !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18)
+            && i.rsi14 >= 55 && i.rsi14 <= 75 && (i.adx14 || 0) >= 20 && (i.volRatio || 0) >= 1.2;
+        })
+        .sort((a, b) => (b.engineRate - a.engineRate) || ((b.indicators?.volRatio || 0) - (a.indicators?.volRatio || 0)))
+        .slice(0, 15);
+      for (const r of pool) {
+        if (seen.has(r.symbol)) continue;
         seen.add(r.symbol);
         out.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate, close: r.close,
-          source: 'ENGINE >= 8' });
+          rsi: r.indicators?.rsi14, adx: r.indicators?.adx14, volRatio: r.indicators?.volRatio,
+          source: 'WATCH' });
       }
     } catch (_) {}
     res.json({ generatedAt: new Date().toISOString(), watchlist: out.slice(0, 40) });
