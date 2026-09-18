@@ -207,11 +207,11 @@ function buyerStructure(roc, ltp) {
 // Signal decision from ROC momentum + buyer structure:
 //   BUY  = positive 5-min ROC accelerating with volume AND buyers in control
 //   SELL = momentum flipping negative, big selling structure, or stop breach
-function rocSignal(roc, ltp, stopLoss) {
+function rocSignal(roc, ltp, stopLoss, inPosition) {
   if (!roc || ltp == null) return { signal: 'HOLD', reason: 'no data' };
   const { roc5, roc15, volX } = roc;
-  if (stopLoss != null && ltp <= stopLoss) return { signal: 'SELL', reason: 'at stop loss' };
-  if (roc5 < -0.10 && roc15 < 0) return { signal: 'SELL', reason: 'momentum flipped down (ROC5 ' + roc5 + '%, ROC15 ' + roc15 + '%)' };
+  if (inPosition && stopLoss != null && ltp <= stopLoss) return { signal: 'EXIT', reason: 'at stop loss' };
+  if (roc5 < -0.10 && roc15 < 0) return { signal: 'SHORT', reason: 'momentum flipped down (ROC5 ' + roc5 + '%, ROC15 ' + roc15 + '%) - breakdown setup' };
   if (roc5 > 0.10 && roc15 > 0 && volX >= 1.1) return { signal: 'BUY', reason: 'ROC accelerating up (ROC5 +' + roc5 + '%, ROC15 +' + roc15 + '%, vol ' + volX + 'x)' };
   if (roc5 > 0.25 && roc15 >= 0) return { signal: 'BUY', reason: 'strong price burst (ROC5 +' + roc5 + '%)' };
   return { signal: 'HOLD', reason: 'flat (ROC5 ' + (roc5 == null ? '-' : roc5) + '%)' };
@@ -247,7 +247,7 @@ async function scanSignals(candidatesOverride) {
       const roc = computeRoc(series);
       const struct = buyerStructure(roc, ltp);
       const openCall = openBySym[c.symbol];
-      const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null);
+      const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null, !!openCall);
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         vwap: roc ? roc.vwap : null, vwapDrift: roc ? roc.vwapDrift : null,
@@ -262,6 +262,70 @@ async function scanSignals(candidatesOverride) {
   out.sort((a, b) => (b.roc5 || -99) - (a.roc5 || -99));
   fs.writeFileSync(SIGNALS_FILE, JSON.stringify({ generatedAt: now, marketOpen: isMarketOpen(), signals: out }));
   return { signals: out.length, buys: out.filter(s => s.signal === 'BUY').length, sells: out.filter(s => s.signal === 'SELL').length };
+}
+
+
+// ---------- real-time movers board (strictly 09:15-15:15 IST) ----------
+
+// For every stock >= MIN_PRICE: 1-min and 5-min change %, direction trail.
+// Flag MOVER when |1-min change| >= 1% or |5-min change| >= 1%.
+const MOVER_TH = 1.0; // percent
+
+function computeMove(series) {
+  if (!series || !series.bars || series.bars.length < 6) return null;
+  const bars = series.bars;
+  const last = bars[bars.length - 1].c;
+  const prev1 = bars[bars.length - 2].c;
+  const prev5 = bars[bars.length - 6] ? bars[bars.length - 6].c : null;
+  const prevClose = series.prevClose || 0;
+  const m1 = prev1 > 0 ? ((last - prev1) / prev1) * 100 : 0;
+  const m5 = prev5 > 0 ? ((last - prev5) / prev5) * 100 : null;
+  const mDay = prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : null;
+  // direction trail: last 5 one-min closes up/down pattern
+  const trail = [];
+  for (let i = Math.max(1, bars.length - 5); i < bars.length; i++) {
+    trail.push(bars[i].c >= bars[i - 1].c ? 'up' : 'down');
+  }
+  return { ltp: last, m1: +m1.toFixed(2), m5: m5 == null ? null : +m5.toFixed(2), mDay: mDay == null ? null : +mDay.toFixed(2), trail };
+}
+
+async function scanMovers() {
+  let symbols = [];
+  try {
+    const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
+    for (const r of es.results || []) symbols.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate });
+  } catch (_) {}
+  if (!symbols.length) return { movers: 0 };
+
+  const CONC = 14;
+  const out = [];
+  const now = new Date().toISOString();
+  for (let i = 0; i < symbols.length; i += CONC) {
+    const batch = symbols.slice(i, i + CONC);
+    const res = await Promise.all(batch.map(async c => {
+      const series = await fetchIntradaySeries(c.symbol);
+      if (!series) return null;
+      const mv = computeMove(series);
+      if (!mv || mv.ltp == null || mv.ltp < MIN_PRICE) return null;
+      const isMover = Math.abs(mv.m1) >= MOVER_TH || Math.abs(mv.m5 || 0) >= MOVER_TH;
+      return { symbol: c.symbol, engine: c.engine, score: c.score, time: now, ...mv, isMover };
+    }));
+    out.push(...res.filter(Boolean));
+  }
+  // movers first, then by 1-min change magnitude
+  out.sort((a, b) => (b.isMover - a.isMover) || (Math.abs(b.m1) - Math.abs(a.m1)));
+  fs.writeFileSync(path.join(DATA, 'live_movers.json'), JSON.stringify({ generatedAt: now, marketOpen: isMarketOpen(), movers: out.filter(x => x.isMover).length, stocks: out }));
+  return { stocks: out.length, movers: out.filter(x => x.isMover).length };
+}
+
+function getMovers({ onlyMovers = false, minMove = 0 } = {}) {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(DATA, 'live_movers.json'), 'utf8'));
+    let stocks = j.stocks || [];
+    if (onlyMovers) stocks = stocks.filter(s => s.isMover);
+    if (minMove > 0) stocks = stocks.filter(s => Math.abs(s.m1) >= minMove || Math.abs(s.m5 || 0) >= minMove);
+    return { generatedAt: j.generatedAt, marketOpen: j.marketOpen, movers: j.movers, stocks };
+  } catch (_) { return { generatedAt: null, stocks: [] }; }
 }
 
 const MIN_CALL_GAP_MIN = 30;    // same symbol can re-call after 30 min
@@ -465,7 +529,8 @@ async function tick(opts = {}) {
   try {
     if (isMarketOpen()) {
       await scanForNewCalls();
-      await scanSignals();          // per-minute ROC + buyer-structure board      // velocity-ranked fresh calls, throttled per symbol
+      await scanSignals();          // per-minute ROC + buyer-structure board
+      await scanMovers();           // real-time movers board (1%/5% flags)
       await trackCalls();
     }
     if (state.todayKey !== todayKey()) await dailyTrack();
@@ -511,4 +576,4 @@ function getSignals() {
   catch (_) { return { generatedAt: null, signals: [] }; }
 }
 
-module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, isMarketOpen, state };
+module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, scanMovers, getMovers, isMarketOpen, state };

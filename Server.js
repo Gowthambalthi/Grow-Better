@@ -271,6 +271,17 @@ app.get('/api/gb/signals', (req, res) => {
   }
 });
 
+app.get('/api/gb/movers', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    const onlyMovers = req.query.all !== '1';
+    const minMove = req.query.min ? parseFloat(req.query.min) : 0;
+    res.json(liveCalls.getMovers({ onlyMovers, minMove }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/gb/calls/:symbol', (req, res) => {
   try {
     const liveCalls = require('./common/market/liveCallEngine');
