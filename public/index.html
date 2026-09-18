@@ -1268,6 +1268,18 @@
           <div id="gbTodayPnl" style="display:flex;gap:12px;margin:0 0 12px;flex-wrap:wrap;"></div>
           <div id="gbCallsWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
 
+          <!-- Per-minute ROC signal board: BUY / SELL / HOLD with buyer structure -->
+          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Intraday Signals (ROC + Buyers)</h2>
+            <span id="gbSigStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">every minute · rate-of-change + VWAP buyer structure</span>
+            <div id="gbSigFilters" style="margin-left:auto;display:flex;gap:6px;">
+              <button class="btn gbSigF" data-f="" style="padding:3px 10px;font-size:12px;">ALL</button>
+              <button class="btn gbSigF" data-f="BUY" style="padding:3px 10px;font-size:12px;color:#00e091;">BUY</button>
+              <button class="btn gbSigF" data-f="SELL" style="padding:3px 10px;font-size:12px;color:#ff4d6d;">SELL</button>
+            </div>
+          </div>
+          <div id="gbSigWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+
           <h2 style="font-size:16px;margin:8px 0;color:var(--text,#e6e9f0);">Scanner Results</h2>
           <div id="gbTableWrap" style="overflow:auto;max-height:70vh;"></div>
         </section>
@@ -3898,6 +3910,56 @@ function _renderMfGridBody(grid, schemes) {
           } catch (e) {}
         }
 
+        // ---- Intraday ROC signal board ----
+        var gbSigData = null;
+        var gbSigFilter = '';
+        var strCol = function(st) {
+          if (st === 'BIG BUYERS HOLDING') return '#00e091';
+          if (st === 'BIG SELLING') return '#ff4d6d';
+          if (st === 'BUYERS NEUTRAL') return '#7ab8ff';
+          return 'var(--text-muted,#8b93a7)';
+        };
+        function gbRenderSignals() {
+          var wrap = document.getElementById('gbSigWrap');
+          if (!wrap) return;
+          if (!gbSigData || !(gbSigData.signals || []).length) { wrap.innerHTML = '<div class="empty-state">No signals yet — board refreshes every minute during market hours.</div>'; return; }
+          var sigs = gbSigData.signals.filter(function(s) { return !gbSigFilter || s.signal === gbSigFilter; });
+          var head = ['Time','Symbol','Signal','LTP','ROC 5m','ROC 15m','Vol','VWAP','Buyers','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var body = sigs.slice(0, 120).map(function(s) {
+            var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SELL' ? '#ff4d6d' : 'var(--text-muted,#8b93a7)';
+            var rocCol = s.roc5 > 0 ? '#00e091' : s.roc5 < 0 ? '#ff4d6d' : 'inherit';
+            return '<tr style="border-top:1px solid var(--border,#232a36);' + (s.inPosition ? 'background:rgba(0,179,134,0.07);' : '') + '">' +
+              '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (s.time || '').slice(11, 19) + '</td>' +
+              '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
+              '<td style="padding:4px 10px;font-weight:800;color:' + sigCol + ';">' + s.signal + '</td>' +
+              '<td style="padding:4px 10px;">' + (s.ltp != null ? s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp : '-') + '</td>' +
+              '<td style="padding:4px 10px;color:' + rocCol + ';font-weight:700;">' + (s.roc5 != null ? (s.roc5 > 0 ? '+' : '') + s.roc5 + '%' : '-') + '</td>' +
+              '<td style="padding:4px 10px;color:' + (s.roc15 > 0 ? '#00e091' : s.roc15 < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.roc15 != null ? (s.roc15 > 0 ? '+' : '') + s.roc15 + '%' : '-') + '</td>' +
+              '<td style="padding:4px 10px;">' + (s.volX != null ? s.volX + 'x' : '-') + '</td>' +
+              '<td style="padding:4px 10px;color:var(--text-muted);">' + (s.vwap != null ? s.vwap : '-') + '</td>' +
+              '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + strCol(s.structure) + ';" title="' + (s.structNote || '') + '">' + s.structure + '</td>' +
+              '<td style="padding:4px 10px;font-size:11px;color:var(--text-muted);">' + (s.reason || '') + '</td>' +
+              '</tr>';
+          }).join('');
+          wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' +
+            'Scanned ' + gbSigData.counts.total + ' stocks · ' + gbSigData.counts.buy + ' BUY · ' + gbSigData.counts.sell + ' SELL · updated ' + (gbSigData.generatedAt || '').slice(11, 19) + ' UTC' +
+            '</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+        }
+        async function gbRefreshSignals() {
+          try {
+            var r = await fetch('/api/gb/signals');
+            var j = await r.json();
+            if (j.error) return;
+            gbSigData = j;
+            gbRenderSignals();
+            var st = document.getElementById('gbSigStatus');
+            if (st) st.textContent = (j.marketOpen ? '● market open' : '○ market closed') + ' · ' + j.counts.buy + ' BUY / ' + j.counts.sell + ' SELL of ' + j.counts.total;
+          } catch (e) {}
+        }
+        Array.prototype.forEach.call(document.querySelectorAll('.gbSigF'), function(b) {
+          b.addEventListener('click', function() { gbSigFilter = b.getAttribute('data-f') || ''; gbRenderSignals(); });
+        });
+
         var gbCallsWrap = document.getElementById('gbCallsWrap');
         if (gbCallsWrap) gbCallsWrap.addEventListener('click', function(e) {
           var tr = e.target.closest('tr[data-callsym]');
@@ -3921,13 +3983,15 @@ function _renderMfGridBody(grid, schemes) {
         if (gbTickBtn) gbTickBtn.addEventListener('click', async function() {
           gbTickBtn.disabled = true; gbTickBtn.textContent = '⟳…';
           try { await fetch('/api/gb/calls/tick', { method: 'POST' }); } catch (_) {}
-          await gbRefreshCalls();
+          await Promise.all([gbRefreshCalls(), gbRefreshSignals()]);
           gbTickBtn.disabled = false; gbTickBtn.textContent = '⟳ Refresh prices';
         });
 
         // initial load + auto-refresh every 60s while the terminal view is open
         gbRefreshCalls();
+        gbRefreshSignals();
         setInterval(gbRefreshCalls, 60000);
+        setInterval(gbRefreshSignals, 60000);
 
         var gbWrap = document.getElementById('gbTableWrap');
         if (gbWrap) gbWrap.addEventListener('click', function(e) {

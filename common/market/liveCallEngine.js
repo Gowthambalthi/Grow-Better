@@ -28,6 +28,8 @@ const { fetchLiveStockQuote, fetchIntradaySeries } = require('./liveStockQuoteSe
 const DATA = path.join(__dirname, '..', '..', 'data');
 const CALLS_FILE = path.join(DATA, 'live_calls.json');
 const TRADE_TABLE = path.join(DATA, 'trade_table_stocks.json');
+const SIGNALS_FILE = path.join(DATA, 'live_signals.json');
+const MIN_PRICE = 100;   // hard floor: no calls/signals on stocks under Rs 100
 const OHLCV = path.join(DATA, 'ohlcv');
 const SCRIPTS = path.join(__dirname, '..', '..', 'scripts');
 
@@ -153,6 +155,115 @@ function velocityScore(series) {
   return +(0.6 * pScore + 0.4 * vScore).toFixed(1);
 }
 
+// ---------- rate of change (ROC) + per-minute BUY/SELL signals ----------
+
+// ROC over n minutes from the 1-min series: % price change. Plus volume ratio
+// (last-15-min avg vs day avg) and big-buyer proxy: where price sits vs the
+// day's VWAP. Volume-weighted price tells who is in control:
+//   price > VWAP with rising volume = big buyers holding / accumulating
+//   price falling below VWAP on high volume = big buyers distributing (SELL)
+//   price flat around VWAP = neutral / absorption
+function computeRoc(series) {
+  if (!series || !series.bars || series.bars.length < 20) return null;
+  const bars = series.bars;
+  const last = bars[bars.length - 1].c;
+  const rocN = (n) => {
+    if (bars.length <= n) return null;
+    const ref = bars[bars.length - 1 - n].c;
+    return ref > 0 ? +(((last - ref) / ref) * 100).toFixed(2) : null;
+  };
+  const roc5 = rocN(5), roc15 = rocN(15);
+  const vols = bars.map(b => b.v);
+  const dayAvg = vols.reduce((s, v) => s + v, 0) / vols.length;
+  const recentAvg = vols.slice(-15).reduce((s, v) => s + v, 0) / 15;
+  // VWAP over the day so far
+  let pv = 0, vv = 0;
+  for (const b of bars) { pv += b.c * b.v; vv += b.v; }
+  const vwap = vv > 0 ? pv / vv : last;
+  // last 15-min VWAP vs day VWAP: short-term money flow direction
+  let pv15 = 0, vv15 = 0;
+  for (const b of bars.slice(-15)) { pv15 += b.c * b.v; vv15 += b.v; }
+  const vwap15 = vv15 > 0 ? pv15 / vv15 : last;
+  return {
+    roc5, roc15,
+    volX: dayAvg > 0 ? +(recentAvg / dayAvg).toFixed(2) : 1,
+    vwap: +vwap.toFixed(2),
+    vwapDrift: vwap > 0 ? +(((vwap15 - vwap) / vwap) * 100).toFixed(2) : 0,
+  };
+}
+
+// Buyer-structure read from price/volume/VWAP (swing volume logic compressed
+// to intraday):
+function buyerStructure(roc, ltp) {
+  if (!roc || ltp == null) return { structure: 'UNKNOWN', note: 'no data' };
+  const aboveVwap = ltp > roc.vwap;
+  if (aboveVwap && roc.vwapDrift > 0.05 && roc.volX >= 1.2) return { structure: 'BIG BUYERS HOLDING', note: 'price above VWAP, short-term flow rising on volume' };
+  if (aboveVwap && roc.vwapDrift <= 0.05) return { structure: 'BUYERS NEUTRAL', note: 'above VWAP but short-term flow flat' };
+  if (!aboveVwap && roc.vwapDrift < -0.05 && roc.volX >= 1.2) return { structure: 'BIG SELLING', note: 'below VWAP, flow falling on volume - distribution' };
+  if (!aboveVwap) return { structure: 'SMALL SELLING', note: 'below VWAP, mild flow' };
+  return { structure: 'NEUTRAL', note: 'at VWAP' };
+}
+
+// Signal decision from ROC momentum + buyer structure:
+//   BUY  = positive 5-min ROC accelerating with volume AND buyers in control
+//   SELL = momentum flipping negative, big selling structure, or stop breach
+function rocSignal(roc, ltp, stopLoss) {
+  if (!roc || ltp == null) return { signal: 'HOLD', reason: 'no data' };
+  const { roc5, roc15, volX } = roc;
+  if (stopLoss != null && ltp <= stopLoss) return { signal: 'SELL', reason: 'at stop loss' };
+  if (roc5 < -0.10 && roc15 < 0) return { signal: 'SELL', reason: 'momentum flipped down (ROC5 ' + roc5 + '%, ROC15 ' + roc15 + '%)' };
+  if (roc5 > 0.10 && roc15 > 0 && volX >= 1.1) return { signal: 'BUY', reason: 'ROC accelerating up (ROC5 +' + roc5 + '%, ROC15 +' + roc15 + '%, vol ' + volX + 'x)' };
+  if (roc5 > 0.25 && roc15 >= 0) return { signal: 'BUY', reason: 'strong price burst (ROC5 +' + roc5 + '%)' };
+  return { signal: 'HOLD', reason: 'flat (ROC5 ' + (roc5 == null ? '-' : roc5) + '%)' };
+}
+
+// Minute scan across the whole scored universe (price >= MIN_PRICE): computes
+// ROC + buyer structure + BUY/SELL/HOLD for each and persists the board.
+async function scanSignals(candidatesOverride) {
+  let candidates = candidatesOverride;
+  if (!candidates) {
+    candidates = [];
+    try {
+      const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
+      for (const r of es.results || []) candidates.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate });
+    } catch (_) {}
+  }
+  if (!candidates.length) return { signals: 0 };
+
+  const db = loadCalls();
+  const openBySym = {};
+  for (const c of db.calls) if (c.status === 'ACTIVE') openBySym[c.symbol] = c;
+
+  const CONC = 14;
+  const out = [];
+  const now = new Date().toISOString();
+  for (let i = 0; i < candidates.length; i += CONC) {
+    const batch = candidates.slice(i, i + CONC);
+    const res = await Promise.all(batch.map(async c => {
+      const series = await fetchIntradaySeries(c.symbol);
+      if (!series) return null;
+      const ltp = series.last;
+      if (ltp == null || ltp < MIN_PRICE) return null;   // price floor
+      const roc = computeRoc(series);
+      const struct = buyerStructure(roc, ltp);
+      const openCall = openBySym[c.symbol];
+      const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null);
+      return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
+        roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
+        vwap: roc ? roc.vwap : null, vwapDrift: roc ? roc.vwapDrift : null,
+        structure: struct.structure, structNote: struct.note,
+        signal: sig.signal, reason: sig.reason,
+        inPosition: !!openCall, entry: openCall ? openCall.entry : null,
+        stopLoss: openCall ? openCall.stopLoss : null,
+        time: now };
+    }));
+    out.push(...res.filter(Boolean));
+  }
+  out.sort((a, b) => (b.roc5 || -99) - (a.roc5 || -99));
+  fs.writeFileSync(SIGNALS_FILE, JSON.stringify({ generatedAt: now, marketOpen: isMarketOpen(), signals: out }));
+  return { signals: out.length, buys: out.filter(s => s.signal === 'BUY').length, sells: out.filter(s => s.signal === 'SELL').length };
+}
+
 const MIN_CALL_GAP_MIN = 30;    // same symbol can re-call after 30 min
 const MAX_CALLS_PER_TICK = 8;   // cap per minute tick
 
@@ -212,7 +323,9 @@ async function scanForNewCalls() {
     if (lastCall && (Date.now() - new Date(lastCall.time).getTime()) < MIN_CALL_GAP_MIN * 60000) continue;
 
     // stop/target: confirmed table levels when present, else velocity-scan defaults (2x/4x of 2% risk)
-    const stop = c.stopLoss || +(c.ltp * 0.98).toFixed(2);
+    // INTRADAY levels: tight stop (max 0.6% below entry), T1 +2R, T2 +4R.
+    let stop = c.stopLoss && (c.ltp - c.stopLoss) / c.ltp <= 0.01 ? c.stopLoss : +(c.ltp * 0.994).toFixed(2);
+    stop = Math.max(stop, +(c.ltp * 0.994).toFixed(2)); // never wider than 0.6%
     const risk = c.ltp - stop;
     db.calls.push({
       id: today + '-' + c.symbol + '-' + Date.now(),
@@ -225,8 +338,8 @@ async function scanForNewCalls() {
       source: c.source,
       entry: c.ltp,
       stopLoss: stop,
-      target1: c.target1 || +(c.ltp + risk * 2).toFixed(2),
-      target2: c.target2 || +(c.ltp + risk * 4).toFixed(2),
+      target1: +(c.ltp + risk * 2).toFixed(2),
+      target2: +(c.ltp + risk * 4).toFixed(2),
       confirm: c.confirm || null,
       intraday: c.intraday || null,
       status: 'ACTIVE',
@@ -351,7 +464,8 @@ async function tick(opts = {}) {
   }
   try {
     if (isMarketOpen()) {
-      await scanForNewCalls();      // velocity-ranked fresh calls, throttled per symbol
+      await scanForNewCalls();
+      await scanSignals();          // per-minute ROC + buyer-structure board      // velocity-ranked fresh calls, throttled per symbol
       await trackCalls();
     }
     if (state.todayKey !== todayKey()) await dailyTrack();
@@ -392,4 +506,9 @@ function getCallDetail(symbol) {
   return { call, candles };
 }
 
-module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, isMarketOpen, state };
+function getSignals() {
+  try { return JSON.parse(fs.readFileSync(SIGNALS_FILE, 'utf8')); }
+  catch (_) { return { generatedAt: null, signals: [] }; }
+}
+
+module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, isMarketOpen, state };

@@ -250,6 +250,27 @@ app.get('/api/gb/calls', (req, res) => {
   }
 });
 
+app.get('/api/gb/signals', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    const board = liveCalls.getSignals();
+    const sig = board.signals || [];
+    const only = String(req.query.filter || '').toUpperCase();
+    res.json({
+      generatedAt: board.generatedAt,
+      marketOpen: board.marketOpen,
+      counts: {
+        total: sig.length,
+        buy: sig.filter(s => s.signal === 'BUY').length,
+        sell: sig.filter(s => s.signal === 'SELL').length,
+      },
+      signals: only ? sig.filter(s => s.signal === only) : sig,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/gb/calls/:symbol', (req, res) => {
   try {
     const liveCalls = require('./common/market/liveCallEngine');

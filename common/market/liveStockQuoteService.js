@@ -76,7 +76,8 @@ async function fetchIntradaySeries(symbol) {
       bars.push({ t: ts[i] * 1000, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
-    return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c };
+    return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
+      prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0) };
   } catch (_) { return null; }
 }
 
