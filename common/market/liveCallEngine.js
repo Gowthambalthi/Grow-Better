@@ -295,7 +295,9 @@ async function scanSignals(candidatesOverride) {
   for (let k = 0; k < Math.min(quoteBudget, allSyms.length); k++) quoted.add(allSyms[(start + k) % allSyms.length]);
   state._quoteCursor = (start + quoteBudget) % Math.max(1, allSyms.length);
   let quoteMap = {};
-  try { quoteMap = await fetchAngelQuotes([...quoted]); } catch (_) {}
+  if (hasAngelCreds()) {
+    try { quoteMap = await fetchAngelQuotes([...quoted]); } catch (_) {}
+  }
   for (let i = 0; i < candidates.length; i += CONC) {
     const batch = candidates.slice(i, i + CONC);
     // use the pre-fetched batch quotes (no per-batch Angel call — rate budget)

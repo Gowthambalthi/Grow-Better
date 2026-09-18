@@ -179,6 +179,17 @@ module.exports = {
     if (meta && meta.regularMarketPrice != null) {
       const ltp = Number(meta.regularMarketPrice);
       const close = Number(meta.chartPreviousClose || meta.previousClose || ltp);
+      // Day volume + buy/sell proxies from the 1-min series so the engine's
+      // openCheck and new-buyer gates work on hosts without Angel creds.
+      const quote = res.data?.chart?.result?.[0];
+      const iq = quote?.indicators?.quote?.[0] || {};
+      let dayVol = 0, buyProxy = 0, sellProxy = 0;
+      const tsArr = quote?.timestamp || [];
+      for (let i = 0; i < tsArr.length; i++) {
+        const v = iq.volume?.[i] || 0; const o = iq.open?.[i]; const cl = iq.close?.[i];
+        dayVol += v;
+        if (o != null && cl != null) { if (cl >= o) buyProxy += v; else sellProxy += v; }
+      }
       const obj = {
         symbol: cleanSym,
         ltp,
@@ -186,6 +197,9 @@ module.exports = {
         close,
         change: Number((ltp - close).toFixed(2)),
         changePct: close > 0 ? Number((((ltp - close) / close) * 100).toFixed(2)) : 0,
+        volume: dayVol || Number(meta.regularMarketVolume || 0),
+        totBuy: Math.round(buyProxy),
+        totSell: Math.round(sellProxy),
         source: 'Live Exchange Feed',
         lastUpdated: new Date().toISOString(),
       };
