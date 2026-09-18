@@ -52,6 +52,18 @@ function initScheduler() {
       runDailyConvictionPipeline();
     }, { timezone: 'Asia/Kolkata' });
 
+    // 6:00 PM IST daily (post-close): refresh daily OHLCV + rebuild trade
+    // table + engine scores so the Terminal's 'Stocks to Watch Tomorrow'
+    // box is built from TODAY's close before the next session.
+    cron.schedule('0 18 * * 1-5', () => {
+      try {
+        const liveCalls = require('../market/liveCallEngine');
+        liveCalls.runPipeline({ forcePipeline: true })
+          .then(() => console.log('[cron] 6PM post-close scan complete — watchlist rebuilt'))
+          .catch(e => console.error('[cron] post-close scan failed:', e.message));
+      } catch (e) { console.error('[cron] post-close scan error:', e.message); }
+    }, { timezone: 'Asia/Kolkata' });
+
     // Sunday 2:00 PM IST weekly: Run Institutes & AMFI pipeline (0 2 * * 0)
     cron.schedule('0 2 * * 0', () => {
       runWeeklyInstitutesPipeline();

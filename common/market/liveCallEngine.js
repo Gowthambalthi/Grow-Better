@@ -94,7 +94,7 @@ async function ohlcvStale() {
   return true;
 }
 
-async function runPipeline() {
+async function runPipeline(opts = {}) {
   if (state.pipelineRunning) return { skipped: true };
   state.pipelineRunning = true;
   const steps = {};
@@ -102,7 +102,7 @@ async function runPipeline() {
     // 1. refresh candles if stale — only when Angel credentials exist.
     //    Without creds (e.g. Render free tier) skip fetching and serve the
     //    committed data instead of crashing the pipeline.
-    const stale = await ohlcvStale();
+    const stale = opts.forcePipeline ? true : await ohlcvStale();
     if (stale && hasAngelCreds()) {
       const r = await runScript('fetchUniverseOhlcv.js');
       steps.fetch = r.err ? 'error: ' + String(r.err.message || r.err).slice(0, 80) : 'ok';
@@ -196,10 +196,27 @@ function computeRoc(series) {
   let hi5 = -Infinity, lo5 = Infinity;
   for (const b of last5) { if (b.c > hi5) hi5 = b.c; if (b.c < lo5) lo5 = b.c; }
   const posInRange = hi5 > lo5 ? +(((last - lo5) / (hi5 - lo5)) * 100).toFixed(0) : 50;
+  // VOLUME-AT-PRICE on the signal bar: where did the biggest volume of the
+  // last 5 bars trade, and at which end of that bar's range? 3y/15-min
+  // backtest (419k bars): heavy volume closing in the TOP 20% of its bar
+  // averages -9.3bps next bar (bull trap — 59% win fading it), while heavy
+  // volume closing in the BOTTOM 20% averages +3.5bps next bar (selling gets
+  // absorbed). So: heavy-at-top = DANGER for longs, heavy-at-bottom = bounce
+  // fuel. Light volume = no information either way.
+  let volAtPrice = 'NONE';
+  {
+    let hv = -Infinity, hb = null;
+    for (const b of last5) { if (b.v > hv) { hv = b.v; hb = b; } }
+    const hbRange = (hb.h != null ? hb.h : hb.c) - (hb.l != null ? hb.l : hb.c);
+    const hbPos = hbRange > 0 ? ((hb.c - (hb.l != null ? hb.l : hb.c)) / hbRange) : 0.5;
+    const hbVolRel = dayAvg > 0 ? hv / dayAvg : 0;
+    if (hbVolRel >= 1.5) volAtPrice = hbPos >= 0.8 ? 'HEAVY-TOP' : hbPos < 0.2 ? 'HEAVY-BOT' : 'HEAVY-MID';
+    else volAtPrice = 'LIGHT';
+  }
   return {
     roc5, roc15,
     volX: dayAvg > 0 ? +(recentAvg / dayAvg).toFixed(2) : 1,
-    volRoc, posInRange,
+    volRoc, posInRange, volAtPrice,
     vwap: +vwap.toFixed(2),
     vwapDrift: vwap > 0 ? +(((vwap15 - vwap) / vwap) * 100).toFixed(2) : 0,
   };
@@ -282,19 +299,25 @@ async function scanSignals(candidatesOverride) {
       let signal = sig.signal;
       const volRocOk = roc && (roc.volRoc == null || roc.volRoc >= -10);
       const posOk = roc && roc.posInRange != null ? roc.posInRange >= 40 : true;
+      // VOLUME-AT-PRICE gate (3y-validated): heavy volume closing at the TOP
+      // of its bar is a bull trap (-9.3bps next bar, 59% win fading) — no BUY.
+      // Heavy-at-bottom is fine (absorption, bounce fuel). Light = neutral.
+      const vapOk = !(roc && roc.volAtPrice === 'HEAVY-TOP');
       if (signal === 'BUY' && (!valid || !buyer.ok)) signal = 'WAIT';
       if (signal === 'BUY' && !volRocOk) signal = 'WAIT';
       if (signal === 'BUY' && !posOk) signal = 'WAIT';
+      if (signal === 'BUY' && !vapOk) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
+        volAtPrice: roc ? roc.volAtPrice : null,
         vwap: roc ? roc.vwap : null, vwapDrift: roc ? roc.vwapDrift : null,
         structure: struct.structure, structNote: struct.note,
         volume: q.volume || null, totBuy: q.totBuy || null, totSell: q.totSell || null,
         dayValue: q.volume && q.ltp ? Math.round(q.volume * q.ltp) : null,
         openCheck: valid ? 'OK' : 'INVALID', openReason: open.reason,
         newBuyer: buyer.ok, buyerReason: buyer.reason,
-        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
+        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : !vapOk ? 'WAIT: heavy volume at bar top (bull trap risk)' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
         inPosition: !!openCall, entry: openCall ? openCall.entry : null,
         stopLoss: openCall ? openCall.stopLoss : null,
         time: now };
