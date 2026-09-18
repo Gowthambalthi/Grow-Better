@@ -23,7 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
-const { fetchLiveStockQuote, fetchIntradaySeries } = require('./liveStockQuoteService');
+const { fetchLiveStockQuote, fetchIntradaySeries, fetchAngelQuotes } = require('./liveStockQuoteService');
 
 const DATA = path.join(__dirname, '..', '..', 'data');
 const CALLS_FILE = path.join(DATA, 'live_calls.json');
@@ -237,8 +237,21 @@ async function scanSignals(candidatesOverride) {
   const CONC = 14;
   const out = [];
   const now = new Date().toISOString();
+  // Angel quote rate budget: ~200 symbols per tick (25s), rotating across ticks
+  // so every stock gets a fresh authed quote at least every ~5 minutes.
+  const quoteBudget = 200;
+  const allSyms = candidates.map(c => c.symbol);
+  if (!state._quoteCursor) state._quoteCursor = 0;
+  const start = state._quoteCursor % allSyms.length;
+  const quoted = new Set();
+  for (let k = 0; k < Math.min(quoteBudget, allSyms.length); k++) quoted.add(allSyms[(start + k) % allSyms.length]);
+  state._quoteCursor = (start + quoteBudget) % Math.max(1, allSyms.length);
+  let quoteMap = {};
+  try { quoteMap = await fetchAngelQuotes([...quoted]); } catch (_) {}
   for (let i = 0; i < candidates.length; i += CONC) {
     const batch = candidates.slice(i, i + CONC);
+    // use the pre-fetched batch quotes (no per-batch Angel call — rate budget)
+    const batchQuotes = quoteMap;
     const res = await Promise.all(batch.map(async c => {
       const series = await fetchIntradaySeries(c.symbol);
       if (!series) return null;
@@ -248,11 +261,22 @@ async function scanSignals(candidatesOverride) {
       const struct = buyerStructure(roc, ltp);
       const openCall = openBySym[c.symbol];
       const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null, !!openCall);
+      // opening validation (09:15-09:20 mandatory; revalidated after) + new-buyer
+      const q = batchQuotes[c.symbol] || {};
+      const open = openingCheck(series, q, series.prevClose || q.close || 0);
+      const buyer = newBuyerCheck(q);
+      const valid = open.ok;                 // failed = INVALID: no BUY recommendation
+      let signal = sig.signal;
+      if (signal === 'BUY' && (!valid || !buyer.ok)) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         vwap: roc ? roc.vwap : null, vwapDrift: roc ? roc.vwapDrift : null,
         structure: struct.structure, structNote: struct.note,
-        signal: sig.signal, reason: sig.reason,
+        volume: q.volume || null, totBuy: q.totBuy || null, totSell: q.totSell || null,
+        dayValue: q.volume && q.ltp ? Math.round(q.volume * q.ltp) : null,
+        openCheck: valid ? 'OK' : 'INVALID', openReason: open.reason,
+        newBuyer: buyer.ok, buyerReason: buyer.reason,
+        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : 'WAIT: ' + buyer.reason) : sig.reason,
         inPosition: !!openCall, entry: openCall ? openCall.entry : null,
         stopLoss: openCall ? openCall.stopLoss : null,
         time: now };
@@ -261,7 +285,7 @@ async function scanSignals(candidatesOverride) {
   }
   out.sort((a, b) => (b.roc5 || -99) - (a.roc5 || -99));
   fs.writeFileSync(SIGNALS_FILE, JSON.stringify({ generatedAt: now, marketOpen: isMarketOpen(), signals: out }));
-  return { signals: out.length, buys: out.filter(s => s.signal === 'BUY').length, sells: out.filter(s => s.signal === 'SELL').length };
+  return { signals: out.length, buys: out.filter(s => s.signal === 'BUY').length, waits: out.filter(s => s.signal === 'WAIT').length, sells: out.filter(s => s.signal === 'SHORT' || s.signal === 'SELL').length };
 }
 
 
@@ -328,6 +352,43 @@ function getMovers({ onlyMovers = false, minMove = 0 } = {}) {
   } catch (_) { return { generatedAt: null, stocks: [] }; }
 }
 
+
+// ---------- opening validation window + new-buyer recommendation ----------
+
+// Session pre-check (09:15-09:20): the first 5-min bar must CONFIRM —
+//   price up vs prev close, volume healthy, traded value not negligible.
+//   Stocks that fail are marked INVALID and get NO buy recommendation until
+//   a later tick re-validates them.
+function istMinutesNow(d = new Date()) {
+  const ist = new Date(d.getTime() + (5.5 * 60 + d.getTimezoneOffset()) * 60000);
+  return ist.getHours() * 60 + ist.getMinutes();
+}
+
+// Validate one stock's opening 5-min bar. quote = Angel quote (volume/totBuy).
+function openingCheck(series, quote, prevClose) {
+  if (!series || !series.bars || series.bars.length < 1) return { ok: false, reason: 'no bars yet' };
+  const first = series.bars[0];
+  const priceOk = prevClose > 0 ? first.c >= prevClose : true;      // not gapping down hard
+  const volOk = (quote.volume || 0) > 0;                            // real trading happened
+  const value = first.c * (quote.volume || 0);
+  const valueOk = value > 5e6;                                      // >= Rs50L traded: real participation
+  const reasons = [];
+  if (!priceOk) reasons.push('price below prev close');
+  if (!volOk) reasons.push('no volume');
+  if (!valueOk) reasons.push('traded value too low');
+  return { ok: priceOk && volOk && valueOk, reason: reasons.join(', ') || 'all correct', priceOk, volOk, valueOk, value };
+}
+
+// New-buyer check from Angel quote: buyers stepping in = LTP up AND total buy
+// quantity dominating (totBuy > totSell). Only then is a BUY recommendation made.
+function newBuyerCheck(quote) {
+  if (!quote || quote.ltp == null) return { ok: false, reason: 'no quote' };
+  const up = (quote.changePct || 0) > 0;
+  const buyersDominate = (quote.totBuy || 0) > (quote.totSell || 0);
+  return { ok: up && buyersDominate,
+    reason: up ? (buyersDominate ? 'new buyers stepping in (buy qty ' + quote.totBuy + ' > sell qty ' + quote.totSell + ')' : 'price up but sellers dominate') : 'price not up' };
+}
+
 const MIN_CALL_GAP_MIN = 30;    // same symbol can re-call after 30 min
 const MAX_CALLS_PER_TICK = 8;   // cap per minute tick
 
@@ -386,7 +447,13 @@ async function scanForNewCalls() {
     const lastCall = db.calls.filter(x => x.symbol === c.symbol).sort((a, b) => (b.time || '').localeCompare(a.time || ''))[0];
     if (lastCall && (Date.now() - new Date(lastCall.time).getTime()) < MIN_CALL_GAP_MIN * 60000) continue;
 
-    // stop/target: confirmed table levels when present, else velocity-scan defaults (2x/4x of 2% risk)
+    // ENTRY GATE — new-buyer check: only enter when buyers are actually
+    // stepping in (price up + totBuy > totSell). If conditions are not met,
+    // do NOT enter — the stock stays on the board as WAIT.
+    const cQuote = await fetchLiveStockQuote(c.symbol);
+    const buyerGate = newBuyerCheck(cQuote);
+    if (!buyerGate.ok) continue;
+
     // INTRADAY levels: tight stop (max 0.6% below entry), T1 +2R, T2 +4R.
     let stop = c.stopLoss && (c.ltp - c.stopLoss) / c.ltp <= 0.01 ? c.stopLoss : +(c.ltp * 0.994).toFixed(2);
     stop = Math.max(stop, +(c.ltp * 0.994).toFixed(2)); // never wider than 0.6%
