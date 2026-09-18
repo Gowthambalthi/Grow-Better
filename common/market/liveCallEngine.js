@@ -78,7 +78,9 @@ function isMarketOpen(d = new Date()) {
   // NSE session 09:15–15:30 IST, Mon–Fri (approx; ignores holidays)
   const ist = new Date(d.getTime() + (5.5 * 60 + d.getTimezoneOffset()) * 60000);
   const day = ist.getDay(); const mins = ist.getHours() * 60 + ist.getMinutes();
-  return day >= 1 && day <= 5 && mins >= 555 && mins <= 930;
+  // Regular session only: 09:15-15:15 IST. The 15:15-15:30 window is the
+  // closing auction — no intraday entries, signals or scans there.
+  return day >= 1 && day <= 5 && mins >= 555 && mins < 915;
 }
 
 async function ohlcvStale() {

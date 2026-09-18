@@ -141,7 +141,14 @@ async function fetchIntradaySeries(symbol) {
     for (let i = 0; i < ts.length; i++) {
       const c = q.close?.[i]; const v = q.volume?.[i];
       if (c == null) continue;
-      bars.push({ t: ts[i] * 1000, c, v: v || 0 });
+      const tMs = ts[i] * 1000;
+      // NSE regular session only: 09:15 <= IST < 15:15. Drops the pre-open
+      // bar and the 15:15-15:30 closing-auction stub that Yahoo includes —
+      // both are fake sessions for intraday math (velocity/ROC/volume).
+      const ist = new Date(tMs + (5.5 * 60 + new Date(tMs).getTimezoneOffset()) * 60000);
+      const mins = ist.getHours() * 60 + ist.getMinutes();
+      if (mins < 555 || mins >= 915) continue;
+      bars.push({ t: tMs, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
@@ -206,7 +213,14 @@ async function fetchIntradaySeries(symbol) {
     for (let i = 0; i < ts.length; i++) {
       const c = q.close?.[i]; const v = q.volume?.[i];
       if (c == null) continue;
-      bars.push({ t: ts[i] * 1000, c, v: v || 0 });
+      const tMs = ts[i] * 1000;
+      // NSE regular session only: 09:15 <= IST < 15:15. Drops the pre-open
+      // bar and the 15:15-15:30 closing-auction stub that Yahoo includes —
+      // both are fake sessions for intraday math (velocity/ROC/volume).
+      const ist = new Date(tMs + (5.5 * 60 + new Date(tMs).getTimezoneOffset()) * 60000);
+      const mins = ist.getHours() * 60 + ist.getMinutes();
+      if (mins < 555 || mins >= 915) continue;
+      bars.push({ t: tMs, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
