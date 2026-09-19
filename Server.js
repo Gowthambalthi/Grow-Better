@@ -212,6 +212,18 @@ app.get('/api/gb/detail/:symbol', (req, res) => {
 
 // ---- GB Terminal: Strategy 1 scanner ----
 // Serves the precomputed engine-score pipeline results.
+// Force a REAL rescan: rerun the full pipeline (candle refresh + engine
+// scoring + trade table rebuild), then return the freshly built data.
+app.post('/api/gb/scan/rescan', async (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    const r = await liveCalls.runPipeline({ forcePipeline: true });
+    res.json({ ok: true, steps: r.steps, generatedAt: new Date().toISOString() });
+  } catch (e) {
+    res.status(500).json({ error: 'Rescan failed: ' + e.message });
+  }
+});
+
 app.get('/api/gb/scan', (req, res) => {
   const fs = require('fs');
   const path = require('path');
