@@ -3943,7 +3943,7 @@ function _renderMfGridBody(grid, schemes) {
           if (!wrap) return;
           if (!gbSigData || !(gbSigData.signals || []).length) { wrap.innerHTML = '<div class="empty-state">No signals yet — board refreshes every minute during market hours.</div>'; return; }
           var sigs = gbSigData.signals.filter(function(s) { return !gbSigFilter || s.signal === gbSigFilter; });
-          var head = ['Time','Symbol','Signal','LTP','ROC 5m','ROC 15m','Vol x','Vol ROC','Range pos','Vol@Price','VWAPs 5/15/day','Stack','Day Range','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var head = ['Time','Symbol','Signal','LTP','ROC 5m','ROC 15m','Vol x','Vol ROC','Range pos','Vol@Price','Candles','VWAPs 5/15/day','Stack','Day Range','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
           var body = sigs.slice(0, 120).map(function(s) {
             var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SHORT' ? '#ff4d6d' : s.signal === 'EXIT' ? '#ffa94d' : 'var(--text-muted,#8b93a7)';
             var rocCol = s.roc5 > 0 ? '#00e091' : s.roc5 < 0 ? '#ff4d6d' : 'inherit';
@@ -3958,6 +3958,7 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:4px 10px;color:' + ((s.volRoc || 0) >= -10 ? '#00e091' : '#ff4d6d') + ';">' + (s.volRoc != null ? (s.volRoc > 0 ? '+' : '') + s.volRoc + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;font-weight:600;color:' + ((s.posInRange || 0) >= 40 ? '#00e091' : '#ffb86b') + ';">' + (s.posInRange != null ? s.posInRange + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + (s.volAtPrice === 'HEAVY-TOP' ? '#ff4d6d' : s.volAtPrice === 'HEAVY-BOT' ? '#00e091' : s.volAtPrice === 'HEAVY-MID' ? '#ffb86b' : 'var(--text-muted)') + '">' + (s.volAtPrice || '-') + '</td>' +
+              '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + (s.candlesAgree === 'UP' ? '#00e091' : s.candlesAgree === 'DOWN' ? '#ff4d6d' : 'var(--text-muted)') + '" title="' + (s.candleTrend ? ('3m: ' + s.candleTrend.m3 + ' | 5m: ' + s.candleTrend.m5 + ' | 15m: ' + s.candleTrend.m15 + ' | 30m: ' + s.candleTrend.m30 + (s.candlePattern && s.candlePattern !== 'NONE' ? ' | ' + s.candlePattern : '')) : '') + '">' + (s.candlesAgree || '-') + (s.candlePattern && s.candlePattern !== 'NONE' ? ' · ' + s.candlePattern : '') + '</td>' +
               '<td style="padding:4px 10px;color:var(--text-muted);">' + (s.vwap != null ? s.vwap + ' / ' + (s.vwap15 || '-') + ' / ' + (s.vwap5 || '-') : '-') + '</td>' +
               '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + (s.vwapStack === 'ABOVE ALL' ? '#00e091' : s.vwapStack === 'BELOW ALL' ? '#ff4d6d' : 'var(--text-muted)') + '">' + (s.vwapStack || '-') + '</td>' +
               '<td style="padding:4px 10px;font-size:11px;color:var(--text-muted);">' + (s.dayLow != null ? s.dayLow.toFixed(1) + ' – ' + s.dayHigh.toFixed(1) : '-') + (s.posVsPD ? ' · ' + s.posVsPD : '') + '</td>' +

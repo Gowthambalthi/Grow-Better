@@ -24,6 +24,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { fetchLiveStockQuote, fetchIntradaySeries, fetchAngelQuotes } = require('./liveStockQuoteService');
+const { readCandleFrames } = require('./candleFrames');
 
 const DATA = path.join(__dirname, '..', '..', 'data');
 const CALLS_FILE = path.join(DATA, 'live_calls.json');
@@ -311,6 +312,7 @@ async function scanSignals(candidatesOverride) {
       // than 5 minutes — that is dead data for intraday, not late data.
       if (isMarketOpen() && series.lastBarAgeSec != null && series.lastBarAgeSec > 300) return null;
       const roc = computeRoc(series);
+      const candlesMtf = readCandleFrames(series.bars);   // 3/5/15/30-min candle structure
       const struct = buyerStructure(roc, ltp);
       const openCall = openBySym[c.symbol];
       const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null, !!openCall);
@@ -334,6 +336,9 @@ async function scanSignals(candidatesOverride) {
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
         volAtPrice: roc ? roc.volAtPrice : null,
+        candlesAgree: candlesMtf ? candlesMtf.agree : null,
+        candlePattern: candlesMtf && candlesMtf.frames.m5 ? candlesMtf.frames.m5.pattern : null,
+        candleTrend: candlesMtf ? { m3: candlesMtf.frames.m3?.trend, m5: candlesMtf.frames.m5?.trend, m15: candlesMtf.frames.m15?.trend, m30: candlesMtf.frames.m30?.trend } : null,
         vwap5: roc ? roc.vwap5 : null, vwap15: roc ? roc.vwap15 : null,
         vwapStack: roc ? roc.vwapStack : null,
         dayHigh: roc ? roc.dayHigh : null, dayLow: roc ? roc.dayLow : null,
