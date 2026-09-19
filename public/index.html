@@ -3861,29 +3861,28 @@ function _renderMfGridBody(grid, schemes) {
         if (gbBtn) gbBtn.addEventListener('click', function(){ gbScan(true); });
 
         // ---- Terminal section tabs ----
-        function gbSetTermView(v) {
-          document.querySelectorAll('.gbTermTab').forEach(function(b) {
-            var on = b.dataset.v === v;
-            b.style.background = on ? 'var(--accent,#00B386)' : 'transparent';
-            b.style.color = on ? '#fff' : 'var(--text-dim,#8b93a7)';
-            b.style.border = '1px solid ' + (on ? 'var(--accent,#00B386)' : 'var(--border,#232a36)');
-          });
+        // Capture-phase + deferred enforcement: some other click handler rewrites
+        // section display styles after ours, so we apply the view in a setTimeout(0)
+        // AFTER all other handlers have finished. This is the last word on display.
+        function gbApplyTermView(v) {
           document.querySelectorAll('#view-terminal > .gbTermView[data-sec]').forEach(function(el) {
-            el.style.display = (v === 'all' || el.dataset.sec === v) ? 'block' : 'none';
+            el.style.display = (v === 'all' || el.getAttribute('data-sec') === v) ? 'block' : 'none';
           });
-          // reorder visually in ALL mode: signals, movers, watchlist, calls
-          if (v === 'all') {
-            var term = document.getElementById('view-terminal');
-            ['sig', 'movers', 'watch', 'calls'].forEach(function(sec) {
-              var el = term.querySelector('.gbTermView[data-sec="' + sec + '"]');
-              if (el) term.insertBefore(el, document.getElementById('gbTableWrap').parentNode === term ? document.getElementById('gbTableWrap') : null);
-            });
-          }
+          document.querySelectorAll('.gbTermTab').forEach(function(x) {
+            var on = x.getAttribute('data-v') === v;
+            x.style.background = on ? 'var(--accent,#00B386)' : 'transparent';
+            x.style.color = on ? '#fff' : 'var(--text-dim,#8b93a7)';
+            x.style.border = '1px solid ' + (on ? 'var(--accent,#00B386)' : 'var(--border,#232a36)');
+          });
         }
-        document.querySelectorAll('.gbTermTab').forEach(function(b) {
-          b.addEventListener('click', function(){ gbSetTermView(b.dataset.v); });
-        });
-        gbSetTermView('all');
+        document.addEventListener('click', function(e) {
+          var b = e.target && e.target.closest ? e.target.closest('.gbTermTab') : null;
+          if (!b) return;
+          var v = b.getAttribute('data-v');
+          gbApplyTermView(v);
+          setTimeout(function(){ gbApplyTermView(v); }, 0);
+        }, true);
+        gbApplyTermView('all');
 
         // ---- Live Buy Calls ----
         var gbCallsData = null;
