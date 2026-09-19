@@ -119,6 +119,7 @@ async function fetchAngelQuotes(symbols) {
           lastUpdated: new Date().toISOString(),
         };
         quoteCache[sym] = out[sym];
+        quoteCache[sym]._fetchedAt = Date.now();
       }
     } catch (_) { /* try next batch / fall through to yahoo */ }
   }
@@ -166,9 +167,20 @@ module.exports = {
   if (!symbol) return null;
   const cleanSym = symbol.replace(/-EQ$/i, '').trim().toUpperCase();
 
-  // 1. Angel One (real exchange feed, works on Render with creds)
-  const angel = await fetchAngelQuotes([cleanSym]);
-  if (angel[cleanSym]) return angel[cleanSym];
+  // 1. Angel One (real exchange feed, works on Render with creds).
+  // STALENESS RULE for intraday: a quote older than 90s is NOT live enough.
+  // If Angel fails or returns stale, we fall through to Yahoo rather than
+  // serving 5-minute-old prices that would fire late intraday signals.
+  let angelQuote = null;
+  try {
+    const angel = await fetchAngelQuotes([cleanSym]);
+    if (angel[cleanSym]) angelQuote = angel[cleanSym];
+  } catch (_) {}
+  const angelFresh = angelQuote && angelQuote._fetchedAt && (Date.now() - angelQuote._fetchedAt) < 90000;
+  if (angelQuote && !angelFresh) {
+    angelQuote.source = 'Angel (STALE ' + Math.round((Date.now() - angelQuote._fetchedAt) / 1000) + 's)';
+  }
+
 
   // 2. Yahoo fallback
   try {
@@ -203,13 +215,19 @@ module.exports = {
         source: 'Live Exchange Feed',
         lastUpdated: new Date().toISOString(),
       };
+      obj._fetchedAt = Date.now();
       quoteCache[cleanSym] = obj;
       return obj;
     }
   } catch (_) {}
 
-  // 3. No fake fallback: cached only, else null (callers must skip)
-  return quoteCache[cleanSym] || null;
+  // 3. No fake fallback: return fresh Yahoo if we got one; else only a
+  // cache younger than 90s; else null (callers must skip — stale data is
+  // worse than no data for intraday).
+  if (angelQuote && angelFresh) return angelQuote;   // fresh angel beat yahoo
+  const cached = quoteCache[cleanSym];
+  if (cached && cached._fetchedAt && (Date.now() - cached._fetchedAt) < 90000) return cached;
+  return null;
 }
 
 /**

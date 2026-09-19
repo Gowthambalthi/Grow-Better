@@ -318,6 +318,37 @@ app.get('/api/gb/signals', (req, res) => {
   }
 });
 
+app.get('/api/gb/notifications', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    res.json(liveCalls.getNotifs());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/gb/notifications/read', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    liveCalls.markNotifsRead();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/gb/dayreport', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    res.json(liveCalls.buildDayReport());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/gb/surges', (req, res) => {
+  try {
+    const liveCalls = require('./common/market/liveCallEngine');
+    res.json(liveCalls.getSurges());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/gb/movers', (req, res) => {
   try {
     const liveCalls = require('./common/market/liveCallEngine');

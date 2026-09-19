@@ -443,7 +443,10 @@ function openingCheck(series, quote, prevClose) {
   if (!priceOk) reasons.push('price below prev close');
   if (!volOk) reasons.push('no volume');
   if (!valueOk) reasons.push('traded value too low');
-  return { ok: priceOk && volOk && valueOk, reason: reasons.join(', ') || 'all correct', priceOk, volOk, valueOk, value };
+  const gapPct = prevClose > 0 ? +(((first.o != null ? first.o : first.c) - prevClose) / prevClose * 100).toFixed(2) : null;
+  const gapOk = gapPct == null || (gapPct > -2 && gapPct < 7);
+  if (!gapOk) reasons.push('gap ' + gapPct + '% too extreme');
+  return { ok: priceOk && volOk && valueOk && gapOk, reason: reasons.join(', ') || 'all correct', priceOk, volOk, valueOk, value, gapPct };
 }
 
 // New-buyer check from Angel quote: buyers stepping in = LTP up AND total buy
@@ -460,6 +463,10 @@ const MIN_CALL_GAP_MIN = 30;    // same symbol can re-call after 30 min
 const MAX_CALLS_PER_TICK = 8;   // cap per minute tick
 
 async function scanForNewCalls() {
+  // 09:20 CONFIRMATION GATE: the first 5 minutes are opening noise. No new
+  // BUY calls before 09:20 IST — at 09:20 the opening bar has completed and
+  // gap%, volume interest and the first candles can actually be judged.
+  if (istMinutesNow() < 560) return { newCalls: 0, reason: 'awaiting 09:20 opening confirmation' };
   // Candidate pool: the confirmed trade table (4-frame gate) PLUS the wider
   // engine-score list, so minute scans can surface fresh movers beyond the
   // few daily fresh buys.
@@ -658,6 +665,124 @@ function todayReport() {
   };
 }
 
+// ---------- notifications ----------
+// In-memory + file-persisted notification feed:
+//   - STRONG BUY: an UP surge (>=0.5% between 5s ticks) on a high-score name
+//   - DAY REPORT: generated at 15:15 IST with the day's calls P&L + predictions
+const NOTIF_FILE = path.join(DATA, 'live_notifications.json');
+function pushNotif(type, title, body, extra) {
+  try {
+    let db = { notifs: [] };
+    try { db = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8')); } catch (_) {}
+    const item = Object.assign({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), type, title, body, time: new Date().toISOString(), read: false }, extra || {});
+    db.notifs.unshift(item);
+    db.notifs = db.notifs.slice(0, 200);
+    fs.writeFileSync(NOTIF_FILE, JSON.stringify(db));
+  } catch (_) {}
+}
+function getNotifs() {
+  try {
+    const db = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8'));
+    return { time: new Date().toISOString(), unread: (db.notifs || []).filter(x => !x.read).length, notifs: (db.notifs || []).slice(0, 50) };
+  } catch (_) { return { time: new Date().toISOString(), unread: 0, notifs: [] }; }
+}
+function markNotifsRead() {
+  try {
+    const db = JSON.parse(fs.readFileSync(NOTIF_FILE, 'utf8'));
+    for (const x of db.notifs || []) x.read = true;
+    fs.writeFileSync(NOTIF_FILE, JSON.stringify(db));
+  } catch (_) {}
+}
+
+// ---------- day report: 15:15 IST end-of-day predictions summary ----------
+function buildDayReport() {
+  const rep = todayReport();
+  const db = loadCalls();
+  const today = todayKey();
+  const active = db.calls.filter(c => c.status === 'ACTIVE' && c.date === today);
+  // predictions for tomorrow: top 5 confirmed/scored names from the watch box
+  let picks = [];
+  try {
+    const wl = JSON.parse(fs.readFileSync(path.join(DATA, 'watchlist.json'), 'utf8'));
+    picks = (wl.watch || wl.stocks || wl.rows || []).slice(0, 5).map(w => (w.symbol || w.sym || String(w)));
+  } catch (_) {}
+  const verdict = rep.realizedPnlPct > 0 ? 'PROFITABLE DAY' : rep.realizedPnlPct < 0 ? 'LOSING DAY' : 'FLAT DAY';
+  return { verdict, ...rep, openPositions: active.length, tomorrowPicks: picks };
+}
+let _dayReportSent = null;
+function maybeSendDayReport() {
+  // fires once when IST time passes 15:15 (915) on a trading day
+  const key = todayKey();
+  if (_dayReportSent === key) return;
+  if (istMinutesNow() >= 915 && istMinutesNow() < 1200) {
+    _dayReportSent = key;
+    const r = buildDayReport();
+    pushNotif('DAY_REPORT', 'Day Report 15:15 — ' + r.verdict,
+      'Calls today: ' + r.totalCalls + ' | Booked: ' + r.realizedPnlPct + '% | Open: ' + r.active + ' (unrealized ' + r.unrealizedPnlPct + '%)' +
+      (r.tomorrowPicks.length ? ' | Tomorrow picks: ' + r.tomorrowPicks.join(', ') : ''),
+      { report: r });
+  }
+}
+
+// ---------- fast surge detector (STRONG BUY, sub-5s reaction) ----------
+// Polls the top watchset with ONE batched Angel call every tick (~5s) and
+// flags stocks whose LTP jumped vs the previous tick (sudden move) — these
+// surface instantly as STRONG BUY candidates instead of waiting up to a
+// minute for the heavy 60s scan. Falls back to Yahoo 1-min series when
+// Angel creds are absent.
+async function scanSurges() {
+  if (!isMarketOpen()) return { surges: 0 };
+  let watch = [];
+  try {
+    const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
+    watch = (es.results || []).slice(0, 120).map(r => r.symbol);
+  } catch (_) {}
+  if (!watch.length) return { surges: 0 };
+  if (!state._surgePrev) state._surgePrev = {};
+  if (!state.surges) state.surges = [];
+  const now = Date.now();
+  const TH = 0.5;
+  const prev = state._surgePrev;
+  const cur = {};
+  if (hasAngelCreds()) {
+    try {
+      const qm = await fetchAngelQuotes(watch);
+      for (const sym of Object.keys(qm)) cur[sym] = qm[sym].ltp;
+    } catch (_) {}
+  }
+  const missed = watch.filter(x => cur[x] == null).slice(0, 6);
+  await Promise.all(missed.map(async sym => {
+    const sr = await fetchIntradaySeries(sym).catch(() => null);
+    if (sr && sr.last != null) cur[sym] = sr.last;
+  }));
+  let hits = 0;
+  for (const sym of Object.keys(cur)) {
+    const ltp = cur[sym];
+    if (ltp == null || ltp < MIN_PRICE) continue;
+    const p = prev[sym];
+    prev[sym] = ltp;
+    if (p == null || p <= 0) continue;
+    const movePct = +(((ltp - p) / p) * 100).toFixed(2);
+    if (Math.abs(movePct) >= TH) {
+      hits++;
+      state.surges.push({ symbol: sym, time: new Date().toISOString(), movePct, ltp, direction: movePct > 0 ? 'UP' : 'DOWN' });
+      if (movePct > 0 && ltp >= MIN_PRICE) {
+        // STRONG BUY notification: sudden UP move between ticks
+        const lastNotif = (state.surges || []).filter(x => x.symbol === sym).length;
+        if (lastNotif < 3) pushNotif('STRONG_BUY', 'STRONG BUY: ' + sym + ' ' + (movePct > 0 ? '+' : '') + movePct + '%',
+          sym + ' surged +' + movePct + '% in seconds, now Rs' + ltp + '. Buyers stepping in — momentum candidate.',
+          { symbol: sym, movePct, ltp });
+      }
+    }
+  }
+  state.surges = state.surges.filter(x => now - new Date(x.time).getTime() < 600000).slice(-200).reverse();
+  return { surges: hits };
+}
+
+function getSurges() {
+  return { time: new Date().toISOString(), surges: state.surges || [] };
+}
+
 // ---------- public API ----------
 
 async function tick(opts = {}) {
@@ -688,6 +813,8 @@ async function tick(opts = {}) {
         await scanSignals();        // per-minute ROC + buyer-structure board
         await scanMovers();         // real-time movers board (1%/5% flags)
       }
+      await scanSurges();
+      maybeSendDayReport();   // 15:15 IST end-of-day report notification
       await trackCalls();
     }
     if (state.todayKey !== todayKey()) await dailyTrack();
@@ -733,4 +860,4 @@ function getSignals() {
   catch (_) { return { generatedAt: null, signals: [] }; }
 }
 
-module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, scanMovers, getMovers, isMarketOpen, state };
+module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, getSurges, getNotifs, markNotifsRead, buildDayReport, scanSurges, scanMovers, getMovers, isMarketOpen, state };
