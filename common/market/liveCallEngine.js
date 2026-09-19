@@ -794,6 +794,67 @@ async function scanSurges() {
   return { surges: hits };
 }
 
+// ---------- dead-stock volume revival (news-driven interest) ----------
+// A quiet stock (last ~15 one-min bars mostly near-zero volume) suddenly
+// printing a bar at >=4x its recent average = VOLUME REVIVAL. News usually
+// shows up as volume first. Notified once per symbol per day.
+let _revivalNotified = {};   // symbol -> dateKey
+async function scanVolumeRevival() {
+  if (!isMarketOpen()) return { revivals: 0 };
+  let watch = [];
+  try {
+    const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
+    watch = (es.results || []).slice(0, 200).map(r => r.symbol);
+  } catch (_) {}
+  if (!watch.length) return { revivals: 0 };
+  if (state._revivalCursor == null) state._revivalCursor = 0;
+  // rotate: ~40 symbols per call, full cycle every few ticks
+  const CH = 40;
+  const batch = [];
+  for (let k = 0; k < Math.min(CH, watch.length); k++) batch.push(watch[(state._revivalCursor + k) % watch.length]);
+  state._revivalCursor = (state._revivalCursor + CH) % Math.max(1, watch.length);
+  const today = todayKey();
+  let hits = 0;
+  const CONC = 8;
+  for (let i = 0; i < batch.length; i += CONC) {
+    const res = await Promise.all(batch.slice(i, i + CONC).map(async sym => {
+      try {
+        if (_revivalNotified[sym] === today) return null;
+        const sr = await fetchIntradaySeries(sym);
+        if (!sr || !sr.bars || sr.bars.length < 30) return null;
+        const vols = sr.bars.map(b => b.v || 0);
+        const recent = vols.slice(-15);
+        const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+        if (avg <= 0) return null;
+        const last = vols[vols.length - 1];
+        // dead baseline: recent average tiny (<= 500 shares/min) ...
+        const wasDead = avg <= 500;
+        // ... and the last bar explodes to >=4x that average
+        if (!(wasDead && last >= avg * 4 && last >= 2000)) return null;
+        const bars = sr.bars;
+        const up = bars[bars.length - 1].c >= bars[bars.length - 1].o;
+        _revivalNotified[sym] = today;
+        return { sym, avg: Math.round(avg), last, up, ltp: sr.last };
+      } catch (_) { return null; }
+    }));
+    for (const r of res.filter(Boolean)) {
+      hits++;
+      const mult = r.avg > 0 ? Math.round(r.last / r.avg) : 0;
+      pushNotif('VOLUME_REVIVAL', 'VOLUME REVIVAL: ' + r.sym + ' (' + mult + 'x volume)',
+        r.sym + ' was dead (~' + r.avg + ' sh/min) and just printed ' + r.last + ' shares in one minute' +
+        (r.up ? ' with price pushing UP' : '') + ' at Rs' + r.ltp + '. Sudden interest — often news. Watch closely.' +
+        (r.up ? ' Price confirming — momentum candidate.' : ' Price not confirming yet — wait for direction.'),
+        { symbol: r.sym, volMultiple: mult, ltp: r.ltp, up: r.up });
+      if (r.up) {
+        pushNotif('STRONG_BUY', 'STRONG BUY: ' + r.sym + ' (volume revival ' + mult + 'x)',
+          r.sym + ' came alive from dead volume with price UP — ' + mult + 'x its recent average at Rs' + r.ltp + '.',
+          { symbol: r.sym, volMultiple: mult, ltp: r.ltp });
+      }
+    }
+  }
+  return { revivals: hits };
+}
+
 function getSurges() {
   return { time: new Date().toISOString(), surges: state.surges || [] };
 }
@@ -838,6 +899,7 @@ async function tick(opts = {}) {
         await scanMovers();         // real-time movers board (1%/5% flags)
       }
       await scanSurges();
+      scanVolumeRevival().catch(() => {});   // dead-stock news-volume revival
       await trackCalls();
     }
     // Day report fires AFTER the 15:00 live stop — the tick keeps running
@@ -887,4 +949,4 @@ function getSignals() {
   catch (_) { return { generatedAt: null, signals: [] }; }
 }
 
-module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, getSurges, getNotifs, markNotifsRead, buildDayReport, scanSurges, scanMovers, getMovers, isMarketOpen, state };
+module.exports = { start, stop, tick, getCalls, getCallDetail, todayReport, runPipeline, scanForNewCalls, scanSignals, getSignals, getSurges, scanVolumeRevival, getNotifs, markNotifsRead, buildDayReport, scanSurges, scanMovers, getMovers, isMarketOpen, state };
