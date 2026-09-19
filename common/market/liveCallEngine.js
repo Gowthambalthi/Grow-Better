@@ -470,6 +470,10 @@ async function scanForNewCalls() {
   // BUY calls before 09:20 IST — at 09:20 the opening bar has completed and
   // gap%, volume interest and the first candles can actually be judged.
   if (istMinutesNow() < 560) return { newCalls: 0, reason: 'awaiting 09:20 opening confirmation' };
+  // 14:30 CUTOFF (backtest-validated): entries in the 14:00-15:00 band hit
+  // targets only ~6% of the time (61% exit at close) — there isn't enough
+  // session left for a 2R intraday target. No new calls after 14:30 IST.
+  if (istMinutesNow() > 870) return { newCalls: 0, reason: 'past 14:30 IST cutoff — late entries are structurally weak' };
   // Candidate pool: the confirmed trade table (4-frame gate) PLUS the wider
   // engine-score list, so minute scans can surface fresh movers beyond the
   // few daily fresh buys.
