@@ -103,11 +103,11 @@ async function runPipeline(opts = {}) {
     //    Without creds (e.g. Render free tier) skip fetching and serve the
     //    committed data instead of crashing the pipeline.
     const stale = opts.forcePipeline ? true : await ohlcvStale();
-    if (stale && hasAngelCreds()) {
+    if (stale) {
       const r = await runScript('fetchUniverseOhlcv.js');
       steps.fetch = r.err ? 'error: ' + String(r.err.message || r.err).slice(0, 80) : 'ok';
     } else {
-      steps.fetch = stale ? 'skipped (no Angel creds)' : 'fresh';
+      steps.fetch = 'fresh';
     }
     // 2. filter → score → trade table; each step independent so one failure
     //    doesn't stop the rest. CRITICAL: buildTradeTable must not run when
@@ -796,9 +796,18 @@ async function tick(opts = {}) {
   // stale (once per day effectively) — never on an hourly loop. On hosts
   // without Angel creds (Render) fetch is skipped inside runPipeline, so
   // staleness would stay true forever and re-run every hour for nothing.
+  // MARKET-OPEN TRIGGER: on the first tick of a trading day (09:15 IST or
+  // later), force the full pipeline once — refresh daily candles, rescore
+  // engines, rebuild the trade table/watchlist. This is what makes Render
+  // update its dates and scans at open instead of serving yesterday's data.
+  const istNow = istMinutesNow();
+  if (istNow >= 555 && state._pipelineDayKey !== todayKey()) {
+    state._pipelineDayKey = todayKey();
+    state.lastPipelineRun = null;   // force the stale check below to fire
+  }
   const hourly = !state.lastPipelineRun || (now - new Date(state.lastPipelineRun).getTime()) > 3600e3;
-  if (opts.forcePipeline || (hourly && hasAngelCreds() && await ohlcvStale().catch(() => false))) {
-    await runPipeline().catch(() => {});
+  if (opts.forcePipeline || (hourly && await ohlcvStale().catch(() => false))) {
+    await runPipeline(opts).catch(() => {});
   }
   try {
     // Fast loop (5s): call tracking runs EVERY tick so SL/T1/T2 exits fire
