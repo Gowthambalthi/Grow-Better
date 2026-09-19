@@ -71,6 +71,15 @@ async function initBrokers() {
       brokers.angelone = angel;
       app.set('angelSession', angel.session);
       brokerStatus.angelone = { connected: true, loginTime: new Date().toISOString(), lastError: null };
+      // Pre-emptive session refresh every 4 hours — beats waiting for a 403
+      // mid-session and serving dead portfolio/quote data.
+      setInterval(() => {
+        angel.login().then(() => {
+          app.set('angelSession', angel.session);
+          brokerStatus.angelone.loginTime = new Date().toISOString();
+          console.log('[server] angelone session refreshed (4h cycle)');
+        }).catch(e => console.error('[server] angelone refresh failed:', e.message));
+      }, 4 * 3600e3);
       attachAutoRecording(angel, 'angelone');
       // Always listen for broker errors — an unhandled 'error' event on an
       // EventEmitter crashes the whole Node process (seen: ECONNRESET from
@@ -79,6 +88,15 @@ async function initBrokers() {
         brokerStatus.angelone = brokerStatus.angelone || {};
         brokerStatus.angelone.lastError = e && e.message;
         console.error('[server] angelone broker error:', e && e.message);
+        // 403 = expired JWT: relogin immediately so live data resumes
+        if (e && /403|unauthorized|expired/i.test(e.message || '')) {
+          angel.relogin().then(() => {
+            app.set('angelSession', angel.session);
+            brokerStatus.angelone.lastError = null;
+            brokerStatus.angelone.loginTime = new Date().toISOString();
+            console.log('[server] angelone session refreshed after 403');
+          }).catch(re => console.error('[server] angelone relogin failed:', re.message));
+        }
       });
       angel.subscribeOrderUpdates(); // start capturing fills immediately
       

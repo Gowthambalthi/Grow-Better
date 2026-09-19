@@ -37,13 +37,17 @@ const WORLD_SYMBOLS = {
 };
 
 let cachedSession = null;
+let cachedSessionAt = 0;
 
 async function getAngelSession() {
-  if (cachedSession && cachedSession.jwtToken) return cachedSession;
+  // JWTs expire — never trust a cached session older than 3 hours.
+  if (cachedSession && cachedSession.jwtToken && (Date.now() - cachedSessionAt) < 3 * 3600e3) return cachedSession;
+  cachedSession = null;
   try {
     const authRes = await angelAuth.login();
     if (authRes?.session) {
       cachedSession = authRes.session;
+      cachedSessionAt = Date.now();
       return cachedSession;
     }
   } catch (e) {

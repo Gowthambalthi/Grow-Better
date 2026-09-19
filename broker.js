@@ -52,6 +52,19 @@ class Broker extends EventEmitter {
     return this.session;
   }
 
+  /**
+   * Re-login and swap the live session objects. Broker JWTs expire (Angel
+   * returns 403 once they do) — callers relogin and retry instead of
+   * failing until the next manual server restart.
+   */
+  async relogin() {
+    return this.login();
+  }
+
+  async getHoldings() {
+    this._assertLoggedIn();
+    return this._holdings.getHoldings();
+  }
   async getHoldings() {
     this._assertLoggedIn();
     return this._holdings.getHoldings();

@@ -15,16 +15,18 @@ const env = require('../../config/env');
 
 const quoteCache = {};
 let _angelSession = null;
+let _angelSessionAt = 0;
 let _instrumentMap = null;   // symbol -> token
 let _instrumentMapAt = 0;
 
 async function _getAngelSession() {
-  if (_angelSession && _angelSession.jwtToken) return _angelSession;
+  if (_angelSession && _angelSession.jwtToken && (Date.now() - _angelSessionAt) < 3 * 3600e3) return _angelSession;
+  _angelSession = null;
   try {
     // reuse the running broker's session if the server already logged in
     const envCfg = require('../../config/env');
     const session = typeof envCfg.getAngelSession === 'function' ? await envCfg.getAngelSession() : null;
-    if (session && session.jwtToken) { _angelSession = session; return _angelSession; }
+    if (session && session.jwtToken) { _angelSession = session; _angelSessionAt = Date.now(); return _angelSession; }
   } catch (_) {}
   try {
     const { login } = require('../../angelone/auth');
