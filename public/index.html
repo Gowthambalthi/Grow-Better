@@ -4108,22 +4108,43 @@ function _renderMfGridBody(grid, schemes) {
           var d = gbWatchData;
           if (!d || !(d.watchlist || []).length) { wrap.innerHTML = '<div class="empty-state">Run the scan to build tomorrow\'s watchlist.</div>'; return; }
           var head = ['Symbol','Engine','Score','Close','Entry','Stop','T1','T2','Source'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('');
-          var body = d.watchlist.map(function(w) {
-            var fresh = w.source === 'FRESH BUY';
-            return '<tr style="border-top:1px solid var(--border,#232a36);' + (fresh ? 'font-weight:700;' : 'opacity:0.85;') + '">' +
-              '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + w.symbol + '</td>' +
-              '<td style="padding:5px 10px;font-size:12px;">' + (w.engine || '-') + '</td>' +
-              '<td style="padding:5px 10px;">' + w.score + '</td>' +
-              '<td style="padding:5px 10px;">' + (w.close != null ? w.close : '-') + '</td>' +
-              '<td style="padding:5px 10px;">' + (w.entry != null ? w.entry : '-') + '</td>' +
-              '<td style="padding:5px 10px;color:#ff4d6d;">' + (w.stopLoss != null ? w.stopLoss : '-') + '</td>' +
-              '<td style="padding:5px 10px;color:#00B386;">' + (w.target1 != null ? w.target1 : '-') + '</td>' +
-              '<td style="padding:5px 10px;color:#00B386;">' + (w.target2 != null ? w.target2 : '-') + '</td>' +
-              '<td style="padding:5px 10px;font-size:12px;color:' + (fresh ? '#00e091' : 'var(--text-muted)') + '">' + w.source + '</td>' +
-              '</tr>';
-          }).join('');
-          wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' + d.watchlist.length + ' stocks · built from scan ' + (d.generatedAt || '').slice(0, 10) + ' — FRESH BUY rows are the confirmed entries; ENGINE rows are high-score names to monitor at open.</div>' +
-            '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+          var srcColor = function(s) {
+            if (s === 'FRESH BUY') return '#00e091';
+            if (s === 'STRICT') return '#00B386';
+            if (s === 'DIVERSE') return '#7ab8ff';
+            return 'var(--text-muted)';
+          };
+          var srcNote = {
+            'FRESH BUY': 'confirmed entry today',
+            'STRICT': "yesterday's proven rule set — score>=9, no traps, RSI 55-75, ADX>=20, vol>=1.2x",
+            'DIVERSE': 'same strict bar, RSI band adapted per engine (max 4/engine) — balanced across engines',
+          };
+          function secLabel(src) {
+            var n = d.watchlist.filter(function(w){ return w.source === src; }).length;
+            if (!n) return '';
+            return '<tr><td colspan="10" style="padding:8px 10px 4px;font-size:11px;font-weight:800;letter-spacing:0.04em;color:' + srcColor(src) + ';">'
+              + src + ' (' + n + ') — ' + srcNote[src] + '</td></tr>';
+          }
+          var rows = '';
+          ['FRESH BUY', 'STRICT', 'DIVERSE'].forEach(function(src) {
+            rows += secLabel(src);
+            rows += d.watchlist.filter(function(w){ return w.source === src; }).map(function(w) {
+              var fresh = w.source === 'FRESH BUY';
+              return '<tr style="border-top:1px solid var(--border,#232a36);' + (fresh ? 'font-weight:700;' : '') + '">' +
+                '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + w.symbol + '</td>' +
+                '<td style="padding:5px 10px;font-size:12px;">' + (w.engine || '-') + '</td>' +
+                '<td style="padding:5px 10px;">' + w.score + '</td>' +
+                '<td style="padding:5px 10px;">' + (w.close != null ? w.close : '-') + '</td>' +
+                '<td style="padding:5px 10px;">' + (w.entry != null ? w.entry : '-') + '</td>' +
+                '<td style="padding:5px 10px;color:#ff4d6d;">' + (w.stopLoss != null ? w.stopLoss : '-') + '</td>' +
+                '<td style="padding:5px 10px;color:#00B386;">' + (w.target1 != null ? w.target1 : '-') + '</td>' +
+                '<td style="padding:5px 10px;color:#00B386;">' + (w.target2 != null ? w.target2 : '-') + '</td>' +
+                '<td style="padding:5px 10px;font-size:12px;font-weight:700;color:' + srcColor(w.source) + '">' + w.source + '</td>' +
+                '</tr>';
+            }).join('');
+          });
+          wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' + d.watchlist.length + ' stocks · built from scan ' + (d.generatedAt || '').slice(0, 10) + ' — three blocks: confirmed FRESH BUYs, yesterday\'s STRICT rule set, and DIVERSE (same strict bar, engine-balanced).</div>' +
+            '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + rows + '</tbody></table>';
         }
         var gbWatchData = null;
         async function gbRefreshWatch() {

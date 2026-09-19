@@ -291,48 +291,73 @@ app.get('/api/gb/watchlist', (req, res) => {
     } catch (_) {}
     try {
       const es = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'engine_scores.json'), 'utf8'));
-      // Strict watchlist rules — cut the 500+ engine>=8 pool down to a
-      // tradeable short list (~10-20 names):
-      //   1. score >= 9 and no traps (RSI<=80, vol>=0.8, ADX>=18)
-      //   2. RSI 55-75 (trending, not overbought)
-      //   3. ADX >= 20 (real trend strength)
-      //   4. volume ratio >= 1.2 (participation above normal)
-      //   5. cap at 15, ranked by score then volume ratio
-      const pool = (es.results || [])
+      // ---- ONE strict quality bar, applied everywhere (yesterday's proven
+      // rule set — this is the logic that performed well):
+      //   1. no traps (RSI<=80, volRatio>=0.8, ADX>=18)
+      //   2. score >= 9
+      //   3. RSI 55-75 (trending, not overbought / not dead)
+      //   4. ADX >= 20 (real trend strength)
+      //   5. volume ratio >= 1.2 (real participation)
+      // The SAME bar is used for both blocks below — nothing is loosened.
+      const strictPool = (es.results || [])
         .filter(r => {
           const i = r.indicators || {};
-          return !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18);
+          return (r.engineRate || 0) >= 9
+            && !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18)
+            && i.rsi14 >= 55 && i.rsi14 <= 75
+            && (i.adx14 || 0) >= 20
+            && (i.volRatio || 0) >= 1.2;
         })
         .sort((a, b) => (b.engineRate - a.engineRate) || ((b.indicators?.volRatio || 0) - (a.indicators?.volRatio || 0)));
-      // ENGINE DIVERSITY with per-engine qualification: the strict RSI 55-75
-      // + ADX>=20 band is naturally a TREND filter — it starved BREAKOUT /
-      // SUPPORT BOUNCE / PULLBACK / ACCUMULATION out of the list. Now each
-      // engine qualifies on its own terms (TREND keeps the strict band; the
-      // others need score >= 8 and no overbought RSI), capped at 4 names
-      // per engine so no single engine fills the whole watchlist.
-      const perEngine = {};
-      const diverse = [];
-      for (const r of pool) {
-        const eng = r.winningEngine || 'OTHER';
-        const i = r.indicators || {};
-        const qual = eng === 'TREND'
-          ? (r.engineRate >= 9 && i.rsi14 >= 55 && i.rsi14 <= 75 && (i.adx14 || 0) >= 20)
-          : (r.engineRate >= 8 && (i.rsi14 || 0) <= 78);
-        if (!qual) continue;
-        if ((perEngine[eng] || 0) >= 4) continue;
-        perEngine[eng] = (perEngine[eng] || 0) + 1;
-        diverse.push(r);
-        if (diverse.length >= 15) break;
-      }
-      for (const r of diverse) {
+
+      // BLOCK 1 — STRICT: exactly yesterday's logic (pure score ranking, cap 15).
+      for (const r of strictPool.slice(0, 15)) {
         if (seen.has(r.symbol)) continue;
         seen.add(r.symbol);
         out.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate, close: r.close,
           rsi: r.indicators?.rsi14, adx: r.indicators?.adx14, volRatio: r.indicators?.volRatio,
-          source: 'WATCH' });
+          source: 'STRICT' });
+      }
+
+      // BLOCK 2 — DIVERSIFIED: same strict bar, EXCEPT the RSI band, which is
+      // adapted to each engine's natural zone. Every other threshold is
+      // identical (score >= 9, no traps, ADX >= 20, volRatio >= 1.2).
+      // Reason: RSI 55-75 IS the trend zone — a SUPPORT BOUNCE by definition
+      // fires at low RSI, so a single band can never surface those engines.
+      // One criterion adapted, nothing loosened. Capped at 4 names per engine.
+      const RSI_BAND = {
+        'TREND': [55, 75],
+        'BREAKOUT': [55, 80],
+        'PULLBACK': [45, 65],
+        'SUPPORT BOUNCE': [30, 60],
+        'ACCUMULATION': [40, 70],
+      };
+      const divPool = (es.results || [])
+        .filter(r => {
+          const i = r.indicators || {};
+          if ((r.engineRate || 0) < 9) return false;
+          if (i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18) return false;   // no traps
+          if ((i.adx14 || 0) < 20) return false;
+          if ((i.volRatio || 0) < 1.2) return false;
+          const band = RSI_BAND[r.winningEngine] || [40, 80];
+          return i.rsi14 >= band[0] && i.rsi14 <= band[1];
+        })
+        .sort((a, b) => (b.engineRate - a.engineRate) || ((b.indicators?.volRatio || 0) - (a.indicators?.volRatio || 0)));
+      const perEngine = {};
+      let diverseAdded = 0;
+      for (const r of divPool) {
+        const eng = r.winningEngine || 'OTHER';
+        if ((perEngine[eng] || 0) >= 4) continue;
+        perEngine[eng] = (perEngine[eng] || 0) + 1;
+        if (seen.has(r.symbol)) { continue; }   // already shown in STRICT
+        seen.add(r.symbol);
+        out.push({ symbol: r.symbol, engine: eng, score: r.engineRate, close: r.close,
+          rsi: r.indicators?.rsi14, adx: r.indicators?.adx14, volRatio: r.indicators?.volRatio,
+          source: 'DIVERSE' });
+        if (++diverseAdded >= 12) break;
       }
     } catch (_) {}
-    res.json({ generatedAt: new Date().toISOString(), watchlist: out.slice(0, 19) });
+    res.json({ generatedAt: new Date().toISOString(), watchlist: out.slice(0, 40) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
