@@ -1259,14 +1259,26 @@
           </div>
           <div id="gbSummary" style="display:none;display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
 
+          <!-- Terminal section tabs -->
+          <div id="gbTermTabs" style="display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap;">
+            <button class="btn gbTermTab" data-v="all"    style="padding:6px 16px;font-size:13px;font-weight:700;">ALL</button>
+            <button class="btn gbTermTab" data-v="sig"    style="padding:6px 16px;font-size:13px;font-weight:700;">INTRADAY SIGNALS</button>
+            <button class="btn gbTermTab" data-v="movers" style="padding:6px 16px;font-size:13px;font-weight:700;">LIVE MOVERS</button>
+            <button class="btn gbTermTab" data-v="watch"  style="padding:6px 16px;font-size:13px;font-weight:700;">WATCHLIST</button>
+            <button class="btn gbTermTab" data-v="calls"  style="padding:6px 16px;font-size:13px;font-weight:700;">CLOSED / CALLS</button>
+          </div>
+
           <!-- Stocks to watch tomorrow: today's top confirmed setups -->
+          <div class="gbTermView" data-sec="watch">
           <div style="display:flex;align-items:center;gap:12px;margin:0 0 8px;">
-            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Stocks to Watch Tomorrow</h2>
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Watchlist</h2>
             <span style="font-size:12px;color:var(--text-dim,#8b93a7);">today's confirmed fresh buys + top engine scores — plan entries at open</span>
           </div>
           <div id="gbWatchWrap" style="overflow:auto;max-height:35vh;margin-bottom:20px;"></div>
+          </div>
 
           <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
+          <div class="gbTermView" data-sec="calls">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
             <span id="gbCallsStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">auto-scans every minute</span>
@@ -1274,8 +1286,10 @@
           </div>
           <div id="gbTodayPnl" style="display:flex;gap:12px;margin:0 0 12px;flex-wrap:wrap;"></div>
           <div id="gbCallsWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+          </div>
 
           <!-- Real-time movers board: 1-min / 5-min change flags -->
+          <div class="gbTermView" data-sec="movers">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Movers (1% in 1min / 5min)</h2>
             <span id="gbMvStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">refreshing every tick · 09:15–15:15 IST</span>
@@ -1285,8 +1299,10 @@
             </div>
           </div>
           <div id="gbMoversWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+          </div>
 
           <!-- Per-minute ROC signal board: BUY / SELL / HOLD with buyer structure -->
+          <div class="gbTermView" data-sec="sig">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Intraday Signals (ROC + Buyers)</h2>
             <span id="gbSigStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">every minute · rate-of-change + VWAP buyer structure</span>
@@ -1298,6 +1314,7 @@
             </div>
           </div>
           <div id="gbSigWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+          </div>
 
           <h2 style="font-size:16px;margin:8px 0;color:var(--text,#e6e9f0);">Scanner Results</h2>
           <div id="gbTableWrap" style="overflow:auto;max-height:70vh;"></div>
@@ -3842,6 +3859,31 @@ function _renderMfGridBody(grid, schemes) {
 
         var gbBtn = document.getElementById('gbScanBtn');
         if (gbBtn) gbBtn.addEventListener('click', function(){ gbScan(true); });
+
+        // ---- Terminal section tabs ----
+        function gbSetTermView(v) {
+          document.querySelectorAll('.gbTermTab').forEach(function(b) {
+            var on = b.dataset.v === v;
+            b.style.background = on ? 'var(--accent,#00B386)' : 'transparent';
+            b.style.color = on ? '#fff' : 'var(--text-dim,#8b93a7)';
+            b.style.border = '1px solid ' + (on ? 'var(--accent,#00B386)' : 'var(--border,#232a36)');
+          });
+          document.querySelectorAll('#view-terminal > .gbTermView[data-sec]').forEach(function(el) {
+            el.style.display = (v === 'all' || el.dataset.sec === v) ? 'block' : 'none';
+          });
+          // reorder visually in ALL mode: signals, movers, watchlist, calls
+          if (v === 'all') {
+            var term = document.getElementById('view-terminal');
+            ['sig', 'movers', 'watch', 'calls'].forEach(function(sec) {
+              var el = term.querySelector('.gbTermView[data-sec="' + sec + '"]');
+              if (el) term.insertBefore(el, document.getElementById('gbTableWrap').parentNode === term ? document.getElementById('gbTableWrap') : null);
+            });
+          }
+        }
+        document.querySelectorAll('.gbTermTab').forEach(function(b) {
+          b.addEventListener('click', function(){ gbSetTermView(b.dataset.v); });
+        });
+        gbSetTermView('all');
 
         // ---- Live Buy Calls ----
         var gbCallsData = null;

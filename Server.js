@@ -301,12 +301,30 @@ app.get('/api/gb/watchlist', (req, res) => {
       const pool = (es.results || [])
         .filter(r => {
           const i = r.indicators || {};
-          return (r.engineRate || 0) >= 9 && !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18)
-            && i.rsi14 >= 55 && i.rsi14 <= 75 && (i.adx14 || 0) >= 20 && (i.volRatio || 0) >= 1.2;
+          return !(i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18);
         })
-        .sort((a, b) => (b.engineRate - a.engineRate) || ((b.indicators?.volRatio || 0) - (a.indicators?.volRatio || 0)))
-        .slice(0, 15);
+        .sort((a, b) => (b.engineRate - a.engineRate) || ((b.indicators?.volRatio || 0) - (a.indicators?.volRatio || 0)));
+      // ENGINE DIVERSITY with per-engine qualification: the strict RSI 55-75
+      // + ADX>=20 band is naturally a TREND filter — it starved BREAKOUT /
+      // SUPPORT BOUNCE / PULLBACK / ACCUMULATION out of the list. Now each
+      // engine qualifies on its own terms (TREND keeps the strict band; the
+      // others need score >= 8 and no overbought RSI), capped at 4 names
+      // per engine so no single engine fills the whole watchlist.
+      const perEngine = {};
+      const diverse = [];
       for (const r of pool) {
+        const eng = r.winningEngine || 'OTHER';
+        const i = r.indicators || {};
+        const qual = eng === 'TREND'
+          ? (r.engineRate >= 9 && i.rsi14 >= 55 && i.rsi14 <= 75 && (i.adx14 || 0) >= 20)
+          : (r.engineRate >= 8 && (i.rsi14 || 0) <= 78);
+        if (!qual) continue;
+        if ((perEngine[eng] || 0) >= 4) continue;
+        perEngine[eng] = (perEngine[eng] || 0) + 1;
+        diverse.push(r);
+        if (diverse.length >= 15) break;
+      }
+      for (const r of diverse) {
         if (seen.has(r.symbol)) continue;
         seen.add(r.symbol);
         out.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate, close: r.close,
@@ -314,7 +332,7 @@ app.get('/api/gb/watchlist', (req, res) => {
           source: 'WATCH' });
       }
     } catch (_) {}
-    res.json({ generatedAt: new Date().toISOString(), watchlist: out.slice(0, 40) });
+    res.json({ generatedAt: new Date().toISOString(), watchlist: out.slice(0, 19) });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
