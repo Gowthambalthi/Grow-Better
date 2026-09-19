@@ -833,9 +833,12 @@ async function tick(opts = {}) {
         await scanMovers();         // real-time movers board (1%/5% flags)
       }
       await scanSurges();
-      maybeSendDayReport();   // 15:15 IST end-of-day report notification
       await trackCalls();
     }
+    // Day report fires AFTER the 15:00 live stop — the tick keeps running
+    // so the 15:15 IST end-of-day notification (verdict + tomorrow picks)
+    // actually gets sent.
+    maybeSendDayReport();   // 15:15 IST end-of-day report notification
     if (state.todayKey !== todayKey()) await dailyTrack();
   } catch (_) {}
   return Date.now() - t0;
