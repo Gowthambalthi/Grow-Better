@@ -99,34 +99,31 @@ html, body {
 button { font-family: inherit; }
 
 /* ============================================================ SHELL */
-.app-shell { display: flex; flex-direction: column; min-height: 100vh; width: 100% !important; max-width: 100vw !important; overflow-x: clip !important; }
+.app-shell { display: flex; min-height: 100vh; width: 100% !important; max-width: 100vw !important; overflow-x: clip !important; }
 
-/* ---- Top tab bar (converted from left sidebar) ---- */
+/* ---- Sidebar ---- */
 .sidebar {
-  width: 100%;
+  width: var(--sidebar-w);
   flex-shrink: 0;
   background: var(--navy, #1B2A4E);
-  background: linear-gradient(90deg, #1B2A4E, #142040) !important;
-  border-right: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, #1B2A4E, #142040) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  transition: background 0.2s, border-color 0.2s;
+  flex-direction: column;
+  padding: 16px 10px;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, border-color 0.2s;
   z-index: 100;
-  position: sticky !important;
+  position: fixed !important;
   top: 0;
   left: 0;
-  bottom: auto;
-  height: auto;
-  overflow-y: hidden;
-  overflow-x: auto;
+  bottom: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .sidebar.collapsed {
-  width: 100%;
-  padding: 8px 16px;
+  width: var(--sidebar-w-collapsed);
+  padding: 16px 8px;
 }
 .sidebar.collapsed .brand-text-wrap,
 .sidebar.collapsed .nav-item span:not(.nav-icon),
@@ -174,10 +171,9 @@ button { font-family: inherit; }
 .brand-title { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; color: #FFFFFF; -webkit-font-smoothing: antialiased; }
 .brand-subtitle { font-size: 9.5px; font-weight: 700; color: #00B386; letter-spacing: 0.08em; text-transform: uppercase; -webkit-font-smoothing: antialiased; }
 
-.sidebar-nav { display: flex; flex-direction: row; gap: 4px; flex: 1; align-items: center; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 .nav-item {
-  display: flex; align-items: center; gap: 6px;
-  white-space: nowrap;
+  display: flex; align-items: center; gap: 12px;
   background: transparent !important;
   border: 1px solid transparent !important;
   color: rgba(255, 255, 255, 0.8);
@@ -246,7 +242,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 0;
+  margin-top: 12px;
 }
 .sidebar-bottom .nav-item { flex: 1; }
 .collapse-toggle {
@@ -287,9 +283,9 @@ button { font-family: inherit; }
 /* ---- Main Column ---- */
 .main-col {
   flex: 1;
-  margin-left: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  margin-left: var(--sidebar-w) !important;
+  width: calc(100% - var(--sidebar-w)) !important;
+  max-width: calc(100% - var(--sidebar-w)) !important;
   min-width: 0 !important;
   overflow-x: clip !important;
   display: flex;
@@ -298,9 +294,9 @@ button { font-family: inherit; }
 }
 .sidebar.collapsed + .main-col,
 .sidebar.collapsed ~ .main-col {
-  margin-left: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  margin-left: var(--sidebar-w-collapsed) !important;
+  width: calc(100% - var(--sidebar-w-collapsed)) !important;
+  max-width: calc(100% - var(--sidebar-w-collapsed)) !important;
 }
 
 /* ---- Topbar Header (Flush Corner-to-Corner Header) ---- */
