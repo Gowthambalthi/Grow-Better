@@ -133,9 +133,17 @@ async function fetchIntradaySeries(symbol) {
   const cleanSym = String(symbol || '').replace(/-EQ$/i, '').trim().toUpperCase();
   try {
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${cleanSym}.NS?interval=1m&range=1d`;
-    const res = await axios.get(url, { headers: uHeaders, timeout: 3000 });
-    const r = res.data?.chart?.result?.[0];
+    // SERVER FAILOVER: try query2 first, then query1 — whichever answers.
+    // For intraday, a slow/dead server must never mean stale or no data.
+    let r = null;
+    for (const host of ['query2', 'query1']) {
+      try {
+        const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${cleanSym}.NS?interval=1m&range=1d`;
+        const res = await axios.get(url, { headers: uHeaders, timeout: 3000 });
+        if (res.data?.chart?.result?.[0]) { r = res.data.chart.result[0]; break; }
+      } catch (_) { /* next server */ }
+    }
+    if (!r) return null;
     const ts = r?.timestamp; const q = r?.indicators?.quote?.[0];
     if (!ts || !q) return null;
     const bars = [];
@@ -152,7 +160,11 @@ async function fetchIntradaySeries(symbol) {
       bars.push({ t: tMs, o: q.open?.[i] ?? c, h: q.high?.[i] ?? c, l: q.low?.[i] ?? c, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
+    // LIVE-DATA RULE for intraday: expose how old the newest bar is so the
+    // engine can refuse to trade on 5-minute-late data.
+    const lastBarAgeSec = Math.round((Date.now() - bars[bars.length - 1].t) / 1000);
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
+      lastBarAgeSec, _fetchedAt: Date.now(),
       prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0),
       dayHigh: bars.reduce((m, b) => Math.max(m, b.h ?? b.c), 0),
       dayLow: bars.reduce((m, b) => Math.min(m, b.l ?? b.c), Infinity) };
@@ -238,9 +250,17 @@ async function fetchIntradaySeries(symbol) {
   const cleanSym = String(symbol || '').replace(/-EQ$/i, '').trim().toUpperCase();
   try {
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${cleanSym}.NS?interval=1m&range=1d`;
-    const res = await axios.get(url, { headers: uHeaders, timeout: 3000 });
-    const r = res.data?.chart?.result?.[0];
+    // SERVER FAILOVER: try query2 first, then query1 — whichever answers.
+    // For intraday, a slow/dead server must never mean stale or no data.
+    let r = null;
+    for (const host of ['query2', 'query1']) {
+      try {
+        const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${cleanSym}.NS?interval=1m&range=1d`;
+        const res = await axios.get(url, { headers: uHeaders, timeout: 3000 });
+        if (res.data?.chart?.result?.[0]) { r = res.data.chart.result[0]; break; }
+      } catch (_) { /* next server */ }
+    }
+    if (!r) return null;
     const ts = r?.timestamp; const q = r?.indicators?.quote?.[0];
     if (!ts || !q) return null;
     const bars = [];
@@ -257,7 +277,11 @@ async function fetchIntradaySeries(symbol) {
       bars.push({ t: tMs, o: q.open?.[i] ?? c, h: q.high?.[i] ?? c, l: q.low?.[i] ?? c, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
+    // LIVE-DATA RULE for intraday: expose how old the newest bar is so the
+    // engine can refuse to trade on 5-minute-late data.
+    const lastBarAgeSec = Math.round((Date.now() - bars[bars.length - 1].t) / 1000);
     return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
+      lastBarAgeSec, _fetchedAt: Date.now(),
       prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0),
       dayHigh: bars.reduce((m, b) => Math.max(m, b.h ?? b.c), 0),
       dayLow: bars.reduce((m, b) => Math.min(m, b.l ?? b.c), Infinity) };

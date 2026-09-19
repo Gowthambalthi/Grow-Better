@@ -307,6 +307,9 @@ async function scanSignals(candidatesOverride) {
       if (!series) return null;
       const ltp = series.last;
       if (ltp == null || ltp < MIN_PRICE) return null;   // price floor
+      // LIVE-DATA RULE: during market hours, refuse to signal on bars older
+      // than 5 minutes — that is dead data for intraday, not late data.
+      if (isMarketOpen() && series.lastBarAgeSec != null && series.lastBarAgeSec > 300) return null;
       const roc = computeRoc(series);
       const struct = buyerStructure(roc, ltp);
       const openCall = openBySym[c.symbol];
@@ -503,6 +506,9 @@ async function scanForNewCalls() {
     const res = await Promise.all(batch.map(async c => {
       const series = await fetchIntradaySeries(c.symbol);
       const q = await fetchLiveStockQuote(c.symbol);
+      // LIVE-DATA RULE: no new calls on stale series during market hours.
+      if (isMarketOpen() && (!series || (series.lastBarAgeSec != null && series.lastBarAgeSec > 300)))
+        return { ...c, ltp: null, vel: 0, series };
       return { ...c, ltp: q && q.ltp, vel: velocityScore(series), series };
     }));
     scored.push(...res);
