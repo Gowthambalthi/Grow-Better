@@ -99,8 +99,6 @@
         </div>
 
         <div class="topbar-right">
-          <button id="gbNotifBell" title="Notifications" style="position:relative;background:none;border:1px solid #e5e7eb;border-radius:8px;padding:6px 9px;cursor:pointer;font-size:15px;line-height:1;">&#128276;<span id="gbNotifBadge" style="display:none;position:absolute;top:-6px;right:-6px;background:#e11d48;color:#fff;border-radius:999px;font-size:10px;padding:1px 5px;font-weight:700;">0</span></button>
-
 
           <!-- Interactive Primary Index Ticker Pill + Chevron Button Dropdown -->
           <div class="popover-wrapper" id="indexPopoverWrapper">
@@ -5695,52 +5693,5 @@ function _renderMfGridBody(grid, schemes) {
     })();
   </script>
   <script type="module" src="/js/app.js?v=20260908e"></script>
-<div id="gbNotifPanel" style="display:none;position:fixed;top:52px;right:12px;width:360px;max-height:60vh;overflow:auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:99999;">
-  <div style="padding:10px 14px;font-weight:700;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">Notifications<button id="gbNotifMark" style="background:none;border:none;color:#00B386;cursor:pointer;font-size:12px;">Mark all read</button></div>
-  <div id="gbNotifList" style="padding:6px;"></div>
-</div>
-<script>
-(function(){
-  var lastUnread=-1;
-  function esc(t){return String(t==null?'':t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
-  function poll(){
-    fetch('/api/gb/notifications').then(function(r){return r.json();}).then(function(d){
-      var b=document.getElementById('gbNotifBadge');
-      if(b){ b.style.display=d.unread>0?'inline-block':'none'; b.textContent=d.unread; }
-      if(d.unread>0&&d.unread!==lastUnread&&lastUnread>=0&&'Notification' in window&&Notification.permission==='granted'){
-        var n=d.notifs[0]; if(n){ try{ new Notification(n.title,{body:n.body}); }catch(e){} }
-      }
-      lastUnread=d.unread;
-      var list=document.getElementById('gbNotifList');
-      if(list&&!list.dataset.skipRender){
-        list.innerHTML=d.notifs.length?d.notifs.map(function(x){
-          var col=x.type==='STRONG_BUY'?'#00B386':x.type==='DAY_REPORT'?'#2563eb':'#888';
-          return '<div style="padding:8px 10px;border-bottom:1px solid #f4f4f5;'+(x.read?'opacity:.55;':'')+'"><div style="font-weight:700;color:'+col+';font-size:13px;">'+esc(x.title)+'</div><div style="font-size:12px;color:#444;margin-top:2px;">'+esc(x.body)+'</div><div style="font-size:10px;color:#999;margin-top:3px;">'+new Date(x.time).toLocaleTimeString()+'</div></div>';
-        }).join(''):'<div style="padding:16px;color:#999;font-size:13px;text-align:center;">No notifications yet</div>';
-      }
-    }).catch(function(){});
-  }
-  function bind(){
-    var bell=document.getElementById('gbNotifBell');
-    var panel=document.getElementById('gbNotifPanel');
-    var mark=document.getElementById('gbNotifMark');
-    if(!bell||!panel) return;
-    bell.addEventListener('click',function(){
-      var show=panel.style.display==='none';
-      panel.style.display=show?'block':'none';
-      if(show){ var l=document.getElementById('gbNotifList'); if(l) l.dataset.skipRender='1'; poll(); }
-    });
-    if(mark) mark.addEventListener('click',function(){
-      fetch('/api/gb/notifications/read',{method:'POST'}).then(function(){ var l=document.getElementById('gbNotifList'); if(l) delete l.dataset.skipRender; poll(); });
-    });
-    document.addEventListener('click',function(e){
-      if(panel.style.display==='block'&&!panel.contains(e.target)&&e.target!==bell&&!bell.contains(e.target)){ panel.style.display='none'; var l=document.getElementById('gbNotifList'); if(l) delete l.dataset.skipRender; }
-    });
-    if('Notification' in window&&Notification.permission==='default') Notification.requestPermission();
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind); else bind();
-  setInterval(poll,5000); poll();
-})();
-</script>
 </body>
 </html>
