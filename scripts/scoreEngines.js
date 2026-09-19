@@ -366,4 +366,6 @@ function main() {
   console.log(`Top 10: ${results.slice(0, 10).map(r => `${r.symbol} ${r.winningEngine}(${r.engineRate})`).join(', ')}`);
 }
 
-main();
+module.exports = { evaluate };
+
+if (require.main === module) main();
