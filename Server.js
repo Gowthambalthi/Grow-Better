@@ -864,7 +864,7 @@ app.get('/api/:broker/portfolio', getBroker, async (req, res) => {
     const rows = req.params.broker === 'angelone'
       ? await portfolioService.getAngelPortfolio(req.broker.session)
       : await portfolioService.getGrowwPortfolio(req.broker.session, brokers.angelone?.session);
-    res.json({ holdings: rows, summary: portfolioService.summarize(rows) });
+    res.json({ connected: !!req.broker.session, holdings: rows, summary: portfolioService.summarize(rows) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -878,7 +878,12 @@ app.get('/api/portfolio', async (req, res) => {
   try {
     const results = {};
 
-    let angelCash = 788.69;
+    // Cash is the broker's live RMS figure or nothing. `connected` lets the UI say
+    // "broker not connected" instead of rendering an empty table that looks like a
+    // zero-value portfolio.
+    const angelConnected = !!(brokers.angelone && brokers.angelone.session);
+    const growwConnected = !!(brokers.groww && brokers.groww.session);
+    let angelCash = null;
     let angelRows = [];
     try {
       const session = brokers.angelone?.session || null;
@@ -896,13 +901,35 @@ app.get('/api/portfolio', async (req, res) => {
         }
       }
       angelRows = await portfolioService.getAngelPortfolio(session);
+
+      // The broker 'error' hook only covers the websocket feeds, so a 403 on the
+      // holdings endpoint used to leave the portfolio broken until a manual restart
+      // (RMS funds kept working, which made it look like holdings were simply empty).
+      // Relogin + retry once, rate-limited so concurrent requests can't stampede.
+      const hst = portfolioService.getHoldingsStatus('angelone');
+      if (session && !hst.ok && /403|unauthorized|expired/i.test(hst.error || '')) {
+        const now = Date.now();
+        if (!global.__angelHoldingsReloginAt || now - global.__angelHoldingsReloginAt > 60000) {
+          global.__angelHoldingsReloginAt = now;
+          try {
+            await brokers.angelone.relogin();
+            app.set('angelSession', brokers.angelone.session);
+            console.log('[Server] Angel One relogged in after holdings 403 — retrying holdings');
+            angelRows = await portfolioService.getAngelPortfolio(brokers.angelone.session);
+          } catch (re) {
+            console.error('[Server] Angel One relogin/retry after holdings 403 failed:', re.message);
+          }
+        }
+      }
     } catch (err) {
       console.error('[Server] Angel One portfolio fetch error:', err.message);
-      angelRows = await portfolioService.getAngelPortfolio(null);
+      angelRows = [];
     }
-    results.angelone = { holdings: angelRows, summary: portfolioService.summarize(angelRows, 'angelone', angelCash) };
+    results.angelone = { connected: angelConnected, holdingsStatus: portfolioService.getHoldingsStatus('angelone'), holdings: angelRows, summary: portfolioService.summarize(angelRows, 'angelone', angelCash) };
 
-    let growwCash = 134.21; // Exact Groww available cash balance
+    // Groww exposes no funds endpoint in this integration, so its cash is unknown
+    // rather than a hardcoded 134.21.
+    const growwCash = null;
     let growwRows = [];
     try {
       const session = brokers.groww?.session || null;
@@ -910,17 +937,20 @@ app.get('/api/portfolio', async (req, res) => {
       growwRows = await portfolioService.getGrowwPortfolio(session, angelSess);
     } catch (err) {
       console.error('[Server] Groww portfolio fetch error:', err.message);
-      growwRows = await portfolioService.getGrowwPortfolio(null, null);
+      growwRows = [];
     }
-    results.groww = { holdings: growwRows, summary: portfolioService.summarize(growwRows, 'groww', growwCash) };
+    results.groww = { connected: growwConnected, holdingsStatus: portfolioService.getHoldingsStatus('groww'), holdings: growwRows, summary: portfolioService.summarize(growwRows, 'groww', growwCash) };
 
     const allRows = [
       ...angelRows.filter((r) => !r.error),
       ...growwRows.filter((r) => !r.error),
     ];
-    const combinedCash = (results.angelone.summary.cashBalance || 0) + (results.groww.summary.cashBalance || 0);
+    const aCash = results.angelone.summary.cashBalance;
+    const gCash = results.groww.summary.cashBalance;
+    const combinedCash = (aCash != null || gCash != null) ? ((aCash || 0) + (gCash || 0)) : null;
 
     results.combined = {
+      connected: angelConnected || growwConnected,
       holdings: allRows,
       summary: portfolioService.summarize(allRows, 'combined', combinedCash),
     };

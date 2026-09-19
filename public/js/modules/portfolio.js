@@ -85,14 +85,14 @@ export function renderHoldingsRow(row) {
     </tr>`;
 }
 
-export function renderTable(tbodyId, countId, rows) {
+export function renderTable(tbodyId, countId, rows, emptyHint) {
   const tbody = document.getElementById(tbodyId);
   const countEl = document.getElementById(countId);
   if (countEl) countEl.textContent = `${rows.length} holding${rows.length === 1 ? '' : 's'}`;
   if (tbody) {
     tbody.innerHTML = rows.length
       ? rows.map(renderHoldingsRow).join('')
-      : '<tr class="empty-row"><td colspan="10">No holdings recorded</td></tr>';
+      : `<tr class="empty-row"><td colspan="10">${emptyHint || 'No holdings recorded'}</td></tr>`;
   }
 }
 
@@ -114,10 +114,22 @@ export async function loadPortfolio() {
     const growwHoldings = data.groww?.holdings || [];
     currentHoldingsCache = [...angelHoldings, ...growwHoldings];
 
-    renderTable('tbodyAngelone', 'countAngelone', angelHoldings);
-    renderTable('tbodyPortfolioAngelone', 'countPortfolioAngelone', angelHoldings);
-    renderTable('tbodyGroww', 'countGroww', growwHoldings);
-    renderTable('tbodyPortfolioGroww', 'countPortfolioGroww', growwHoldings);
+    // An empty table is ambiguous, so state which of three things is true: no session,
+    // session but the fetch failed, or connected with genuinely no positions.
+    const hintFor = (block, name) => {
+      const st = block?.holdingsStatus;
+      if (!block || !st) return null;
+      if (!st.connected) return `${name} not connected — no holdings shown (nothing cached is displayed)`;
+      if (!st.ok) return `${name} connected but holdings could not be loaded (${st.error || 'broker error'}) — retry, or re-login if it persists`;
+      return null;
+    };
+    const angelHint = hintFor(data.angelone, 'Angel One');
+    const growwHint = hintFor(data.groww, 'Groww');
+
+    renderTable('tbodyAngelone', 'countAngelone', angelHoldings, angelHint);
+    renderTable('tbodyPortfolioAngelone', 'countPortfolioAngelone', angelHoldings, angelHint);
+    renderTable('tbodyGroww', 'countGroww', growwHoldings, growwHint);
+    renderTable('tbodyPortfolioGroww', 'countPortfolioGroww', growwHoldings, growwHint);
     latestPortfolioData = data;
     updatePortfolioPanelsVisibility(currentViewMode);
 
@@ -204,14 +216,19 @@ function updateSummaryCards(mode = 'all') {
   setPctVal('portSumXirr', c.xirr);
   setPctVal('portSumCagr', c.accountReturnPercent || c.cagr);
   setPl('portSumNetPl', c.overallPL);
-  setPl('portSumAccountPl', c.accountPL != null ? c.accountPL : (c.rawOverallPL || 0));
+  setPl('portSumAccountPl', c.accountPL);
   setText('portSumAdjAccountPl', money(c.totalAccruedCharges));
   setText('portSumCashInvested', money(c.cashInvested || c.investedAmount));
 
   // Topbar Cash Balance & Cash Breakdown Popover Dropdown (Colored Red if Negative)
-  const angelCash = latestPortfolioData?.angelone?.summary?.cashBalance != null ? latestPortfolioData.angelone.summary.cashBalance : -185.08;
-  const growwCash = latestPortfolioData?.groww?.summary?.cashBalance != null ? latestPortfolioData.groww.summary.cashBalance : 134.21;
-  const totalCash = c.cashBalance != null ? c.cashBalance : (angelCash + growwCash);
+  // No invented fallbacks: unknown cash renders as "—". These used to default to
+  // -185.08 / 134.21, so an offline broker still showed a confident fake balance.
+  const angelCash = latestPortfolioData?.angelone?.summary?.cashBalance;
+  const growwCash = latestPortfolioData?.groww?.summary?.cashBalance;
+  // Combined total falls back to the per-broker figures across BOTH brokers, not
+  // just the connected ones, so a single connected broker can't masquerade as the total.
+  const totalCash = c.cashBalance != null ? c.cashBalance
+    : ((angelCash != null || growwCash != null) ? ((angelCash || 0) + (growwCash || 0)) : null);
 
   setColoredCash('topbarCashValue', totalCash);
   setColoredCash('angelCashFundVal', angelCash);
@@ -257,7 +274,15 @@ function updateSummaryCards(mode = 'all') {
 function setColoredCash(id, val) {
   const el = document.getElementById(id);
   if (!el) return;
-  const num = Number(val) || 0;
+  // Unknown cash renders as an em dash. It used to coerce to 0, which reads as a
+  // real (and alarming) ₹0.00 balance when the broker simply isn't connected.
+  if (val == null || val === '' || isNaN(Number(val))) {
+    el.textContent = '—';
+    el.style.color = '#94A3B8';
+    el.style.fontWeight = '600';
+    return;
+  }
+  const num = Number(val);
   el.textContent = money(num);
   if (id === 'topbarCashValue') {
     el.style.color = '#475569';
@@ -302,7 +327,14 @@ function setText(id, text) { const el = document.getElementById(id); if (el) el.
 function setPctVal(id, val) {
   const el = document.getElementById(id);
   if (!el) return;
-  const num = Number(val) || 0;
+  // null/undefined means the broker did not give us the data — show an em dash
+  // rather than a confident +0.00%.
+  if (val == null || val === '' || isNaN(Number(val))) {
+    el.textContent = '—';
+    el.style.setProperty('color', '#94A3B8', 'important');
+    return;
+  }
+  const num = Number(val);
   const sign = num > 0 ? '+' : (num < 0 ? '-' : '');
   el.textContent = `${sign}${Math.abs(num).toFixed(2)}%`;
   el.style.setProperty('color', num >= 0 ? '#00B386' : '#EB5B56', 'important');
@@ -311,7 +343,12 @@ function setPctVal(id, val) {
 function setPl(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
-  const num = Number(value || 0);
+  if (value == null || value === '' || isNaN(Number(value))) {
+    el.textContent = '—';
+    el.style.setProperty('color', '#94A3B8', 'important');
+    return;
+  }
+  const num = Number(value);
   const isLoss = num < 0;
   const sign = isLoss ? '-' : (num > 0 ? '+' : '');
   el.textContent = `${sign}₹${Math.abs(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

@@ -19,26 +19,14 @@ const ledger = require('../ledger/ledgerService');
 const institutionalService = require('../institutional/institutionalService');
 const liveQuoteEngine = require('../market/liveQuoteEngine');
 
-const LAST_TRADED_MARKET_PRICES = {
-  CUPID: 282.43,
-  'CUPID-EQ': 282.43,
-  EMMVEE: 318.40,
-  'EMMVEE-EQ': 318.40,
-  RELIANCE: 1313.20,
-  'RELIANCE-EQ': 1313.20,
-  SHRIRAMFIN: 1122.00,
-};
+// Live-only price caches. These used to be seeded with hardcoded CUPID/EMMVEE/
+// RELIANCE numbers, which meant the portfolio displayed invented prices whenever
+// the broker feed was down. They are now populated exclusively by real ticks and
+// quotes; an empty cache falls through to the live quote and then to the average
+// buy price, never to a made-up constant.
+const LAST_TRADED_MARKET_PRICES = {};
 
-const PREVIOUS_CLOSE_PRICES = {
-  CUPID: 284.56,
-  'CUPID-EQ': 284.56,
-  EMMVEE: 323.80,
-  'EMMVEE-EQ': 323.80,
-  RELIANCE: 1321.48,
-  'RELIANCE-EQ': 1321.48,
-  SHRIRAMFIN: 1125.00,
-  'SHRIRAMFIN-EQ': 1125.00,
-};
+const PREVIOUS_CLOSE_PRICES = {};
 
 const TOKEN_TO_SYMBOL = {
   '1660': 'CUPID',
@@ -143,32 +131,20 @@ function buildRow(broker, { tradingsymbol, exchange, quantity, avgPrice, ltp, cl
   const ctx = ledgerContextFor(broker, tradingsymbol, quantity);
   const cleanSym = (tradingsymbol || '').replace('-EQ', '').toUpperCase();
 
-  const STOCK_LEVERAGE = {
-    EMMVEE: 2.9,
-    RELIANCE: 4.0,
-    SHRIRAMFIN: 3.6,
-    HDFCBANK: 4.4,
-    MCX: 3.5,
-  };
-
-  // EMMVEE and RELIANCE are MTF; CUPID is Delivery
-  let isMtfPosition = (cleanSym === 'EMMVEE' || cleanSym === 'RELIANCE' || cleanSym === 'SHRIRAMFIN');
-  if (cleanSym === 'CUPID') {
-    isMtfPosition = false;
-  }
-
-  const lev = STOCK_LEVERAGE[cleanSym] || 3.0;
-  const daysHeld = ctx.daysHeld || (cleanSym === 'EMMVEE' ? 35 : (cleanSym === 'RELIANCE' ? 35 : (cleanSym === 'CUPID' && broker === 'angelone' ? 20 : 23)));
+  // MTF status and interest come from the ledger's actual records only. They used
+  // to be inferred from the symbol name (a hardcoded "EMMVEE and RELIANCE are MTF"
+  // rule plus a made-up leverage table and fabricated holding periods), which
+  // charged imaginary interest against positions that may not exist at all.
+  // A position with no ledger record is plain delivery with no accrued interest.
+  const isMtfPosition = !!ctx.isMtf && ctx.mtfBorrowed > 0;
+  const daysHeld = ctx.daysHeld || 0;
 
   let mtfInterestToDeduct = 0;
   let borrowedAmt = 0;
 
   if (isMtfPosition) {
-    const selfFunded = (quantity * avgPrice) / lev;
-    borrowedAmt = ctx.mtfBorrowed || Math.max(0, (quantity * avgPrice) - selfFunded);
-    // Daily MTF interest formula: daysHeld * (14.99% / 365) * borrowedAmount
-    const dailyMtfRate = 0.0004109589;
-    mtfInterestToDeduct = Math.max(0, daysHeld * dailyMtfRate * borrowedAmt);
+    borrowedAmt = ctx.mtfBorrowed;
+    mtfInterestToDeduct = Math.max(0, ctx.mtfInterestAccrued || 0);
   }
 
   const productType = isMtfPosition ? 'MARGIN' : 'DELIVERY';
@@ -307,67 +283,70 @@ async function fetchAngelLiveQuotes(holdingsList, angelSession) {
   return bySymbol;
 }
 
+/**
+ * Live holdings only. If the broker session is missing or the live call fails we
+ * return an EMPTY list — never a cached, ledger-derived or hardcoded position.
+ *
+ * History: this function used to fall back to open BUY rows in the ledger DB and,
+ * failing that, to three hardcoded rows ("matching Angel One terminal screenshot")
+ * for CUPID/EMMVEE/RELIANCE. That is why the portfolio displayed holdings the user
+ * did not own whenever the broker was disconnected. Removed deliberately: showing
+ * nothing is correct, showing a fabricated position is not.
+ */
+/**
+ * Per-broker holdings health, for the UI to distinguish three very different
+ * states that all render as an empty table otherwise:
+ *   connected=false            → we have no broker session at all
+ *   ok=false, connected=true   → session exists but the fetch failed (auth/limits)
+ *   ok=true, rows=0            → genuinely holding nothing
+ */
+const HOLDINGS_STATUS = {
+  angelone: { connected: false, ok: false, error: null },
+  groww: { connected: false, ok: false, error: null },
+};
+
+function setHoldingsStatus(broker, patch) {
+  HOLDINGS_STATUS[broker] = { ...HOLDINGS_STATUS[broker], ...patch };
+}
+
+function getHoldingsStatus(broker) {
+  return HOLDINGS_STATUS[broker] || { connected: false, ok: false, error: null };
+}
+
 async function getAngelPortfolio(session) {
+  if (!session) {
+    console.warn('[portfolioService] Angel One: no live session — showing no holdings (fabricated fallbacks removed)');
+    setHoldingsStatus('angelone', { connected: false, ok: false, error: 'no live session' });
+    return [];
+  }
+
   let liveRows = [];
-  if (session) {
-    try {
-      const holdings = new AngelHoldings(session);
-      liveRows = await holdings.getHoldings();
-    } catch (err) {
-      console.error('[portfolioService] Angel One live holdings call error:', err.message);
-    }
+  try {
+    const holdings = new AngelHoldings(session);
+    liveRows = await holdings.getHoldings();
+    setHoldingsStatus('angelone', { connected: true, ok: true, error: null });
+  } catch (err) {
+    console.error('[portfolioService] Angel One live holdings call error:', err.message);
+    setHoldingsStatus('angelone', { connected: true, ok: false, error: err.message });
+    return [];
   }
 
   const mergedMap = new Map();
 
-  // If live holdings are returned from Angel One API, LIVE DATA HAS ABSOLUTE PRECEDENCE!
-  if (liveRows && liveRows.length > 0) {
-    for (const h of liveRows) {
-      const rawSym = h.tradingsymbol || h.symbol || '';
-      const cleanSym = rawSym.replace('-EQ', '');
-      if (!cleanSym) continue;
+  // Live broker data is the only source of truth for what is held.
+  for (const h of (Array.isArray(liveRows) ? liveRows : [])) {
+    const rawSym = h.tradingsymbol || h.symbol || '';
+    const cleanSym = rawSym.replace('-EQ', '');
+    if (!cleanSym) continue;
 
-      mergedMap.set(cleanSym, {
-        tradingsymbol: cleanSym,
-        exchange: h.exchange || 'NSE',
-        quantity: Number(h.quantity || h.netquantity || 0),
-        avgPrice: Number(h.averageprice || h.price || h.avgprice || 0),
-        ltp: Number(h.ltp || h.averageprice || 0),
-        close: h.close != null ? Number(h.close) : null,
-      });
-    }
-  } else {
-    // Fallback if Angel One session is offline
-    const dbTrades = ledger.getTrades('angelone').filter((t) => t.transaction_type === 'BUY' && !t.closed_date);
-    for (const t of dbTrades) {
-      const rawSym = t.tradingsymbol || '';
-      const cleanSym = rawSym.replace('-EQ', '');
-      if (!cleanSym) continue;
-
-      if (!mergedMap.has(cleanSym)) {
-        mergedMap.set(cleanSym, {
-          tradingsymbol: cleanSym,
-          exchange: t.exchange || 'NSE',
-          quantity: Number(t.quantity),
-          avgPrice: Number(t.price),
-          ltp: Number(t.price),
-          close: null,
-        });
-      } else {
-        const existing = mergedMap.get(cleanSym);
-        const newQty = existing.quantity + Number(t.quantity);
-        const newAvg = (existing.quantity * existing.avgPrice + Number(t.quantity) * Number(t.price)) / newQty;
-        existing.quantity = newQty;
-        existing.avgPrice = newAvg;
-      }
-    }
-  }
-
-  // Exact fallback default holdings matching Angel One terminal screenshot if list is empty
-  if (mergedMap.size === 0) {
-    mergedMap.set('CUPID', { tradingsymbol: 'CUPID', exchange: 'NSE', quantity: 48, avgPrice: 287.16, ltp: 278.86, close: 284.03 });
-    mergedMap.set('EMMVEE', { tradingsymbol: 'EMMVEE', exchange: 'NSE', quantity: 15, avgPrice: 346.37, ltp: 315.25, close: 317.70 });
-    mergedMap.set('RELIANCE', { tradingsymbol: 'RELIANCE', exchange: 'NSE', quantity: 16, avgPrice: 1321.48, ltp: 1311.80, close: 1322.00 });
+    mergedMap.set(cleanSym, {
+      tradingsymbol: cleanSym,
+      exchange: h.exchange || 'NSE',
+      quantity: Number(h.quantity || h.netquantity || 0),
+      avgPrice: Number(h.averageprice || h.price || h.avgprice || 0),
+      ltp: Number(h.ltp || h.averageprice || 0),
+      close: h.close != null ? Number(h.close) : null,
+    });
   }
 
   const holdingsList = Array.from(mergedMap.values());
@@ -406,53 +385,36 @@ async function getAngelPortfolio(session) {
   });
 }
 
+/** Groww holdings — live only, same rule as Angel One: no session or a failed call means no rows. */
 async function getGrowwPortfolio(growwSession, angelSession) {
+  if (!growwSession) {
+    console.warn('[portfolioService] Groww: no live session — showing no holdings (fabricated fallbacks removed)');
+    setHoldingsStatus('groww', { connected: false, ok: false, error: 'no live session' });
+    return [];
+  }
+
   let liveRows = [];
-  if (growwSession) {
-    try {
-      const holdings = new GrowwHoldings(growwSession);
-      liveRows = await holdings.getHoldings();
-    } catch (err) {
-      console.error('[portfolioService] Groww live holdings call error:', err.message);
-    }
+  try {
+    const holdings = new GrowwHoldings(growwSession);
+    liveRows = await holdings.getHoldings();
+    setHoldingsStatus('groww', { connected: true, ok: true, error: null });
+  } catch (err) {
+    console.error('[portfolioService] Groww live holdings call error:', err.message);
+    setHoldingsStatus('groww', { connected: true, ok: false, error: err.message });
+    return [];
   }
 
   const mergedMap = new Map();
 
-  if (liveRows && liveRows.length > 0) {
-    for (const h of liveRows) {
-      const sym = h.trading_symbol || h.tradingSymbol || h.symbol;
-      if (!sym) continue;
-      mergedMap.set(sym, {
-        trading_symbol: sym,
-        quantity: Number(h.quantity || 0),
-        average_price: Number(h.average_price || h.averagePrice || 0),
-        ltp: Number(h.last_price || h.average_price || 0),
-        tradable_exchanges: h.tradable_exchanges || ['NSE'],
-      });
-    }
-  } else {
-    const dbTrades = ledger.getTrades('groww').filter((t) => t.transaction_type === 'BUY' && !t.closed_date);
-    for (const t of dbTrades) {
-      const sym = t.tradingsymbol;
-      mergedMap.set(sym, {
-        trading_symbol: sym,
-        quantity: Number(t.quantity),
-        average_price: Number(t.price),
-        ltp: Number(t.price),
-        tradable_exchanges: [t.exchange || 'NSE'],
-      });
-    }
-  }
-
-  // Exact fallback matching Groww app screenshot if Groww API session is offline or unconfigured
-  if (mergedMap.size === 0) {
-    mergedMap.set('CUPID', {
-      trading_symbol: 'CUPID',
-      quantity: 13,
-      average_price: 233.29,
-      ltp: 278.00,
-      tradable_exchanges: ['NSE'],
+  for (const h of (Array.isArray(liveRows) ? liveRows : [])) {
+    const sym = h.trading_symbol || h.tradingSymbol || h.symbol;
+    if (!sym) continue;
+    mergedMap.set(sym, {
+      trading_symbol: sym,
+      quantity: Number(h.quantity || 0),
+      average_price: Number(h.average_price || h.averagePrice || 0),
+      ltp: Number(h.last_price || h.average_price || 0),
+      tradable_exchanges: h.tradable_exchanges || ['NSE'],
     });
   }
 
@@ -571,25 +533,22 @@ function summarize(rows, broker = 'combined', liveCash = null) {
 
   const rawNetDeposits = totalAdded - totalWithdrawn;
 
-  let cashBalance = 0;
-  if (liveCash != null && !isNaN(liveCash)) {
-    cashBalance = Number(liveCash);
-  } else if (broker === 'angelone') {
-    cashBalance = 788.69;
-  } else if (broker === 'groww') {
-    cashBalance = 134.21;
-  } else {
-    cashBalance = 922.90;
-  }
+  // Cash comes from the broker's live funds API or not at all. It used to default
+  // to hardcoded per-broker balances (₹788.69 / ₹134.21 / ₹922.90), so an offline
+  // broker still showed a confident — and invented — cash figure. `cashBalance` is
+  // now null when unknown (the UI renders "—"), while the arithmetic below uses 0
+  // so derived totals stay finite.
+  const cashBalance = (liveCash != null && !isNaN(Number(liveCash))) ? Number(liveCash) : null;
+  const cashForMath = cashBalance != null ? cashBalance : 0;
 
-  const effectiveNetDeposits = (totalAdded > 0 || totalWithdrawn > 0) ? rawNetDeposits : (investedAmount - totalMtfBorrowed + cashBalance);
+  const effectiveNetDeposits = (totalAdded > 0 || totalWithdrawn > 0) ? rawNetDeposits : (investedAmount - totalMtfBorrowed + cashForMath);
   const currentPortfolioEquity = currentAmount - totalMtfBorrowed;
-  const accountEquity = currentAmount + cashBalance - totalMtfBorrowed;
+  const accountEquity = currentAmount + cashForMath - totalMtfBorrowed;
 
   const ownCapitalInvested = investedAmount - totalMtfBorrowed;
   const cashInvested = investedAmount;
-  const effectiveTotalAdded = totalAdded > 0 ? totalAdded : (cashInvested + cashBalance + (totalWithdrawn > 0 ? totalWithdrawn : 0));
-  const accountPL = effectiveTotalAdded - totalWithdrawn - cashBalance - cashInvested;
+  const effectiveTotalAdded = totalAdded > 0 ? totalAdded : (cashInvested + cashForMath + (totalWithdrawn > 0 ? totalWithdrawn : 0));
+  const accountPL = effectiveTotalAdded - totalWithdrawn - cashForMath - cashInvested;
 
   let effectiveNetCharges = 0;
   let effectiveMtfInterest = 0;
@@ -619,10 +578,18 @@ function summarize(rows, broker = 'combined', liveCash = null) {
   }
 
   const totalAccruedCharges = effectiveNetCharges + effectiveMtfInterest;
-  const adjustedAccountPL = effectiveNetDeposits - cashBalance - totalAccruedCharges;
+  const adjustedAccountPL = effectiveNetDeposits - cashForMath - totalAccruedCharges;
 
-  const maxDaysHeld = valid.length > 0 ? Math.max(...valid.map((r) => r.daysHeld || 0), 1) : 1;
-  const accountReturnPercent = effectiveNetDeposits > 0 ? (accountPL / effectiveNetDeposits) * 100 : 0;
+  // With no live holdings, "account P&L" degenerates into echoing the ledger's net
+  // deposits back as profit (deposits − cash, with nothing invested). That is not a
+  // P&L — it is unaccounted capital — so report it as unknown rather than a number
+  // that looks like a ₹10k gain on an empty portfolio.
+  const plKnown = valid.length > 0;
+  const accountPLOut = plKnown ? accountPL : null;
+  const adjustedAccountPLOut = plKnown ? adjustedAccountPL : null;
+
+  const maxDaysHeld = valid.length > 0 ? Math.max(...valid.map((r) => r.daysHeld || 0), 1) : 0;
+  const accountReturnPercent = (plKnown && effectiveNetDeposits > 0) ? (accountPL / effectiveNetDeposits) * 100 : null;
   const cagr = accountReturnPercent;
 
   const cashFlows = fundsTxns.map((t) => ({
@@ -642,7 +609,7 @@ function summarize(rows, broker = 'combined', liveCash = null) {
     xirr = calculateXirr(cashFlows);
   }
 
-  const uninvestedLedgerCash = cashBalance;
+  const uninvestedLedgerCash = cashForMath;
   const absorbedCapital = effectiveNetDeposits - ownCapitalInvested - uninvestedLedgerCash;
   const unadjustedNetFormula = accountPL;
 
@@ -671,8 +638,8 @@ function summarize(rows, broker = 'combined', liveCash = null) {
     cashBalance,
     currentHoldingsEquity: currentPortfolioEquity,
     accountEquity,
-    accountPL,
-    adjustedAccountPL,
+    accountPL: accountPLOut,
+    adjustedAccountPL: adjustedAccountPLOut,
     unreflectedCosts: totalAccruedCharges,
     xirr,
     cagr,
@@ -683,4 +650,4 @@ function summarize(rows, broker = 'combined', liveCash = null) {
   };
 }
 
-module.exports = { getAngelPortfolio, getGrowwPortfolio, summarize, updateLiveLtpFromWs };
+module.exports = { getAngelPortfolio, getGrowwPortfolio, summarize, updateLiveLtpFromWs, getHoldingsStatus };

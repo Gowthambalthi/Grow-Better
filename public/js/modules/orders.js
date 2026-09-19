@@ -18,9 +18,12 @@ let activeOrderParams = {
   productType: 'MARGIN',
 };
 
+// null = genuinely unknown. These used to be seeded with hardcoded balances
+// (788.69 / 111.31), which made an offline broker look funded. Unknown funds now
+// render as "—" and the affordability check is skipped rather than guessed.
 let brokerFundsMap = {
-  angelone: 788.69,
-  groww: 111.31,
+  angelone: null,
+  groww: null,
 };
 
 let selectedActionOrderId = null;
@@ -67,13 +70,14 @@ export function addOrderToToday(order) {
 
   // 1. Check Available Funds
   const brokerKey = newOrder.broker || 'angelone';
-  const availCash = brokerFundsMap[brokerKey] || 0;
+  const availCash = brokerFundsMap[brokerKey];
   const leverage = getLeverageFor(newOrder.symbol);
   const requiredFunds = (newOrder.productType === 'MARGIN' || newOrder.isMtf)
     ? ((newOrder.qty * newOrder.price) / leverage)
     : (newOrder.qty * newOrder.price);
 
-  if (requiredFunds > availCash) {
+  // Only reject on funds when the broker actually told us the balance.
+  if (availCash != null && requiredFunds > availCash) {
     newOrder.status = 'REJECTED (NO FUNDS)';
   } else {
     // 2. Enforcement Rules:
@@ -190,13 +194,13 @@ export function renderOrdersUI() {
       todaysOrders.forEach(o => {
         // Dynamic Funds Validation for Live Order Rows
         const brokerKey = o.broker || 'angelone';
-        const availCash = brokerFundsMap[brokerKey] || 0;
+        const availCash = brokerFundsMap[brokerKey];
         const leverage = getLeverageFor(o.symbol);
         const requiredFunds = (o.productType === 'MARGIN' || o.isMtf)
           ? ((o.qty * o.price) / leverage)
           : (o.qty * o.price);
 
-        if (o.status !== 'CANCELLED' && requiredFunds > availCash) {
+        if (o.status !== 'CANCELLED' && availCash != null && requiredFunds > availCash) {
           o.status = 'REJECTED (NO FUNDS)';
         }
 
@@ -507,9 +511,9 @@ function updateOmBrokerDisplay() {
   }
 
   const availValEl = document.getElementById('omAvailVal');
-  const availCash = brokerFundsMap[broker] != null ? brokerFundsMap[broker] : 0;
+  const availCash = brokerFundsMap[broker];
   if (availValEl) {
-    availValEl.textContent = money(availCash);
+    availValEl.textContent = availCash != null ? money(availCash) : '—';
   }
   const submitBtn = document.getElementById('omSubmitBtn');
   if (submitBtn) {
