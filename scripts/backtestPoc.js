@@ -23,6 +23,24 @@ const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, 
 const LIMIT = args.limit ? parseInt(args.limit, 10) : 0;
 const TARGET_R = args.targetR ? parseFloat(args.targetR) : 1.5;
 const SIDE = args.side || 'both';
+const MTF = !!args.mtf; // higher-timeframe delta must agree (1h store)
+const h1Cache = new Map();
+function h1Deltas(sym) {
+  if (h1Cache.has(sym)) return h1Cache.get(sym);
+  const m = new Map(); // date -> delta of last completed 1h bar that day
+  try {
+    const cs = JSON.parse(fs.readFileSync(path.join(DIR.replace('ohlcv_15m', 'ohlcv_1h'), sym + '.json'), 'utf8')).candles;
+    for (const row of cs) {
+      const d = row[0].slice(0, 10);
+      const mins = parseInt(row[0].slice(11, 13), 10) * 60 + parseInt(row[0].slice(14, 16), 10);
+      if (mins < 555 || mins > 930) continue;
+      const [, o, h, l, c, v] = row;
+      m.set(d, { delta: v > 0 && h > l ? v * (2 * (c - l) / (h - l) - 1) : 0 });
+    }
+  } catch (_) {}
+  h1Cache.set(sym, m);
+  return m;
+}
 
 function run() {
   const files = fs.readdirSync(DIR).filter(f => f.endsWith('.json'));
@@ -67,6 +85,12 @@ function run() {
         if (args.tightflow) { // strict order-flow agreement: session delta must tilt the trade's way
           if (side === 'SHORT' && prof.flowBias > -0.05) continue;
           if (side === 'LONG' && prof.flowBias < 0.05) continue;
+        }
+        if (MTF) { // higher-timeframe (1h) delta must agree with the trade
+          const hd = h1Deltas(sym).get(date);
+          if (hd == null) continue;
+          if (side === 'SHORT' && hd.delta >= 0) continue;
+          if (side === 'LONG' && hd.delta <= 0) continue;
         }
 
         const entry = bars[i + 1][1]; // next bar open

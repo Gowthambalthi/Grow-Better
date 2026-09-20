@@ -105,9 +105,9 @@ button { font-family: inherit; }
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  /* Brand green sidebar */
-  background: linear-gradient(180deg, #0B6E4F, #064432) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  /* White sidebar; only the selected item is green */
+  background: #FFFFFF !important;
+  border-right: 1px solid #E2E8F0;
   display: flex;
   flex-direction: column;
   padding: 16px 10px;
@@ -182,7 +182,7 @@ button { font-family: inherit; }
   display: flex; align-items: center; gap: 12px;
   background: transparent !important;
   border: 1px solid transparent !important;
-  color: rgba(255, 255, 255, 0.8);
+  color: #475569;
   padding: 10px 12px;
   border-radius: 10px;
   font-size: 13.5px;
@@ -200,38 +200,20 @@ button { font-family: inherit; }
   transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease;
 }
 
-/* Hover: NO BOX! JUST MOVE IT! */
+/* Hover: slide + green tint, no box */
 .nav-item:hover {
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
-  color: #FFFFFF;
+  color: #059669;
   transform: translateX(5px);
 }
 .nav-item:hover .nav-icon {
-  color: #6EE7B7;
+  color: #059669;
   transform: scale(1.1);
 }
 
-/* ---- Sidebar hover: the whole rail turns WHITE while the mouse is over it ---- */
-.sidebar:hover {
-  background: #FFFFFF !important;
-  border-right: 1px solid #E2E8F0 !important;
-  box-shadow: 4px 0 24px rgba(15, 36, 71, 0.10);
-}
-.sidebar:hover .nav-item { color: #334155 !important; }
-.sidebar:hover .nav-item .nav-icon { color: #64748B; }
-.sidebar:hover .nav-item:hover { color: #0F2447 !important; }
-.sidebar:hover .nav-item:hover .nav-icon { color: #00B386 !important; }
-/* the active pill keeps its green identity on the white rail */
-.sidebar:hover .nav-item.active {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
-  color: #FFFFFF !important;
-}
-.sidebar:hover .nav-item.active .nav-icon { color: #FFFFFF !important; }
-/* Note: the topbar brand title is NOT inside the sidebar, so the rail's hover
-   state must never recolour it — that rule previously turned "BETTER" navy on a
-   navy bar, making it invisible whenever the mouse was over the rail. */
+/* Note: the rail is always white now; only the ACTIVE item carries the green pill. */
 
 /* Narrow screens: drop the wordmark (logo stays) and tighten the right group, so
    the index/cash/Signals pills are never clipped off the edge of a fixed bar. */
@@ -240,9 +222,6 @@ button { font-family: inherit; }
   .topbar-right { gap: 8px !important; }
   .topbar-index-pill { min-width: 0 !important; }
 }
-.sidebar:hover .sidebar-broker-status { color: #475569 !important; }
-.sidebar:hover .sidebar-bottom .collapse-toggle { color: #475569 !important; border-color: #E2E8F0 !important; background: #F8FAFC !important; }
-.sidebar:hover .sidebar-bottom .collapse-toggle:hover { color: #0F2447 !important; background: #EEF2F7 !important; border-color: #CBD5E1 !important; }
 .sidebar.collapsed .nav-item:hover {
   transform: scale(1.1);
 }
@@ -255,6 +234,8 @@ button { font-family: inherit; }
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45) !important;
 }
+
+.nav-item.active span { color: #FFFFFF !important; }
 
 .nav-item.active .nav-icon {
   color: #FFFFFF !important;

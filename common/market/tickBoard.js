@@ -40,6 +40,7 @@ const FEED_DEAD_MS = 45000;    // no tick at all for this long = feed dead
 const HIST_MS = 8 * 60000;     // rolling tick buffer retention
 const SOCKETS = 3;             // Angel allows 3 concurrent sockets
 const MAX_TOKENS_PER_SOCKET = 1000;
+const NIFTY_TOKEN = '99926000'; // Nifty 50 index — direction gate for confirmations
 
 const WINDOWS = [
   { key: 's10', ms: 10000 },
@@ -94,9 +95,11 @@ async function start(opts = {}) {
 
       // 3. sockets
       const per = Math.ceil(resolved.length / SOCKETS);
+      buffers.set(NIFTY_TOKEN, []); // Nifty rides socket 0; direction gate for order-flow confirmations
       for (let s = 0; s < SOCKETS; s++) {
         const slice = resolved.slice(s * per, (s + 1) * per);
         if (!slice.length) break;
+        if (s === 0) slice.push({ token: NIFTY_TOKEN, symbol: 'NIFTY', engine: null, score: null });
         const feed = new AngelMarketFeed(session);
         feed.on('tick', (t) => onTick(t));
         feed.on('error', (e) => console.error('[tickBoard] feed error:', e.message));
@@ -114,7 +117,7 @@ async function start(opts = {}) {
       }
       running = true;
       // periodic board build
-      if (!buildTimer) buildTimer = setInterval(() => { buildBoard().catch(() => {}); }, 5000);
+      if (!buildTimer) buildTimer = setInterval(() => { try { buildBoard(); } catch (_) {} }, 5000);
       return true;
     } finally { starting = null; }
   })();
@@ -141,8 +144,53 @@ function onTick(t) {
   const ts = t.exchangeTimestamp || Date.now(); // Angel sends epoch ms
   const last = arr[arr.length - 1];
   if (last && last.t >= ts && last.p === p) return; // duplicate
-  arr.push({ t: ts, p });
+  // order flow: total buy/sell quantity at the exchange (QUOTE mode payload)
+  const bq = Number(t.totalBuyQuantity) || 0;
+  const sq = Number(t.totalSellQuantity) || 0;
+  arr.push({ t: ts, p, bq, sq });
   while (arr.length && arr[0].t < Date.now() - HIST_MS) arr.shift();
+}
+
+// ---------- order flow: buy/sell ratio + per-window alignment ----------
+// Ratio = totBuyQuan / totSellQuan. Δ over a window = ratio_now - ratio_then.
+// GREEN: price up AND buy pressure building (both windows agree)
+// RED:   price down AND sell pressure building (both windows agree)
+// NEUTRAL: windows disagree, or Δ below the noise floor (OF_MIN_DELTA).
+const FLOW_WINDOWS = [WINDOWS[2], WINDOWS[3]]; // 30s + 1m confirmation pair
+const OF_MIN_DELTA = 0.05;   // minimum |Δratio| to count as "building"
+const OF_MIN_MOVE = 0.1;     // minimum |price %| over the window
+
+function ratioAt(arr, ms, now) {
+  const target = now - ms;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i].t <= target) {
+      const s = arr[i];
+      return (s.bq || s.sq) ? s.bq / Math.max(1, s.sq) : null;
+    }
+  }
+  return null;
+}
+
+function flowRead(arr, now, ltp) {
+  const nowRatio = (arr[arr.length - 1].bq || arr[arr.length - 1].sq)
+    ? arr[arr.length - 1].bq / Math.max(1, arr[arr.length - 1].sq) : null;
+  const out = {};
+  let ups = 0, downs = 0, tracked = 0;
+  for (const w of FLOW_WINDOWS) {
+    const ref = refPrice(arr, w.ms, now);
+    const move = ref != null && ref > 0 ? +(((ltp - ref) / ref) * 100).toFixed(2) : null;
+    const r0 = ratioAt(arr, w.ms, now);
+    const dRatio = (nowRatio != null && r0 != null) ? +(nowRatio - r0).toFixed(3) : null;
+    let dir = null;
+    if (move != null && dRatio != null && Math.abs(dRatio) >= OF_MIN_DELTA && Math.abs(move) >= OF_MIN_MOVE) {
+      dir = (move > 0 && dRatio > 0) ? 'green' : (move < 0 && dRatio < 0) ? 'red' : null;
+    }
+    out[w.key] = { move, dRatio, dir };
+    if (dir) { tracked++; if (dir === 'green') ups++; else downs++; }
+  }
+  out.flowColor = (tracked === FLOW_WINDOWS.length) ? (ups === FLOW_WINDOWS.length ? 'green' : downs === FLOW_WINDOWS.length ? 'red' : null) : null;
+  out.ratio = nowRatio != null ? +nowRatio.toFixed(2) : null;
+  return out;
 }
 
 function loadUniverse() {
@@ -176,12 +224,22 @@ function refPrice(arr, ms, now) {
 
 function pct(a, b) { return (a != null && b > 0) ? +(((a - b) / b) * 100).toFixed(2) : null; }
 
-async function buildBoard() {
+function buildBoard() {
   const now = Date.now();
   const feedDead = lastTickAt && (now - lastTickAt) > FEED_DEAD_MS;
+  // Nifty direction over the confirmation windows (strict gate: a confirmed
+  // buy needs the index NOT falling; a confirmed short needs it NOT rising)
+  const nb = buffers.get(NIFTY_TOKEN) || [];
+  const nifty = nb.length ? {
+    ltp: nb[nb.length - 1].p,
+    s30: (() => { const r = refPrice(nb, 30000, now); return r ? +(((nb[nb.length - 1].p - r) / r) * 100).toFixed(2) : null; })(),
+    m1: (() => { const r = refPrice(nb, 60000, now); return r ? +(((nb[nb.length - 1].p - r) / r) * 100).toFixed(2) : null; })(),
+  } : null;
+  const niftyUp = !!(nifty && nifty.s30 != null && nifty.s30 > -0.02 && (nifty.m1 == null || nifty.m1 > -0.05));
+  const niftyDown = !!(nifty && nifty.s30 != null && nifty.s30 < 0.02 && (nifty.m1 == null || nifty.m1 < 0.05));
   const stocks = [];
   for (const [token, arr] of buffers) {
-    if (!arr.length) continue;
+    if (!arr.length || token === NIFTY_TOKEN) continue;
     const meta = tokenToSym.get(token) || {};
     const ltp = arr[arr.length - 1].p;
     if (ltp < MIN_PRICE) continue;
@@ -197,6 +255,15 @@ async function buildBoard() {
     row.mDay = close > 0 ? +(((ltp - close) / close) * 100).toFixed(2) : null;
     row.isMover = !feedDead && WINDOWS.some(w => row[w.key] != null && Math.abs(row[w.key]) >= MOVER_TH);
     row.bestMove = best;
+    const of = feedDead ? null : flowRead(arr, now, ltp);
+    if (of) {
+      row.flow = of.flowColor;                 // 'green' | 'red' | null (disagreement = no colour)
+      row.ratio = of.ratio;                    // current buy:sell ratio
+      row.ofS30 = of[WINDOWS[2].key] && of[WINDOWS[2].key].dir;
+      row.ofM1 = of[WINDOWS[3].key] && of[WINDOWS[3].key].dir;
+      // STRICT confirmation: order flow AND Nifty must agree (index can't oppose)
+      row.confirmed = (of.flowColor === 'green' && niftyUp) || (of.flowColor === 'red' && niftyDown);
+    }
     stocks.push(row);
   }
   // pool tag: stocks the 45-min Yahoo job marked ACTIVE rank first; DRY sink
@@ -205,6 +272,7 @@ async function buildBoard() {
   for (const s of pool.dry || []) poolMap.set(s, 'dry');
   for (const s of stocks) s.pool = poolMap.get(s.symbol) || 'active';   // no pool data yet = treat as active
   stocks.sort((a, b) => (a.stale - b.stale) || (a.pool === 'dry') - (b.pool === 'dry') ||
+    (b.confirmed === true) - (a.confirmed === true) ||           // order-flow-confirmed first
     (b.isMover - a.isMover) || (b.bestMove - a.bestMove));
   for (const s of stocks) delete s.bestMove;
   const activeCount = stocks.filter(s => s.pool !== 'dry').length;
@@ -214,6 +282,8 @@ async function buildBoard() {
     source: 'Angel One ticks',
     feedDead,
     movers: stocks.filter(s => s.isMover).length,
+    confirmed: stocks.filter(s => s.confirmed).length,
+    nifty,
     tracked: buffers.size,
     poolActive: activeCount,
     poolDry: stocks.length - activeCount,
