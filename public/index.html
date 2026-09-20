@@ -1258,7 +1258,8 @@
             <button id="gbScanBtn" class="btn btn-primary" style="padding:10px 22px;font-size:15px;">▶ Scan All Stocks</button>
             <span id="gbScanStatus" style="color:var(--text-dim,#8b93a7);font-size:13px;">Scans ~2,700 NSE stocks for fresh BUY setups (GB Strategy 1: 5 engines + trap filter + fresh-entry check).</span>
           </div>
-          <div id="gbSummary" style="display:none;display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
+          <div id="gbSummary" style="display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
+          <div id="gbFreshPanel" style="display:none;background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;margin:0 0 18px;"></div>
 
           <!-- Terminal section tabs -->
           <div id="gbTermTabs" style="display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap;">
@@ -3730,7 +3731,7 @@ function _renderMfGridBody(grid, schemes) {
 
         // ---- GB Terminal: Strategy 1 scanner ----
         var gbLoaded = false;
-        var gbRows = [];
+        var gbRows = [], gbLastScan = null;
         var gbSortKey = 'score';
         var gbSortDir = -1;
 
@@ -3773,6 +3774,7 @@ function _renderMfGridBody(grid, schemes) {
             var j = await r.json();
             if (j.error) { status.textContent = '❌ ' + j.error; btn.disabled = false; btn.textContent = '▶ Scan All Stocks'; return; }
             gbRows = j.rows || [];
+            gbLastScan = j;
             gbRenderSummary(j);
             gbRenderTable();
             var bt = j.backtest ? (' · backtest 1Y: ' + j.backtest.totalSignals + ' signals, ' + j.backtest.winRate + '% win, avg ' + j.backtest.avgRR + 'R, ' + j.backtest.avgHoldDays + 'd hold') : '';
@@ -3788,20 +3790,54 @@ function _renderMfGridBody(grid, schemes) {
           var el = document.getElementById('gbSummary');
           if (!el) return;
           var cards = [
-            ['Scanned', j.scanned.toLocaleString('en-IN'), 'stocks across NSE mainboard'],
-            ['Fresh Buys', String(j.freshBuys), 'engineRate ≥7 + no traps + fresh entry'],
+            ['Scanned', j.scanned.toLocaleString('en-IN'), 'stocks across NSE mainboard', null],
+            ['Fresh Buys', String(j.freshBuys), 'engineRate ≥7 + no traps + fresh entry', 'buy'],
+            ['Fresh Sells / Shorts', (j.freshSells || []).length, 'order-flow + Nifty confirmed short side', 'sell'],
           ];
-          if (j.backtest) {
-            cards.push(['Backtest Win Rate', j.backtest.winRate + '%', j.backtest.totalSignals.toLocaleString('en-IN') + ' signals (1Y)']);
-            cards.push(['Avg R:R', j.backtest.avgRR + 'R', 'avg hold ' + j.backtest.avgHoldDays + ' trading days']);
-          }
           el.style.display = 'flex';
           el.innerHTML = cards.map(function(c) {
-            return '<div style="background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;padding:14px 20px;min-width:170px;">' +
+            var click = c[3] ? ('cursor:pointer;" onclick="gbShowFreshCalls(\'' + c[3] + '\')') : '';
+            var col = c[3] === 'sell' ? '#ff4d6d' : 'var(--accent,#00B386)';
+            return '<div ' + click + ' style="background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;padding:14px 20px;min-width:170px;">' +
               '<div style="font-size:12px;color:var(--text-muted,#8b93a7);text-transform:uppercase;letter-spacing:0.5px;">' + c[0] + '</div>' +
-              '<div style="font-size:26px;font-weight:700;color:var(--accent,#00B386);margin:4px 0 2px;">' + c[1] + '</div>' +
-              '<div style="font-size:11px;color:var(--text-muted,#8b93a7);">' + c[2] + '</div></div>';
+              '<div style="font-size:26px;font-weight:700;color:' + col + ';margin:4px 0 2px;">' + c[1] + '</div>' +
+              '<div style="font-size:11px;color:var(--text-muted,#8b93a7);">' + c[2] + (c[3] ? ' · click to view' : '') + '</div></div>';
           }).join('');
+        }
+
+        window.gbRenderSummary = gbRenderSummary; window.gbShowFreshCalls = gbShowFreshCalls; // exposed for console debugging
+        function gbShowFreshCalls(side) {
+          var wrap = document.getElementById('gbFreshPanel') || document.getElementById('gbTableWrap');
+          if (!wrap || !gbLastScan) return;
+          wrap.style.display = 'block';
+          var html = '<div style="padding:10px;font-size:13px;">';
+          if (side === 'buy') {
+            var rows = (gbLastScan.rows || []).slice(0, 40);
+            html += '<div style="font-weight:800;color:#00e091;margin-bottom:8px;">FRESH BUY CALLS (' + rows.length + ')</div>';
+            html += rows.map(function(r) {
+              return '<div style="display:flex;gap:14px;padding:6px 0;border-bottom:1px solid var(--border,#232a36);">' +
+                '<b style="color:var(--accent,#00B386);min-width:110px;">' + (r.symbol || '') + '</b>' +
+                '<span>LTP ' + (r.close != null ? r.close : '·') + '</span>' +
+                '<span style="color:#00e091;">entry ' + (r.entryZone || r.entry || '·') + '</span>' +
+                '<span style="color:#ffa94d;">SL ' + (r.stopLoss || '·') + '</span>' +
+                '<span style="color:#7ab8ff;">T1 ' + (r.target1 || '·') + '</span>' +
+                '<span style="color:var(--text-muted);">' + (r.engine || '') + (r.score != null ? ' (' + r.score + ')' : '') + '</span></div>';
+            }).join('') || '<div class="empty-state">No fresh buy calls.</div>';
+          } else {
+            var sells = gbLastScan.freshSells || [];
+            html += '<div style="font-weight:800;color:#ff4d6d;margin-bottom:8px;">FRESH SELL / SHORT CALLS (' + sells.length + ') — order flow + Nifty confirmed</div>';
+            html += sells.map(function(r) {
+              return '<div style="display:flex;gap:14px;padding:6px 0;border-bottom:1px solid var(--border,#232a36);">' +
+                '<b style="color:#ff4d6d;min-width:110px;">' + r.symbol + '</b>' +
+                '<span>LTP ' + (r.ltp != null && r.ltp.toFixed ? r.ltp.toFixed(2) : r.ltp) + '</span>' +
+                '<span style="color:#ff4d6d;">30s ' + (r.move != null ? r.move + '%' : '·') + '</span>' +
+                '<span style="color:var(--text-muted);">B:S ' + (r.ratio != null ? r.ratio : '·') + '</span>' +
+                '<span style="font-size:11px;color:var(--text-muted);">short-selling candidate — exit on flow flip</span></div>';
+            }).join('') || '<div class="empty-state">No confirmed short candidates right now (needs live ticks).</div>';
+          }
+          html += '</div>';
+          wrap.innerHTML = html;
+          try { wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
         }
 
         function gbRenderTable() {

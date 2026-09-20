@@ -264,10 +264,20 @@ app.get('/api/gb/scan', (req, res) => {
       const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'backtest_results.json'), 'utf8'));
       backtest = { totalSignals: bt.totalSignals, winRate: bt.winRate, avgRR: bt.avgRR, avgHoldDays: bt.avgHoldDays };
     } catch (_) {}
+    // Fresh sells: live order-flow-confirmed SHORT candidates from the tick
+    // board (flow red + Nifty agreement). The scanner itself is long-only.
+    let freshSells = [];
+    try {
+      const tb = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'live_tick_movers.json'), 'utf8'));
+      freshSells = (tb.stocks || []).filter(s => s.confirmed === true && s.flow === 'red' && s.isMover)
+        .map(s => ({ symbol: s.symbol, ltp: s.ltp, move: s.s30 != null ? s.s30 : s.m1, ratio: s.ratio }))
+        .sort((a, b) => (a.move || 0) - (b.move || 0)).slice(0, 30);
+    } catch (_) {}
     res.json({
       generatedAt: tight.generatedAt,
       scanned: tight.scanned,
       freshBuys: tight.freshBuys,
+      freshSells,
       backtest,
       rows: tight.rows,
     });
