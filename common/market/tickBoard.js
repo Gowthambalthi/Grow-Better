@@ -199,8 +199,15 @@ async function buildBoard() {
     row.bestMove = best;
     stocks.push(row);
   }
-  stocks.sort((a, b) => (a.stale - b.stale) || (b.isMover - a.isMover) || (b.bestMove - a.bestMove));
+  // pool tag: stocks the 45-min Yahoo job marked ACTIVE rank first; DRY sink
+  const pool = loadPool();
+  const poolMap = new Map((pool.active || []).map(s => [s, 'active']));
+  for (const s of pool.dry || []) poolMap.set(s, 'dry');
+  for (const s of stocks) s.pool = poolMap.get(s.symbol) || 'active';   // no pool data yet = treat as active
+  stocks.sort((a, b) => (a.stale - b.stale) || (a.pool === 'dry') - (b.pool === 'dry') ||
+    (b.isMover - a.isMover) || (b.bestMove - a.bestMove));
   for (const s of stocks) delete s.bestMove;
+  const activeCount = stocks.filter(s => s.pool !== 'dry').length;
   const out = {
     generatedAt: new Date(now).toISOString(),
     marketOpen: isMarketOpenNow(),
@@ -208,10 +215,73 @@ async function buildBoard() {
     feedDead,
     movers: stocks.filter(s => s.isMover).length,
     tracked: buffers.size,
+    poolActive: activeCount,
+    poolDry: stocks.length - activeCount,
     stocks,
   };
   try { fs.writeFileSync(BOARD_FILE, JSON.stringify(out)); } catch (_) {}
+  maybePoolJob(now);
   return { stocks: stocks.length, movers: out.movers };
+}
+
+// ---------- 45-min Yahoo pool job (DELETE dry / ADD active) ----------
+// Yahoo (delayed) is NEVER used for the live board. Its only job: at fixed
+// times during market hours (09:45, 10:30, 11:15, 12:00, 12:45, 13:30, 14:15
+// IST) sweep the whole universe and re-classify each stock:
+//   ACTIVE — still moving (|Yahoo 5-min move| >= 0.4%) or ticked in the last
+//            45 min on the Angel feed with meaningful volume.
+//   DRY    — no Angel tick in 45 min AND |Yahoo 5-min move| < 0.2% → dropped
+//            from the ranked board (rows stay available but sink + flagged).
+// A stock marked DRY that later shows activity is ADDED back automatically.
+const POOL_TIMES_MIN = [585, 630, 675, 720, 765, 810, 855]; // 09:45..14:15 IST
+const POOL_FILE = path.join(DATA, 'movers_pool.json');
+let _lastPoolKey = null;
+
+function istNow(d = new Date()) {
+  const ist = new Date(d.getTime() + (5.5 * 60 + d.getTimezoneOffset()) * 60000);
+  return { mins: ist.getHours() * 60 + ist.getMinutes(), day: ist.getDay(), time: `${String(ist.getHours()).padStart(2, '0')}:${String(ist.getMinutes()).padStart(2, '0')}` };
+}
+
+function maybePoolJob(now) {
+  if (!running) return;
+  const { mins, day, time } = istNow(new Date(now));
+  const key = `${new Date(now).toISOString().slice(0, 10)}:${mins}`;
+  if (day < 1 || day > 5) return;
+  if (!POOL_TIMES_MIN.includes(mins) || _lastPoolKey === key) return;
+  _lastPoolKey = key;
+  poolJob(time).catch(e => console.error('[tickBoard] pool job error:', e.message));
+}
+
+async function poolJob(atTime) {
+  const moversBoard = require('./moversBoard');
+  console.log(`[tickBoard] 45-min pool job @ ${atTime} IST — sweeping Yahoo for dry/active classification`);
+  await moversBoard.sweep();            // batched Yahoo quotes, whole universe
+  const yb = moversBoard.getMovers({});
+  const yMap = new Map((yb.stocks || []).map(s => [s.symbol, s]));
+  const now = Date.now();
+  const active = [], dry = [];
+  for (const [token, arr] of buffers) {
+    const meta = tokenToSym.get(token) || {};
+    const sym = meta.symbol || token;
+    const lastTickAge = arr.length ? (now - arr[arr.length - 1].t) / 60000 : Infinity; // minutes
+    const y = yMap.get(sym);
+    const yMove = Math.max(Math.abs(y && y.m1 || 0), Math.abs(y && y.m5 || 0));
+    const isActive = (lastTickAge <= 45 && yMove >= 0.2) || yMove >= 0.4;
+    (isActive ? active : dry).push(sym);
+  }
+  const pool = { at: new Date(now).toISOString(), jobTime: atTime, activeCount: active.length, dryCount: dry.length, active, dry };
+  try { fs.writeFileSync(POOL_FILE, JSON.stringify(pool)); } catch (_) {}
+  console.log(`[tickBoard] pool job done: ${active.length} active / ${dry.length} dry`);
+  return pool;
+}
+
+function loadPool() {
+  try {
+    const j = JSON.parse(fs.readFileSync(POOL_FILE, 'utf8'));
+    // pool older than 2 hours or from a previous day: ignore (everything active)
+    if (!j.at || Date.now() - new Date(j.at).getTime() > 2 * 3600e3) return {};
+    return j;
+  } catch (_) { return {}; }
 }
 
 function getBoard({ onlyMovers = false, minMove = 0 } = {}) {
@@ -224,4 +294,4 @@ function getBoard({ onlyMovers = false, minMove = 0 } = {}) {
   } catch (_) { return { generatedAt: null, stocks: [] }; }
 }
 
-module.exports = { start, stop, buildBoard, getBoard, isMarketOpenNow, WINDOWS };
+module.exports = { start, stop, buildBoard, getBoard, isMarketOpenNow, poolJob, WINDOWS };

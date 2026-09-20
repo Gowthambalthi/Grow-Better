@@ -389,10 +389,11 @@ function computeMove(series) {
 }
 
 async function scanMovers() {
-  // Market hours: the Angel tick board owns the board — do NOT spend API
-  // budget on delayed Yahoo sweeps. The Yahoo board is built off-hours only.
+  // Angel tick board owns the market-hours board (no delay). Yahoo NEVER
+  // serves the board — not even off-hours. Its ONLY role is the scheduled
+  // 45-min pool job (dry/active classification) inside tickBoard.
   if (tickBoard.isMarketOpenNow()) {
-    if (!require('fs').existsSync(path.join(DATA, 'live_tick_movers.json'))) {
+    if (!fs.existsSync(path.join(DATA, 'live_tick_movers.json'))) {
       await tickBoard.start().catch(() => {});   // lazy boot if server gate missed
     }
     if (fs.existsSync(path.join(DATA, 'live_tick_movers.json'))) {
@@ -401,7 +402,7 @@ async function scanMovers() {
     }
     return { source: 'angel-pending' };
   }
-  return moversBoard.scanMovers();
+  return { source: 'closed', closed: true };   // off-hours: last tick snapshot persists on disk
 }
 
 function getMovers({ onlyMovers = false, minMove = 0 } = {}) {

@@ -425,15 +425,14 @@ app.get('/api/gb/surges', (req, res) => {
 app.get('/api/gb/movers', (req, res) => {
   try {
     const tickBoard = require('./common/market/tickBoard');
-    const liveCalls = require('./common/market/liveCallEngine');
     const onlyMovers = req.query.all !== '1';
     const minMove = req.query.min ? parseFloat(req.query.min) : 0;
-    // Market hours: Angel tick board ONLY (no delay). Outside: Yahoo snapshot.
-    if (tickBoard.isMarketOpenNow()) {
-      const b = tickBoard.getBoard({ onlyMovers, minMove });
-      if (b.generatedAt) return res.json(b);
-    }
-    res.json(liveCalls.getMovers({ onlyMovers, minMove }));
+    // Angel tick board ONLY. Yahoo NEVER serves the board (delayed = fake
+    // moves); its sole job is the 45-min dry/active pool re-classification.
+    // Off-hours the last tick snapshot persists on disk and is served as-is.
+    const b = tickBoard.getBoard({ onlyMovers, minMove });
+    if (b.generatedAt) return res.json(b);
+    res.json({ generatedAt: null, marketOpen: tickBoard.isMarketOpenNow(), source: 'Angel One ticks', movers: 0, stocks: [], note: 'no tick board yet — boots at market open 09:15 IST' });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
