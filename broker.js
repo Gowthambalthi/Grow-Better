@@ -65,10 +65,6 @@ class Broker extends EventEmitter {
     this._assertLoggedIn();
     return this._holdings.getHoldings();
   }
-  async getHoldings() {
-    this._assertLoggedIn();
-    return this._holdings.getHoldings();
-  }
 
   async placeOrder(order, brokerOptions) {
     this._assertLoggedIn();

@@ -156,14 +156,15 @@ function requireApiKey(req, res, next) {
   const expected = env.server.apiKey();
   if (!expected) return next(); // no key configured — auth disabled
 
-  // Allow local loopback browser access (127.0.0.1 / ::1 / localhost) seamlessly
+  // Allow ONLY genuine loopback connections through without a key.
+  // NOTE: req.hostname is derived from the client-controlled Host header and
+  // must NEVER be trusted here — a remote attacker sending `Host: localhost`
+  // would otherwise bypass authentication entirely.
   const clientIp = req.ip || req.connection?.remoteAddress || '';
   const isLocal =
     clientIp === '127.0.0.1' ||
     clientIp === '::1' ||
-    clientIp === '::ffff:127.0.0.1' ||
-    req.hostname === 'localhost' ||
-    req.hostname === '127.0.0.1';
+    clientIp === '::ffff:127.0.0.1';
   if (isLocal) return next();
 
   const provided = req.get('X-API-Key');
@@ -182,6 +183,11 @@ function requireApiKey(req, res, next) {
 }
 
 app.use(requireApiKey);
+
+// Behind a reverse proxy (Render) req.ip would otherwise be the proxy's
+// address; trust X-Forwarded-For so the loopback bypass above only ever
+// matches a genuine local connection and the real client IP is visible.
+app.set('trust proxy', 1);
 
 // ---- Health ----
 app.get('/health', (req, res) => {
@@ -603,7 +609,12 @@ app.get('/api/instruments/search', (req, res) => {
   try {
     const q = (req.query.q || '').trim();
     if (!q) return res.json([]);
-    const results = instrumentService.search(q, { limit: 15 });
+    const { exchange, segment, limit } = req.query;
+    const results = instrumentService.search(q, {
+      limit: limit ? Number(limit) : 15,
+      ...(exchange ? { exchange } : {}),
+      ...(segment ? { segment } : {}),
+    });
     const list = [];
     const seen = new Set();
 
@@ -625,7 +636,7 @@ app.get('/api/instruments/search', (req, res) => {
         }
       }
     }
-    res.json(list.slice(0, 15));
+    res.json(list.slice(0, limit ? Math.min(Number(limit), 100) : 15));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1979,18 +1990,7 @@ app.get('/api/instruments/status', (req, res) => {
   res.json(instrumentService.status());
 });
 
-// GET /api/instruments/search?q=reliance&exchange=NSE&limit=10
-app.get('/api/instruments/search', (req, res) => {
-  try {
-    const { q, exchange, segment, limit } = req.query;
-    if (!q) return res.status(400).json({ error: 'q query param is required' });
-    res.json(instrumentService.search(q, { exchange, segment, limit: limit ? Number(limit) : undefined }));
-  } catch (err) {
-    res.status(503).json({ error: err.message }); // most likely "not loaded yet"
-  }
-});
-
-// GET /api/instruments/resolve?symbol=RELIANCE&exchange=NSE
+// ---- Instruments ----
 app.get('/api/instruments/resolve', (req, res) => {
   try {
     const { symbol, exchange } = req.query;
