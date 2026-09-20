@@ -193,6 +193,68 @@ function flowRead(arr, now, ltp) {
   return out;
 }
 
+// ---------- tick candles: structure + S/R + big-buyer (all from the tick buffer) ----------
+// Aggregates ticks into small candles (default 15s) and reads pure price action.
+// Runs on every board build over in-memory ticks — sub-millisecond per stock.
+const TICK_CANDLE_MS = 15000; // 15s micro-candles
+
+function tickCandles(arr) {
+  const out = [];
+  let cur = null;
+  for (const t of arr) {
+    if (!cur || t.t >= cur.t0 + TICK_CANDLE_MS) {
+      cur = { t0: Math.floor(t.t / TICK_CANDLE_MS) * TICK_CANDLE_MS, o: t.p, h: t.p, l: t.p, c: t.p, v: 0 };
+      out.push(cur);
+    } else {
+      if (t.p > cur.h) cur.h = t.p;
+      if (t.p < cur.l) cur.l = t.p;
+      cur.c = t.p;
+    }
+    cur.v += (t.bq || 0); // proxy: buy-side depth changes as activity proxy
+  }
+  return out;
+}
+
+// Structure read: returns { dir, sr, bigBuyer, bigSeller }
+//   dir: 'up' | 'down' | null — last-3-candle higher-lows / lower-highs + last candle close direction
+//   sr: distance % to session high/low — a buy INTO the session high is chasing resistance
+//   bigBuyer/bigSeller: a sudden large jump in tot buy/sell quantity in the last ~30s
+function structureRead(arr, ltp) {
+  if (arr.length < 8) return { dir: null, sr: null, bigBuyer: false, bigSeller: false };
+  const cs = tickCandles(arr);
+  const n = cs.length;
+  let dir = null;
+  if (n >= 3) {
+    const last3 = cs.slice(-3);
+    const hl = last3[1].l > last3[0].l && last3[2].l >= last3[1].l;
+    const lh = last3[1].h < last3[0].h && last3[2].h <= last3[1].h;
+    const upClose = last3[2].c > last3[2].o;
+    const dnClose = last3[2].c < last3[2].o;
+    if (hl && upClose) dir = 'up';
+    else if (lh && dnClose) dir = 'down';
+  }
+  // session S/R from tick extremes
+  let hi = -Infinity, lo = Infinity;
+  for (const c of cs) { if (c.h > hi) hi = c.h; if (c.l < lo) lo = c.l; }
+  const sr = {
+    atHigh: hi > 0 ? +(((hi - ltp) / hi) * 100).toFixed(3) : null,  // 0 = AT session high
+    atLow: lo > 0 ? +(((ltp - lo) / lo) * 100).toFixed(3) : null,   // 0 = AT session low
+  };
+  // big player: tot buy/sell quantity jumped sharply in the last 30s
+  const now = arr[arr.length - 1].t;
+  let ref = null;
+  for (let i = arr.length - 1; i >= 0; i--) { if (arr[i].t <= now - 30000) { ref = arr[i]; break; } }
+  const last = arr[arr.length - 1];
+  let bigBuyer = false, bigSeller = false;
+  if (ref) {
+    const bqJump = last.bq - ref.bq, sqJump = last.sq - ref.sq;
+    const base = Math.max(1, Math.min(ref.bq, ref.sq));
+    if (bqJump > 0 && bqJump / base > 0.5 && bqJump > sqJump * 2) bigBuyer = true;
+    if (sqJump > 0 && sqJump / base > 0.5 && sqJump > bqJump * 2) bigSeller = true;
+  }
+  return { dir, sr, bigBuyer, bigSeller };
+}
+
 function loadUniverse() {
   const map = new Map();
   try {
@@ -255,14 +317,25 @@ function buildBoard() {
     row.mDay = close > 0 ? +(((ltp - close) / close) * 100).toFixed(2) : null;
     row.isMover = !feedDead && WINDOWS.some(w => row[w.key] != null && Math.abs(row[w.key]) >= MOVER_TH);
     row.bestMove = best;
+    const st = structureRead(arr, ltp);
+    row.candle = st.dir;            // 'up' | 'down' | null — 15s tick-candle structure
+    row.bigBuyer = st.bigBuyer;
+    row.bigSeller = st.bigSeller;
+    row.sr = st.sr;
     const of = feedDead ? null : flowRead(arr, now, ltp);
     if (of) {
       row.flow = of.flowColor;                 // 'green' | 'red' | null (disagreement = no colour)
       row.ratio = of.ratio;                    // current buy:sell ratio
       row.ofS30 = of[WINDOWS[2].key] && of[WINDOWS[2].key].dir;
       row.ofM1 = of[WINDOWS[3].key] && of[WINDOWS[3].key].dir;
-      // STRICT confirmation: order flow AND Nifty must agree (index can't oppose)
-      row.confirmed = (of.flowColor === 'green' && niftyUp) || (of.flowColor === 'red' && niftyDown);
+      // STRICT confirmation: candle structure AND order flow AND Nifty must all agree.
+      // A buy chasing INTO the session high is rejected (resistance) unless a big buyer
+      // just stepped in (absorption); same mirror for shorts at the session low.
+      const chasingHigh = st.sr.atHigh != null && st.sr.atHigh < 0.1;
+      const chasingLow = st.sr.atLow != null && st.sr.atLow < 0.1;
+      const buyOk = of.flowColor === 'green' && st.dir === 'up' && niftyUp && (!chasingHigh || st.bigBuyer);
+      const shortOk = of.flowColor === 'red' && st.dir === 'down' && niftyDown && (!chasingLow || st.bigSeller);
+      row.confirmed = buyOk || shortOk;
     }
     stocks.push(row);
   }

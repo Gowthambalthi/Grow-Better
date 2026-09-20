@@ -4079,7 +4079,7 @@ function _renderMfGridBody(grid, schemes) {
             if (v <= -quickTh) sells.push(row);
             else if (v >= quickTh) {
               // strict confirmation only from 30s up (flow windows are 30s/1m)
-              var canConfirm = gbMvTf !== 's10' && gbMvTf !== 's20' && s.flow === 'green' && s.confirmed === true;
+              var canConfirm = gbMvTf !== 's10' && gbMvTf !== 's20' && s.flow === 'green' && s.confirmed === true && s.candle === 'up';
               (canConfirm ? buys : waits).push(row);
             } else sells.push(Math.abs(v) >= quickTh * 0.6 ? row : null); // small noise neither way
           });
@@ -4093,10 +4093,12 @@ function _renderMfGridBody(grid, schemes) {
             var s = r.s, v = r.v;
             var arrow = v > 0 ? ' <span style="color:#00e091;">▲</span>' : ' <span style="color:#ff4d6d;">▼</span>';
             var staleBadge = s.stale ? ' <span style="color:#ffa94d;font-size:10px;">DELAY</span>' : '';
+            var bigTag = s.bigBuyer ? ' <span style="color:#00e091;font-size:10px;font-weight:800;">🜲 BIG BUYER</span>' : s.bigSeller ? ' <span style="color:#ff4d6d;font-size:10px;font-weight:800;">▼ BIG SELLER</span>' : '';
+            var candleTag = s.candle === 'up' ? ' <span style="color:#00e091;font-size:10px;">▮▲</span>' : s.candle === 'down' ? ' <span style="color:#ff4d6d;font-size:10px;">▮▼</span>' : '';
             var bg = cls === 'conf' ? 'rgba(0,224,145,0.16)' : cls === 'buy' ? 'rgba(0,224,145,0.05)' : cls === 'sell' ? 'rgba(255,77,109,0.10)' : 'transparent';
             return '<tr style="border-top:1px solid var(--border,#232a36);background:' + bg + ';">' +
               '<td style="padding:5px 10px;font-weight:700;">' + (v > 0 ? '+' : '') + v + '%' + arrow + '</td>' +
-              '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + staleBadge + '</td>' +
+              '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + staleBadge + bigTag + candleTag + '</td>' +
               '<td style="padding:5px 10px;">' + (s.ltp != null && s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp) + '</td>' +
               '<td style="padding:5px 10px;font-size:12px;color:var(--text-muted);">' + (s.ratio != null ? 'B:S ' + s.ratio : '·') + '</td>' +
               '<td style="padding:5px 10px;font-size:11px;font-weight:800;color:' + tagColor + ';">' + tag + '</td>' +

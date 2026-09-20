@@ -92,6 +92,24 @@ function run() {
           if (side === 'SHORT' && hd.delta >= 0) continue;
           if (side === 'LONG' && hd.delta <= 0) continue;
         }
+        // Candle-structure confirmation: last 3 bars must show higher-lows (long)
+        // or lower-highs (short) — mirrors the tick-candle gate in the live board.
+        if (args.candles) {
+          const lows = [bars[i-2][3], bars[i-1][3], l];
+          const highs = [bars[i-2][2], bars[i-1][2], h];
+          if (side === 'LONG' && !(lows[1] > lows[0] && lows[2] >= lows[1])) continue;
+          if (side === 'SHORT' && !(highs[1] < highs[0] && highs[2] <= highs[1])) continue;
+        }
+        // Big-buyer gate: the signal bar's |delta| must be outsized vs recent bars —
+        // large directional participation, not drift. Mirrors the bigBuyer/bigSeller jump.
+        if (args.bigbuyer) {
+          const recent = bars.slice(Math.max(0, i - 8), i).map(b2 => {
+            const [, o2, h2, l2, , v2] = b2; const r2 = h2 - l2;
+            return v2 > 0 && r2 > 0 ? v2 * Math.abs(2 * ((b2[4] - l2) / r2) - 1) : 0;
+          });
+          const avgRecent = recent.reduce((s, x) => s + x, 0) / Math.max(1, recent.length);
+          if (Math.abs(delta) < 1.5 * Math.max(avgRecent, 1)) continue;
+        }
 
         const entry = bars[i + 1][1]; // next bar open
         const stopPct = Math.abs(entry - stop) / entry;
