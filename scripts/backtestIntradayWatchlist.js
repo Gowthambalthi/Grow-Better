@@ -43,6 +43,27 @@ function load(file) {
 }
 
 const RSI_BAND = { TREND: [55, 75], BREAKOUT: [55, 80], PULLBACK: [45, 65], 'SUPPORT BOUNCE': [30, 60], ACCUMULATION: [40, 70] };
+
+/**
+ * FRESH BUY — replicates scripts/buildTradeTable.js exactly, because that is what
+ * the watchlist's FRESH BUY block is built from: score >= 7, no traps, and the
+ * "freshness" rule (close within 1% of the engine's entry zone) plus volRatio > 1.2.
+ * Note it has NO ADX floor and a lower score bar than STRICT/DIVERSE (>= 9).
+ */
+function memberFresh(r) {
+  const i = r.indicators || {};
+  if ((r.engineRate || 0) < 7) return false;
+  if (i.rsi14 > 80 || i.volRatio < 0.8 || i.adx14 < 18) return false;
+  if (!i.ema20 || r.close > i.ema20 * 1.10) return false;
+  const zone = r.winningEngine === 'BREAKOUT' ? i.resistance30
+    : r.winningEngine === 'SUPPORT BOUNCE' ? i.support30
+    : i.ema20;
+  if (!zone) return false;
+  if (!(r.close >= zone * 0.99 && r.close <= zone * 1.01)) return false;   // within 1% of entry zone
+  if ((i.volRatio || 0) <= 1.2) return false;
+  return true;
+}
+
 function member(r, mode) {
   const i = r.indicators || {};
   if ((r.engineRate || 0) < 9) return false;
@@ -201,7 +222,7 @@ function stats(rows) {
     { name: '2% SL / 4% TGT', kind: 'pct', stopPct: 0.02, targetPct: 0.04 },
     { name: 'CANDLE SL / 4% TGT', kind: 'candle', targetPct: 0.04 },
   ];
-  const MODES = ['ALL', 'STRICT', 'DIVERSE'];
+  const MODES = ['ALL', 'FRESH', 'STRICT', 'DIVERSE'];
   const BUCKETS = ['base', 'bigBuyers', 'rocOn', 'volBuild', 'confirmed', 'strict3', 'rocSweet', 'rocExt', 'notExt'];
   const results = {};
   for (const m of MODES) {
@@ -243,7 +264,7 @@ function stats(rows) {
       const inStrict = member(r, 'STRICT');
       const inDiverse = member(r, 'DIVERSE');
       const inAll = (r.engineRate || 0) >= 7;      // engine signal, no watchlist gate
-      const membership = { ALL: inAll, STRICT: inStrict, DIVERSE: inDiverse };
+      const membership = { ALL: inAll, FRESH: memberFresh(r), STRICT: inStrict, DIVERSE: inDiverse };
       for (const mode of MODES) {
         if (!membership[mode]) continue;
         signals[mode] = (signals[mode] || 0) + 1;
