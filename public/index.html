@@ -1266,6 +1266,7 @@
             <button class="btn gbTermTab" data-v="all"    style="padding:6px 16px;font-size:13px;font-weight:700;">ALL</button>
             <button class="btn gbTermTab" data-v="watch"  style="padding:6px 16px;font-size:13px;font-weight:700;">WATCHLIST</button>
             <button class="btn gbTermTab" data-v="movers" style="padding:6px 16px;font-size:13px;font-weight:700;">LIVE MOVERS</button>
+            <button class="btn gbTermTab" data-v="signals" style="padding:6px 16px;font-size:13px;font-weight:700;">INTRADAY SIGNALS</button>
             <button class="btn gbTermTab" data-v="calls"  style="padding:6px 16px;font-size:13px;font-weight:700;">CLOSED / CALLS</button>
           </div>
 
@@ -1289,6 +1290,20 @@
             </div>
           </div>
           <div id="gbMoversWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+          </div>
+
+          <!-- ROC + big-buyers intraday signals table -->
+          <div class="gbTermView" data-sec="signals" style="display:none;">
+          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Intraday Signals (ROC + Buyers)</h2>
+            <span id="gbSigStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">ROC engine · refreshed every 15s</span>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <button class="btn gbSigF" data-f="" style="padding:3px 10px;font-size:12px;">ALL</button>
+              <button class="btn gbSigF" data-f="BUY" style="padding:3px 10px;font-size:12px;color:#00e091;">BUY</button>
+              <button class="btn gbSigF" data-f="SHORT" style="padding:3px 10px;font-size:12px;color:#ff4d6d;">SHORT</button>
+            </div>
+          </div>
+          <div id="gbSigWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
           </div>
 
           <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
@@ -4157,6 +4172,7 @@ function _renderMfGridBody(grid, schemes) {
         Array.prototype.forEach.call(document.querySelectorAll('.gbSigF'), function(b) {
           b.addEventListener('click', function() { gbSigFilter = b.getAttribute('data-f') || ''; gbRenderSignals(); });
         });
+        window.gbRefreshSignals = gbRefreshSignals; window.gbRenderSignals = gbRenderSignals;
 
         // ---- Stocks to Watch Tomorrow ----
         function gbRenderWatch() {
@@ -4232,7 +4248,7 @@ function _renderMfGridBody(grid, schemes) {
 
         // initial load + auto-refresh every 60s while the terminal view is open
         gbRefreshCalls();
-        /* sig removed */
+        gbRefreshSignals();
         gbRefreshMovers();
         setInterval(gbRefreshCalls, 15000);
         setInterval(gbRefreshSignals, 15000);
