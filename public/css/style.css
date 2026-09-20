@@ -105,9 +105,9 @@ button { font-family: inherit; }
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
-  /* Main brand navy */
-  background: linear-gradient(180deg, #0F2447, #0B1B34) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  /* Brand green sidebar */
+  background: linear-gradient(180deg, #0B6E4F, #064432) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.18);
   display: flex;
   flex-direction: column;
   padding: 16px 10px;
@@ -209,7 +209,7 @@ button { font-family: inherit; }
   transform: translateX(5px);
 }
 .nav-item:hover .nav-icon {
-  color: #60A5FA;
+  color: #6EE7B7;
   transform: scale(1.1);
 }
 
@@ -223,9 +223,9 @@ button { font-family: inherit; }
 .sidebar:hover .nav-item .nav-icon { color: #64748B; }
 .sidebar:hover .nav-item:hover { color: #0F2447 !important; }
 .sidebar:hover .nav-item:hover .nav-icon { color: #00B386 !important; }
-/* the active pill keeps its blue identity on the white rail */
+/* the active pill keeps its green identity on the white rail */
 .sidebar:hover .nav-item.active {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
   color: #FFFFFF !important;
 }
 .sidebar:hover .nav-item.active .nav-icon { color: #FFFFFF !important; }
@@ -247,13 +247,13 @@ button { font-family: inherit; }
   transform: scale(1.1);
 }
 
-/* Active State: Vibrant Royal Blue Pill (Fully Visible, Fits Perfectly!) */
+/* Active State: Vibrant Green Pill (matches the green rail) */
 .nav-item.active {
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45) !important;
 }
 
 .nav-item.active .nav-icon {
@@ -265,9 +265,9 @@ button { font-family: inherit; }
   content: '';
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   width: 3.5px; height: 55%;
-  background: #60A5FA;
+  background: #6EE7B7;
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 10px #60A5FA;
+  box-shadow: 0 0 10px #6EE7B7;
 }
 
 /* Active Click Press Down Pop */
@@ -297,7 +297,7 @@ button { font-family: inherit; }
   font-size: 13px;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-.collapse-toggle:hover { color: #60A5FA; border-color: #3B82F6; background: var(--bg-panel); }
+.collapse-toggle:hover { color: #10B981; border-color: #059669; background: var(--bg-panel); }
 .sidebar.collapsed .collapse-toggle { transform: rotate(180deg); }
 
 /* ---- Fixed Bottom Right Corner Status Pill ---- */
