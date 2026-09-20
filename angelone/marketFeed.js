@@ -51,6 +51,7 @@ class AngelMarketFeed extends EventEmitter {
     });
 
     this.ws.on('open', () => {
+      this._reconnectAttempt = 0;
       this.emit('open');
       this.heartbeatTimer = setInterval(() => {
         if (this.ws.readyState === WebSocket.OPEN) this.ws.send('ping');
@@ -86,7 +87,11 @@ class AngelMarketFeed extends EventEmitter {
   _scheduleReconnect() {
     if (this.isReconnecting || this.manualClose) return;
     this.isReconnecting = true;
-    console.log('[AngelMarketFeed] Connection dropped. Auto-reconnecting in 5 seconds...');
+    // Exponential backoff: hammering the socket endpoint on failure gets the
+    // IP rate-limited (HTTP 429 on connect) and then EVERY reconnect fails.
+    this._reconnectAttempt = (this._reconnectAttempt || 0) + 1;
+    const delay = Math.min(30000 * Math.pow(2, this._reconnectAttempt - 1), 300000);
+    console.log(`[AngelMarketFeed] Connection dropped. Auto-reconnecting in ${Math.round(delay / 1000)}s (attempt ${this._reconnectAttempt})...`);
     setTimeout(() => {
       this.isReconnecting = false;
       try {
@@ -97,7 +102,7 @@ class AngelMarketFeed extends EventEmitter {
       } catch (e) {
         console.error('[AngelMarketFeed] Auto-reconnect failed:', e.message);
       }
-    }, 5000);
+    }, delay);
   }
 
   /**

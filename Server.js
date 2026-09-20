@@ -424,9 +424,15 @@ app.get('/api/gb/surges', (req, res) => {
 
 app.get('/api/gb/movers', (req, res) => {
   try {
+    const tickBoard = require('./common/market/tickBoard');
     const liveCalls = require('./common/market/liveCallEngine');
     const onlyMovers = req.query.all !== '1';
     const minMove = req.query.min ? parseFloat(req.query.min) : 0;
+    // Market hours: Angel tick board ONLY (no delay). Outside: Yahoo snapshot.
+    if (tickBoard.isMarketOpenNow()) {
+      const b = tickBoard.getBoard({ onlyMovers, minMove });
+      if (b.generatedAt) return res.json(b);
+    }
     res.json(liveCalls.getMovers({ onlyMovers, minMove }));
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -2244,6 +2250,25 @@ app.get('/api/debug/groww', async (req, res) => {
     console.log('[server] live call engine started (60s tick)');
   } catch (e) {
     console.log('[server] live call engine failed to start:', e.message);
+  }
+
+  // ---- Tick-level movers board (Angel One WebSocket, full universe) ----
+  // Market hours only; auto-boots at 09:15, stops after 15:15. Yahoo never
+  // serves the board while the market is open (delayed data = fake moves).
+  try {
+    const tickBoard = require('./common/market/tickBoard');
+    let tbUp = false;
+    const tbGate = async () => {
+      try {
+        const open = tickBoard.isMarketOpenNow();
+        if (open && !tbUp) { tbUp = await tickBoard.start().catch(() => false); if (tbUp) console.log('[server] tick movers board UP (Angel One ticks)'); }
+        if (!open && tbUp) { tickBoard.stop(); tbUp = false; console.log('[server] tick movers board stopped (market closed)'); }
+      } catch (_) {}
+    };
+    tbGate();
+    setInterval(tbGate, 60000);
+  } catch (e) {
+    console.log('[server] tick board failed to start:', e.message);
   }
 
   app.listen(port, host, () => {

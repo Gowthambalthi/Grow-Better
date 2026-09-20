@@ -363,10 +363,10 @@ async function scanSignals(candidatesOverride) {
 
 
 // ---------- real-time movers board (strictly 09:15-15:15 IST) ----------
-
-// For every stock >= MIN_PRICE: 1-min and 5-min change %, direction trail.
-// Flag MOVER when |1-min change| >= 1% or |5-min change| >= 1%.
-const MOVER_TH = 1.0; // percent
+// UPGRADED: market hours run on Angel One TICKS (tickBoard.js, full universe,
+// no delay). Yahoo batch board (moversBoard.js) serves OFF-HOURS viewing only.
+const moversBoard = require('./moversBoard');
+const tickBoard = require('./tickBoard');
 
 function computeMove(series) {
   if (!series || !series.bars || series.bars.length < 6) return null;
@@ -389,42 +389,23 @@ function computeMove(series) {
 }
 
 async function scanMovers() {
-  let symbols = [];
-  try {
-    const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
-    for (const r of es.results || []) symbols.push({ symbol: r.symbol, engine: r.winningEngine, score: r.engineRate });
-  } catch (_) {}
-  if (!symbols.length) return { movers: 0 };
-
-  const CONC = 14;
-  const out = [];
-  const now = new Date().toISOString();
-  for (let i = 0; i < symbols.length; i += CONC) {
-    const batch = symbols.slice(i, i + CONC);
-    const res = await Promise.all(batch.map(async c => {
-      const series = await fetchIntradaySeries(c.symbol);
-      if (!series) return null;
-      const mv = computeMove(series);
-      if (!mv || mv.ltp == null || mv.ltp < MIN_PRICE) return null;
-      const isMover = Math.abs(mv.m1) >= MOVER_TH || Math.abs(mv.m2 || 0) >= MOVER_TH || Math.abs(mv.m5 || 0) >= MOVER_TH;
-      return { symbol: c.symbol, engine: c.engine, score: c.score, time: now, ...mv, isMover };
-    }));
-    out.push(...res.filter(Boolean));
+  // Market hours: the Angel tick board owns the board — do NOT spend API
+  // budget on delayed Yahoo sweeps. The Yahoo board is built off-hours only.
+  if (tickBoard.isMarketOpenNow()) {
+    if (!require('fs').existsSync(path.join(DATA, 'live_tick_movers.json'))) {
+      await tickBoard.start().catch(() => {});   // lazy boot if server gate missed
+    }
+    if (fs.existsSync(path.join(DATA, 'live_tick_movers.json'))) {
+      await tickBoard.buildBoard().catch(() => {});
+      return { source: 'angel-ticks' };
+    }
+    return { source: 'angel-pending' };
   }
-  // movers first, then by 1-min change magnitude
-  out.sort((a, b) => (b.isMover - a.isMover) || (Math.abs(b.m1) - Math.abs(a.m1)));
-  fs.writeFileSync(path.join(DATA, 'live_movers.json'), JSON.stringify({ generatedAt: now, marketOpen: isMarketOpen(), movers: out.filter(x => x.isMover).length, stocks: out }));
-  return { stocks: out.length, movers: out.filter(x => x.isMover).length };
+  return moversBoard.scanMovers();
 }
 
 function getMovers({ onlyMovers = false, minMove = 0 } = {}) {
-  try {
-    const j = JSON.parse(fs.readFileSync(path.join(DATA, 'live_movers.json'), 'utf8'));
-    let stocks = j.stocks || [];
-    if (onlyMovers) stocks = stocks.filter(s => s.isMover);
-    if (minMove > 0) stocks = stocks.filter(s => Math.abs(s.m1) >= minMove || Math.abs(s.m5 || 0) >= minMove);
-    return { generatedAt: j.generatedAt, marketOpen: j.marketOpen, movers: j.movers, stocks };
-  } catch (_) { return { generatedAt: null, stocks: [] }; }
+  return moversBoard.getMovers({ onlyMovers, minMove });
 }
 
 

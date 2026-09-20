@@ -98,7 +98,8 @@
       <header class="topbar">
         <div class="topbar-left">
           <div class="topbar-brand-simple" data-nav="dashboard" title="Grow Better — Algo Terminal">
-            <span class="topbar-brand-title"><span style="color:#00B386;">GROW</span> <span style="color:#1a1d26;">BETTER</span></span>
+            <img src="/logo.png" alt="Grow Better" class="topbar-logo-simple">
+            <span class="topbar-brand-title"><span style="color:#00B386;">GROW</span> <span style="color:#0F2447;">BETTER</span></span>
           </div>
         </div>
 
@@ -1268,26 +1269,6 @@
             <button class="btn gbTermTab" data-v="calls"  style="padding:6px 16px;font-size:13px;font-weight:700;">CLOSED / CALLS</button>
           </div>
 
-          <!-- Stocks to watch tomorrow: today's top confirmed setups -->
-          <div class="gbTermView" data-sec="watch">
-          <div style="display:flex;align-items:center;gap:12px;margin:0 0 8px;">
-            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Watchlist</h2>
-            <span style="font-size:12px;color:var(--text-dim,#8b93a7);">today's confirmed fresh buys + top engine scores — plan entries at open</span>
-          </div>
-          <div id="gbWatchWrap" style="overflow:auto;max-height:35vh;margin-bottom:20px;"></div>
-          </div>
-
-          <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
-          <div class="gbTermView" data-sec="calls">
-          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
-            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
-            <span id="gbCallsStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">auto-scans every minute</span>
-            <button id="gbCallsTickBtn" class="btn" style="padding:4px 12px;font-size:12px;margin-left:auto;">⟳ Refresh prices</button>
-          </div>
-          <div id="gbTodayPnl" style="display:flex;gap:12px;margin:0 0 12px;flex-wrap:wrap;"></div>
-          <div id="gbCallsWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
-          </div>
-
           <!-- Real-time movers board: 1-min / 5-min change flags -->
           <div class="gbTermView" data-sec="movers">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
@@ -1314,6 +1295,26 @@
             </div>
           </div>
           <div id="gbSigWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
+          </div>
+
+          <!-- Stocks to watch tomorrow: today's top confirmed setups -->
+          <div class="gbTermView" data-sec="watch">
+          <div style="display:flex;align-items:center;gap:12px;margin:0 0 8px;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Watchlist</h2>
+            <span style="font-size:12px;color:var(--text-dim,#8b93a7);">today's confirmed fresh buys + top engine scores — plan entries at open</span>
+          </div>
+          <div id="gbWatchWrap" style="overflow:auto;max-height:35vh;margin-bottom:20px;"></div>
+          </div>
+
+          <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
+          <div class="gbTermView" data-sec="calls">
+          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
+            <span id="gbCallsStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">auto-scans every minute</span>
+            <button id="gbCallsTickBtn" class="btn" style="padding:4px 12px;font-size:12px;margin-left:auto;">⟳ Refresh prices</button>
+          </div>
+          <div id="gbTodayPnl" style="display:flex;gap:12px;margin:0 0 12px;flex-wrap:wrap;"></div>
+          <div id="gbCallsWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
           </div>
 
           <h2 style="font-size:16px;margin:8px 0;color:var(--text,#e6e9f0);">Scanner Results</h2>
@@ -4048,24 +4049,28 @@ function _renderMfGridBody(grid, schemes) {
           if (!wrap) return;
           if (!gbMvData || !(gbMvData.stocks || []).length) { wrap.innerHTML = '<div class="empty-state">Movers board refreshes every tick — live during 09:15–15:15 IST.</div>'; return; }
           var stocks = gbMvData.stocks.filter(function(s) { return gbMvMode === 'all' || s.isMover; });
-          var head = ['Time','Symbol','LTP','1-min','2-min','5-min','Day %','Trail (last 5 min)','Engine'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var src = gbMvData.source || 'Yahoo batch';
+          var head = ['Time','Symbol','LTP','10s','20s','30s','1-min','3-min','5-min','Day %','Engine'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var moveCell = function(v, big) {
+            if (v == null) return '<td style="padding:4px 10px;color:var(--text-muted);">·</td>';
+            var c = v >= (big || 1) ? '#00e091' : v <= -(big || 1) ? '#ff4d6d' : v > 0 ? '#7ab8ff' : v < 0 ? '#ffb86b' : 'inherit';
+            var w = Math.abs(v) >= (big || 1) ? 'font-weight:800;' : '';
+            return '<td style="padding:4px 10px;'+w+'color:' + c + ';">' + (v > 0 ? '+' : '') + v + '%</td>';
+          };
           var body = stocks.slice(0, 120).map(function(s) {
-            var m1c = s.m1 > 0.99 ? '#00e091' : s.m1 < -0.99 ? '#ff4d6d' : s.m1 > 0 ? '#7ab8ff' : '#ffb86b';
-            var trail = (s.trail || []).map(function(t){ return t === 'up' ? '<span style="color:#00e091;">↑</span>' : '<span style="color:#ff4d6d;">↓</span>'; }).join('');
+            var staleBadge = s.stale ? ' <span style="color:#ffa94d;font-size:10px;">DELAY</span>' : '';
             return '<tr style="border-top:1px solid var(--border,#232a36);' + (s.isMover ? 'font-weight:600;' : 'opacity:0.7;') + '">' +
               '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (s.time || '').slice(11, 19) + '</td>' +
-              '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
+              '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + staleBadge + '</td>' +
               '<td style="padding:4px 10px;">' + (s.ltp != null && s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp) + '</td>' +
-              '<td style="padding:4px 10px;font-weight:800;color:' + m1c + ';">' + (s.m1 > 0 ? '+' : '') + s.m1 + '%</td>' +
-              '<td style="padding:4px 10px;font-weight:700;color:' + ((s.m2 || 0) > 0 ? '#00e091' : (s.m2 || 0) < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.m2 != null ? (s.m2 > 0 ? '+' : '') + s.m2 + '%' : '-') + '</td>' +
-              '<td style="padding:4px 10px;color:' + ((s.m5 || 0) > 0 ? '#00e091' : (s.m5 || 0) < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.m5 != null ? (s.m5 > 0 ? '+' : '') + s.m5 + '%' : '-') + '</td>' +
-              '<td style="padding:4px 10px;color:' + ((s.mDay || 0) > 0 ? '#00e091' : (s.mDay || 0) < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.mDay != null ? (s.mDay > 0 ? '+' : '') + s.mDay + '%' : '-') + '</td>' +
-              '<td style="padding:4px 10px;letter-spacing:2px;">' + trail + '</td>' +
-              '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (s.engine || '-') + ' (' + s.score + ')</td>' +
+              moveCell(s.s10, 0.5) + moveCell(s.s20, 0.75) + moveCell(s.s30, 0.75) +
+              moveCell(s.m1) + moveCell(s.m3) + moveCell(s.m5) +
+              moveCell(s.mDay) +
+              '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (s.engine || '-') + (s.score != null ? ' (' + s.score + ')' : '') + '</td>' +
               '</tr>';
           }).join('');
           wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' +
-            gbMvData.movers + ' movers of ' + gbMvData.stocks.length + ' stocks · updated ' + (gbMvData.generatedAt || '').slice(11, 19) + ' UTC' +
+            (src === 'Angel One ticks' ? '⚡ Angel One exchange ticks (no delay)' : src) + ' · ' + gbMvData.movers + ' movers of ' + gbMvData.stocks.length + ' stocks · updated ' + (gbMvData.generatedAt || '').slice(11, 19) + ' UTC' +
             '</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
         }
         async function gbRefreshMovers() {
@@ -4079,7 +4084,7 @@ function _renderMfGridBody(grid, schemes) {
             gbRenderMovers();
             if (typeof gbRenderCalls === 'function') gbRenderCalls();
             var st = document.getElementById('gbMvStatus');
-            if (st) st.textContent = (j.marketOpen ? '● market open' : '○ market closed') + ' · ' + j.movers + ' movers of ' + j.stocks.length;
+            if (st) st.textContent = (j.source === 'Angel One ticks' ? '⚡ Angel ticks' : (j.marketOpen ? '● market open' : '○ market closed · Yahoo')) + ' · ' + j.movers + ' movers of ' + j.stocks.length;
           } catch (e) {}
         }
         Array.prototype.forEach.call(document.querySelectorAll('.gbMvF'), function(b) {
