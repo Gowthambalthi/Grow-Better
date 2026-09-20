@@ -328,10 +328,17 @@ async function scanSignals(candidatesOverride) {
       // of its bar is a bull trap (-9.3bps next bar, 59% win fading) — no BUY.
       // Heavy-at-bottom is fine (absorption, bounce fuel). Light = neutral.
       const vapOk = !(roc && roc.volAtPrice === 'HEAVY-TOP');
+      // MTF candle gate: fast TFs (3m/5m) must both be UP-trending, and the
+      // slow TFs (15m/30m) must not be DOWN — mixed momentum = no BUY.
+      const ct = candlesMtf ? { m3: candlesMtf.frames.m3?.trend, m5: candlesMtf.frames.m5?.trend, m15: candlesMtf.frames.m15?.trend, m30: candlesMtf.frames.m30?.trend } : {};
+      const fastUp = ct.m3 === 'UP' && (ct.m5 === 'UP' || ct.m5 === 'UP-LEAN');
+      const slowOk = ct.m15 !== 'DOWN' && ct.m30 !== 'DOWN';
+      const mtfOk = fastUp && slowOk;
       if (signal === 'BUY' && (!valid || !buyer.ok)) signal = 'WAIT';
       if (signal === 'BUY' && !volRocOk) signal = 'WAIT';
       if (signal === 'BUY' && !posOk) signal = 'WAIT';
       if (signal === 'BUY' && !vapOk) signal = 'WAIT';
+      if (signal === 'BUY' && !mtfOk) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
@@ -349,7 +356,7 @@ async function scanSignals(candidatesOverride) {
         dayValue: q.volume && q.ltp ? Math.round(q.volume * q.ltp) : null,
         openCheck: valid ? 'OK' : 'INVALID', openReason: open.reason,
         newBuyer: buyer.ok, buyerReason: buyer.reason,
-        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : !vapOk ? 'WAIT: heavy volume at bar top (bull trap risk)' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
+        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : !vapOk ? 'WAIT: heavy volume at bar top (bull trap risk)' : !mtfOk ? 'WAIT: candles not aligned (3m/5m up, 15m/30m not down — got ' + [ct.m3, ct.m5, ct.m15, ct.m30].join('/') + ')' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
         inPosition: !!openCall, entry: openCall ? openCall.entry : null,
         stopLoss: openCall ? openCall.stopLoss : null,
         time: now };
@@ -525,6 +532,32 @@ async function scanForNewCalls() {
     const buyerGate = newBuyerCheck(cQuote);
     if (!buyerGate.ok) continue;
 
+    // DAILY SWING GATE (horizon tag): read the last 20 daily bars. A close in
+    // the top 40% of the 20-day range with the 10-day average rising = the
+    // intraday move rides a daily uptrend → tag SWING-SUITABLE (also fine to
+    // hold overnight). Otherwise INTRADAY-ONLY. Also persist the MTF candle
+    // trends so every call carries its full multi-timeframe evidence.
+    let horizon = 'INTRADAY-ONLY', swing = null;
+    try {
+      const dj = JSON.parse(fs.readFileSync(path.join(OHLCV, c.symbol + '.json'), 'utf8'));
+      const d20 = dj.candles.slice(-20);
+      if (d20.length >= 15) {
+        const hi20 = Math.max(...d20.map(b => b[2]));
+        const lo20 = Math.min(...d20.map(b => b[3]));
+        const pos = hi20 > lo20 ? ((c.ltp - lo20) / (hi20 - lo20)) * 100 : 50;
+        const d10 = d20.slice(-10);
+        const avg10 = d10.reduce((s, b) => s + b[4], 0) / d10.length;
+        const avg10Prev = d20.slice(-11, -1).reduce((s, b) => s + b[4], 0) / 10;
+        swing = { pos20d: +pos.toFixed(1), avg10Rising: avg10 > avg10Prev };
+        if (pos >= 40 && avg10 > avg10Prev) horizon = 'SWING-SUITABLE';
+      }
+    } catch (_) {}
+    let mtfTrends = null;
+    try {
+      const cf = readCandleFrames((c.series && c.series.bars) || c.series);
+      if (cf) mtfTrends = { m3: cf.frames.m3?.trend, m5: cf.frames.m5?.trend, m15: cf.frames.m15?.trend, m30: cf.frames.m30?.trend };
+    } catch (_) {}
+
     // INTRADAY levels: candle-based stop from the live 1-min series — 10-bar
     // swing low (the pullback low the move launched from) with 0.1% buffer,
     // clamped to a 0.25%-0.6% risk band. Falls back to 0.6% below entry when
@@ -558,6 +591,9 @@ async function scanForNewCalls() {
       target2: +(c.ltp + risk * 4).toFixed(2),
       confirm: c.confirm || null,
       intraday: c.intraday || null,
+      horizon,
+      swing,
+      mtfTrends,
       stopBasis,
       status: 'ACTIVE',
       closedAt: null,

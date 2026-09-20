@@ -3744,7 +3744,9 @@ function _renderMfGridBody(grid, schemes) {
           }
         }
 
-        // ---- GB Terminal: Strategy 1 scanner ----
+        });
+
+// ---- GB Terminal: Strategy 1 scanner ----
         var gbLoaded = false;
         var gbRows = [], gbLastScan = null;
         var gbSortKey = 'score';
@@ -3963,7 +3965,7 @@ function _renderMfGridBody(grid, schemes) {
             return '<tr data-callsym="' + c.symbol + '" style="border-top:1px solid var(--border,#232a36);cursor:pointer;' + op + '">' +
               '<td style="padding:5px 10px;font-size:12px;color:var(--text-muted);white-space:nowrap;">' + (c.time || '').slice(11, 16) + '</td>' +
               '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + c.symbol + '</td>' +
-              '<td style="padding:5px 10px;font-size:12px;">' + c.engine + ' (' + c.score + ')</td>' +
+              '<td style="padding:5px 10px;font-size:12px;">' + c.engine + ' (' + c.score + ')' + (c.horizon === 'SWING-SUITABLE' ? ' <span style="color:#8be9c0;font-size:10px;font-weight:800;">SWING</span>' : '') + '</td>' +
               '<td style="padding:5px 10px;">' + c.entry + '</td>' +
               '<td style="padding:5px 10px;color:' + ltpCol + ';font-weight:600;">' + (c.lastLtp || '-') + '</td>' +
               mvCell(mv ? mv.m1 : null) +
@@ -4001,7 +4003,9 @@ function _renderMfGridBody(grid, schemes) {
               '<div style="font-weight:700;font-size:15px;color:var(--accent,#00B386);margin-bottom:6px;">' + c.symbol + ' — call inspection</div>' +
               '<div style="font-size:13px;line-height:1.9;">' +
                 'Called: <b>' + (c.time || '').slice(0, 16).replace('T', ' ') + '</b> at <b>' + c.entry + '</b><br>' +
-                'Engine: ' + c.engine + ' (score ' + c.score + ')<br>' +
+                'Engine: ' + c.engine + ' (score ' + c.score + ')' + (c.horizon ? ' · Horizon: <b>' + c.horizon + '</b>' : '') + '<br>' +
+                (c.mtfTrends ? 'Candles 3m/5m/15m/30m: <b>' + [c.mtfTrends.m3, c.mtfTrends.m5, c.mtfTrends.m15, c.mtfTrends.m30].join(' / ') + '</b><br>' : '') +
+                (c.swing ? 'Daily 20d position: <b>' + c.swing.pos20d + '%</b>' + (c.swing.avg10Rising ? ' · 10-day avg RISING' : '') + '<br>' : '') +
                 'Frames: ' + (c.confirm ? (c.confirm.framesPassed + '/4' + (c.confirm.extAtr != null ? ' · ext ' + c.confirm.extAtr + ' ATR' : '') + (c.confirm.rsVsNifty != null ? ' · RS ' + (c.confirm.rsVsNifty * 100).toFixed(1) + '%' : '')) : '-') + '<br>' +
                 'SL ' + c.stopLoss + ' · T1 ' + c.target1 + (c.t1Hit ? ' ✓hit' : '') + ' · T2 ' + c.target2 + '<br>' +
                 'Status: <b>' + c.status + (c.exitReason ? ' (' + c.exitReason + ')' : '') + '</b><br>' +
@@ -4395,7 +4399,7 @@ function _renderMfGridBody(grid, schemes) {
           var modal = document.getElementById('modalMfDetail');
           if (modal) modal.style.display = 'none';
         }
-      });
+      
 
       var currentModalHoldings = [];
 
