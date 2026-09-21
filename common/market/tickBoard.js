@@ -37,8 +37,8 @@ const UNIVERSE_FILE = path.join(DATA, 'nse_universe_3000.txt');
 const MIN_PRICE = 100;
 const MOVER_TH = 1.0;          // % move on any window flags a MOVER
 const FEED_DEAD_MS = 45000;    // no tick at all for this long = feed dead
-const HIST_MS = 8 * 60000;     // rolling tick buffer retention
-const SOCKETS = 3;             // Angel allows 3 concurrent sockets
+const HIST_MS = 8 * 60000;     // rolling tick buffer retentionconst MAX_POOL = 300;       // liquid pool tracked live (one socket covers it)
+const SOCKETS = 3;          // Angel allows 3 concurrent sockets
 const MAX_TOKENS_PER_SOCKET = 1000;
 const NIFTY_TOKEN = '99926000'; // Nifty 50 index — direction gate for confirmations
 
@@ -98,9 +98,11 @@ async function start(opts = {}) {
       console.log(`[tickBoard] resolved ${resolved.length}/${uni.length} symbols to Angel tokens`);
 
       // 3. sockets
-      const per = Math.ceil(resolved.length / SOCKETS);
+      // One socket per 1000 tokens — a 300-name pool needs exactly one.
+      const socketsNeeded = Math.max(1, Math.ceil(resolved.length / MAX_TOKENS_PER_SOCKET));
+      const per = Math.ceil(resolved.length / socketsNeeded);
       buffers.set(NIFTY_TOKEN, []); // Nifty rides socket 0; direction gate for order-flow confirmations
-      for (let s = 0; s < SOCKETS; s++) {
+      for (let s = 0; s < socketsNeeded; s++) {
         const slice = resolved.slice(s * per, (s + 1) * per);
         if (!slice.length) break;
         if (s === 0) slice.push({ token: NIFTY_TOKEN, symbol: 'NIFTY', engine: null, score: null });
@@ -115,7 +117,7 @@ async function start(opts = {}) {
           for (let i = 0; i < slice.length; i += 200) {
             feed.subscribe(`tb${s}`, MODE.QUOTE, [{ exchangeType: EXCHANGE_TYPE.NSE_CM, tokens: slice.slice(i, i + 200).map(r => r.token) }]);
           }
-          console.log(`[tickBoard] socket ${s + 1}/${SOCKETS}: subscribed ${slice.length} tokens`);
+          console.log(`[tickBoard] socket ${s + 1}/${socketsNeeded}: subscribed ${slice.length} tokens`);
         });
         await new Promise(res => setTimeout(res, 10000 * (s + 1))); // Angel rate-limits socket opens — stagger hard
       }
@@ -264,13 +266,31 @@ function structureRead(arr, ltp) {
 
 function loadUniverse() {
   const map = new Map();
+  // Preferred source: the filtered universe, capped to the N most liquid names
+  // by turnover. A tight pool needs ONE socket instead of three — which is also
+  // what stops Angel's connect rate-limit (429) from killing the feed.
   try {
-    const txt = fs.readFileSync(UNIVERSE_FILE, 'utf8');
-    for (const line of txt.split(/\r?\n/)) {
-      const s = line.trim().toUpperCase();
-      if (s && /^[A-Z0-9&_-]+$/.test(s)) map.set(s, { symbol: s, engine: null, score: null });
+    const uf = JSON.parse(fs.readFileSync(path.join(DATA, 'universe_filtered.json'), 'utf8'));
+    const arr = Array.isArray(uf) ? uf : (uf.stocks || uf.universe || []);
+    const ranked = arr
+      .filter(r => r && r.symbol && !/^\d{6}$/.test(String(r.symbol)))
+      .sort((a, b) => (b.avgTurnoverCr || 0) - (a.avgTurnoverCr || 0))
+      .slice(0, MAX_POOL);
+    for (const r of ranked) {
+      const s = String(r.symbol).replace(/-EQ$/i, '').toUpperCase();
+      map.set(s, { symbol: s, engine: null, score: null });
     }
   } catch (_) {}
+  // Fallback: the full 3k list (only when the filtered universe is unavailable)
+  if (!map.size) {
+    try {
+      const txt = fs.readFileSync(UNIVERSE_FILE, 'utf8');
+      for (const line of txt.split(/\r?\n/)) {
+        const s = line.trim().toUpperCase();
+        if (s && /^[A-Z0-9&_-]+$/.test(s)) map.set(s, { symbol: s, engine: null, score: null });
+      }
+    } catch (_) {}
+  }
   try {
     const es = JSON.parse(fs.readFileSync(path.join(DATA, 'engine_scores.json'), 'utf8'));
     for (const r of es.results || []) {

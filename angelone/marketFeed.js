@@ -77,6 +77,7 @@ class AngelMarketFeed extends EventEmitter {
     });
 
     this.ws.on('error', (err) => {
+      this._lastErr = err.message || '';
       this.emit('error', err);
       if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
         this._scheduleReconnect();
@@ -90,8 +91,11 @@ class AngelMarketFeed extends EventEmitter {
     // Exponential backoff: hammering the socket endpoint on failure gets the
     // IP rate-limited (HTTP 429 on connect) and then EVERY reconnect fails.
     this._reconnectAttempt = (this._reconnectAttempt || 0) + 1;
-    const delay = Math.min(30000 * Math.pow(2, this._reconnectAttempt - 1), 300000);
-    console.log(`[AngelMarketFeed] Connection dropped. Auto-reconnecting in ${Math.round(delay / 1000)}s (attempt ${this._reconnectAttempt})...`);
+    // 429 at handshake = IP/account throttled by Angel. Retrying on the normal
+    // backoff keeps the throttle hot; wait a hard 10 min instead.
+    const hardThrottle = this._lastErr && /429/.test(this._lastErr);
+    const delay = hardThrottle ? 600000 : Math.min(30000 * Math.pow(2, this._reconnectAttempt - 1), 300000);
+    console.log(`[AngelMarketFeed] Connection dropped${hardThrottle ? ' (429 throttle)' : ''}. Auto-reconnecting in ${Math.round(delay / 1000)}s (attempt ${this._reconnectAttempt})...`);
     setTimeout(() => {
       this.isReconnecting = false;
       try {

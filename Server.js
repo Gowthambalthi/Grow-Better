@@ -2292,12 +2292,26 @@ app.get('/api/debug/groww', async (req, res) => {
     const tbGate = async () => {
       try {
         const open = tickBoard.isMarketOpenNow();
-        if (open && !tbUp) { tbUp = await tickBoard.start().catch(() => false); if (tbUp) console.log('[server] tick movers board UP (Angel One ticks)'); }
+        if (open && !tbUp) {
+          tbUp = await tickBoard.start().catch(() => false);
+          if (tbUp) console.log('[server] tick movers board UP (Angel One ticks)');
+          else {
+            // start() failed (often Angel connect rate-limit 429). Retrying every
+            // 60s re-opens sockets and keeps the rate-limit hot — back off hard.
+            console.log('[server] tick board start failed — backing off 5 min');
+            tbGateDisabledUntil = Date.now() + 5 * 60000;
+          }
+        }
         if (!open && tbUp) { tickBoard.stop(); tbUp = false; console.log('[server] tick movers board stopped (market closed)'); }
       } catch (_) {}
     };
-    tbGate();
-    setInterval(tbGate, 60000);
+    let tbGateDisabledUntil = 0;
+    const tbGateWrapped = async () => {
+      if (Date.now() < tbGateDisabledUntil) return;
+      await tbGate();
+    };
+    tbGateWrapped();
+    setInterval(tbGateWrapped, 60000);
   } catch (e) {
     console.log('[server] tick board failed to start:', e.message);
   }
