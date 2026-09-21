@@ -3945,10 +3945,16 @@ function _renderMfGridBody(grid, schemes) {
           var wrap = document.getElementById('gbCallsWrap');
           if (!wrap || !gbCallsData) return;
           var calls = gbCallsData.calls || [];
-          if (!calls.length) { wrap.innerHTML = '<div class="empty-state">No live calls yet — engine is scanning; confirmed buys appear here automatically.</div>'; return; }
+          // HISTORY RULE: show active calls only; closed/old ones behind the History toggle
+          var showHist = window.__gbCallsHist === true;
+          var today = new Date().toISOString().slice(0, 10);
+          var active = calls.filter(function(c){ return c.status === 'ACTIVE'; });
+          var todaysClosed = calls.filter(function(c){ return c.status === 'CLOSED' && c.date === today; });
+          var visible = showHist ? calls : active.concat(todaysClosed);
+          if (!visible.length) { wrap.innerHTML = '<div class="empty-state">No live calls yet — engine is scanning; confirmed buys appear here automatically.</div>' + (calls.length ? '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 History (' + calls.length + ' closed)</button></div>' : ''); var hb0 = document.getElementById('gbCallsHistBtn'); if (hb0) hb0.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); }); return; }
           var head = '<tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' +
             ['Time','Symbol','Engine','Entry','LTP','1-min','2-min','5-min','Stop','T1','T2','P&L','Status'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('') + '</tr>';
-          var body = calls.map(function(c) {
+          var body = visible.map(function(c) {
             var closed = c.status === 'CLOSED';
             var op = closed ? 'opacity:0.45;' : '';
             var pnl = closed ? c.pnlPct : c.unrealPct;
@@ -3978,7 +3984,10 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:5px 10px;font-size:12px;">' + (closed ? c.exitReason : 'ACTIVE') + '</td>' +
               '</tr>';
           }).join('');
-          wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+          var histBtn = '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 ' + (showHist ? 'Back to live calls' : 'History (show closed)') + '</button></div>';
+          wrap.innerHTML = histBtn + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+          var hb = document.getElementById('gbCallsHistBtn');
+          if (hb) hb.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); });
         }
 
         function gbRenderCallDetail(d) {

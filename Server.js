@@ -899,9 +899,28 @@ app.get('/api/:broker/portfolio', getBroker, async (req, res) => {
 let portfolioCache = null;
 let portfolioCacheTime = 0;
 
+// PORTFOLIO REFRESH POLICY (user rule): holdings/MF are position data, not trading
+// data — no intraday polling. Fetch once, then only refresh at/after 15:15 IST
+// (market close, when no trade can be missed). Before 15:15 the cache is served
+// as-is; ?force=1 bypasses for manual refresh.
+function istNow() {
+  const s = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kolkata', hour12: false });
+  return new Date(s.replace(/(\d+)\/(\d+)\/(\d+),?/, '$3-$2-$1'));
+}
+function portfolioCacheFresh() {
+  if (!portfolioCache) return false;
+  const now = istNow();
+  const cutoff = new Date(now); cutoff.setHours(15, 15, 0, 0);
+  if (now >= cutoff) return portfolioCacheTime >= cutoff.getTime(); // past 15:15 → need a fetch from after 15:15 today
+  return portfolioCacheTime >= new Date(now).setHours(0, 0, 0, 0); // before 15:15 → today's fetch is enough
+}
+
 // Combined view across both brokers in one call.
 app.get('/api/portfolio', async (req, res) => {
   try {
+    if (portfolioCacheFresh() && req.query.force !== '1') {
+      return res.json(portfolioCache);
+    }
     const results = {};
 
     // Cash is the broker's live RMS figure or nothing. `connected` lets the UI say
@@ -980,6 +999,9 @@ app.get('/api/portfolio', async (req, res) => {
       holdings: allRows,
       summary: portfolioService.summarize(allRows, 'combined', combinedCash),
     };
+
+    portfolioCache = results;
+    portfolioCacheTime = Date.now();
 
     res.json(results);
   } catch (err) {
