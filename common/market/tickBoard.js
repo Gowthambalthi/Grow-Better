@@ -316,7 +316,10 @@ function pct(a, b) { return (a != null && b > 0) ? +(((a - b) / b) * 100).toFixe
 
 function buildBoard() {
   const now = Date.now();
-  const feedDead = lastTickAt && (now - lastTickAt) > FEED_DEAD_MS;
+  // No tick ever received (lastTickAt = 0) counts as DEAD too — otherwise a
+  // freshly-restarted board that never got a tick reports itself as alive and
+  // every empty row looks like "nothing is moving" instead of "no feed".
+  const feedDead = !lastTickAt || (now - lastTickAt) > FEED_DEAD_MS;
   // Nifty direction over the confirmation windows (strict gate: a confirmed
   // buy needs the index NOT falling; a confirmed short needs it NOT rising)
   const nb = buffers.get(NIFTY_TOKEN) || [];
