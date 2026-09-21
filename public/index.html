@@ -3735,15 +3735,31 @@ function _renderMfGridBody(grid, schemes) {
         // the current build look like an older one.
         setTimeout(function () { try { gbAutoLoad(); } catch (_) {} }, 400);
 
-        // Stamp the build actually loaded in this browser, so a stale tab is
-        // visible on the page instead of being guessed at.
-        (async function gbStampBuild() {
-          try {
-            var r = await fetch('/api/gb/build');
-            var j = await r.json();
-            var el = document.getElementById('gbBuild');
-            if (el) el.textContent = 'build ' + (j.sha || '?') + ' · ' + new Date().toTimeString().slice(0, 5);
-          } catch (_) {}
+        // ---- Build stamp + stale-tab guard ---------------------------------
+        // A tab opened hours ago keeps its OLD html/js and keeps polling, so it
+        // renders fresh data with an outdated layout and looks like a rollback.
+        // Here we stamp the loaded build and, if the server starts serving a
+        // different one, reload once so the page picks up the new UI by itself.
+        (function gbBuildWatch() {
+          var loadedSha = null;
+          async function check() {
+            try {
+              var r = await fetch('/api/gb/build', { cache: 'no-store' });
+              var j = await r.json();
+              if (!loadedSha) {
+                loadedSha = j.sha;
+                var el = document.getElementById('gbBuild');
+                if (el) el.textContent = 'build ' + (j.sha || '?') + ' · ' + new Date().toTimeString().slice(0, 5);
+                return;
+              }
+              if (j.sha && loadedSha && j.sha !== loadedSha) {
+                console.log('[gb] new build ' + j.sha + ' (page had ' + loadedSha + ') — reloading');
+                location.reload();
+              }
+            } catch (_) {}
+          }
+          check();
+          setInterval(check, 60000);
         })();
 
 // ---- GB Terminal: Strategy 1 scanner ----
