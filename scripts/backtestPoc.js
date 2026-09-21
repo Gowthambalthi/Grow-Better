@@ -16,6 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const { buildProfile, groupBySession } = require('../common/market/pocEngine');
+const { calcCamarillaPivots, camarillaContext, priorSession } = require('../common/market/camarilla');
 
 const DIR = path.join(__dirname, '..', 'data', 'ohlcv_15m');
 const COST_BPS = 12;
@@ -109,6 +110,28 @@ function run() {
           });
           const avgRecent = recent.reduce((s, x) => s + x, 0) / Math.max(1, recent.length);
           if (Math.abs(delta) < 1.5 * Math.max(avgRecent, 1)) continue;
+        }
+        // Camarilla gate: pivots from the PRIOR session's H/L/C.
+        //   --cam=fade  : LONG only near/below S3 (bounce zone), SHORT only near/above R3
+        //   --cam=break : LONG only ABOVE_R3 (trend day confirmed), SHORT only BELOW_S3
+        if (args.cam) {
+          if (process.env.CAM_DEBUG) console.error("CAM gate hit", sym, date);
+          const pdate = priorSession(candles, date);
+          if (!pdate) continue;
+          const pb = candles.filter(b2 => String(b2[0]).slice(0, 10) === pdate);
+          if (!pb.length) continue;
+          const ph = Math.max(...pb.map(b2 => b2[2])), pl = Math.min(...pb.map(b2 => b2[3]));
+          const pc = pb[pb.length - 1][4];
+          const piv = calcCamarillaPivots(ph, pl, pc);
+          const ctx = piv ? camarillaContext(c, piv) : null;
+          if (!ctx) continue;
+          if (args.cam === 'fade') {
+            if (side === 'LONG' && !(ctx.zone === 'IN_RANGE' && c <= piv.s3 * 1.01)) continue;
+            if (side === 'SHORT' && !(ctx.zone === 'IN_RANGE' && c >= piv.r3 * 0.99)) continue;
+          } else if (args.cam === 'break') {
+            if (side === 'LONG' && ctx.zone !== 'ABOVE_R3' && ctx.zone !== 'ABOVE_R4') continue;
+            if (side === 'SHORT' && ctx.zone !== 'BELOW_S3' && ctx.zone !== 'BELOW_S4') continue;
+          }
         }
 
         const entry = bars[i + 1][1]; // next bar open

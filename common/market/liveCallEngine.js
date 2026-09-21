@@ -25,6 +25,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { fetchLiveStockQuote, fetchIntradaySeries, fetchAngelQuotes } = require('./liveStockQuoteService');
 const { readCandleFrames } = require('./candleFrames');
+const { calcCamarillaPivots, camarillaContext } = require('./camarilla');
 
 const DATA = path.join(__dirname, '..', '..', 'data');
 const CALLS_FILE = path.join(DATA, 'live_calls.json');
@@ -557,6 +558,18 @@ async function scanForNewCalls() {
       const cf = readCandleFrames((c.series && c.series.bars) || c.series);
       if (cf) mtfTrends = { m3: cf.frames.m3?.trend, m5: cf.frames.m5?.trend, m15: cf.frames.m15?.trend, m30: cf.frames.m30?.trend };
     } catch (_) {}
+    // Camarilla pivots from the prior session (backtest-validated read: confirmed
+    // trend-day continuation — longs above R3, shorts below S3 — is net-positive;
+    // fade-at-level entries were tail-dependent and are NOT gated on).
+    let cam = null;
+    try {
+      const dj = JSON.parse(fs.readFileSync(path.join(OHLCV, c.symbol + '.json'), 'utf8'));
+      const dBefore = dj.candles.filter(b2 => b2[0] < today);
+      const pd = dBefore[dBefore.length - 1];
+      if (pd) {
+        cam = camarillaContext(c.ltp, calcCamarillaPivots(pd[2], pd[3], pd[4]));
+      }
+    } catch (_) {}
 
     // INTRADAY levels: candle-based stop from the live 1-min series — 10-bar
     // swing low (the pullback low the move launched from) with 0.1% buffer,
@@ -594,6 +607,7 @@ async function scanForNewCalls() {
       horizon,
       swing,
       mtfTrends,
+      cam,
       stopBasis,
       status: 'ACTIVE',
       closedAt: null,

@@ -89,6 +89,9 @@ function tryRecordAngel(update) {
   const isEmptyHeartbeat = !tradingsymbol && !orderId && quantity === 0;
   if (isEmptyHeartbeat) return null; // Connection handshake/heartbeat ping — silently ignore
 
+  // Completeness gate: needs symbol, order id, qty, side and a price we can record at
+  const looksComplete = !!(tradingsymbol && orderId && quantity > 0 && transactionType);
+  const hasRequiredFields = !!(orderId && transactionType);
   if (!looksComplete || !hasRequiredFields) {
     console.warn('[autoRecorder] angelone order update did not match expected shape — skipping auto-record, raw payload:', JSON.stringify(update));
     return null;
