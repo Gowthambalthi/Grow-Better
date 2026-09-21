@@ -329,12 +329,14 @@ async function scanSignals(candidatesOverride) {
       // of its bar is a bull trap (-9.3bps next bar, 59% win fading) — no BUY.
       // Heavy-at-bottom is fine (absorption, bounce fuel). Light = neutral.
       const vapOk = !(roc && roc.volAtPrice === 'HEAVY-TOP');
-      // MTF candle gate: fast TFs (3m/5m) must both be UP-trending, and the
-      // slow TFs (15m/30m) must not be DOWN — mixed momentum = no BUY.
-      const ct = candlesMtf ? { m3: candlesMtf.frames.m3?.trend, m5: candlesMtf.frames.m5?.trend, m15: candlesMtf.frames.m15?.trend, m30: candlesMtf.frames.m30?.trend } : {};
-      const fastUp = ct.m3 === 'UP' && (ct.m5 === 'UP' || ct.m5 === 'UP-LEAN');
+      // MTF candle gate (STRICT): micro TFs (1m/2m) must both be UP-trending,
+      // fast TFs (3m/5m) UP or UP-LEAN, and slow TFs (15m/30m) not DOWN —
+      // six timeframes of structure must agree before a BUY.
+      const ct = candlesMtf ? { m1: candlesMtf.frames.m1?.trend, m2: candlesMtf.frames.m2?.trend, m3: candlesMtf.frames.m3?.trend, m5: candlesMtf.frames.m5?.trend, m15: candlesMtf.frames.m15?.trend, m30: candlesMtf.frames.m30?.trend } : {};
+      const microUp = ct.m1 === 'UP' && (ct.m2 === 'UP' || ct.m2 === 'UP-LEAN');
+      const fastUp = (ct.m3 === 'UP' || ct.m3 === 'UP-LEAN') && (ct.m5 === 'UP' || ct.m5 === 'UP-LEAN');
       const slowOk = ct.m15 !== 'DOWN' && ct.m30 !== 'DOWN';
-      const mtfOk = fastUp && slowOk;
+      const mtfOk = microUp && fastUp && slowOk;
       if (signal === 'BUY' && (!valid || !buyer.ok)) signal = 'WAIT';
       if (signal === 'BUY' && !volRocOk) signal = 'WAIT';
       if (signal === 'BUY' && !posOk) signal = 'WAIT';
@@ -346,7 +348,8 @@ async function scanSignals(candidatesOverride) {
         volAtPrice: roc ? roc.volAtPrice : null,
         candlesAgree: candlesMtf ? candlesMtf.agree : null,
         candlePattern: candlesMtf && candlesMtf.frames.m5 ? candlesMtf.frames.m5.pattern : null,
-        candleTrend: candlesMtf ? { m3: candlesMtf.frames.m3?.trend, m5: candlesMtf.frames.m5?.trend, m15: candlesMtf.frames.m15?.trend, m30: candlesMtf.frames.m30?.trend } : null,
+        candleTrend: candlesMtf ? { m1: candlesMtf.frames.m1?.trend, m2: candlesMtf.frames.m2?.trend, m3: candlesMtf.frames.m3?.trend, m5: candlesMtf.frames.m5?.trend, m15: candlesMtf.frames.m15?.trend, m30: candlesMtf.frames.m30?.trend } : null,
+        swingAgree: candlesMtf ? candlesMtf.swingAgree : null,
         vwap5: roc ? roc.vwap5 : null, vwap15: roc ? roc.vwap15 : null,
         vwapStack: roc ? roc.vwapStack : null,
         dayHigh: roc ? roc.dayHigh : null, dayLow: roc ? roc.dayLow : null,
@@ -357,7 +360,7 @@ async function scanSignals(candidatesOverride) {
         dayValue: q.volume && q.ltp ? Math.round(q.volume * q.ltp) : null,
         openCheck: valid ? 'OK' : 'INVALID', openReason: open.reason,
         newBuyer: buyer.ok, buyerReason: buyer.reason,
-        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : !vapOk ? 'WAIT: heavy volume at bar top (bull trap risk)' : !mtfOk ? 'WAIT: candles not aligned (3m/5m up, 15m/30m not down — got ' + [ct.m3, ct.m5, ct.m15, ct.m30].join('/') + ')' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
+        signal, reason: signal === 'WAIT' ? (!valid ? 'INVALID: ' + open.reason : !buyer.ok ? 'WAIT: ' + buyer.reason : !volRocOk ? 'WAIT: volume drying (' + roc.volRoc + '%)' : !vapOk ? 'WAIT: heavy volume at bar top (bull trap risk)' : !mtfOk ? 'WAIT: candles not aligned (1m+2m up, 3m/5m up-lean, 15m/30m not down — got ' + [ct.m1, ct.m2, ct.m3, ct.m5, ct.m15, ct.m30].join('/') + ')' : 'WAIT: mid-range close (' + roc.posInRange + '%, need top 40%)') : sig.reason,
         inPosition: !!openCall, entry: openCall ? openCall.entry : null,
         stopLoss: openCall ? openCall.stopLoss : null,
         time: now };
@@ -556,7 +559,13 @@ async function scanForNewCalls() {
     let mtfTrends = null;
     try {
       const cf = readCandleFrames((c.series && c.series.bars) || c.series);
-      if (cf) mtfTrends = { m3: cf.frames.m3?.trend, m5: cf.frames.m5?.trend, m15: cf.frames.m15?.trend, m30: cf.frames.m30?.trend };
+      if (cf) mtfTrends = { m1: cf.frames.m1?.trend, m2: cf.frames.m2?.trend, m3: cf.frames.m3?.trend, m5: cf.frames.m5?.trend, m15: cf.frames.m15?.trend, m30: cf.frames.m30?.trend };
+      // swing read: 5m/15m/30m all UP strengthens the SWING-SUITABLE tag;
+      // mixed/down slow TFs on a SWING tag downgrade it to intraday-only
+      if (cf && horizon === 'SWING-SUITABLE' && cf.swingAgree !== 'UP') {
+        horizon = 'INTRADAY-ONLY';
+        swing = swing || {}; swing.swingAgree = cf.swingAgree; swing.downgraded = true;
+      }
     } catch (_) {}
     // Camarilla pivots from the prior session (backtest-validated read: confirmed
     // trend-day continuation — longs above R3, shorts below S3 — is net-positive;

@@ -14,7 +14,7 @@
  * no extra network calls.
  */
 
-const TF_MINUTES = [3, 5, 15, 30];
+const TF_MINUTES = [1, 2, 3, 5, 15, 30];
 
 function aggregate(bars, minutes) {
   if (!bars || bars.length < minutes) return [];
@@ -96,8 +96,14 @@ function readCandleFrames(bars) {
   const trends = Object.values(frames).map(f => f.trend);
   const ups = trends.filter(t => t.startsWith('UP')).length;
   const downs = trends.filter(t => t.startsWith('DOWN')).length;
-  const agree = ups >= 3 ? 'UP' : downs >= 3 ? 'DOWN' : 'MIXED';
-  return { frames, agree, ups, downs };
+  // strict agreement: majority of ALL six TFs (1m/2m micro + 3/5/15/30 context)
+  const agree = ups >= 4 ? 'UP' : downs >= 4 ? 'DOWN' : 'MIXED';
+  // swing read: slow TFs only — 5m/15m/30m tell the multi-hour story.
+  // Only frames that exist (early session has no 30m yet) — require at least one.
+  const slow = ['m5', 'm15', 'm30'].map(k => frames[k] && frames[k].trend).filter(Boolean);
+  const swingAgree = slow.length && slow.every(t => t.startsWith('UP')) ? 'UP'
+    : slow.length && slow.every(t => t.startsWith('DOWN')) ? 'DOWN' : 'MIXED';
+  return { frames, agree, ups, downs, swingAgree };
 }
 
 module.exports = { readCandleFrames, aggregate, classify, TF_MINUTES };
