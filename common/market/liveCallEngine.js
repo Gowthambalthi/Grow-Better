@@ -262,6 +262,14 @@ function buyerStructure(roc, ltp) {
 //          buying the top of someone else's move. This is the rule that stops
 //          the table reading "all green" on stocks that already ran.
 //   SELL = momentum flipping negative, big selling structure, or stop breach
+// A 10-second move at or beyond this % is a real fast move. Measured on the
+// live tape (297 ticked names, quiet session): 0.30% fired on nothing, 0.25% on
+// one name, 0.15% on five - selective without being dead.
+const FAST_MOVE = 0.15;
+
+// signed percent, so a negative ROC does not print as "+-0.76%"
+function sgn(x) { return (x > 0 ? "+" : "") + x; }
+
 function rocSignal(roc, ltp, stopLoss, inPosition, tick) {
   if (!roc || ltp == null) return { signal: 'HOLD', reason: 'no data' };
   const { roc5, roc15, volX } = roc;
@@ -269,9 +277,30 @@ function rocSignal(roc, ltp, stopLoss, inPosition, tick) {
   if (roc5 < -0.10 && roc15 < 0) return { signal: 'SHORT', reason: 'momentum flipped down (ROC5 ' + roc5 + '%, ROC15 ' + roc15 + '%) - breakdown setup' };
   const s20 = tick && tick.s20 != null ? tick.s20 : null;
   // ALREADY-MOVED veto runs before any BUY: past these levels the run is history.
-  if (roc5 >= 0.80 || roc15 >= 1.50) {
-    return { signal: 'LATE', reason: 'already moved (ROC5 +' + roc5 + '%) - buying now is chasing, wait for a pullback' };
+  // Mirror of that veto for the short side: a stock that has already collapsed
+  // is not a short entry - the easy part of the fall has gone.
+  if (roc5 <= -0.80 || roc15 <= -1.50) {
+    return { signal: 'HOLD', reason: 'already dropped (ROC5 ' + roc5 + '%) - shorting here is chasing the fall' };
   }
+  if (roc5 >= 0.80 || roc15 >= 1.50) {
+    return { signal: 'LATE', reason: 'already moved (ROC5 ' + sgn(roc5) + '%, ROC15 ' + sgn(roc15) + '%) - buying now is chasing, wait for a pullback' };
+  }
+  // FAST 10-SECOND DECISION - reacts within ~10s of the move instead of waiting
+  // for the 5m ROC, which reports the run after it happened. Tick data confirms
+  // it: the 20s window must still be building and the 15s tick-candle structure
+  // must agree with the direction.
+  const s10 = tick && tick.s10 != null ? tick.s10 : null;
+  if (s10 != null && s20 != null) {
+    const upOk = !tick.candle || tick.candle === 'up';
+    const downOk = !tick.candle || tick.candle === 'down';
+    if (s10 >= FAST_MOVE && s20 >= 0.10 && upOk) {
+      return { signal: 'BUY', fast: true, reason: '10s burst +' + s10 + '% (20s +' + s20 + '%, ' + (tick.bigBuyer ? 'big buyer holding' : 'tick candles up') + ') - entry now' };
+    }
+    if (s10 <= -FAST_MOVE && s20 <= -0.10 && downOk) {
+      return { signal: 'SHORT', fast: true, reason: '10s drop ' + s10 + '% (20s ' + s20 + '%, ' + (tick.bigSeller ? 'big seller in' : 'tick candles down') + ') - short now' };
+    }
+  }
+
   // FRESH TURN: when tick data exists, the 20-second window must also be up —
   // that is "happening now" instead of "already ran".
   const freshOk = s20 == null ? true : s20 > 0.03;
@@ -364,11 +393,17 @@ async function scanSignals(candidatesOverride) {
       const fastUp = (ct.m3 === 'UP' || ct.m3 === 'UP-LEAN') && (ct.m5 === 'UP' || ct.m5 === 'UP-LEAN');
       const slowOk = ct.m15 !== 'DOWN' && ct.m30 !== 'DOWN';
       const mtfOk = microUp && fastUp && slowOk;
-      if (signal === 'BUY' && (!valid || !buyer.ok)) signal = 'WAIT';
-      if (signal === 'BUY' && !volRocOk) signal = 'WAIT';
-      if (signal === 'BUY' && !posOk) signal = 'WAIT';
+      // A fast signal is already confirmed by the ticks (10s move + 20s still
+      // building + tick-candle direction), so the slow gates do not apply to it:
+      // no REST opening-volume check, no 5m volume ROC, no 5-minute range
+      // position, no six-timeframe candle stack. Volume-at-price still applies -
+      // heavy volume at the bar top is the bull-trap case.
+      const fastBuy = signal === 'BUY' && sig.fast === true;
+      if (signal === 'BUY' && (!valid || !buyer.ok) && !fastBuy) signal = 'WAIT';
+      if (signal === 'BUY' && !volRocOk && !fastBuy) signal = 'WAIT';
+      if (signal === 'BUY' && !posOk && !fastBuy) signal = 'WAIT';
       if (signal === 'BUY' && !vapOk) signal = 'WAIT';
-      if (signal === 'BUY' && !mtfOk) signal = 'WAIT';
+      if (signal === 'BUY' && !mtfOk && !fastBuy) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
         s10: tick ? tick.s10 : null, s20: tick ? tick.s20 : null, s30: tick ? tick.s30 : null,
         roc1: roc ? roc.roc1 : null, roc3: roc ? roc.roc3 : null,

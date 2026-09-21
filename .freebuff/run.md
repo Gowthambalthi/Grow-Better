@@ -14,13 +14,6 @@
 - Use single quotes around the whole -Command so bash does not expand `$env:PORT`.
 
 ## Identifying the running version
-- **As of the full rollback to `c7625d33` (10:29), the build chip is gone**: `GET /api/gb/build` returns 404 and the page has no `build <sha>` chip, because both were added later and were rolled back with the rest. There is no longer any in-page way to tell whether a browser tab is stale.
-- Confirm the checked-out version instead:
-  ```
-  git diff c7625d33 -- Server.js common/market/liveCallEngine.js \
-    common/market/liveStockQuoteService.js common/market/tickBoard.js public/index.html
-  ```
-  Empty output = the whole app is byte-identical to the 10:29 version.
-- Because the auto-reload guard is gone too, a long-lived tab will keep showing its old DOM. After a code change, close the tab and reopen, or hard-refresh (`Ctrl+Shift+R`).
-- Verify: `curl http://127.0.0.1:4000/api/status` → 200; log shows `[server] listening on http://0.0.0.0:4000` (server takes ~10–15 s to boot: DB load, broker login, instrument master).
-- Known boot warnings (harmless): `node-cron module not installed` fallback, `[autoRecorder] looksComplete is not defined`.
+- The build chip is gone (it was rolled back with the rest): `GET /api/gb/build` returns 404 and the page prints no `build <sha>` stamp. Check the checkout instead with `git log -1 --format=%h`, then reload - if the Terminal still shows a panel the current commit removed, that tab is stale.
+- The auto-reload guard is gone too, so a long-lived tab keeps its own DOM and its own JS. After a code change, close the tab and reopen it, or hard-refresh (`Ctrl+Shift+R`).
+- Tick-dependent UI: the ROC 10s/20s/30s columns and the 10-second BUY/SHORT rule read the Angel tick board (`data/live_tick_movers.json`). When the feed is dark (`/api/gb/movers` returns `stocks: 0`, Angel login 403), those cells render `-` and no fast signal can fire. That is the feed, not the UI.
