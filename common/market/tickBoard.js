@@ -37,7 +37,8 @@ const UNIVERSE_FILE = path.join(DATA, 'nse_universe_3000.txt');
 const MIN_PRICE = 100;
 const MOVER_TH = 1.0;          // % move on any window flags a MOVER
 const FEED_DEAD_MS = 45000;    // no tick at all for this long = feed dead
-const HIST_MS = 8 * 60000;     // rolling tick buffer retentionconst MAX_POOL = 300;       // liquid pool tracked live (one socket covers it)
+const HIST_MS = 8 * 60000;     // rolling tick buffer retention
+const MAX_POOL = 300;          // liquid pool tracked live (one socket covers it)
 const SOCKETS = 3;          // Angel allows 3 concurrent sockets
 const MAX_TOKENS_PER_SOCKET = 1000;
 const NIFTY_TOKEN = '99926000'; // Nifty 50 index — direction gate for confirmations
@@ -467,4 +468,4 @@ function getBoard({ onlyMovers = false, minMove = 0 } = {}) {
   } catch (_) { return { generatedAt: null, stocks: [] }; }
 }
 
-module.exports = { start, stop, buildBoard, getBoard, isMarketOpenNow, poolJob, WINDOWS };
+module.exports = { start, stop, buildBoard, getBoard, isMarketOpenNow, poolJob, WINDOWS, loadUniverse, MAX_POOL };
