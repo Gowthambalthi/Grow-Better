@@ -223,6 +223,10 @@ function computeRoc(series) {
   }
   return {
     roc1, roc3, roc5, roc15,
+    // Traded value so far today, in ₹ crore. vv is total volume, pv is
+    // sum(price x volume) — so pv IS the turnover. Used as the liquidity
+    // floor: thin names are noise for intraday, not setups.
+    turnoverCr: +(pv / 1e7).toFixed(2),
     volX: dayAvg > 0 ? +(recentAvg / dayAvg).toFixed(2) : 1,
     volRoc, posInRange, volAtPrice,
     // Multi-timeframe VWAP stack + previous-day levels (confirmation context,
@@ -271,6 +275,19 @@ function rocSignal(roc, ltp, stopLoss, inPosition) {
 
 // Minute scan across the whole scored universe (price >= MIN_PRICE): computes
 // ROC + buyer structure + BUY/SELL/HOLD for each and persists the board.
+// Liquidity floor for the signals board. Your Stage-1 plan calls for a
+// ₹5-10 Cr daily turnover floor; we use the top of that (₹10 Cr) expressed
+// as a FULL-DAY equivalent and scale it by how much of the session has run,
+// so a 09:20 scan isn't judged against a finished day's volume.
+const MIN_DAY_TURNOVER_CR = 10;
+function minTurnoverNow(d = new Date()) {
+  const ist = new Date(d.getTime() + (5.5 * 60 + d.getTimezoneOffset()) * 60000);
+  const mins = ist.getHours() * 60 + ist.getMinutes();
+  const OPEN = 555, CLOSE = 930;               // 09:15 -> 15:30
+  const frac = Math.max(0.05, Math.min(1, (mins - OPEN) / (CLOSE - OPEN)));
+  return +(MIN_DAY_TURNOVER_CR * frac).toFixed(2);
+}
+
 async function scanSignals(candidatesOverride) {
   let candidates = candidatesOverride;
   if (!candidates) {
@@ -315,6 +332,10 @@ async function scanSignals(candidatesOverride) {
       // than 5 minutes — that is dead data for intraday, not late data.
       if (isMarketOpen() && series.lastBarAgeSec != null && series.lastBarAgeSec > 300) return null;
       const roc = computeRoc(series);
+      // LIQUIDITY FLOOR: drop the thin tail entirely — a name that has traded
+      // only a few lakh rupees so far is noise for an intraday list, whatever
+      // its ROC says. Scales with session progress (see minTurnoverNow).
+      if (roc && roc.turnoverCr != null && roc.turnoverCr < minTurnoverNow()) return null;
       const candlesMtf = readCandleFrames(series.bars);   // 3/5/15/30-min candle structure
       const struct = buyerStructure(roc, ltp);
       const openCall = openBySym[c.symbol];
@@ -348,6 +369,7 @@ async function scanSignals(candidatesOverride) {
         roc1: roc ? roc.roc1 : null, roc3: roc ? roc.roc3 : null,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
+        turnoverCr: roc ? roc.turnoverCr : null,
         volAtPrice: roc ? roc.volAtPrice : null,
         candlesAgree: candlesMtf ? candlesMtf.agree : null,
         candlePattern: candlesMtf && candlesMtf.frames.m5 ? candlesMtf.frames.m5.pattern : null,

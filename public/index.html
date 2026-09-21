@@ -4073,7 +4073,7 @@ function _renderMfGridBody(grid, schemes) {
             ['Time','time',0],['Symbol','symbol',0],['Signal','signal',0],['LTP','ltp',1],
             ['ROC 10s','s10',1],['ROC 30s','s30',1],
             ['ROC 1m','roc1',1],['ROC 3m','roc3',1],['ROC 5m','roc5',1],['ROC 15m','roc15',1],
-            ['Vol x','volX',1],['Vol ROC','volRoc',1],['Range pos','posInRange',1],
+            ['Vol x','volX',1],['Vol ROC','volRoc',1],['Value \u20b9Cr','turnoverCr',1],['Range pos','posInRange',1],
             ['Vol@Price','volAtPrice',0],['VWAPs 5/15/day','vwap',1],['Stack','vwapStack',0],
             ['Day Range','dayLow',1],['Reason','reason',0]
           ];
@@ -4113,6 +4113,7 @@ function _renderMfGridBody(grid, schemes) {
               rocCell(s.roc15) +
               '<td style="padding:4px 10px;">' + (s.volX != null ? s.volX + 'x' : '-') + '</td>' +
               '<td style="padding:4px 10px;color:' + ((s.volRoc || 0) >= -10 ? '#00e091' : '#ff4d6d') + ';">' + (s.volRoc != null ? (s.volRoc > 0 ? '+' : '') + s.volRoc + '%' : '-') + '</td>' +
+              '<td style="padding:4px 10px;color:var(--text-muted);">' + (s.turnoverCr != null ? s.turnoverCr : '-') + '</td>' +
               '<td style="padding:4px 10px;font-weight:600;color:' + ((s.posInRange || 0) >= 40 ? '#00e091' : '#ffb86b') + ';">' + (s.posInRange != null ? s.posInRange + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + (s.volAtPrice === 'HEAVY-TOP' ? '#ff4d6d' : s.volAtPrice === 'HEAVY-BOT' ? '#00e091' : s.volAtPrice === 'HEAVY-MID' ? '#ffb86b' : 'var(--text-muted)') + '">' + (s.volAtPrice || '-') + '</td>' +
               '<td style="padding:4px 10px;color:var(--text-muted);">' + (s.vwap != null ? s.vwap + ' / ' + (s.vwap15 || '-') + ' / ' + (s.vwap5 || '-') : '-') + '</td>' +
