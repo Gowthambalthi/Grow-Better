@@ -458,6 +458,30 @@ function loadPool() {
   } catch (_) { return {}; }
 }
 
+// Sub-minute windows (10s/30s) straight from the live tick ring buffers.
+// Only these windows need true tick data — 1-min and slower come from the
+// candle series. Returns { SYM: { ltp, s10, s30, ageSec } }; a value is null
+// when the buffer is too short (freshly subscribed, or no recent trade).
+function tickWindows(symbols) {
+  const now = Date.now();
+  const out = {};
+  const want = symbols && symbols.length ? new Set(symbols.map(s => String(s).toUpperCase())) : null;
+  for (const [token, arr] of buffers) {
+    if (token === NIFTY_TOKEN || !arr.length) continue;
+    const meta = tokenToSym.get(token) || {};
+    const sym = meta.symbol;
+    if (!sym || (want && !want.has(sym))) continue;
+    const last = arr[arr.length - 1];
+    out[sym] = {
+      ltp: last.p,
+      s10: pct(last.p, refPrice(arr, 10000, now)),
+      s30: pct(last.p, refPrice(arr, 30000, now)),
+      ageSec: Math.round((now - last.t) / 1000),
+    };
+  }
+  return out;
+}
+
 function getBoard({ onlyMovers = false, minMove = 0 } = {}) {
   try {
     const j = JSON.parse(fs.readFileSync(BOARD_FILE, 'utf8'));
@@ -468,4 +492,4 @@ function getBoard({ onlyMovers = false, minMove = 0 } = {}) {
   } catch (_) { return { generatedAt: null, stocks: [] }; }
 }
 
-module.exports = { start, stop, buildBoard, getBoard, isMarketOpenNow, poolJob, WINDOWS, loadUniverse, MAX_POOL };
+module.exports = { start, stop, buildBoard, getBoard, tickWindows, isMarketOpenNow, poolJob, WINDOWS, loadUniverse, MAX_POOL };

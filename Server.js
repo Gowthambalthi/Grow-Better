@@ -390,8 +390,18 @@ app.get('/api/gb/signals', (req, res) => {
   try {
     const liveCalls = require('./common/market/liveCallEngine');
     const board = liveCalls.getSignals();
-    const sig = board.signals || [];
     const only = String(req.query.filter || '').toUpperCase();
+    // 10s/30s only exist as live ticks — merge them in from the tick board.
+    // Absent feed (or no trade in the window) leaves them null, never faked.
+    let tick = {};
+    try {
+      const tb = require('./common/market/tickBoard');
+      tick = tb.tickWindows([]);
+    } catch (_) {}
+    const sig = (board.signals || []).map(s => {
+      const t = tick[s.symbol];
+      return t ? { ...s, s10: t.s10, s30: t.s30, tickAgeSec: t.ageSec } : s;
+    });
     res.json({
       generatedAt: board.generatedAt,
       marketOpen: board.marketOpen,

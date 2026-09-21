@@ -4071,6 +4071,7 @@ function _renderMfGridBody(grid, schemes) {
           // ---- sortable headers: every column, click to sort, click again to flip ----
           var SIG_COLS = [
             ['Time','time',0],['Symbol','symbol',0],['Signal','signal',0],['LTP','ltp',1],
+            ['ROC 10s','s10',1],['ROC 30s','s30',1],
             ['ROC 1m','roc1',1],['ROC 3m','roc3',1],['ROC 5m','roc5',1],['ROC 15m','roc15',1],
             ['Vol x','volX',1],['Vol ROC','volRoc',1],['Range pos','posInRange',1],
             ['Vol@Price','volAtPrice',0],['VWAPs 5/15/day','vwap',1],['Stack','vwapStack',0],
@@ -4104,6 +4105,8 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
               '<td style="padding:4px 10px;font-weight:800;color:' + sigCol + ';">' + s.signal + '</td>' +
               '<td style="padding:4px 10px;">' + (s.ltp != null ? s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp : '-') + '</td>' +
+              rocCell(s.s10) +
+              rocCell(s.s30) +
               rocCell(s.roc1) +
               rocCell(s.roc3) +
               rocCell(s.roc5) +
