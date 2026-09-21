@@ -4061,12 +4061,15 @@ function _renderMfGridBody(grid, schemes) {
           // ---- sortable headers: every column, click to sort, click again to flip ----
           var SIG_COLS = [
             ['Time','time',0],['Symbol','symbol',0],['Signal','signal',0],['LTP','ltp',1],
+            ['ROC 10s','s10',1],['ROC 20s','s20',1],['ROC 30s','s30',1],
             ['ROC 1m','roc1',1],['ROC 3m','roc3',1],['ROC 5m','roc5',1],['ROC 15m','roc15',1],
             ['Vol x','volX',1],['Vol ROC','volRoc',1],['Range pos','posInRange',1],
             ['Vol@Price','volAtPrice',0],['VWAPs 5/15/day','vwap',1],['Stack','vwapStack',0],
-            ['Day Range','dayLow',1],['Reason','reason',0]
+            ['Day Range','dayLow',1],['Big Buyers','structure',0],['Reason','reason',0]
           ];
-          if (!gbSigSort) gbSigSort = { key: 'roc5', dir: -1 };
+          // Default view: biggest 20-SECOND move on top. Sorting by the 5m ROC put
+          // stocks that had already run at the top — the move was history by then.
+          if (!gbSigSort) gbSigSort = { key: 's20', dir: -1 };
           var sKey = gbSigSort.key, sDir = gbSigSort.dir;
           sigs = sigs.slice().sort(function(a, b) {
             var av = a[sKey], bv = b[sKey];
@@ -4087,13 +4090,16 @@ function _renderMfGridBody(grid, schemes) {
             return '<td style="padding:4px 10px;color:' + (v > 0 ? '#00e091' : v < 0 ? '#ff4d6d' : 'inherit') + ';font-weight:' + (v != null && Math.abs(v) >= 0.25 ? '700' : '400') + ';">' + (v != null ? (v > 0 ? '+' : '') + v + '%' : '-') + '</td>';
           };
           var body = sigs.slice(0, 120).map(function(s) {
-            var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SHORT' ? '#ff4d6d' : s.signal === 'EXIT' ? '#ffa94d' : 'var(--text-muted,#8b93a7)';
+            var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SHORT' ? '#ff4d6d' : s.signal === 'LATE' ? '#ffb86b' : s.signal === 'EXIT' ? '#ffa94d' : 'var(--text-muted,#8b93a7)';
             var rocCol = s.roc5 > 0 ? '#00e091' : s.roc5 < 0 ? '#ff4d6d' : 'inherit';
             return '<tr style="border-top:1px solid var(--border,#232a36);' + (s.inPosition ? 'background:rgba(0,179,134,0.07);' : '') + '">' +
               '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (s.time || '').slice(11, 19) + '</td>' +
               '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
               '<td style="padding:4px 10px;font-weight:800;color:' + sigCol + ';">' + s.signal + '</td>' +
               '<td style="padding:4px 10px;">' + (s.ltp != null ? s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp : '-') + '</td>' +
+              rocCell(s.s10) +
+              rocCell(s.s20) +
+              rocCell(s.s30) +
               rocCell(s.roc1) +
               rocCell(s.roc3) +
               rocCell(s.roc5) +

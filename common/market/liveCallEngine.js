@@ -256,16 +256,30 @@ function buyerStructure(roc, ltp) {
   return { structure: 'NEUTRAL', note: 'at VWAP' };
 }
 
-// Signal decision from ROC momentum + buyer structure:
-//   BUY  = positive 5-min ROC accelerating with volume AND buyers in control
+// Signal decision from ROC momentum + buyer structure + the fast tick window:
+//   BUY  = the move is STARTING now (20s window up, 5-min not yet extended)
+//   LATE = the move has already happened (5m/15m extended) — buying here is
+//          buying the top of someone else's move. This is the rule that stops
+//          the table reading "all green" on stocks that already ran.
 //   SELL = momentum flipping negative, big selling structure, or stop breach
-function rocSignal(roc, ltp, stopLoss, inPosition) {
+function rocSignal(roc, ltp, stopLoss, inPosition, tick) {
   if (!roc || ltp == null) return { signal: 'HOLD', reason: 'no data' };
   const { roc5, roc15, volX } = roc;
   if (inPosition && stopLoss != null && ltp <= stopLoss) return { signal: 'EXIT', reason: 'at stop loss' };
   if (roc5 < -0.10 && roc15 < 0) return { signal: 'SHORT', reason: 'momentum flipped down (ROC5 ' + roc5 + '%, ROC15 ' + roc15 + '%) - breakdown setup' };
-  if (roc5 > 0.10 && roc15 > 0 && volX >= 1.1) return { signal: 'BUY', reason: 'ROC accelerating up (ROC5 +' + roc5 + '%, ROC15 +' + roc15 + '%, vol ' + volX + 'x)' };
-  if (roc5 > 0.25 && roc15 >= 0) return { signal: 'BUY', reason: 'strong price burst (ROC5 +' + roc5 + '%)' };
+  const s20 = tick && tick.s20 != null ? tick.s20 : null;
+  // ALREADY-MOVED veto runs before any BUY: past these levels the run is history.
+  if (roc5 >= 0.80 || roc15 >= 1.50) {
+    return { signal: 'LATE', reason: 'already moved (ROC5 +' + roc5 + '%) - buying now is chasing, wait for a pullback' };
+  }
+  // FRESH TURN: when tick data exists, the 20-second window must also be up —
+  // that is "happening now" instead of "already ran".
+  const freshOk = s20 == null ? true : s20 > 0.03;
+  if (roc5 > 0.05 && roc15 > 0 && volX >= 1.1 && freshOk) {
+    return { signal: 'BUY', reason: 'fresh turn: ROC5 +' + roc5 + '%, 20s ' + (s20 == null ? 'n/a' : s20 + '%') + ', vol ' + volX + 'x' };
+  }
+  if (s20 != null && s20 >= 0.25 && roc5 > 0) return { signal: 'BUY', reason: '20s burst +' + s20 + '% with the 5m still up' };
+  if (roc5 > 0.10 && roc15 > 0 && !freshOk) return { signal: 'HOLD', reason: 'late entry refused: 5m up but the 20s has stalled (' + s20 + '%)' };
   return { signal: 'HOLD', reason: 'flat (ROC5 ' + (roc5 == null ? '-' : roc5) + '%)' };
 }
 
@@ -302,6 +316,16 @@ async function scanSignals(candidatesOverride) {
   if (hasAngelCreds()) {
     try { quoteMap = await fetchAngelQuotes([...quoted]); } catch (_) {}
   }
+  // Fast tick windows (10s / 20s / 30s) from the Angel tick board — the freshest
+  // read on what is moving RIGHT NOW. A 5m/15m ROC is already history by the
+  // time it looks strong, which is what made the board read "all green".
+  let tickMap = {};
+  try {
+    const tb = tickBoard.getBoard();
+    for (const r of tb.stocks || []) {
+      if (r.s10 != null || r.s20 != null || r.s30 != null) tickMap[r.symbol] = r;
+    }
+  } catch (_) {}
   for (let i = 0; i < candidates.length; i += CONC) {
     const batch = candidates.slice(i, i + CONC);
     // use the pre-fetched batch quotes (no per-batch Angel call — rate budget)
@@ -318,7 +342,8 @@ async function scanSignals(candidatesOverride) {
       const candlesMtf = readCandleFrames(series.bars);   // 3/5/15/30-min candle structure
       const struct = buyerStructure(roc, ltp);
       const openCall = openBySym[c.symbol];
-      const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null, !!openCall);
+      const tick = tickMap[c.symbol] || null;
+      const sig = rocSignal(roc, ltp, openCall ? openCall.stopLoss : null, !!openCall, tick);
       // opening validation (09:15-09:20 mandatory; revalidated after) + new-buyer
       const q = batchQuotes[c.symbol] || {};
       const open = openingCheck(series, q, series.prevClose || q.close || 0);
@@ -345,6 +370,7 @@ async function scanSignals(candidatesOverride) {
       if (signal === 'BUY' && !vapOk) signal = 'WAIT';
       if (signal === 'BUY' && !mtfOk) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
+        s10: tick ? tick.s10 : null, s20: tick ? tick.s20 : null, s30: tick ? tick.s30 : null,
         roc1: roc ? roc.roc1 : null, roc3: roc ? roc.roc3 : null,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
@@ -370,7 +396,14 @@ async function scanSignals(candidatesOverride) {
     }));
     out.push(...res.filter(Boolean));
   }
-  out.sort((a, b) => (b.roc5 || -99) - (a.roc5 || -99));
+  // Rank by what is moving NOW: the 20-second tick window first; names without
+  // ticks follow, ordered by the 5m ROC as before.
+  out.sort((a, b) => {
+    const at = a.s20 != null, bt = b.s20 != null;
+    if (at && bt) return b.s20 - a.s20;
+    if (at !== bt) return at ? -1 : 1;
+    return (b.roc5 || -99) - (a.roc5 || -99);
+  });
   fs.writeFileSync(SIGNALS_FILE, JSON.stringify({ generatedAt: now, marketOpen: isMarketOpen(), signals: out }));
   return { signals: out.length, buys: out.filter(s => s.signal === 'BUY').length, waits: out.filter(s => s.signal === 'WAIT').length, sells: out.filter(s => s.signal === 'SHORT' || s.signal === 'SELL').length };
 }
