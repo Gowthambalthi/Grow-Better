@@ -176,6 +176,8 @@ function computeRoc(series) {
     const ref = bars[bars.length - 1 - n].c;
     return ref > 0 ? +(((last - ref) / ref) * 100).toFixed(2) : null;
   };
+  // Fast frames (1m/3m) read the immediate move; 5m/15m carry the trend.
+  const roc1 = rocN(1), roc3 = rocN(3);
   const roc5 = rocN(5), roc15 = rocN(15);
   const vols = bars.map(b => b.v);
   const dayAvg = vols.reduce((s, v) => s + v, 0) / vols.length;
@@ -220,7 +222,7 @@ function computeRoc(series) {
     else volAtPrice = 'LIGHT';
   }
   return {
-    roc5, roc15,
+    roc1, roc3, roc5, roc15,
     volX: dayAvg > 0 ? +(recentAvg / dayAvg).toFixed(2) : 1,
     volRoc, posInRange, volAtPrice,
     // Multi-timeframe VWAP stack + previous-day levels (confirmation context,
@@ -343,6 +345,7 @@ async function scanSignals(candidatesOverride) {
       if (signal === 'BUY' && !vapOk) signal = 'WAIT';
       if (signal === 'BUY' && !mtfOk) signal = 'WAIT';
       return { symbol: c.symbol, engine: c.engine, score: c.score, ltp,
+        roc1: roc ? roc.roc1 : null, roc3: roc ? roc.roc3 : null,
         roc5: roc ? roc.roc5 : null, roc15: roc ? roc.roc15 : null, volX: roc ? roc.volX : null,
         volRoc: roc ? roc.volRoc : null, posInRange: roc ? roc.posInRange : null,
         volAtPrice: roc ? roc.volAtPrice : null,

@@ -4067,7 +4067,10 @@ function _renderMfGridBody(grid, schemes) {
           if (!wrap) return;
           if (!gbSigData || !(gbSigData.signals || []).length) { wrap.innerHTML = '<div class="empty-state">No signals yet — board refreshes every minute during market hours.</div>'; return; }
           var sigs = gbSigData.signals.filter(function(s) { return !gbSigFilter || s.signal === gbSigFilter; });
-          var head = ['Time','Symbol','Signal','LTP','ROC 5m','ROC 15m','Vol x','Vol ROC','Range pos','Vol@Price','VWAPs 5/15/day','Stack','Day Range','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var head = ['Time','Symbol','Signal','LTP','ROC 1m','ROC 3m','ROC 5m','ROC 15m','Vol x','Vol ROC','Range pos','Vol@Price','VWAPs 5/15/day','Stack','Day Range','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          var rocCell = function(v) {
+            return '<td style="padding:4px 10px;color:' + (v > 0 ? '#00e091' : v < 0 ? '#ff4d6d' : 'inherit') + ';font-weight:' + (v != null && Math.abs(v) >= 0.25 ? '700' : '400') + ';">' + (v != null ? (v > 0 ? '+' : '') + v + '%' : '-') + '</td>';
+          };
           var body = sigs.slice(0, 120).map(function(s) {
             var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SHORT' ? '#ff4d6d' : s.signal === 'EXIT' ? '#ffa94d' : 'var(--text-muted,#8b93a7)';
             var rocCol = s.roc5 > 0 ? '#00e091' : s.roc5 < 0 ? '#ff4d6d' : 'inherit';
@@ -4076,8 +4079,10 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
               '<td style="padding:4px 10px;font-weight:800;color:' + sigCol + ';">' + s.signal + '</td>' +
               '<td style="padding:4px 10px;">' + (s.ltp != null ? s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp : '-') + '</td>' +
-              '<td style="padding:4px 10px;color:' + rocCol + ';font-weight:700;">' + (s.roc5 != null ? (s.roc5 > 0 ? '+' : '') + s.roc5 + '%' : '-') + '</td>' +
-              '<td style="padding:4px 10px;color:' + (s.roc15 > 0 ? '#00e091' : s.roc15 < 0 ? '#ff4d6d' : 'inherit') + '">' + (s.roc15 != null ? (s.roc15 > 0 ? '+' : '') + s.roc15 + '%' : '-') + '</td>' +
+              rocCell(s.roc1) +
+              rocCell(s.roc3) +
+              rocCell(s.roc5) +
+              rocCell(s.roc15) +
               '<td style="padding:4px 10px;">' + (s.volX != null ? s.volX + 'x' : '-') + '</td>' +
               '<td style="padding:4px 10px;color:' + ((s.volRoc || 0) >= -10 ? '#00e091' : '#ff4d6d') + ';">' + (s.volRoc != null ? (s.volRoc > 0 ? '+' : '') + s.volRoc + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;font-weight:600;color:' + ((s.posInRange || 0) >= 40 ? '#00e091' : '#ffb86b') + ';">' + (s.posInRange != null ? s.posInRange + '%' : '-') + '</td>' +
