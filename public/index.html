@@ -3948,7 +3948,27 @@ function _renderMfGridBody(grid, schemes) {
             '<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">SWING = daily uptrend, safe to hold · INTRA = close same day</span></div>';
           if (!visible.length) { wrap.innerHTML = hzPills + '<div class="empty-state">No ' + (hzMode === 'ALL' ? '' : hzMode.toLowerCase() + ' ') + 'calls yet — engine is scanning; confirmed buys appear here automatically.</div>' + (calls.length ? '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 History (' + calls.length + ' closed)</button></div>' : ''); var hb0 = document.getElementById('gbCallsHistBtn'); if (hb0) hb0.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); }); var hp0s = wrap.querySelectorAll('.gbHzPill'); Array.prototype.forEach.call(hp0s, function(b){ b.addEventListener('click', function(){ window.__gbCallsHz = b.getAttribute('data-hz'); gbRenderCalls(); }); }); return; }
           var head = '<tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' +
-            ['Time','Symbol','Engine','Entry','LTP','1-min','2-min','5-min','Stop','T1','T2','P&L','Status'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('') + '</tr>';
+            [['Time','time'],['Symbol','symbol'],['Engine','engine'],['Entry','entry'],['LTP','lastLtp'],['1-min','m1'],['2-min','m2'],['5-min','m5'],['Stop','stopLoss'],['T1','target1'],['T2','target2'],['P&L','pnl'],['Status','status']].map(function(col){
+              var on = gbClSort.key === col[1];
+              var arrow = on ? (gbClSort.dir < 0 ? '&#9660;' : '&#9650;') : ' <span style="opacity:0.35;">&#8645;</span>';
+              return '<th class="gbClSortH" data-k="'+col[1]+'" title="Sort by '+col[0]+'" style="text-align:left;padding:6px 10px;white-space:nowrap;cursor:pointer;user-select:none;color:'+(on?'#7ef0c4':'inherit')+';">'+col[0]+arrow+'</th>';
+            }).join('') + '</tr>';
+          var clVal = function(c, k) {
+            if (k === 'pnl') { var pv = c.status === 'CLOSED' ? c.pnlPct : c.unrealPct; return pv == null ? null : pv; }
+            if (k === 'm1' || k === 'm2' || k === 'm5') {
+              var m = (gbMvData && gbMvData.bySymbol) ? gbMvData.bySymbol[c.symbol] : null;
+              return (m && m[k] != null) ? m[k] : null;
+            }
+            var v2 = c[k];
+            return v2 == null ? null : v2;
+          };
+          visible = visible.slice().sort(function(a, b) {
+            var av = clVal(a, gbClSort.key), bv = clVal(b, gbClSort.key);
+            var an = av == null || av === '', bn = bv == null || bv === '';
+            if (an && bn) return 0; if (an) return 1; if (bn) return -1;
+            if (typeof av === 'string' || typeof bv === 'string') return String(av).localeCompare(String(bv)) * gbClSort.dir;
+            return (av - bv) * gbClSort.dir;
+          });
           var body = visible.map(function(c) {
             var closed = c.status === 'CLOSED';
             var op = closed ? 'opacity:0.45;' : '';
@@ -3980,6 +4000,18 @@ function _renderMfGridBody(grid, schemes) {
               '</tr>';
           }).join('');
           var histBtn = '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 ' + (showHist ? 'Back to live calls' : 'History (show closed)') + '</button></div>';
+          if (!wrap.dataset.clSortBound) {
+            wrap.dataset.clSortBound = '1';
+            wrap.addEventListener('click', function(ev) {
+              var th = ev.target && ev.target.closest ? ev.target.closest('.gbClSortH') : null;
+              if (!th) return;
+              var k = th.getAttribute('data-k');
+              if (!k) return;
+              if (gbClSort.key === k) gbClSort.dir = -gbClSort.dir;
+              else gbClSort = { key: k, dir: (k === 'symbol' || k === 'engine' || k === 'status') ? 1 : -1 };
+              gbRenderCalls();
+            });
+          }
           wrap.innerHTML = hzPills + histBtn + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
           var hb = document.getElementById('gbCallsHistBtn');
           if (hb) hb.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); });
@@ -4084,7 +4116,7 @@ function _renderMfGridBody(grid, schemes) {
           var head = SIG_COLS.map(function(c) {
             var active = sKey === c[1];
             var arrow = active ? (sDir < 0 ? ' \u25BC' : ' \u25B2') : '';
-            return '<th class="gbSigSortH" data-k="' + c[1] + '" title="Sort by ' + c[0] + '" style="text-align:left;padding:6px 10px;white-space:nowrap;cursor:pointer;user-select:none;color:' + (active ? 'var(--accent,#00B386)' : 'inherit') + ';">' + c[0] + arrow + '</th>';
+            return '<th class="gbSigSortH" data-k="' + c[1] + '" title="Sort by ' + c[0] + '" style="text-align:left;padding:6px 10px;white-space:nowrap;cursor:pointer;user-select:none;color:' + (active ? 'var(--accent,#00B386)' : 'inherit') + ';">' + c[0] + arrow + (active ? '' : ' <span style="opacity:0.35;">&#8645;</span>') + '</th>';
           }).join('');
           var rocCell = function(v) {
             return '<td style="padding:4px 10px;color:' + (v > 0 ? '#00e091' : v < 0 ? '#ff4d6d' : 'inherit') + ';font-weight:' + (v != null && Math.abs(v) >= 0.25 ? '700' : '400') + ';">' + (v != null ? (v > 0 ? '+' : '') + v + '%' : '-') + '</td>';
@@ -4132,7 +4164,8 @@ function _renderMfGridBody(grid, schemes) {
             '</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
         }
         // ---- Live Movers board ----
-        var gbMvData = null, gbMvMode = 'movers', gbMvTf = 's30';
+        var gbMvData = null, gbMvMode = 'movers', gbMvTf = 's30', gbMvSort = { key: 'v', dir: -1 };
+        var gbClSort = { key: 'time', dir: -1 };
         function gbRenderMovers() {
           var wrap = document.getElementById('gbMoversWrap');
           if (!wrap) return;
@@ -4155,15 +4188,36 @@ function _renderMfGridBody(grid, schemes) {
               (canConfirm ? buys : waits).push(row);
             } else sells.push(Math.abs(v) >= quickTh * 0.6 ? row : null); // small noise neither way
           });
-          buys.sort(function(a,b){ return b.v - a.v; });
-          waits.sort(function(a,b){ return b.v - a.v; });
-          sells = sells.filter(Boolean).sort(function(a,b){ return a.v - b.v; });
+          // row order inside each group follows gbMvSort (click any header)
+
+          sells = sells.filter(Boolean);
           var pillRow = '<div style="padding:0 10px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
             TFS.map(function(t){ var on = t[0]===gbMvTf; return '<button class="gbMvTfPill" data-tf="'+t[0]+'" style="padding:4px 12px;border-radius:14px;border:1px solid '+(on?'#00B386':'var(--border,#2a3346)')+';background:'+(on?'rgba(0,179,134,0.15)':'transparent')+';color:'+(on?'#00e091':'var(--text-muted)')+';cursor:pointer;font-size:12px;font-weight:700;">'+t[1]+'</button>'; }).join('') +
             '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">NIFTY ' + (gbMvData.nifty ? (gbMvData.nifty.ltp != null ? gbMvData.nifty.ltp.toFixed(1) + ' · ' + (gbMvData.nifty.s30 > 0 ? '▲' : gbMvData.nifty.s30 < 0 ? '▼' : '·') + ' ' + gbMvData.nifty.s30 + '% (30s)' : 'waiting for ticks') : 'no data') + '</span></div>';
           // join with the signals scan for ROC/Volx/VWAP/Reason columns (screenshot layout)
           var sigMap = {};
           if (gbSigData && gbSigData.signals) gbSigData.signals.forEach(function(g){ sigMap[g.symbol] = g; });
+          // sortable: value comes from the tick row when it carries the field,
+          // otherwise from the joined signals row (ROC / volume / VWAP / Reason).
+          var mvVal = function(r, k) {
+            if (k === 'tag') return r.tag || '';
+            if (k === 'v') return r.v;
+            var a = r.s ? r.s[k] : null;
+            if (a != null) return a;
+            var g = sigMap[r.s.symbol] || {};
+            return g[k] != null ? g[k] : null;
+          };
+          var mvCmp = function(a, b) {
+            var av = mvVal(a, gbMvSort.key), bv = mvVal(b, gbMvSort.key);
+            var an = av == null || av === '', bn = bv == null || bv === '';
+            if (an && bn) return 0; if (an) return 1; if (bn) return -1;
+            if (typeof av === 'string' || typeof bv === 'string') return String(av).localeCompare(String(bv)) * gbMvSort.dir;
+            return (av - bv) * gbMvSort.dir;
+          };
+          buys.forEach(function(r){ r.tag = 'BUY'; });
+          waits.forEach(function(r){ r.tag = 'WAIT'; });
+          sells.forEach(function(r){ r.tag = 'SELL'; });
+          buys.sort(mvCmp); waits.sort(mvCmp); sells.sort(mvCmp);
           var nowT = (gbMvData.generatedAt || '').slice(11, 19);
           var rowHtml = function(r, cls, tag, tagColor) {
             var s = r.s, v = r.v, g = sigMap[s.symbol] || {};
@@ -4199,7 +4253,29 @@ function _renderMfGridBody(grid, schemes) {
             section('WAIT — MOVING UP, NO CONFIRMATION', waits, 'buy', 'WAIT', '#8be9c0') +
             section('SELL / SHORT SIDE', sells, 'sell', 'SELL', '#ff4d6d');
           if (!body) body = '<tr><td colspan="13" class="empty-state">No stocks moving ≥' + quickTh + '% on ' + tfLabel + ' right now.</td></tr>';
-          var head = ['Time','Symbol','Signal','LTP','Move ('+tfLabel+')','ROC 5m','ROC 15m','Vol x','Vol ROC','VWAP','Stack','Big Buyers','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;background:var(--bg-header,#0F2447);color:#fff;">'+h+'</th>'; }).join('');
+          var MV_COLS = [
+            ['Time','time',0],['Symbol','symbol',0],['Signal','tag',0],['LTP','ltp',1],
+            ['Move ('+tfLabel+')','v',1],['ROC 5m','roc5',1],['ROC 15m','roc15',1],
+            ['Vol x','volX',1],['Vol ROC','volRoc',1],['VWAP','vwap',1],
+            ['Stack','vwapStack',0],['Big Buyers','structure',0],['Reason','reason',0]
+          ];
+          var head = MV_COLS.map(function(c){
+            var on = gbMvSort.key === c[1];
+            var arrow = on ? (gbMvSort.dir < 0 ? '&#9660;' : '&#9650;') : ' <span style="opacity:0.35;">&#8645;</span>';
+            return '<th class="gbMvSortH" data-k="'+c[1]+'" title="Sort by '+c[0]+'" style="text-align:left;padding:6px 10px;white-space:nowrap;cursor:pointer;user-select:none;background:var(--bg-header,#0F2447);color:'+(on?'#7ef0c4':'#fff')+';">'+c[0]+arrow+'</th>';
+          }).join('');
+          if (!wrap.dataset.mvSortBound) {
+            wrap.dataset.mvSortBound = '1';
+            wrap.addEventListener('click', function(ev) {
+              var th = ev.target && ev.target.closest ? ev.target.closest('.gbMvSortH') : null;
+              if (!th) return;
+              var k = th.getAttribute('data-k');
+              if (!k) return;
+              if (gbMvSort.key === k) gbMvSort.dir = -gbMvSort.dir;
+              else gbMvSort = { key: k, dir: (k === 'symbol' || k === 'tag' || k === 'structure' || k === 'reason') ? 1 : -1 };
+              gbRenderMovers();
+            });
+          }
           var confNote = gbMvTf === 's10' || gbMvTf === 's20' ? ' · 10s/20s: no strict confirmation (too fast) — light green = unconfirmed watch' : '';
           wrap.innerHTML = pillRow +
             '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' +
