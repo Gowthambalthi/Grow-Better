@@ -26,7 +26,6 @@ const { attachAutoRecording } = require('./common/ledger/autoRecorder');
 const portfolioService = require('./common/portfolio/portfolioService');
 const notificationService = require('./common/notifications/notificationService');
 
-const SERVER_STARTED_AT = new Date().toISOString();
 const app = express();
 const { registerDebugRoute } = require("./scripts/debugGrowwKeys");
 
@@ -249,25 +248,6 @@ app.post('/api/gb/scan/rescan', async (req, res) => {
   }
 });
 
-// Which build is this browser actually showing? Reads the checked-out commit
-// so a stale page can be identified instantly instead of guessed at.
-app.get('/api/gb/build', (req, res) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    let sha = 'unknown';
-    try {
-      const head = fs.readFileSync(path.join(__dirname, '.git', 'HEAD'), 'utf8').trim();
-      if (head.startsWith('ref:')) {
-        sha = fs.readFileSync(path.join(__dirname, '.git', head.replace('ref:', '').trim()), 'utf8').trim().slice(0, 7);
-      } else {
-        sha = head.slice(0, 7);
-      }
-    } catch (_) {}
-    res.json({ sha, startedAt: SERVER_STARTED_AT, indexMtime: fs.statSync(path.join(__dirname, 'public', 'index.html')).mtime.toISOString() });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 app.get('/api/gb/scan', (req, res) => {
   const fs = require('fs');
   const path = require('path');
@@ -410,18 +390,8 @@ app.get('/api/gb/signals', (req, res) => {
   try {
     const liveCalls = require('./common/market/liveCallEngine');
     const board = liveCalls.getSignals();
+    const sig = board.signals || [];
     const only = String(req.query.filter || '').toUpperCase();
-    // 10s/30s only exist as live ticks — merge them in from the tick board.
-    // Absent feed (or no trade in the window) leaves them null, never faked.
-    let tick = {};
-    try {
-      const tb = require('./common/market/tickBoard');
-      tick = tb.tickWindows([]);
-    } catch (_) {}
-    const sig = (board.signals || []).map(s => {
-      const t = tick[s.symbol];
-      return t ? { ...s, s10: t.s10, s30: t.s30, tickAgeSec: t.ageSec } : s;
-    });
     res.json({
       generatedAt: board.generatedAt,
       marketOpen: board.marketOpen,

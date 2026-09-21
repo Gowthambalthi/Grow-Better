@@ -11,7 +11,16 @@
   ```
   powershell -NoProfile -Command '$env:PORT="4200"; (Start-Process -FilePath "node.exe" -ArgumentList "Server.js" -RedirectStandardOutput "<log>" -RedirectStandardError "<log>.err" -WindowStyle Hidden -PassThru).Id'
   ```
-- Build identity: `GET /api/gb/build` returns `{ sha, startedAt, indexMtime }`, and the page prints `build <sha> · <time>` in the Live Movers header. Always check that chip before debugging a UI complaint — it tells you if the browser is on an old page.
-  Use single quotes around the whole -Command so bash does not expand `$env:PORT`.
+- Use single quotes around the whole -Command so bash does not expand `$env:PORT`.
+
+## Identifying the running version
+- **As of the full rollback to `c7625d33` (10:29), the build chip is gone**: `GET /api/gb/build` returns 404 and the page has no `build <sha>` chip, because both were added later and were rolled back with the rest. There is no longer any in-page way to tell whether a browser tab is stale.
+- Confirm the checked-out version instead:
+  ```
+  git diff c7625d33 -- Server.js common/market/liveCallEngine.js \
+    common/market/liveStockQuoteService.js common/market/tickBoard.js public/index.html
+  ```
+  Empty output = the whole app is byte-identical to the 10:29 version.
+- Because the auto-reload guard is gone too, a long-lived tab will keep showing its old DOM. After a code change, close the tab and reopen, or hard-refresh (`Ctrl+Shift+R`).
 - Verify: `curl http://127.0.0.1:4000/api/status` → 200; log shows `[server] listening on http://0.0.0.0:4000` (server takes ~10–15 s to boot: DB load, broker login, instrument master).
 - Known boot warnings (harmless): `node-cron module not installed` fallback, `[autoRecorder] looksComplete is not defined`.

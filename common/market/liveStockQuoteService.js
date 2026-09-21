@@ -131,11 +131,6 @@ async function fetchAngelQuotes(symbols) {
  * Fetch today's 1-minute series for a symbol (for velocity/momentum).
  * Returns { bars: [{t, c, v}], dayVol, last } or null.
  */
-// Minimum median VALUE per 1-minute bar (traded value, in ₹). ~₹5 lakh a
-// minute is about one meaningful order a minute — below that the prints are
-// noise and the candles are jump-artifacts, not price discovery.
-const MIN_MED_BAR_VALUE = 500000;
-
 async function fetchIntradaySeries(symbol) {
   const cleanSym = String(symbol || '').replace(/-EQ$/i, '').trim().toUpperCase();
   try {
@@ -167,27 +162,6 @@ async function fetchIntradaySeries(symbol) {
       bars.push({ t: tMs, o: q.open?.[i] ?? c, h: q.high?.[i] ?? c, l: q.low?.[i] ?? c, c, v: v || 0 });
     }
     if (bars.length < 20) return null;
-    // ---- TRADABILITY GATE (dead counters) --------------------------------
-    // A counter can pass a turnover check and still be untradeable: a handful
-    // of tiny prints per minute, minutes with no trade at all, and prices that
-    // jump between them (e.g. OPTIEMUS: ~149 shares a minute). Such a series
-    // yields meaningless ROC/ATR/volume numbers, so it is refused outright
-    // rather than allowed to sit in the board looking like a setup.
-    // Judged on VALUE per minute, not share count — a ₹1900 stock trading 600
-    // shares a minute is liquid; a ₹600 stock trading 150 is not.
-    const prices = bars.map(b => b.c).filter(p => p > 0).sort((a, b) => a - b);
-    const medPrice = prices.length ? prices[Math.floor(prices.length / 2)] : 0;
-    const sortedVols = bars.map(b => b.v || 0).sort((a, b) => a - b);
-    const medVol = sortedVols[Math.floor(sortedVols.length / 2)];
-    if (medPrice * medVol < MIN_MED_BAR_VALUE) return null;   // too thin to trade
-    const zeroVolShare = bars.filter(b => !b.v).length / bars.length;
-    if (zeroVolShare > 0.15) return null;                     // minutes with no trade
-    // CONTINUITY: how many minutes of the session actually printed a bar.
-    // Missing bars mean the ROC windows straddle holes in the tape.
-    const istNow = new Date(Date.now() + (5.5 * 60 + new Date().getTimezoneOffset()) * 60000);
-    const minsNow = istNow.getHours() * 60 + istNow.getMinutes();
-    const elapsed = Math.max(20, Math.min(375, minsNow - 555));
-    if (bars.length / elapsed < 0.85) return null;            // gappy tape
     // LIVE-DATA RULE for intraday: expose how old the newest bar is so the
     // engine can refuse to trade on 5-minute-late data.
     const lastBarAgeSec = Math.round((Date.now() - bars[bars.length - 1].t) / 1000);
@@ -274,6 +248,48 @@ module.exports = {
  * Fetch today's 1-minute series for a symbol (for velocity/momentum).
  * Returns { bars: [{t, c, v}], dayVol, last } or null.
  */
+async function fetchIntradaySeries(symbol) {
+  const cleanSym = String(symbol || '').replace(/-EQ$/i, '').trim().toUpperCase();
+  try {
+    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
+    // SERVER FAILOVER: try query2 first, then query1 — whichever answers.
+    // For intraday, a slow/dead server must never mean stale or no data.
+    let r = null;
+    for (const host of ['query2', 'query1']) {
+      try {
+        const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${cleanSym}.NS?interval=1m&range=1d`;
+        const res = await axios.get(url, { headers: uHeaders, timeout: 3000 });
+        if (res.data?.chart?.result?.[0]) { r = res.data.chart.result[0]; break; }
+      } catch (_) { /* next server */ }
+    }
+    if (!r) return null;
+    const ts = r?.timestamp; const q = r?.indicators?.quote?.[0];
+    if (!ts || !q) return null;
+    const bars = [];
+    for (let i = 0; i < ts.length; i++) {
+      const c = q.close?.[i]; const v = q.volume?.[i];
+      if (c == null) continue;
+      const tMs = ts[i] * 1000;
+      // NSE regular session only: 09:15 <= IST < 15:15. Drops the pre-open
+      // bar and the 15:15-15:30 closing-auction stub that Yahoo includes —
+      // both are fake sessions for intraday math (velocity/ROC/volume).
+      const ist = new Date(tMs + (5.5 * 60 + new Date(tMs).getTimezoneOffset()) * 60000);
+      const mins = ist.getHours() * 60 + ist.getMinutes();
+      if (mins < 555 || mins >= 915) continue;
+      bars.push({ t: tMs, o: q.open?.[i] ?? c, h: q.high?.[i] ?? c, l: q.low?.[i] ?? c, c, v: v || 0 });
+    }
+    if (bars.length < 20) return null;
+    // LIVE-DATA RULE for intraday: expose how old the newest bar is so the
+    // engine can refuse to trade on 5-minute-late data.
+    const lastBarAgeSec = Math.round((Date.now() - bars[bars.length - 1].t) / 1000);
+    return { bars, dayVol: bars.reduce((s, b) => s + b.v, 0), last: bars[bars.length - 1].c,
+      lastBarAgeSec, _fetchedAt: Date.now(),
+      prevClose: Number(r.meta?.chartPreviousClose || r.meta?.previousClose || 0),
+      dayHigh: bars.reduce((m, b) => Math.max(m, b.h ?? b.c), 0),
+      dayLow: bars.reduce((m, b) => Math.min(m, b.l ?? b.c), Infinity) };
+  } catch (_) { return null; }
+}
+
 module.exports = {
   fetchLiveStockQuote,
   fetchAngelQuotes,
