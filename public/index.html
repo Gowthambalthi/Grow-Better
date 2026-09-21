@@ -1261,26 +1261,11 @@
           <div id="gbSummary" style="display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
           <div id="gbFreshPanel" style="display:none;background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;margin:0 0 18px;"></div>
 
-          <!-- Terminal section tabs -->
-          <div id="gbTermTabs" style="display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap;">
-            <button class="btn gbTermTab" data-v="all"    style="padding:6px 16px;font-size:13px;font-weight:700;">ALL</button>
-            <button class="btn gbTermTab" data-v="watch"  style="padding:6px 16px;font-size:13px;font-weight:700;">WATCHLIST</button>
-            <button class="btn gbTermTab" data-v="movers" style="padding:6px 16px;font-size:13px;font-weight:700;">LIVE MOVERS</button>
-            <button class="btn gbTermTab" data-v="signals" style="padding:6px 16px;font-size:13px;font-weight:700;">INTRADAY SIGNALS</button>
-            <button class="btn gbTermTab" data-v="calls"  style="padding:6px 16px;font-size:13px;font-weight:700;">CLOSED / CALLS</button>
-          </div>
-
-          <!-- Stocks to watch tomorrow: today's top confirmed setups -->
-          <div class="gbTermView" data-sec="watch">
-          <div style="display:flex;align-items:center;gap:12px;margin:0 0 8px;">
-            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Watchlist</h2>
-            <span style="font-size:12px;color:var(--text-dim,#8b93a7);">today's confirmed fresh buys + top engine scores — plan entries at open</span>
-          </div>
-          <div id="gbWatchWrap" style="overflow:auto;max-height:35vh;margin-bottom:20px;"></div>
-          </div>
+          <!-- No section tabs: the board is one continuous intraday page.
+               Watchlist section removed — only ROC/intraday content here. -->
 
           <!-- Real-time movers board: 1-min / 5-min change flags -->
-          <div class="gbTermView" data-sec="movers">
+          <div class="gbTermView" data-sec="movers" style="display:block;">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Movers (10s · 20s · 30s · 1m · 3m · 5m)</h2>
             <span id="gbMvStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">refreshing every tick · 09:15–15:15 IST</span>
@@ -1293,7 +1278,7 @@
           </div>
 
           <!-- ROC + big-buyers intraday signals table -->
-          <div class="gbTermView" data-sec="signals" style="display:none;">
+          <div class="gbTermView" data-sec="signals" style="display:block;">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Intraday Signals (ROC + Buyers)</h2>
             <span id="gbSigStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">ROC engine · refreshed every 15s</span>
@@ -1308,7 +1293,7 @@
           </div>
 
           <!-- Live buy calls: newest on top, closed dimmed, click to inspect -->
-          <div class="gbTermView" data-sec="calls">
+          <div class="gbTermView" data-sec="calls" style="display:block;">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Buy Calls</h2>
             <span id="gbCallsStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">auto-scans every minute</span>
@@ -4301,8 +4286,8 @@ function _renderMfGridBody(grid, schemes) {
             gbRenderWatch();
           } catch (e) {}
         }
-        gbRefreshWatch();
-        setInterval(gbRefreshWatch, 300000);
+        // Watchlist section was removed from the Terminal — no fetch, no timer.
+        // (gbRenderWatch stays for any future use; it exits when its wrap is gone.)
 
         var gbCallsWrap = document.getElementById('gbCallsWrap');
         if (gbCallsWrap) gbCallsWrap.addEventListener('click', function(e) {
