@@ -1261,24 +1261,14 @@
                Watchlist section removed — only ROC/intraday content here. -->
 
           <!-- Real-time movers board: 1-min / 5-min change flags -->
-          <div class="gbTermView" data-sec="movers" style="display:block;">
-          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
-            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Movers (10s · 20s · 30s · 1m · 3m · 5m)</h2>
-            <span id="gbMvStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">refreshing every tick · 09:15–15:15 IST</span>
-            <span id="gbBuild" style="font-size:11px;color:var(--text-dim,#8b93a7);border:1px solid var(--border,#232a36);border-radius:10px;padding:1px 8px;white-space:nowrap;">build —</span>
-            <div style="margin-left:auto;display:flex;gap:6px;">
-              <button class="btn gbMvF" data-f="movers" style="padding:3px 10px;font-size:12px;">MOVERS</button>
-              <button class="btn gbMvF" data-f="all" style="padding:3px 10px;font-size:12px;">ALL</button>
-            </div>
-          </div>
-          <div id="gbMoversWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
-          </div>
+          <!-- Live Movers section removed: this view is ROC/intraday only. -->
 
           <!-- ROC + big-buyers intraday signals table -->
           <div class="gbTermView" data-sec="signals" style="display:block;">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Intraday Signals (ROC + Buyers)</h2>
             <span id="gbSigStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">ROC engine · refreshed every 15s</span>
+            <span id="gbBuild" style="font-size:11px;color:var(--text-dim,#8b93a7);border:1px solid var(--border,#232a36);border-radius:10px;padding:1px 8px;white-space:nowrap;">build —</span>
             <div style="margin-left:auto;display:flex;gap:6px;">
               <button class="btn gbSigF" data-f="" style="padding:3px 10px;font-size:12px;">ALL</button>
               <button class="btn gbSigF" data-f="BUY" style="padding:3px 10px;font-size:12px;color:#00e091;">BUY</button>
@@ -4233,6 +4223,7 @@ function _renderMfGridBody(grid, schemes) {
             b.addEventListener('click', function() { gbMvTf = b.getAttribute('data-tf'); gbRenderMovers(); });
           });
         }
+        // Retained for the API/other views, but nothing calls it on this page.
         async function gbRefreshMovers() {
           try {
             var r = await fetch('/api/gb/movers' + (gbMvMode === 'all' ? '?all=1' : ''));
@@ -4336,17 +4327,17 @@ function _renderMfGridBody(grid, schemes) {
         if (gbTickBtn) gbTickBtn.addEventListener('click', async function() {
           gbTickBtn.disabled = true; gbTickBtn.textContent = '⟳…';
           try { await fetch('/api/gb/calls/tick', { method: 'POST' }); } catch (_) {}
-          await Promise.all([gbRefreshCalls(), gbRefreshSignals(), gbRefreshMovers()]);
+          await Promise.all([gbRefreshCalls(), gbRefreshSignals()]);   // movers section removed
           gbTickBtn.disabled = false; gbTickBtn.textContent = '⟳ Refresh prices';
         });
 
         // initial load + auto-refresh every 60s while the terminal view is open
         gbRefreshCalls();
         gbRefreshSignals();
-        gbRefreshMovers();
+        // movers board no longer rendered on this view — no fetch, no timer.
         setInterval(gbRefreshCalls, 15000);
         setInterval(gbRefreshSignals, 15000);
-        setInterval(gbRefreshMovers, 5000);
+        // movers refresh loop removed with the section
 
         var gbWrap = document.getElementById('gbTableWrap');
         if (gbWrap) gbWrap.addEventListener('click', function(e) {
