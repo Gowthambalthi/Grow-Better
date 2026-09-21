@@ -3747,6 +3747,12 @@ function _renderMfGridBody(grid, schemes) {
 
         });
 
+        // Populate the Terminal scanner on FIRST load too, not only when the
+        // nav item is clicked. Reloading straight onto the Terminal used to
+        // leave the SCANNED / FRESH BUYS / FRESH SELLS cards blank, which made
+        // the current build look like an older one.
+        setTimeout(function () { try { gbAutoLoad(); } catch (_) {} }, 400);
+
 // ---- GB Terminal: Strategy 1 scanner ----
         var gbLoaded = false;
         var gbRows = [], gbLastScan = null;
