@@ -1301,6 +1301,7 @@
               <button class="btn gbSigF" data-f="" style="padding:3px 10px;font-size:12px;">ALL</button>
               <button class="btn gbSigF" data-f="BUY" style="padding:3px 10px;font-size:12px;color:#00e091;">BUY</button>
               <button class="btn gbSigF" data-f="SHORT" style="padding:3px 10px;font-size:12px;color:#ff4d6d;">SHORT</button>
+              <button class="btn gbSigF" data-f="LATE" style="padding:3px 10px;font-size:12px;color:#ffb86b;" title="Already moved - the 5m/15m run has happened; buying here is chasing">LATE</button>
             </div>
           </div>
           <div id="gbSigWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
@@ -4098,7 +4099,7 @@ function _renderMfGridBody(grid, schemes) {
             return '<td style="padding:4px 10px;color:' + (v > 0 ? '#00e091' : v < 0 ? '#ff4d6d' : 'inherit') + ';font-weight:' + (v != null && Math.abs(v) >= 0.25 ? '700' : '400') + ';">' + (v != null ? (v > 0 ? '+' : '') + v + '%' : '-') + '</td>';
           };
           var body = sigs.slice(0, 120).map(function(s) {
-            var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SHORT' ? '#ff4d6d' : s.signal === 'EXIT' ? '#ffa94d' : 'var(--text-muted,#8b93a7)';
+            var sigCol = s.signal === 'BUY' ? '#00e091' : s.signal === 'SHORT' ? '#ff4d6d' : s.signal === 'LATE' ? '#ffb86b' : s.signal === 'EXIT' ? '#ffa94d' : 'var(--text-muted,#8b93a7)';
             var rocCol = s.roc5 > 0 ? '#00e091' : s.roc5 < 0 ? '#ff4d6d' : 'inherit';
             return '<tr style="border-top:1px solid var(--border,#232a36);' + (s.inPosition ? 'background:rgba(0,179,134,0.07);' : '') + '">' +
               '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (s.time || '').slice(11, 19) + '</td>' +

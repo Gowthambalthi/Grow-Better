@@ -265,16 +265,39 @@ function buyerStructure(roc, ltp) {
 //   SELL = momentum flipping negative, big selling structure, or stop breach
 function rocSignal(roc, ltp, stopLoss, inPosition) {
   if (!roc || ltp == null) return { signal: 'HOLD', reason: 'no data' };
-  const { roc5, roc15, volX } = roc;
+  const { roc1, roc3, roc5, roc15, volX } = roc;
   if (inPosition && stopLoss != null && ltp <= stopLoss) return { signal: 'EXIT', reason: 'at stop loss' };
+  // ---- ALREADY-MOVED VETO -------------------------------------------------
+  // A 5-min move this big is the move, not the setup. Buying it means paying
+  // the move's price for whatever (if anything) comes next, so it is refused
+  // outright and labelled so the board shows WHY it isn't a buy.
+  const moved5 = roc5 != null && roc5 >= LATE_ROC5;
+  const moved15 = roc15 != null && roc15 >= LATE_ROC15;
+  const alreadyMoved = moved5 || moved15;
+  // SHORT stays symmetric: the sell-side of an already-extended drop.
   if (roc5 < -0.10 && roc15 < 0) return { signal: 'SHORT', reason: 'momentum flipped down (ROC5 ' + roc5 + '%, ROC15 ' + roc15 + '%) - breakdown setup' };
-  if (roc5 > 0.10 && roc15 > 0 && volX >= 1.1) return { signal: 'BUY', reason: 'ROC accelerating up (ROC5 +' + roc5 + '%, ROC15 +' + roc15 + '%, vol ' + volX + 'x)' };
-  if (roc5 > 0.25 && roc15 >= 0) return { signal: 'BUY', reason: 'strong price burst (ROC5 +' + roc5 + '%)' };
-  return { signal: 'HOLD', reason: 'flat (ROC5 ' + (roc5 == null ? '-' : roc5) + '%)' };
+  if (alreadyMoved) {
+    const which = moved5 ? 'ROC5 +' + roc5 + '%' : 'ROC15 +' + roc15 + '%';
+    return { signal: 'LATE', reason: 'already moved (' + which + ') - buying now is chasing, wait for a pullback' };
+  }
+  // ---- BUY THE TURN, NOT THE RUN -----------------------------------------
+  // Entry needs the LAST minute turning up while the 5-min move is still
+  // small: fresh pressure, not a trend that has already paid out.
+  const freshTurn = roc1 != null && roc1 > FRESH_TURN_ROC1;
+  if (freshTurn && roc15 != null && roc15 > 0 && volX >= 1.1)
+    return { signal: 'BUY', reason: 'fresh turn: 1-min +' + roc1 + '% while 5-min only +' + (roc5 == null ? '-' : roc5) + '% (vol ' + volX + 'x) - early entry' };
+  if (roc1 != null && roc1 <= 0 && roc5 > 0.10 && roc15 > 0)
+    return { signal: 'HOLD', reason: 'up on 5m/15m but 1-min has stalled (' + roc1 + '%) - late entry refused' };
+  return { signal: 'HOLD', reason: 'flat (ROC5 ' + (roc5 == null ? '-' : roc5) + '%, 1m ' + (roc1 == null ? '-' : roc1) + '%)' };
 }
 
 // Minute scan across the whole scored universe (price >= MIN_PRICE): computes
 // ROC + buyer structure + BUY/SELL/HOLD for each and persists the board.
+// Already-moved thresholds: past these the 5m/15m move IS the move.
+const LATE_ROC5 = 0.80;      // % over 5 min
+const LATE_ROC15 = 1.50;     // % over 15 min
+const FRESH_TURN_ROC1 = 0.05; // % over the last minute = the turn we buy
+
 // Liquidity floor for the signals board. Your Stage-1 plan calls for a
 // ₹5-10 Cr daily turnover floor; we use the top of that (₹10 Cr) expressed
 // as a FULL-DAY equivalent and scale it by how much of the session has run,
