@@ -156,7 +156,7 @@ function onTick(t) {
 // GREEN: price up AND buy pressure building (both windows agree)
 // RED:   price down AND sell pressure building (both windows agree)
 // NEUTRAL: windows disagree, or Δ below the noise floor (OF_MIN_DELTA).
-const FLOW_WINDOWS = [WINDOWS[2], WINDOWS[3]]; // 30s + 1m confirmation pair
+const FLOW_WINDOWS = [WINDOWS[2], WINDOWS[3], WINDOWS[4], WINDOWS[5]]; // 30s + 1m + 3m + 5m — multi-TF flow stack
 const OF_MIN_DELTA = 0.05;   // minimum |Δratio| to count as "building"
 const OF_MIN_MOVE = 0.1;     // minimum |price %| over the window
 
@@ -189,6 +189,9 @@ function flowRead(arr, now, ltp) {
     if (dir) { tracked++; if (dir === 'green') ups++; else downs++; }
   }
   out.flowColor = (tracked === FLOW_WINDOWS.length) ? (ups === FLOW_WINDOWS.length ? 'green' : downs === FLOW_WINDOWS.length ? 'red' : null) : null;
+  // multi-TF verdict: all tracked windows must agree for 'strong'; partial (>=2 green of tracked) = 'lean'
+  out.flowStrength = (tracked === FLOW_WINDOWS.length) ? 'strong'
+    : (ups >= 2 || downs >= 2) ? 'lean' : 'weak';
   out.ratio = nowRatio != null ? +nowRatio.toFixed(2) : null;
   return out;
 }
@@ -325,16 +328,19 @@ function buildBoard() {
     const of = feedDead ? null : flowRead(arr, now, ltp);
     if (of) {
       row.flow = of.flowColor;                 // 'green' | 'red' | null (disagreement = no colour)
+      row.flowStrength = of.flowStrength;      // 'strong' (all 30s/1m/3m/5m agree) | 'lean' | 'weak'
       row.ratio = of.ratio;                    // current buy:sell ratio
       row.ofS30 = of[WINDOWS[2].key] && of[WINDOWS[2].key].dir;
       row.ofM1 = of[WINDOWS[3].key] && of[WINDOWS[3].key].dir;
+      row.ofM3 = of[WINDOWS[4].key] && of[WINDOWS[4].key].dir;
+      row.ofM5 = of[WINDOWS[5].key] && of[WINDOWS[5].key].dir;
       // STRICT confirmation: candle structure AND order flow AND Nifty must all agree.
       // A buy chasing INTO the session high is rejected (resistance) unless a big buyer
       // just stepped in (absorption); same mirror for shorts at the session low.
       const chasingHigh = st.sr.atHigh != null && st.sr.atHigh < 0.1;
       const chasingLow = st.sr.atLow != null && st.sr.atLow < 0.1;
-      const buyOk = of.flowColor === 'green' && st.dir === 'up' && niftyUp && (!chasingHigh || st.bigBuyer);
-      const shortOk = of.flowColor === 'red' && st.dir === 'down' && niftyDown && (!chasingLow || st.bigSeller);
+      const buyOk = of.flowColor === 'green' && of.flowStrength === 'strong' && st.dir === 'up' && niftyUp && (!chasingHigh || st.bigBuyer);
+      const shortOk = of.flowColor === 'red' && of.flowStrength === 'strong' && st.dir === 'down' && niftyDown && (!chasingLow || st.bigSeller);
       row.confirmed = buyOk || shortOk;
     }
     stocks.push(row);
