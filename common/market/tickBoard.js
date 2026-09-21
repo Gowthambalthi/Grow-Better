@@ -73,6 +73,10 @@ async function start(opts = {}) {
   if (starting) return starting;
   starting = (async () => {
     try {
+      // if a previous attempt died mid-way, close any half-open sockets first
+      // (otherwise retries stack duplicate sockets and hit Angel's 3-socket cap)
+      for (const f of feeds) { try { f.close(); } catch (_) {} }
+      feeds = [];
       // 1. session
       let session = opts.session;
       if (!session || !session.jwtToken) {
@@ -119,7 +123,7 @@ async function start(opts = {}) {
       // periodic board build
       if (!buildTimer) buildTimer = setInterval(() => { try { buildBoard(); } catch (_) {} }, 5000);
       return true;
-    } finally { starting = null; }
+    } catch (e) { console.error('[tickBoard] start failed, will retry in 60s:', e.message); return false; } finally { starting = null; }
   })();
   return starting;
 }
