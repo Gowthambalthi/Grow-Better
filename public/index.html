@@ -3794,8 +3794,7 @@ function _renderMfGridBody(grid, schemes) {
             gbLastScan = j;
             gbRenderSummary(j);
             gbRenderTable();
-            var bt = j.backtest ? (' · backtest 1Y: ' + j.backtest.totalSignals + ' signals, ' + j.backtest.winRate + '% win, avg ' + j.backtest.avgRR + 'R, ' + j.backtest.avgHoldDays + 'd hold') : '';
-            status.textContent = '✅ Scanned ' + j.scanned.toLocaleString('en-IN') + ' stocks · ' + j.freshBuys + ' fresh buys' + bt + ' · data: ' + (j.generatedAt || '').slice(0, 10);
+            status.textContent = '✅ Scanned ' + j.scanned.toLocaleString('en-IN') + ' stocks · ' + j.freshBuys + ' fresh buys · data: ' + (j.generatedAt || '').slice(0, 10);
           } catch (e2) {
             status.textContent = '❌ Scan failed: ' + e2.message;
           }
@@ -3951,7 +3950,13 @@ function _renderMfGridBody(grid, schemes) {
           var active = calls.filter(function(c){ return c.status === 'ACTIVE'; });
           var todaysClosed = calls.filter(function(c){ return c.status === 'CLOSED' && c.date === today; });
           var visible = showHist ? calls : active.concat(todaysClosed);
-          if (!visible.length) { wrap.innerHTML = '<div class="empty-state">No live calls yet — engine is scanning; confirmed buys appear here automatically.</div>' + (calls.length ? '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 History (' + calls.length + ' closed)</button></div>' : ''); var hb0 = document.getElementById('gbCallsHistBtn'); if (hb0) hb0.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); }); return; }
+          // horizon filter pills: ALL / SWING / INTRA (small, per-horizon buy splitting)
+          var hzMode = window.__gbCallsHz || 'ALL';
+          if (hzMode !== 'ALL') visible = visible.filter(function(c){ return c.horizon === (hzMode === 'SWING' ? 'SWING-SUITABLE' : 'INTRADAY-ONLY'); });
+          var hzPills = '<div style="padding:0 0 8px;display:flex;gap:6px;align-items:center;">' +
+            [['ALL','ALL'],['SWING','SWING'],['INTRA','INTRA']].map(function(p){ var on = hzMode === p[0]; return '<button class="gbHzPill" data-hz="'+p[0]+'" style="padding:3px 12px;border-radius:12px;border:1px solid '+(on?'#00B386':'var(--border,#2a3346)')+';background:'+(on?'rgba(0,179,134,0.15)':'transparent')+';color:'+(on?'#00e091':'var(--text-muted)')+';cursor:pointer;font-size:11px;font-weight:700;">'+p[1]+'</button>'; }).join('') +
+            '<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">SWING = daily uptrend, safe to hold · INTRA = close same day</span></div>';
+          if (!visible.length) { wrap.innerHTML = hzPills + '<div class="empty-state">No ' + (hzMode === 'ALL' ? '' : hzMode.toLowerCase() + ' ') + 'calls yet — engine is scanning; confirmed buys appear here automatically.</div>' + (calls.length ? '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 History (' + calls.length + ' closed)</button></div>' : ''); var hb0 = document.getElementById('gbCallsHistBtn'); if (hb0) hb0.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); }); var hp0s = wrap.querySelectorAll('.gbHzPill'); Array.prototype.forEach.call(hp0s, function(b){ b.addEventListener('click', function(){ window.__gbCallsHz = b.getAttribute('data-hz'); gbRenderCalls(); }); }); return; }
           var head = '<tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' +
             ['Time','Symbol','Engine','Entry','LTP','1-min','2-min','5-min','Stop','T1','T2','P&L','Status'].map(function(h){return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>';}).join('') + '</tr>';
           var body = visible.map(function(c) {
@@ -3985,9 +3990,10 @@ function _renderMfGridBody(grid, schemes) {
               '</tr>';
           }).join('');
           var histBtn = '<div style="padding:0 0 8px;"><button id="gbCallsHistBtn" class="btn" style="padding:3px 12px;font-size:12px;">🕘 ' + (showHist ? 'Back to live calls' : 'History (show closed)') + '</button></div>';
-          wrap.innerHTML = histBtn + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+          wrap.innerHTML = hzPills + histBtn + '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
           var hb = document.getElementById('gbCallsHistBtn');
           if (hb) hb.addEventListener('click', function(){ window.__gbCallsHist = !window.__gbCallsHist; gbRenderCalls(); });
+          Array.prototype.forEach.call(wrap.querySelectorAll('.gbHzPill'), function(b){ b.addEventListener('click', function(){ window.__gbCallsHz = b.getAttribute('data-hz'); gbRenderCalls(); }); });
         }
 
         function gbRenderCallDetail(d) {
