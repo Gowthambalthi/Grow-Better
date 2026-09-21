@@ -1261,26 +1261,28 @@
                Watchlist section removed — only ROC/intraday content here. -->
 
           <!-- Real-time movers board: 1-min / 5-min change flags -->
-          <!-- Live Movers: table only — no timeframe pills, no NIFTY/status chrome. -->
           <div class="gbTermView" data-sec="movers" style="display:block;">
-          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;">
-            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Movers</h2>
+          <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
+            <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Movers (10s · 20s · 30s · 1m · 3m · 5m)</h2>
+            <span id="gbMvStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">refreshing every tick · 09:15–15:15 IST</span>
+            <span id="gbBuild" style="font-size:11px;color:var(--text-dim,#8b93a7);border:1px solid var(--border,#232a36);border-radius:10px;padding:1px 8px;white-space:nowrap;">build —</span>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <button class="btn gbMvF" data-f="movers" style="padding:3px 10px;font-size:12px;">MOVERS</button>
+              <button class="btn gbMvF" data-f="all" style="padding:3px 10px;font-size:12px;">ALL</button>
+            </div>
           </div>
           <div id="gbMoversWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
           </div>
-
 
           <!-- ROC + big-buyers intraday signals table -->
           <div class="gbTermView" data-sec="signals" style="display:block;">
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Intraday Signals (ROC + Buyers)</h2>
             <span id="gbSigStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">ROC engine · refreshed every 15s</span>
-            <span id="gbBuild" style="font-size:11px;color:var(--text-dim,#8b93a7);border:1px solid var(--border,#232a36);border-radius:10px;padding:1px 8px;white-space:nowrap;">build —</span>
             <div style="margin-left:auto;display:flex;gap:6px;">
               <button class="btn gbSigF" data-f="" style="padding:3px 10px;font-size:12px;">ALL</button>
               <button class="btn gbSigF" data-f="BUY" style="padding:3px 10px;font-size:12px;color:#00e091;">BUY</button>
               <button class="btn gbSigF" data-f="SHORT" style="padding:3px 10px;font-size:12px;color:#ff4d6d;">SHORT</button>
-              <button class="btn gbSigF" data-f="LATE" style="padding:3px 10px;font-size:12px;color:#ffb86b;" title="Already moved - the 5m/15m run has happened; buying here is chasing">LATE</button>
             </div>
           </div>
           <div id="gbSigWrap" style="overflow:auto;max-height:45vh;margin-bottom:20px;"></div>
@@ -3738,25 +3740,29 @@ function _renderMfGridBody(grid, schemes) {
         // Here we stamp the loaded build and, if the server starts serving a
         // different one, reload once so the page picks up the new UI by itself.
         (function gbBuildWatch() {
-          var loadedSha = null;
+          var loaded = null;
           async function check() {
             try {
               var r = await fetch('/api/gb/build', { cache: 'no-store' });
               var j = await r.json();
-              if (!loadedSha) {
-                loadedSha = j.sha;
+              // The sha only moves on commit, so an uncommitted edit would never
+              // trigger a reload. index.html's mtime moves on every save, so watch
+              // both: either changing means this tab's DOM is out of date.
+              var stamp = (j.sha || '?') + '@' + (j.indexMtime || '');
+              if (!loaded) {
+                loaded = stamp;
                 var el = document.getElementById('gbBuild');
                 if (el) el.textContent = 'build ' + (j.sha || '?') + ' · ' + new Date().toTimeString().slice(0, 5);
                 return;
               }
-              if (j.sha && loadedSha && j.sha !== loadedSha) {
-                console.log('[gb] new build ' + j.sha + ' (page had ' + loadedSha + ') — reloading');
+              if (stamp !== loaded) {
+                console.log('[gb] page is stale (' + loaded + ' -> ' + stamp + ') — reloading');
                 location.reload();
               }
             } catch (_) {}
           }
           check();
-          setInterval(check, 60000);
+          setInterval(check, 30000);
         })();
 
 // ---- GB Terminal: Strategy 1 scanner ----
@@ -4082,13 +4088,15 @@ function _renderMfGridBody(grid, schemes) {
           if (!gbSigData || !(gbSigData.signals || []).length) { wrap.innerHTML = '<div class="empty-state">No signals yet — board refreshes every minute during market hours.</div>'; return; }
           var sigs = gbSigData.signals.filter(function(s) { return !gbSigFilter || s.signal === gbSigFilter; });
           // ---- sortable headers: every column, click to sort, click again to flip ----
+          // Rolled back to the 10:29 layout (c7625d33): 1m/3m/5m/15m only, no 10s/30s/Value
+          // columns. 'Big Buyers' added so the header row lines up 1:1 with the body cells
+          // (before this the structure cell sat under the Reason header).
           var SIG_COLS = [
             ['Time','time',0],['Symbol','symbol',0],['Signal','signal',0],['LTP','ltp',1],
-            ['ROC 10s','s10',1],['ROC 30s','s30',1],
             ['ROC 1m','roc1',1],['ROC 3m','roc3',1],['ROC 5m','roc5',1],['ROC 15m','roc15',1],
-            ['Vol x','volX',1],['Vol ROC','volRoc',1],['Value \u20b9Cr','turnoverCr',1],['Range pos','posInRange',1],
+            ['Vol x','volX',1],['Vol ROC','volRoc',1],['Range pos','posInRange',1],
             ['Vol@Price','volAtPrice',0],['VWAPs 5/15/day','vwap',1],['Stack','vwapStack',0],
-            ['Day Range','dayLow',1],['Reason','reason',0]
+            ['Day Range','dayLow',1],['Big Buyers','structure',0],['Reason','reason',0]
           ];
           if (!gbSigSort) gbSigSort = { key: 'roc5', dir: -1 };
           var sKey = gbSigSort.key, sDir = gbSigSort.dir;
@@ -4118,15 +4126,12 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + '</td>' +
               '<td style="padding:4px 10px;font-weight:800;color:' + sigCol + ';">' + s.signal + '</td>' +
               '<td style="padding:4px 10px;">' + (s.ltp != null ? s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp : '-') + '</td>' +
-              rocCell(s.s10) +
-              rocCell(s.s30) +
               rocCell(s.roc1) +
               rocCell(s.roc3) +
               rocCell(s.roc5) +
               rocCell(s.roc15) +
               '<td style="padding:4px 10px;">' + (s.volX != null ? s.volX + 'x' : '-') + '</td>' +
               '<td style="padding:4px 10px;color:' + ((s.volRoc || 0) >= -10 ? '#00e091' : '#ff4d6d') + ';">' + (s.volRoc != null ? (s.volRoc > 0 ? '+' : '') + s.volRoc + '%' : '-') + '</td>' +
-              '<td style="padding:4px 10px;color:var(--text-muted);">' + (s.turnoverCr != null ? s.turnoverCr : '-') + '</td>' +
               '<td style="padding:4px 10px;font-weight:600;color:' + ((s.posInRange || 0) >= 40 ? '#00e091' : '#ffb86b') + ';">' + (s.posInRange != null ? s.posInRange + '%' : '-') + '</td>' +
               '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + (s.volAtPrice === 'HEAVY-TOP' ? '#ff4d6d' : s.volAtPrice === 'HEAVY-BOT' ? '#00e091' : s.volAtPrice === 'HEAVY-MID' ? '#ffb86b' : 'var(--text-muted)') + '">' + (s.volAtPrice || '-') + '</td>' +
               '<td style="padding:4px 10px;color:var(--text-muted);">' + (s.vwap != null ? s.vwap + ' / ' + (s.vwap15 || '-') + ' / ' + (s.vwap5 || '-') : '-') + '</td>' +
@@ -4160,7 +4165,7 @@ function _renderMfGridBody(grid, schemes) {
           var TFS = [['s10','10s'],['s20','20s'],['s30','30s'],['m1','1min'],['m3','3min'],['m5','5min']];
           if (!gbMvTf) gbMvTf = 's30';
           var tfLabel = (TFS.find(function(t){return t[0]===gbMvTf;})||['',''])[1];
-          if (!gbMvData || !(gbMvData.stocks || []).length) { wrap.innerHTML = '<div class="empty-state">No ticks yet — the board fills as trades print (09:15–15:15 IST).</div>'; return; }
+          if (!gbMvData || !(gbMvData.stocks || []).length) { wrap.innerHTML = '<div style="padding:0 10px 10px;display:flex;gap:6px;flex-wrap:wrap;">' + TFS.map(function(t){ return '<button class="gbMvTfPill" data-tf="'+t[0]+'" style="padding:4px 12px;border-radius:14px;border:1px solid var(--border,#2a3346);background:transparent;color:var(--text-muted);cursor:pointer;font-size:12px;font-weight:700;">'+t[1]+'</button>'; }).join('') + '</div><div class="empty-state">Movers board refreshes every tick — live during 09:15–15:15 IST.</div>'; return; }
           var stocks = gbMvData.stocks.filter(function(s) { return gbMvMode === 'all' || s.isMover; });
           var src = gbMvData.source || 'Yahoo batch';
           var quickTh = { s10:0.3, s20:0.4, s30:0.5, m1:0.7, m3:1.0, m5:1.3 }[gbMvTf] || 0.5;
@@ -4179,9 +4184,9 @@ function _renderMfGridBody(grid, schemes) {
           buys.sort(function(a,b){ return b.v - a.v; });
           waits.sort(function(a,b){ return b.v - a.v; });
           sells = sells.filter(Boolean).sort(function(a,b){ return a.v - b.v; });
-          // No timeframe pills / NIFTY / status chrome — the board reads on the
-          // fixed 30s window (fastest window that can be flow-confirmed).
-          var pillRow = '';
+          var pillRow = '<div style="padding:0 10px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
+            TFS.map(function(t){ var on = t[0]===gbMvTf; return '<button class="gbMvTfPill" data-tf="'+t[0]+'" style="padding:4px 12px;border-radius:14px;border:1px solid '+(on?'#00B386':'var(--border,#2a3346)')+';background:'+(on?'rgba(0,179,134,0.15)':'transparent')+';color:'+(on?'#00e091':'var(--text-muted)')+';cursor:pointer;font-size:12px;font-weight:700;">'+t[1]+'</button>'; }).join('') +
+            '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">NIFTY ' + (gbMvData.nifty ? (gbMvData.nifty.ltp != null ? gbMvData.nifty.ltp.toFixed(1) + ' · ' + (gbMvData.nifty.s30 > 0 ? '▲' : gbMvData.nifty.s30 < 0 ? '▼' : '·') + ' ' + gbMvData.nifty.s30 + '% (30s)' : 'waiting for ticks') : 'no data') + '</span></div>';
           // join with the signals scan for ROC/Volx/VWAP/Reason columns (screenshot layout)
           var sigMap = {};
           if (gbSigData && gbSigData.signals) gbSigData.signals.forEach(function(g){ sigMap[g.symbol] = g; });
@@ -4221,8 +4226,14 @@ function _renderMfGridBody(grid, schemes) {
             section('SELL / SHORT SIDE', sells, 'sell', 'SELL', '#ff4d6d');
           if (!body) body = '<tr><td colspan="13" class="empty-state">No stocks moving ≥' + quickTh + '% on ' + tfLabel + ' right now.</td></tr>';
           var head = ['Time','Symbol','Signal','LTP','Move ('+tfLabel+')','ROC 5m','ROC 15m','Vol x','Vol ROC','VWAP','Stack','Big Buyers','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;background:var(--bg-header,#0F2447);color:#fff;">'+h+'</th>'; }).join('');
-          wrap.innerHTML =
-            '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+          var confNote = gbMvTf === 's10' || gbMvTf === 's20' ? ' · 10s/20s: no strict confirmation (too fast) — light green = unconfirmed watch' : '';
+          wrap.innerHTML = pillRow +
+            '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' +
+            (src === 'Angel One ticks' ? '⚡ Angel One exchange ticks (no delay)' : src) + ' · ' + (gbMvData.confirmed || 0) + ' confirmed of ' + gbMvData.stocks.length + ' stocks · updated ' + (gbMvData.generatedAt || '').slice(11, 19) + ' UTC' + confNote +
+            '</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+          Array.prototype.forEach.call(wrap.querySelectorAll('.gbMvTfPill'), function(b) {
+            b.addEventListener('click', function() { gbMvTf = b.getAttribute('data-tf'); gbRenderMovers(); });
+          });
         }
         async function gbRefreshMovers() {
           try {
