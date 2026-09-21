@@ -1253,13 +1253,9 @@
 
         <!-- ---- Terminal ---- -->
         <section class="view" id="view-terminal">
-          <h1 class="view-title">GB Terminal — Strategy 1 Scanner</h1>
-          <div class="gb-scan-bar" style="display:flex;align-items:center;gap:14px;margin:12px 0 16px;flex-wrap:wrap;">
-            <button id="gbScanBtn" class="btn btn-primary" style="padding:10px 22px;font-size:15px;">▶ Scan All Stocks</button>
-            <span id="gbScanStatus" style="color:var(--text-dim,#8b93a7);font-size:13px;">Scans ~2,700 NSE stocks for fresh BUY setups (GB Strategy 1: 5 engines + trap filter + fresh-entry check).</span>
-          </div>
-          <div id="gbSummary" style="display:flex;gap:14px;margin:0 0 18px;flex-wrap:wrap;"></div>
-          <div id="gbFreshPanel" style="display:none;background:var(--bg-card,#161b22);border:1px solid var(--border,#232a36);border-radius:10px;margin:0 0 18px;"></div>
+          <!-- Scanner header/cards intentionally absent: this view opens straight
+               on the intraday board (Live Movers -> Intraday Signals -> Calls).
+               The scan endpoint and its renderers stay for the API side. -->
 
           <!-- No section tabs: the board is one continuous intraday page.
                Watchlist section removed — only ROC/intraday content here. -->
@@ -1269,6 +1265,7 @@
           <div style="display:flex;align-items:center;gap:12px;margin:6px 0 8px;flex-wrap:wrap;">
             <h2 style="font-size:16px;margin:0;color:var(--text,#e6e9f0);">Live Movers (10s · 20s · 30s · 1m · 3m · 5m)</h2>
             <span id="gbMvStatus" style="font-size:12px;color:var(--text-dim,#8b93a7);">refreshing every tick · 09:15–15:15 IST</span>
+            <span id="gbBuild" style="font-size:11px;color:var(--text-dim,#8b93a7);border:1px solid var(--border,#232a36);border-radius:10px;padding:1px 8px;white-space:nowrap;">build —</span>
             <div style="margin-left:auto;display:flex;gap:6px;">
               <button class="btn gbMvF" data-f="movers" style="padding:3px 10px;font-size:12px;">MOVERS</button>
               <button class="btn gbMvF" data-f="all" style="padding:3px 10px;font-size:12px;">ALL</button>
@@ -3737,6 +3734,17 @@ function _renderMfGridBody(grid, schemes) {
         // leave the SCANNED / FRESH BUYS / FRESH SELLS cards blank, which made
         // the current build look like an older one.
         setTimeout(function () { try { gbAutoLoad(); } catch (_) {} }, 400);
+
+        // Stamp the build actually loaded in this browser, so a stale tab is
+        // visible on the page instead of being guessed at.
+        (async function gbStampBuild() {
+          try {
+            var r = await fetch('/api/gb/build');
+            var j = await r.json();
+            var el = document.getElementById('gbBuild');
+            if (el) el.textContent = 'build ' + (j.sha || '?') + ' · ' + new Date().toTimeString().slice(0, 5);
+          } catch (_) {}
+        })();
 
 // ---- GB Terminal: Strategy 1 scanner ----
         var gbLoaded = false;
