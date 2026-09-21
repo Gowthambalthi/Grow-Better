@@ -4056,6 +4056,7 @@ function _renderMfGridBody(grid, schemes) {
         // ---- Intraday ROC signal board ----
         var gbSigData = null;
         var gbSigFilter = '';
+        var gbSigSort = null;   // { key, dir } — set on first header click
         var strCol = function(st) {
           if (st === 'BIG BUYERS HOLDING') return '#00e091';
           if (st === 'BIG SELLING') return '#ff4d6d';
@@ -4067,7 +4068,31 @@ function _renderMfGridBody(grid, schemes) {
           if (!wrap) return;
           if (!gbSigData || !(gbSigData.signals || []).length) { wrap.innerHTML = '<div class="empty-state">No signals yet — board refreshes every minute during market hours.</div>'; return; }
           var sigs = gbSigData.signals.filter(function(s) { return !gbSigFilter || s.signal === gbSigFilter; });
-          var head = ['Time','Symbol','Signal','LTP','ROC 1m','ROC 3m','ROC 5m','ROC 15m','Vol x','Vol ROC','Range pos','Vol@Price','VWAPs 5/15/day','Stack','Day Range','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          // ---- sortable headers: every column, click to sort, click again to flip ----
+          var SIG_COLS = [
+            ['Time','time',0],['Symbol','symbol',0],['Signal','signal',0],['LTP','ltp',1],
+            ['ROC 1m','roc1',1],['ROC 3m','roc3',1],['ROC 5m','roc5',1],['ROC 15m','roc15',1],
+            ['Vol x','volX',1],['Vol ROC','volRoc',1],['Range pos','posInRange',1],
+            ['Vol@Price','volAtPrice',0],['VWAPs 5/15/day','vwap',1],['Stack','vwapStack',0],
+            ['Day Range','dayLow',1],['Reason','reason',0]
+          ];
+          if (!gbSigSort) gbSigSort = { key: 'roc5', dir: -1 };
+          var sKey = gbSigSort.key, sDir = gbSigSort.dir;
+          sigs = sigs.slice().sort(function(a, b) {
+            var av = a[sKey], bv = b[sKey];
+            // nulls always sink, whichever direction is active
+            var an = av == null || av === '', bn = bv == null || bv === '';
+            if (an && bn) return 0; if (an) return 1; if (bn) return -1;
+            if (typeof av === 'string' || typeof bv === 'string') {
+              return String(av).localeCompare(String(bv)) * sDir;
+            }
+            return (av - bv) * sDir;
+          });
+          var head = SIG_COLS.map(function(c) {
+            var active = sKey === c[1];
+            var arrow = active ? (sDir < 0 ? ' \u25BC' : ' \u25B2') : '';
+            return '<th class="gbSigSortH" data-k="' + c[1] + '" title="Sort by ' + c[0] + '" style="text-align:left;padding:6px 10px;white-space:nowrap;cursor:pointer;user-select:none;color:' + (active ? 'var(--accent,#00B386)' : 'inherit') + ';">' + c[0] + arrow + '</th>';
+          }).join('');
           var rocCell = function(v) {
             return '<td style="padding:4px 10px;color:' + (v > 0 ? '#00e091' : v < 0 ? '#ff4d6d' : 'inherit') + ';font-weight:' + (v != null && Math.abs(v) >= 0.25 ? '700' : '400') + ';">' + (v != null ? (v > 0 ? '+' : '') + v + '%' : '-') + '</td>';
           };
@@ -4094,6 +4119,18 @@ function _renderMfGridBody(grid, schemes) {
               '<td style="padding:4px 10px;font-size:11px;color:var(--text-muted);">' + (s.reason || '') + '</td>' +
               '</tr>';
           }).join('');
+          if (!wrap.dataset.sortBound) {
+            wrap.dataset.sortBound = '1';
+            wrap.addEventListener('click', function(ev) {
+              var th = ev.target && ev.target.closest ? ev.target.closest('.gbSigSortH') : null;
+              if (!th) return;
+              var k = th.getAttribute('data-k');
+              if (!k) return;
+              if (gbSigSort && gbSigSort.key === k) gbSigSort.dir = -gbSigSort.dir;
+              else gbSigSort = { key: k, dir: (k === 'symbol' || k === 'signal' || k === 'volAtPrice' || k === 'vwapStack' || k === 'reason') ? 1 : -1 };
+              gbRenderSignals();
+            });
+          }
           wrap.innerHTML = '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' +
             'Scanned ' + gbSigData.counts.total + ' stocks · ' + gbSigData.counts.buy + ' BUY · ' + gbSigData.counts.sell + ' SELL · updated ' + (gbSigData.generatedAt || '').slice(11, 19) + ' UTC' +
             '</div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="color:var(--text-muted,#8b93a7);position:sticky;top:0;background:var(--bg-card,#161b22);">' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
