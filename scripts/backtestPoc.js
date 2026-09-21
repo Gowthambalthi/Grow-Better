@@ -131,6 +131,10 @@ function run() {
           } else if (args.cam === 'break') {
             if (side === 'LONG' && ctx.zone !== 'ABOVE_R3' && ctx.zone !== 'ABOVE_R4') continue;
             if (side === 'SHORT' && ctx.zone !== 'BELOW_S3' && ctx.zone !== 'BELOW_S4') continue;
+          } else if (args.cam === 'notdeep') {
+            // veto chasing: skip SHORT already below S4 (breakdown exhausted), skip LONG above R4
+            if (side === 'SHORT' && ctx.zone === 'BELOW_S4') continue;
+            if (side === 'LONG' && ctx.zone === 'ABOVE_R4') continue;
           }
         }
 
