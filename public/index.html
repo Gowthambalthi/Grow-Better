@@ -4117,33 +4117,45 @@ function _renderMfGridBody(grid, schemes) {
           var pillRow = '<div style="padding:0 10px 10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' +
             TFS.map(function(t){ var on = t[0]===gbMvTf; return '<button class="gbMvTfPill" data-tf="'+t[0]+'" style="padding:4px 12px;border-radius:14px;border:1px solid '+(on?'#00B386':'var(--border,#2a3346)')+';background:'+(on?'rgba(0,179,134,0.15)':'transparent')+';color:'+(on?'#00e091':'var(--text-muted)')+';cursor:pointer;font-size:12px;font-weight:700;">'+t[1]+'</button>'; }).join('') +
             '<span style="margin-left:auto;font-size:11px;color:var(--text-muted);">NIFTY ' + (gbMvData.nifty ? (gbMvData.nifty.ltp != null ? gbMvData.nifty.ltp.toFixed(1) + ' · ' + (gbMvData.nifty.s30 > 0 ? '▲' : gbMvData.nifty.s30 < 0 ? '▼' : '·') + ' ' + gbMvData.nifty.s30 + '% (30s)' : 'waiting for ticks') : 'no data') + '</span></div>';
+          // join with the signals scan for ROC/Volx/VWAP/Reason columns (screenshot layout)
+          var sigMap = {};
+          if (gbSigData && gbSigData.signals) gbSigData.signals.forEach(function(g){ sigMap[g.symbol] = g; });
+          var nowT = (gbMvData.generatedAt || '').slice(11, 19);
           var rowHtml = function(r, cls, tag, tagColor) {
-            var s = r.s, v = r.v;
-            var arrow = v > 0 ? ' <span style="color:#00e091;">▲</span>' : ' <span style="color:#ff4d6d;">▼</span>';
+            var s = r.s, v = r.v, g = sigMap[s.symbol] || {};
+            var sigCol = cls === 'conf' ? '#00e091' : cls === 'sell' ? '#ff4d6d' : '#8be9c0';
             var staleBadge = s.stale ? ' <span style="color:#ffa94d;font-size:10px;">DELAY</span>' : '';
-            var bigTag = s.bigBuyer ? ' <span style="color:#00e091;font-size:10px;font-weight:800;">🜲 BIG BUYER</span>' : s.bigSeller ? ' <span style="color:#ff4d6d;font-size:10px;font-weight:800;">▼ BIG SELLER</span>' : '';
-            var candleTag = s.candle === 'up' ? ' <span style="color:#00e091;font-size:10px;">▮▲</span>' : s.candle === 'down' ? ' <span style="color:#ff4d6d;font-size:10px;">▮▼</span>' : '';
-            var bg = cls === 'conf' ? 'rgba(0,224,145,0.16)' : cls === 'buy' ? 'rgba(0,224,145,0.05)' : cls === 'sell' ? 'rgba(255,77,109,0.10)' : 'transparent';
-            return '<tr style="border-top:1px solid var(--border,#232a36);background:' + bg + ';">' +
-              '<td style="padding:5px 10px;font-weight:700;">' + (v > 0 ? '+' : '') + v + '%' + arrow + '</td>' +
-              '<td style="padding:5px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + staleBadge + bigTag + candleTag + '</td>' +
-              '<td style="padding:5px 10px;">' + (s.ltp != null && s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp) + '</td>' +
-              '<td style="padding:5px 10px;font-size:12px;color:var(--text-muted);">' + (s.ratio != null ? 'B:S ' + s.ratio : '·') + '</td>' +
-              '<td style="padding:5px 10px;font-size:11px;font-weight:800;color:' + tagColor + ';">' + tag + '</td>' +
-              '<td style="padding:5px 10px;font-size:12px;color:var(--text-muted);">' + (s.engine || '-') + (s.score != null ? ' (' + s.score + ')' : '') + '</td>' +
+            var bigTag = s.bigBuyer ? ' <span style="color:#00e091;font-size:10px;font-weight:800;">BIG BUYERS<br>HOLDING</span>' : s.bigSeller ? ' <span style="color:#ff4d6d;font-size:10px;font-weight:800;">BIG SELLER</span>' : '';
+            var striped = cls === 'conf' ? 'background:rgba(0,224,145,0.14);' : cls === 'sell' ? 'background:rgba(255,77,109,0.10);' : cls === 'buy' ? 'background:rgba(0,224,145,0.05);' : '';
+            var rocCol = function(x){ return x > 0 ? '#00e091' : x < 0 ? '#ff4d6d' : 'var(--text-muted)'; };
+            var reason = g.reason || (s.candle === 'up' ? 'Candles up + flow building' : s.candle === 'down' ? 'Candles down + selling' : '');
+            return '<tr style="border-top:1px solid var(--border,#232a36);' + striped + '">' +
+              '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + nowT + '</td>' +
+              '<td style="padding:4px 10px;font-weight:700;color:var(--accent,#00B386);">' + s.symbol + staleBadge + '</td>' +
+              '<td style="padding:4px 10px;font-weight:800;color:' + sigCol + ';">' + tag + '</td>' +
+              '<td style="padding:4px 10px;">' + (s.ltp != null && s.ltp.toFixed ? s.ltp.toFixed(2) : s.ltp) + '</td>' +
+              '<td style="padding:4px 10px;font-weight:700;">' + (v > 0 ? '+' : '') + v + '%' + (v > 0 ? ' <span style="color:#00e091;">▲</span>' : ' <span style="color:#ff4d6d;">▼</span>') + '</td>' +
+              '<td style="padding:4px 10px;color:' + rocCol(g.roc5) + ';font-weight:700;">' + (g.roc5 != null ? (g.roc5 > 0 ? '+' : '') + g.roc5 + '%' : '–') + '</td>' +
+              '<td style="padding:4px 10px;color:' + rocCol(g.roc15) + ';">' + (g.roc15 != null ? (g.roc15 > 0 ? '+' : '') + g.roc15 + '%' : '–') + '</td>' +
+              '<td style="padding:4px 10px;">' + (g.volX != null ? g.volX + 'x' : '–') + '</td>' +
+              '<td style="padding:4px 10px;color:' + ((g.volRoc || 0) >= -10 ? '#00e091' : '#ff4d6d') + ';">' + (g.volRoc != null ? (g.volRoc > 0 ? '+' : '') + g.volRoc + '%' : '–') + '</td>' +
+              '<td style="padding:4px 10px;font-size:12px;color:var(--text-muted);">' + (g.vwap != null ? g.vwap : '–') + '</td>' +
+              '<td style="padding:4px 10px;font-size:11px;font-weight:700;color:' + (g.vwapStack === 'ABOVE ALL' ? '#00e091' : g.vwapStack === 'BELOW ALL' ? '#ff4d6d' : 'var(--text-muted)') + ';">' + (g.vwapStack || '–') + '</td>' +
+              '<td style="padding:4px 10px;">' + bigTag + '</td>' +
+              '<td style="padding:4px 10px;font-size:11px;color:var(--text-muted);">' + reason + '</td>' +
               '</tr>';
           };
           var section = function(title, rows, cls, tag, color) {
             if (!rows.length) return '';
-            return '<tr><td colspan="6" style="padding:8px 10px 4px;font-size:11px;font-weight:800;letter-spacing:0.06em;color:' + color + ';">' + title + ' (' + rows.length + ')</td></tr>' +
+            return '<tr><td colspan="13" style="padding:8px 10px 4px;font-size:11px;font-weight:800;letter-spacing:0.06em;color:' + color + ';">' + title + ' (' + rows.length + ')</td></tr>' +
               rows.slice(0, cls === 'conf' ? 30 : 50).map(function(r){ return rowHtml(r, cls, tag, color); }).join('');
           };
           var body =
             section('BUY — ORDER FLOW + NIFTY CONFIRMED', buys, 'conf', 'BUY', '#00e091') +
             section('WAIT — MOVING UP, NO CONFIRMATION', waits, 'buy', 'WAIT', '#8be9c0') +
             section('SELL / SHORT SIDE', sells, 'sell', 'SELL', '#ff4d6d');
-          if (!body) body = '<tr><td colspan="6" class="empty-state">No stocks moving ≥' + quickTh + '% on ' + tfLabel + ' right now.</td></tr>';
-          var head = ['Move ('+tfLabel+')','Symbol','LTP','Order Flow','Status','Engine'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;">'+h+'</th>'; }).join('');
+          if (!body) body = '<tr><td colspan="13" class="empty-state">No stocks moving ≥' + quickTh + '% on ' + tfLabel + ' right now.</td></tr>';
+          var head = ['Time','Symbol','Signal','LTP','Move ('+tfLabel+')','ROC 5m','ROC 15m','Vol x','Vol ROC','VWAP','Stack','Big Buyers','Reason'].map(function(h){ return '<th style="text-align:left;padding:6px 10px;white-space:nowrap;background:var(--bg-header,#0F2447);color:#fff;">'+h+'</th>'; }).join('');
           var confNote = gbMvTf === 's10' || gbMvTf === 's20' ? ' · 10s/20s: no strict confirmation (too fast) — light green = unconfirmed watch' : '';
           wrap.innerHTML = pillRow +
             '<div style="font-size:11px;color:var(--text-muted);padding:2px 10px 8px;">' +
@@ -4186,6 +4198,7 @@ function _renderMfGridBody(grid, schemes) {
           b.addEventListener('click', function() { gbSigFilter = b.getAttribute('data-f') || ''; gbRenderSignals(); });
         });
         window.gbRefreshSignals = gbRefreshSignals; window.gbRenderSignals = gbRenderSignals;
+          window.gbRenderMovers = gbRenderMovers; window.gbRenderCalls = gbRenderCalls;
 
         // ---- Stocks to Watch Tomorrow ----
         function gbRenderWatch() {
@@ -4385,6 +4398,9 @@ function _renderMfGridBody(grid, schemes) {
             '</div>' + confirmBlock + intradayBlock;
         }
 
+        // MF click handling (orphaned from a prior patch — re-wrapped in a
+        // document click handler; top-level `e` reference killed the whole script)
+        document.addEventListener('click', function(e) {
         var tfBtn = e.target.closest('.mf-tf-btn');
         if (tfBtn) {
           var tf = tfBtn.getAttribute('data-tf');
@@ -4408,6 +4424,7 @@ function _renderMfGridBody(grid, schemes) {
           var modal = document.getElementById('modalMfDetail');
           if (modal) modal.style.display = 'none';
         }
+        });
       
 
       var currentModalHoldings = [];
