@@ -1,0 +1,14 @@
+{
+  "targetFile": "strategies/fvg/candidate_sweep_15m_fvg.js",
+  "algorithm": "SHA256",
+  "sha256": "FBF75F75AE4F7548A4880801323918984C07D97733D8995FCB7EC2EE5487B324",
+  "docFile": "docs/EXPLORATORY_CANDIDATE_STUDY.md",
+  "docSha256": "9B259448F5BF5F11B5CE01F910D1B006E6594206F5EEA7DD3172637C576E471D",
+  "testFile": "test/candidate_sweep_15m_fvg.test.js",
+  "testSha256": "9988C7A85897AE838B5329F33E5B8A963118F8D12F24B5014F5EEDE84ED09870",
+  "verifyScript": "scripts/verify_protocol_parameters.js",
+  "verifySha256": "C26C562BF85D225F330CD740D4B379FDE10F9EBAD4DF2A2E172CE5FFC09CC954",
+  "studyClassification": "EXPLORATORY_AND_DIAGNOSTIC",
+  "singleLookStatus": "DROPPED (Discovery trade counts and diagnostic trades were observed during audit)",
+  "purpose": "Reproducible record-keeping and diagnostic documentation of strategy parameters and observed mechanics across 14 months of large-cap NSE equities"
+}
