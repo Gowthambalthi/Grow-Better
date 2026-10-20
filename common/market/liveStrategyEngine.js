@@ -1,0 +1,1958 @@
+/**
+ * common/market/liveStrategyEngine.js
+ *
+ * THE TIER CALL ENGINE — runs the nine core strategies on live Angel One data and
+ * emits one call per strategy, so the three tier tables (SCALPING / INTRADAY /
+ * SWING) are filled by OUR strategies reading the live tape, not by a constant.
+ *
+ * WHAT CHANGED AND WHY
+ * --------------------
+ * The previous version did not implement the strategies at all. It walked the
+ * liquid universe in list order and took the FIRST symbol that had a quote, for
+ * every strategy, with the direction decided by one shared line
+ * (`q.changePct < -0.15`). Measured result on disk: all nine rows were the same
+ * symbol (ARVINDFASN), the same direction, and every row's ltp equalled its
+ * entryPrice forever — a nine-row table wearing nine strategy names. It also only
+ * generated when `activeCandidates.length < 9`, so once those nine identical rows
+ * existed nothing was ever re-evaluated.
+ *
+ * Now each strategy has its own rule over its own inputs:
+ *   SCALPING  1-min bars (volume surge + 5-bar ROC + VWAP alignment, order-flow
+ *             imbalance, 10-bar micro range breakout)
+ *   INTRADAY  today's session bars (opening range 09:15-09:25, 10-bar ROC,
+ *             session VWAP + band sigma)
+ *   SWING     daily bars (20-day Donchian, 20/50 EMA, ATR Supertrend)
+ * and the LIVE quote decides entry. A strategy whose rule is not met on any
+ * symbol still emits its best candidate, but the row says so (`ruleMet: false`)
+ * and carries the measured value — a weak read is labelled, never dressed up.
+ *
+ * A CALL LIVES WHILE ITS THESIS LIVES. Once a call is on the book it is kept
+ * while its own rule still holds in its own direction and it has not aged out of
+ * its holding window (hysteresis). Without that, the "strongest read" changes
+ * symbol every scan and every scan would open a brand-new call at a new entry.
+ * It leaves the book on target 1, on the stop, on a rule flip, or when its window
+ * elapses — and each exit carries the realised R it actually earned into
+ * data/live_history_board.json.
+ *
+ * HONESTY RULES BAKED IN
+ *   - entry is the live LTP at signal time; stop/targets come from that strategy's
+ *     own published percentages. No level is invented from a placeholder price.
+ *   - every row carries `source`, `signalTime`, `quoteAt` and the freshness of the
+ *     bars it read (`barsAgeSec`, `dailyAsOf`), so a stale or recorded input can
+ *     never pass for a live one.
+ *   - R is measured against the call's own entry->stop risk.
+ *   - outside 09:25-15:00 IST no NEW call is opened; existing calls are still
+ *     marked to the live price.
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { fetchAngelQuotes, fetchIntradaySeries } = require('./liveStockQuoteService');
+const sessionTiming = require('./sessionTiming');
+
+const ROOT = path.join(__dirname, '..', '..');
+const BOARD_JSON_PATH = path.join(ROOT, 'data', 'live_strategy_board.json');
+const HISTORY_JSON_PATH = path.join(ROOT, 'data', 'live_history_board.json');
+// Daily bars. This is the corpus the news study cached (one file per symbol,
+// {symbol, dates, o, h, l, c, v}) and it is real daily OHLCV — enough for the
+// 20-day Donchian, the 20/50 EMA and an ATR Supertrend. Nothing refreshes it any
+// more, so each row reports the last daily date it actually read.
+const DAILY_DIR = path.join(ROOT, 'data', 'news', '_bars');
+
+// How often the expensive half (1-min series + the nine rules) runs. The cheap
+// half (live quotes, P&L, exits, file write) runs on every call and on its timer.
+// ONE MINUTE. The rules re-read the whole universe every minute; the live P&L is
+// marked far more often than that by the light cycle, so the tables show a live
+// price while the calls themselves are re-decided once a minute.
+const HEAVY_INTERVAL_MS = 60000;
+const LIGHT_INTERVAL_MS = 5000;
+const MIN_HOLD_MS = 5 * 60 * 1000;          // 5 MINUTES minimum hold time before RULE_FLIPPED exit is allowed
+const SYMBOL_STOP_COOLDOWN_MS = 60 * 60 * 1000; // 60 MINUTES symbol cooldown after hitting Stop Loss
+const MIN_5M_VOL_SHARES = 1000;
+const MIN_5M_TURNOVER_INR = 500000;          // ₹5 Lakhs minimum 5-min traded turnover floor
+const SWING_LONG_ONLY = true;
+
+const MAX_PER_STRATEGY = 2;
+// SWING GETS ITS OWN CAP. A scalp/intraday call ages out in minutes to hours, so
+// two slots per strategy recycle all day — but a swing call holds for up to 50
+// days (see maxAgeMs on the swing strategies), and at the shared cap of 2 the
+// three swing strategies filled all six of their slots in a single scan
+// (2026-10-07 11:34:02 IST) and took no further swing call for the rest of the
+// day: every later scan saw both slots still held and broke out before opening.
+// Swing therefore holds five slots per strategy so it can keep arming through the
+// session; scalp and intraday stay at two.
+const MAX_SWING_PER_STRATEGY = 5;
+const capFor = (strat) => (strat && strat.tier === 'SWING' ? MAX_SWING_PER_STRATEGY : MAX_PER_STRATEGY);
+const LATE_AFTER_MS = {
+  SCALPING: 15 * 60 * 1000,
+  INTRADAY: 45 * 60 * 1000,
+  SWING: 5 * 24 * 60 * 60 * 1000,
+};
+
+// Track symbol cooldowns: `sym:stratId` -> cooldownUntilMs
+const symbolCooldowns = new Map();
+
+// ---------------------------------------------------------------------------
+// THE UNIVERSE — every stock we track, not a hand-picked shortlist.
+// ---------------------------------------------------------------------------
+// Read from disk at load. The 1-minute corpus filenames ARE our tracked NSE
+// universe; the daily-bar corpus (data/news/_bars) supplies the swing rules' daily
+// history. A curated 47-name list silently meant five hundred stocks could never
+// produce a call.
+//
+// A full sweep is affordable — MEASURED 2026-10-07: Angel One answered 1009 of
+// these 1028 symbols in 3272ms in one pass. That is why "all our stocks, every
+// minute" works here.
+const OHLCV_DIR = path.join(ROOT, 'data', 'ohlcv_1m');
+function readUniverse() {
+  const out = [];
+  try {
+    for (const f of fs.readdirSync(OHLCV_DIR)) {
+      if (f.toLowerCase().endsWith('.json')) out.push(f.slice(0, -5).toUpperCase());
+    }
+  } catch (e) {
+    console.error('[liveStrategyEngine] universe read note:', e.message);
+  }
+  return out.sort();
+}
+const UNIVERSE = readUniverse();
+const LIQUID_SYMBOLS = UNIVERSE;   // kept for payload compatibility
+
+// ---------------------------------------------------------------------------
+// TODAY'S 1-MINUTE BARS — built from the live sweep itself.
+// ---------------------------------------------------------------------------
+// data/ohlcv_1m stops at 2026-10-05, so it cannot supply TODAY's bars, and one
+// HTTP candle call per symbol per minute is not affordable across a thousand
+// names. The sweep already carries every symbol's live LTP and CUMULATIVE day
+// volume, so each sweep writes the current minute's bar for every stock: open =
+// the previous bar's close, high/low from this minute's prints, volume = the
+// CHANGE in cumulative day volume (a real traded figure, never a placeholder).
+//
+// Persisted per day, so a restart continues the same session instead of starting
+// the minute series from zero.
+const LIVE_BAR_DIR = path.join(ROOT, 'data', 'live_1m_bars');
+const LIVE_BAR_MAX = 500;
+let liveBars = {};        // SYM -> [{t,o,h,l,c,v,cum}]
+let liveBarDay = null;
+let liveBarDirty = false;
+
+function liveBarFile(day) { return path.join(LIVE_BAR_DIR, day + '.json'); }
+
+function loadLiveBars(day) {
+  liveBars = {};
+  liveBarDay = day;
+  try {
+    const p = liveBarFile(day);
+    if (fs.existsSync(p)) {
+      const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+      for (const sym of Object.keys(raw)) {
+        liveBars[sym] = (raw[sym] || []).map((r) => ({ t: r[0], o: r[1], h: r[2], l: r[3], c: r[4], v: r[5], cum: r[6] }));
+      }
+      console.log("[liveStrategyEngine] today's live bars resumed for " + Object.keys(liveBars).length + ' symbols');
+    }
+  } catch (e) {
+    console.error('[liveStrategyEngine] live bar load note:', e.message);
+  }
+}
+
+function saveLiveBars() {
+  if (!liveBarDirty || !liveBarDay) return;
+  try {
+    fs.mkdirSync(LIVE_BAR_DIR, { recursive: true });
+    const out = {};
+    for (const sym of Object.keys(liveBars)) {
+      out[sym] = liveBars[sym].map((b) => [b.t, b.o, b.h, b.l, b.c, b.v, b.cum]);
+    }
+    fs.writeFileSync(liveBarFile(liveBarDay), JSON.stringify(out), 'utf8');
+    liveBarDirty = false;
+  } catch (e) {
+    console.error('[liveStrategyEngine] live bar save note:', e.message);
+  }
+}
+
+function appendLiveBars(quotes, day, nowMs) {
+  if (day !== liveBarDay) loadLiveBars(day);
+  let written = 0;
+  for (const sym of Object.keys(quotes)) {
+    const q = quotes[sym];
+    const ltp = Number(q.ltp);
+    if (!isFinite(ltp) || ltp <= 0) continue;
+    const cum = Number(q.volume) || 0;
+    const arr = liveBars[sym] || (liveBars[sym] = []);
+    const last = arr[arr.length - 1];
+    if (last && last.cum === cum && last.c === ltp) continue;   // no print since the last sweep
+    const prevCum = last && isFinite(last.cum) ? last.cum : 0;
+    const base = last ? last.c : ltp;
+    arr.push({
+      t: nowMs,
+      o: base,
+      h: Math.max(base, ltp),
+      l: Math.min(base, ltp),
+      c: ltp,
+      v: Math.max(0, cum - prevCum),
+      cum,
+    });
+    if (arr.length > LIVE_BAR_MAX) arr.splice(0, arr.length - LIVE_BAR_MAX);
+    written++;
+  }
+  liveBarDirty = true;
+  return written;
+}
+
+// ---------------------------------------------------------------------------
+// THE NINE STRATEGIES
+// ---------------------------------------------------------------------------
+// `rule` names the function in RULES that decides direction for this strategy;
+// `params` are the thresholds that rule reads. targetPct / slPct are the
+// strategy's published geometry and are what the row's stop and targets are
+// built from.
+// ALL NINE DISABLED (2026-10-08). Every one measured net-negative (see
+// reports/strategy_verdicts.md and SPEC §8.16–§8.18), so the engine issues no calls
+// and the board shows an honest empty state rather than a losing book. Re-enable a
+// strategy only when it has a measured net-positive record.
+const STRATEGIES = [
+  {
+    id: 'VOL_SURGE_SCALP',
+    name: '15-Min Volatility & Volume Momentum Breakout',
+    tier: 'SCALPING',
+    category: 'SCALPING',
+    tradeType: '15-MIN MOMENTUM',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0215, slPct: 0.0085, maxAgeMs: 45 * 60 * 1000,
+    holdingPeriod: '15-45 Min Hold', winRate: null,   // no measured net-positive record — never print an invented one
+    logic: '15-Min High Breakout + 2.0x Volume Expansion + VWAP Slope Guard',
+    rule: 'volSurgeRoc', params: { volMult: 2.0, rocPct: 0.75, lookback: 15, avgWindow: 20, vwapMinDistPct: 0.15 },
+  },
+  {
+    id: 'ORDER_FLOW_SCALP',
+    name: '30-Min Institutional Liquidity Sweep Reversal',
+    tier: 'SCALPING',
+    category: 'SCALPING',
+    tradeType: 'LIQUIDITY SWEEP',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0205, slPct: 0.0080, maxAgeMs: 60 * 60 * 1000,
+    holdingPeriod: '30-60 Min Hold',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: '30-Min High/Low Sweep Reversal + 2.5x Institutional Volume Print',
+    rule: 'orderFlowImpulse', params: { imbalance: 0.60, volMult: 2.5, volWindow: 20 },
+  },
+  {
+    id: 'MICRO_BREAKOUT_SCALP',
+    name: 'Multi-Timeframe 15m/60m Trend Alignment Impulse',
+    tier: 'SCALPING',
+    category: 'SCALPING',
+    tradeType: 'MTF IMPULSE',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0285, slPct: 0.0090, maxAgeMs: 90 * 60 * 1000,
+    holdingPeriod: '30-90 Min Hold',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: '15m/60m Multi-Timeframe Alignment + EMA20 Breakout Impulse',
+    rule: 'microBreakout', params: { rangeBars: 15, volMult: 2.2, volWindow: 20 },
+  },
+  {
+    id: 'ORB_INTRADAY',
+    name: 'Opening Range Breakout (ORB) - Liquid Bluechips',
+    tier: 'INTRADAY',
+    category: 'INTRADAY',
+    tradeType: 'INTRADAY TRADING',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0185, slPct: 0.0070, maxAgeMs: 2 * 60 * 60 * 1000,
+    holdingPeriod: '09:30 - 10:30 IST',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: '10-Min Range + 0.45% Buffer + 2.5x Vol Surge + NIFTY 50 Universe',
+    rule: 'orb', params: { openMinutes: 10, bufferPct: 0.45, maxRangeWidthPct: 2.0, volMult: 2.5, bluechipOnly: true },
+  },
+  {
+    id: 'ROC_VOL_INTRADAY',
+    name: 'Multi-Hour Session VWAP & 20-EMA Trend Continuation',
+    tier: 'INTRADAY',
+    category: 'INTRADAY',
+    tradeType: 'INTRADAY TRADING',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0235, slPct: 0.0085, maxAgeMs: 4 * 60 * 60 * 1000,
+    holdingPeriod: '10:30 - 14:50 IST',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: 'Session VWAP Alignment + 20-EMA Pullback Confirmation',
+    rule: 'rocVol', params: { rocBars: 15, rocPct: 1.00, volMult: 2.0, volWindow: 20, requireEma20: true },
+  },
+  {
+    id: 'VWAP_BAND_INTRADAY',
+    name: '01:30 PM European Open Afternoon Breakout Surge',
+    tier: 'INTRADAY',
+    category: 'INTRADAY',
+    tradeType: 'INTRADAY TRADING',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0210, slPct: 0.0080, maxAgeMs: 2 * 60 * 60 * 1000,
+    holdingPeriod: '13:30 - 15:00 IST',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: 'European Open Volume Acceleration + Afternoon Breakout Continuation',
+    rule: 'vwapBand', params: { sigma: 1.25, volMult: 2.2, volWindow: 20, minRocPct: 0.60 },
+  },
+  {
+    id: 'DONCHIAN_SWING',
+    name: '20-Day Donchian Breakout + Vol Accumulation',
+    tier: 'SWING',
+    category: 'SWING',
+    tradeType: 'SWING TRADING',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0900, slPct: 0.0450, maxAgeMs: 50 * 24 * 60 * 60 * 1000,
+    holdingPeriod: '< 50 Days',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: '20-Day High Breakout + 1.8x Volume Accumulation',
+    rule: 'donchian', params: { days: 20, volMult: 1.8 },
+  },
+  {
+    id: 'GOLDEN_CROSS_SWING',
+    name: 'Golden Cross EMA Swing (20 EMA > 50 EMA)',
+    tier: 'SWING',
+    category: 'SWING',
+    tradeType: 'SWING TRADING',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0850, slPct: 0.0400, maxAgeMs: 50 * 24 * 60 * 60 * 1000,
+    holdingPeriod: '< 50 Days',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: '20-EMA / 50-EMA Golden Crossover + Vol Confirmation',
+    rule: 'goldenCross', params: { fast: 20, slow: 50, minBars: 60 },
+  },
+  {
+    id: 'SUPERTREND_SWING',
+    name: 'Supertrend Momentum Pullback Swing',
+    tier: 'SWING',
+    category: 'SWING',
+    tradeType: 'SWING TRADING',
+    enabled: false,   // DISABLED 2026-10-08: no net-positive measured record (§8.16–§8.18)
+    targetPct: 0.0950, slPct: 0.0450, maxAgeMs: 50 * 24 * 60 * 60 * 1000,
+    holdingPeriod: '< 50 Days',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
+    logic: 'Supertrend Uptrend + 10-Day Range Support Rebound',
+    rule: 'supertrend', params: { period: 10, mult: 3, minBars: 20 },
+  },
+];
+// CODEX WAS REMOVED HERE (2026-10-18), and it is worth writing down why rather than just deleting
+// the entry: it sat in this list with `enabled: true`, a `tradeType` of 'OF03 EXHAUSTION REVERSAL'
+// and `rule: 'codexRule'` — and no such rule was ever bound in RULES, so the engine reported "no
+// rule bound to this strategy" and armed nothing. The registry's CODEX is ORB01 (opening range
+// breakout), measured net-negative (−0.176R on 563 trades, −0.266R on the ten live sessions), which
+// is why it is out of the registry too. A strategy that cannot fire but is advertised as live is
+// worse than one that is simply absent: it reads as coverage that does not exist.
+
+// ---------------------------------------------------------------------------
+// INDICATORS
+// ---------------------------------------------------------------------------
+function stdev(arr) {
+  if (!arr || arr.length < 2) return null;
+  const m = arr.reduce((s, x) => s + x, 0) / arr.length;
+  const v = arr.reduce((s, x) => s + (x - m) * (x - m), 0) / (arr.length - 1);
+  return Math.sqrt(v);
+}
+function emaLast(vals, n) {
+  if (!vals || vals.length < n) return null;
+  const k = 2 / (n + 1);
+  let e = vals.slice(0, n).reduce((s, x) => s + x, 0) / n;
+  for (let i = n; i < vals.length; i++) e = vals[i] * k + e * (1 - k);
+  return e;
+}
+function trueRanges(bars) {
+  const tr = [];
+  for (let i = 1; i < bars.length; i++) {
+    const h = bars[i].h, l = bars[i].l, pc = bars[i - 1].c;
+    tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc)));
+  }
+  return tr;
+}
+// Wilder-smoothed ATR series; out[j] corresponds to bars[period + j].
+function atrSeries(bars, period) {
+  const tr = trueRanges(bars);
+  if (tr.length < period) return null;
+  let a = tr.slice(0, period).reduce((s, x) => s + x, 0) / period;
+  const out = [a];
+  for (let i = period; i < tr.length; i++) {
+    a = (a * (period - 1) + tr[i]) / period;
+    out.push(a);
+  }
+  return out;
+}
+// Standard Supertrend. Returns { trend: 'UP'|'DOWN', line } for the LAST bar.
+function supertrend(bars, period, mult) {
+  const atr = atrSeries(bars, period);
+  if (!atr || atr.length < 2) return null;
+  const offset = period; // atr[i] aligns with bars[offset + i]
+  let upper = null, lower = null, trend = 'UP';
+  for (let i = 0; i < atr.length; i++) {
+    const bar = bars[offset + i];
+    const prev = bars[offset + i - 1];
+    if (!bar || !prev) continue;
+    const hl2 = (bar.h + bar.l) / 2;
+    let up = hl2 + mult * atr[i];
+    let lo = hl2 - mult * atr[i];
+    if (i > 0 && upper !== null) {
+      up = (up < upper || prev.c > upper) ? up : upper;
+      lo = (lo > lower || prev.c < lower) ? lo : lower;
+    }
+    if (i === 0) { upper = up; lower = lo; trend = bar.c >= lo ? 'UP' : 'DOWN'; continue; }
+    if (bar.c > upper) trend = 'UP';
+    else if (bar.c < lower) trend = 'DOWN';
+    upper = up; lower = lo;
+  }
+  return { trend, line: trend === 'UP' ? lower : upper };
+}
+
+// ---------------------------------------------------------------------------
+// THE RULES. Each returns null when the inputs cannot support the rule yet, or
+// { side, score, ruleMet, measured, detail }. `score` ranks candidates WITHIN a
+// strategy; higher = the stronger read for that strategy's own thesis.
+// ---------------------------------------------------------------------------
+function checkVolumeFilter(b) {
+  if (!Array.isArray(b) || !b.length) return true;
+  const len = b.length;
+  const slice15 = b.slice(Math.max(0, len - 15));
+  const slice30 = b.slice(Math.max(0, len - 30));
+  const vol15m = slice15.reduce((s, x) => s + (x.v || 0), 0);
+  const vol30m = slice30.reduce((s, x) => s + (x.v || 0), 0);
+  if (len >= 15 && vol15m < 3000) return false;
+  if (len >= 30 && vol30m < 8000) return false;
+  return true;
+}
+
+const RULES = {
+  // 4.5x volume surge on the last 1-min bar + 5-bar ROC beyond ±0.75%, and the
+  // live price > 0.15% away from session VWAP in the signal direction.
+  volSurgeRoc(ctx, p) {
+    const b = closedBars(ctx.bars, ctx.nowMs);
+    if (b.length < 3 || !checkVolumeFilter(b)) return null;
+    const lookback = Math.min(p.lookback, Math.max(1, b.length - 2));
+    const avgWindow = Math.min(p.avgWindow, Math.max(2, b.length - lookback - 1));
+    const vols = b.slice(-1 - avgWindow, -1).map((x) => x.v);
+    const avgV = vols.reduce((s, x) => s + x, 0) / vols.length;
+    if (!(avgV > 0)) return null;
+    const volX = b[b.length - 1].v / avgV;
+    const prev = b[b.length - 1 - lookback].c;
+    const roc = prev > 0 ? ((ctx.ltp - prev) / prev) * 100 : 0;
+    const vw = sessionVwap(b);
+    
+    // VWAP distance guard (> 0.15% clear of VWAP chop zone)
+    const minDistPct = p.vwapMinDistPct || 0.15;
+    const vwapDistPct = vw ? ((ctx.ltp - vw) / vw) * 100 : 0;
+    const aligned = vw ? (roc >= 0 ? vwapDistPct >= minDistPct : vwapDistPct <= -minDistPct) : true;
+    const side = roc >= 0 ? 'BUY' : 'SELL';
+    const ruleMet = volX >= p.volMult && Math.abs(roc) >= p.rocPct && aligned;
+    return {
+      side, ruleMet, barsUsed: b.length,
+      score: Math.abs(roc) * Math.min(volX / p.volMult, 3) * (aligned ? 1.2 : 0.2),
+      measured: volX.toFixed(2) + 'x vol · ' + lookback + '-bar ROC ' + roc.toFixed(3) + '%' +
+        (aligned ? ' · VWAP clear (' + vwapDistPct.toFixed(2) + '%)' : ' · VWAP chop zone'),
+      detail: 'vol ' + volX.toFixed(2) + 'x vs ' + p.volMult + 'x · ROC ' + roc.toFixed(3) + '% vs ±' + p.rocPct + '%' +
+        (vw ? ' · VWAP dist ' + vwapDistPct.toFixed(2) + '% (min ±' + minDistPct + '%)' : ''),
+    };
+  },
+
+  // Order-flow imbalance + 1-min volume expansion.
+  orderFlowImpulse(ctx, p) {
+    const q = ctx.q || {};
+    const b = closedBars(ctx.bars);
+    if (!checkVolumeFilter(b)) return null;
+    let buy = Number(q.totBuy || 0), sell = Number(q.totSell || 0);
+    let flowSrc = 'exchange buy/sell quantity';
+    if (!(buy + sell > 0)) {
+      const win = (b || []).slice(-10);
+      if (win.length < 3) return null;
+      buy = 0; sell = 0;
+      for (const x of win) {
+        const o = x.o === undefined ? x.c : x.o;
+        if (x.c >= o) buy += x.v; else sell += x.v;
+      }
+      if (!(buy + sell > 0)) return null;
+      flowSrc = '1-min bar flow (proxy — the quote carried no quantity)';
+    }
+    const imb = buy / (buy + sell);
+    let volX = null;
+    const volWindow = Math.min(p.volWindow, b ? b.length : 0);
+    if (volWindow >= 2) {
+      const avgV = b.slice(-volWindow).reduce((s, x) => s + x.v, 0) / volWindow;
+      if (avgV > 0) volX = b[b.length - 1].v / avgV;
+    }
+    const side = imb >= 0.5 ? 'BUY' : 'SELL';
+    const ruleMet = Math.abs(imb - 0.5) >= (p.imbalance - 0.5) && volX !== null && volX >= p.volMult;
+    return {
+      side, ruleMet, barsUsed: b ? b.length : 0,
+      score: Math.abs(imb - 0.5) * 200 * (volX ? Math.min(volX / p.volMult, 3) : 1),
+      measured: 'flow ' + (imb * 100).toFixed(1) + '%' + (volX === null ? '' : ' · ' + volX.toFixed(2) + 'x vol'),
+      detail: 'imbalance ' + (imb * 100).toFixed(1) + '% vs ' + (p.imbalance * 100).toFixed(1) + '%' +
+        (volX === null ? ' · no 1-min bars yet' : ' · vol ' + volX.toFixed(2) + 'x vs ' + p.volMult + 'x over ' + volWindow + ' bars') +
+        ' · ' + flowSrc + ' · barsUsed ' + (b ? b.length : 0),
+    };
+  },
+
+  // Live price outside the prior 10 one-minute closes, with 3x volume expansion.
+  microBreakout(ctx, p) {
+    const b = closedBars(ctx.bars, ctx.nowMs);
+    if (b.length < 3 || !checkVolumeFilter(b)) return null;
+    const rangeBars = Math.min(p.rangeBars, Math.max(2, b.length - 1));
+    const win = b.slice(-(rangeBars + 1), -1);
+    const hi = Math.max(...win.map((x) => x.c));
+    const lo = Math.min(...win.map((x) => x.c));
+    const n = Math.min(p.volWindow, b.length);
+    const avgV = b.slice(-n).reduce((s, x) => s + x.v, 0) / n;
+    const volX = avgV > 0 ? b[b.length - 1].v / avgV : null;
+    const upBreak = ctx.ltp > hi, dnBreak = ctx.ltp < lo;
+    const side = upBreak ? 'BUY' : (dnBreak ? 'SELL' : (ctx.ltp >= (hi + lo) / 2 ? 'BUY' : 'SELL'));
+    const extPct = upBreak ? ((ctx.ltp - hi) / hi) * 100 : dnBreak ? ((lo - ctx.ltp) / lo) * 100 : 0;
+    const ruleMet = (upBreak || dnBreak) && volX !== null && volX >= p.volMult;
+    return {
+      side, ruleMet, barsUsed: b.length,
+      score: Math.abs(extPct) * (volX ? Math.min(volX / p.volMult, 3) : 1),
+      measured: (upBreak ? 'above ' : dnBreak ? 'below ' : 'inside ') + rangeBars + '-bar range · ' +
+        (volX === null ? 'no vol' : volX.toFixed(2) + 'x vol'),
+      detail: rangeBars + '-bar range ' + lo.toFixed(2) + '-' + hi.toFixed(2) + ' (over ' + n + ' bars) · LTP ' + ctx.ltp.toFixed(2) +
+        (volX === null ? '' : ' · vol ' + volX.toFixed(2) + 'x vs ' + p.volMult + 'x') + ' · barsUsed ' + b.length,
+    };
+  },
+
+  // Opening range 09:15-09:25 from today's own 1-min bars, ±0.45% buffer + 2.5x volume + range width cap.
+  orb(ctx, p) {
+    const b = closedBars(ctx.bars, ctx.nowMs);
+    if (b.length < 3 || !checkVolumeFilter(b)) return null;
+    const openMinutes = Math.min(p.openMinutes, b.length);
+    const open = b.slice(0, openMinutes);
+    const rHi = Math.max(...open.map((x) => Math.max(x.h === undefined ? x.c : x.h, x.c)));
+    const rLo = Math.min(...open.map((x) => Math.min(x.l === undefined ? x.c : x.l, x.c)));
+    
+    // Check range width (skip giant gap candles > 2.0% where SL risk is huge)
+    const rangeWidthPct = rLo > 0 ? ((rHi - rLo) / rLo) * 100 : 0;
+    const validWidth = rangeWidthPct <= (p.maxRangeWidthPct || 2.0);
+    
+    const upLvl = rHi * (1 + p.bufferPct / 100);
+    const dnLvl = rLo * (1 - p.bufferPct / 100);
+    const up = ctx.ltp >= upLvl, dn = ctx.ltp <= dnLvl;
+    const side = up ? 'BUY' : (dn ? 'SELL' : (ctx.ltp >= (rHi + rLo) / 2 ? 'BUY' : 'SELL'));
+    
+    // Breakout candle volume filter
+    const avgV = open.reduce((s, x) => s + x.v, 0) / open.length;
+    const lastV = b[b.length - 1].v;
+    const volX = avgV > 0 ? lastV / avgV : 1.0;
+    const volOk = volX >= (p.volMult || 2.0);
+
+    const vw = sessionVwap(b);
+    const vwapAligned = vw ? (up ? ctx.ltp >= vw : dn ? ctx.ltp <= vw : true) : true;
+    const ruleMet = (up || dn) && validWidth && volOk && vwapAligned;
+    const beyond = up ? ((ctx.ltp - upLvl) / upLvl) * 100 : dn ? ((dnLvl - ctx.ltp) / dnLvl) * 100 : 0;
+
+    return {
+      side, ruleMet,
+      score: Math.abs(beyond) * (volOk ? 1.5 : 0.5),
+      barsUsed: b.length,
+      measured: 'OR ' + rLo.toFixed(2) + '-' + rHi.toFixed(2) + ' (width ' + rangeWidthPct.toFixed(2) + '%) · ' +
+        volX.toFixed(2) + 'x vol' + (up ? ' ABOVE +' + p.bufferPct + '%' : dn ? ' BELOW -' + p.bufferPct + '%' : ' INSIDE'),
+      detail: 'opening range ' + rLo.toFixed(2) + '-' + rHi.toFixed(2) + ' · buffer ±' + p.bufferPct + '% · vol ' + volX.toFixed(2) + 'x · width ' + rangeWidthPct.toFixed(2) + '%',
+    };
+  },
+
+  // 10-bar ROC beyond ±1.25% with 2.8x volume expansion + 5-min EMA20 & VWAP Guard.
+  rocVol(ctx, p) {
+    const b = closedBars(ctx.bars, ctx.nowMs);
+    if (b.length < 5 || !checkVolumeFilter(b)) return null;
+    const rocBars = Math.min(p.rocBars, Math.max(1, b.length - 2));
+    const prev = b[b.length - 1 - rocBars].c;
+    const roc = prev > 0 ? ((ctx.ltp - prev) / prev) * 100 : 0;
+    const n = Math.min(p.volWindow, b.length);
+    const avgV = b.slice(-n).reduce((s, x) => s + x.v, 0) / n;
+    const volX = avgV > 0 ? b[b.length - 1].v / avgV : null;
+    
+    // 5-min EMA20 & VWAP Trend Guard
+    const closes = b.map((x) => x.c);
+    const ema20 = emaLast(closes, 20) || closes[closes.length - 1];
+    const vw = sessionVwap(b);
+    const side = roc >= 0 ? 'BUY' : 'SELL';
+    
+    const trendAligned = side === 'BUY'
+      ? (ctx.ltp >= ema20 && (!vw || ctx.ltp >= vw))
+      : (ctx.ltp <= ema20 && (!vw || ctx.ltp <= vw));
+
+    const ruleMet = Math.abs(roc) >= p.rocPct && volX !== null && volX >= p.volMult && trendAligned;
+    return {
+      side, ruleMet, barsUsed: b.length,
+      score: Math.abs(roc) * (volX ? Math.min(volX / p.volMult, 3) : 1) * (trendAligned ? 1.2 : 0.2),
+      measured: rocBars + '-bar ROC ' + roc.toFixed(3) + '%' + (volX === null ? '' : ' · ' + volX.toFixed(2) + 'x vol') +
+        (trendAligned ? ' · Trend Aligned' : ' · Counter-Trend Blocked'),
+      detail: rocBars + '-bar ROC ' + roc.toFixed(3) + '% vs ±' + p.rocPct + '% · vol ' + (volX ? volX.toFixed(2) : 0) + 'x vs ' + p.volMult + 'x · EMA20 ' + ema20.toFixed(2),
+    };
+  },
+
+  // Session VWAP 1.25-sigma band expansion, 2.8x volume, 5-bar ROC momentum confirmation.
+  vwapBand(ctx, p) {
+    const b = closedBars(ctx.bars, ctx.nowMs);
+    if (b.length < 5 || !checkVolumeFilter(b)) return null;
+    const vw = sessionVwap(b);
+    if (!vw) return null;
+    const sd = stdev(b.map((x) => x.c - vw));
+    if (!sd) return null;
+    const band = p.sigma * sd;
+    const up = ctx.ltp >= vw + band, dn = ctx.ltp <= vw - band;
+    const n = Math.min(p.volWindow, b.length);
+    const avgV = b.slice(-n).reduce((s, x) => s + x.v, 0) / n;
+    const volX = avgV > 0 ? b[b.length - 1].v / avgV : null;
+    
+    // 5-bar ROC velocity momentum check
+    const prev5 = b[Math.max(0, b.length - 6)].c;
+    const roc5 = prev5 > 0 ? ((ctx.ltp - prev5) / prev5) * 100 : 0;
+    const momOk = Math.abs(roc5) >= (p.minRocPct || 0.50);
+
+    const side = ctx.ltp >= vw ? 'BUY' : 'SELL';
+    const ruleMet = (up || dn) && volX !== null && volX >= p.volMult && momOk;
+    const extr = band > 0 ? Math.abs(ctx.ltp - vw) / band : 0;
+    return {
+      side, ruleMet,
+      score: extr * (volX ? Math.min(volX / p.volMult, 3) : 1) * 3,
+      barsUsed: b.length,
+      measured: (up ? 'above' : dn ? 'below' : 'inside') + ' VWAP ' + p.sigma + 'σ band (' + vw.toFixed(2) + ') · 5b ROC ' + roc5.toFixed(2) + '%',
+      detail: 'VWAP ' + vw.toFixed(2) + ' ± ' + band.toFixed(2) + ' (' + p.sigma + 'σ) · vol ' + (volX ? volX.toFixed(2) : 0) + 'x · 5b ROC ' + roc5.toFixed(2) + '%',
+    };
+  },
+
+  // MACD + SMA Multi-Condition Signal Strategy (from PlainEnglish/Medium Quant Study)
+  macdSmaTrend(ctx, p) {
+    const b = closedBars(ctx.bars, ctx.nowMs);
+    if (b.length < 20) return null;
+    const closes = b.map((x) => x.c);
+    const sma10 = emaLast(closes, 10) || closes[closes.length - 1];
+    const sma30 = emaLast(closes, 30) || closes[closes.length - 1];
+    const sma50 = emaLast(closes, 50) || closes[closes.length - 1];
+
+    const macdFast = emaLast(closes, 12) || closes[closes.length - 1];
+    const macdSlow = emaLast(closes, 26) || closes[closes.length - 1];
+    const macdVal = macdFast - macdSlow;
+    const macdSignal = macdVal * 0.9;
+
+    const cross10_30 = sma10 > sma30;
+    const macdCross = macdVal > macdSignal;
+    const abv50 = sma10 > sma50 && sma30 > sma50;
+
+    const side = cross10_30 ? 'BUY' : 'SELL';
+    const ruleMet = cross10_30 && macdCross && abv50;
+    return {
+      side, ruleMet, barsUsed: b.length,
+      score: (cross10_30 ? 2 : 0.5) * (macdCross ? 1.5 : 0.8),
+      measured: 'SMA10/30/50: ' + sma10.toFixed(1) + '/' + sma30.toFixed(1) + '/' + sma50.toFixed(1) + ' · MACD ' + macdVal.toFixed(2),
+      detail: 'MACD+SMA Multi-Condition Trend Signal (Strategy 2 & 3 aligned)',
+    };
+  },
+
+  // 20-day Donchian breakout (daily bars) against the live LTP, volume accumulation.
+  donchian(ctx, p) {
+    const d = ctx.daily;
+    if (!d || d.length < p.days) return null;
+    const win = d.slice(-p.days);
+    const hi = Math.max(...win.map((x) => x.h));
+    const lo = Math.min(...win.map((x) => x.l));
+    if (!(hi > 0 && lo > 0)) return null;
+    const volAcc = dayVolumeAccumulation(d);
+    const up = ctx.ltp > hi, dn = ctx.ltp < lo;
+    const side = up ? 'BUY' : (dn ? 'SELL' : (ctx.ltp >= (hi + lo) / 2 ? 'BUY' : 'SELL'));
+    const beyondPct = up ? ((ctx.ltp - hi) / hi) * 100 : dn ? ((lo - ctx.ltp) / lo) * 100 : 0;
+    return {
+      side, ruleMet: up || dn,
+      score: Math.abs(beyondPct) * (volAcc ? Math.min(volAcc / p.volMult, 3) : 1),
+      measured: p.days + 'd ' + lo.toFixed(2) + '-' + hi.toFixed(2) + ' · LTP ' + ctx.ltp.toFixed(2) +
+        (up ? ' BREAKUP' : dn ? ' BREAKDOWN' : ' INSIDE') + (volAcc ? ' · ' + volAcc.toFixed(2) + 'x vol acc' : ''),
+      detail: p.days + '-day Donchian ' + lo.toFixed(2) + '-' + hi.toFixed(2) + ' · daily through ' + ctx.dailyAsOf,
+    };
+  },
+
+  // 20/50 EMA on daily closes; the live price must agree with the cross.
+  goldenCross(ctx, p) {
+    const d = ctx.daily;
+    if (!d || d.length < p.minBars) return null;
+    const closes = d.map((x) => x.c);
+    const f = emaLast(closes, p.fast), s = emaLast(closes, p.slow);
+    if (f === null || s === null) return null;
+    const up = f > s;
+    const agree = up ? ctx.ltp > f : ctx.ltp < f;
+    const side = up ? 'BUY' : 'SELL';
+    const sepPct = ((f - s) / s) * 100;
+    const distPct = ((ctx.ltp - f) / f) * 100;
+    return {
+      side, ruleMet: agree,
+      score: Math.abs(sepPct) * (agree ? 10 : 1) + Math.abs(distPct),
+      measured: 'EMA20 ' + f.toFixed(2) + (up ? ' > ' : ' < ') + 'EMA50 ' + s.toFixed(2) +
+        ' · LTP ' + ctx.ltp.toFixed(2) + (agree ? ' with trend' : ' against trend'),
+      detail: 'EMA20 ' + f.toFixed(2) + ' vs EMA50 ' + s.toFixed(2) + ' (' + sepPct.toFixed(2) + '%) · daily through ' + ctx.dailyAsOf,
+    };
+  },
+
+  // ATR Supertrend (10, 3) on daily bars.
+  supertrend(ctx, p) {
+    const d = ctx.daily;
+    if (!d || d.length < p.minBars) return null;
+    const st = supertrend(d, p.period, p.mult);
+    if (!st || st.line === null || !isFinite(st.line)) return null;
+    const side = st.trend === 'UP' ? 'BUY' : 'SELL';
+    const dist = Math.abs(ctx.ltp - st.line) / st.line * 100;
+    return {
+      side, ruleMet: true, // a Supertrend is always in one direction — that IS the rule
+      score: dist * 3 + (st.trend === 'UP' ? 1 : 0),
+      measured: 'Supertrend ' + st.trend + ' · line ' + st.line.toFixed(2) + ' · LTP ' + ctx.ltp.toFixed(2),
+      detail: 'ATR Supertrend(' + p.period + ', ' + p.mult + ') ' + st.trend + ' · daily through ' + ctx.dailyAsOf,
+    };
+  },
+};
+
+// A rule must never read the minute that is still forming. Two reasons, both
+// measured: our own sweep appends the CURRENT minute's bar, and the Yahoo-sourced
+// bars carried v=0 on the forming bar (11:26 on 2026-10-07: the last bar had no
+// volume on every symbol probed while 129-130 of 132 bars carried it).
+const FORMING_MS = 59000;
+function closedBars(bars, nowMs) {
+  if (!Array.isArray(bars)) return [];
+  const now = nowMs || Date.now();
+  let end = bars.length;
+  while (end > 0) {
+    const age = now - Number(bars[end - 1].t || 0);
+    const forming = age < FORMING_MS;
+    const emptyForming = Number(bars[end - 1].v) === 0 && age < 180000;
+    if (!forming && !emptyForming) break;
+    end--;
+  }
+  return bars.slice(0, end);
+}
+
+// ---------------------------------------------------------------------------
+// THE UPGRADED ENTRY FILTERS — the user's spec (scratch/test_upgraded_logic.js).
+// ---------------------------------------------------------------------------
+// Four changes over the original rules, applied to the LIVE tape before a rule may
+// open a call, plus ATR-derived stop/target distances instead of fixed percentages:
+//   1. TREND ALIGNMENT  — a BUY needs the live price above BOTH the 20-bar mean and
+//      session VWAP; a SELL needs it below both. A volume spike alone fires into a
+//      counter-trend bounce, which is where the old rules lost.
+//   2. VOLUME PERSISTENCE — at least 2 of the last 5 closed bars must carry >= 1.5x
+//      the 15-bar average volume, so one spike bar cannot carry a call on its own.
+//   3. LIQUIDITY — 15-minute volume above 10,000 shares, on top of the 5-minute
+//      1,000-share floor.
+//   4. ATR LEVELS — stop distance = max(0.8% of price, 1.5 x ATR14) and target
+//      distance = 2x the stop distance (RR 1:2), replacing a fixed 0.5-0.8%.
+// The spec's own wording differs from its code in one place (the header says "3 of
+// the last 5 bars > 1.8x"; the executable check is 2 of 5 >= 1.5x). The CODE is
+// what produced the measured backtest, so the code is what is implemented here.
+const UPGRADED = {
+  trendAlign: true,
+  volPersistMinBars: 2,          // of the last 5 closed bars
+  volPersistMult: 1.5,           // against the 15-bar mean volume
+  liquidity15mShares: 10000,     // 15-minute share volume floor
+  atrPeriod: 14,
+  slAtrMult: 1.5,
+  slMinPct: 0.008,               // the 0.8% floor the spec keeps under the ATR stop
+  targetSlMult: 2.0,             // target = 2x the stop distance
+};
+
+// Average true range over the LAST `period` bars — the spec's own formula, kept
+// byte-for-byte in spirit so the live levels match what was measured.
+function atrOf(bars, period) {
+  if (!Array.isArray(bars) || bars.length < period + 1) return null;
+  let sum = 0;
+  for (let i = bars.length - period; i < bars.length; i++) {
+    const b = bars[i], p = bars[i - 1];
+    if (!b || !p) return null;
+    sum += Math.max(b.h - b.l, Math.abs(b.h - p.c), Math.abs(b.l - p.c));
+  }
+  return sum / period;
+}
+
+// Run the three tape filters and return the ATR the levels are built from. `ok:false`
+// always carries a plain-English `why`, so a refused name can be counted and shown
+// rather than silently disappearing.
+function upgradedFilters(bars, ltp, nowMs) {
+  const b = closedBars(bars, nowMs);
+  if (b.length < 21) return { ok: false, why: 'not enough closed bars (needs 21)' };
+  const win15 = b.slice(-15);
+  const vol15m = win15.reduce((s, x) => s + (Number(x.v) || 0), 0);
+  if (vol15m <= UPGRADED.liquidity15mShares) {
+    return { ok: false, why: 'liquidity — 15-minute volume under 10,000 shares', vol15m };
+  }
+  const avgVol = vol15m / win15.length;
+  const persist = b.slice(-5).filter((x) => (Number(x.v) || 0) >= avgVol * UPGRADED.volPersistMult).length;
+  if (persist < UPGRADED.volPersistMinBars) {
+    return { ok: false, why: 'volume persistence — fewer than 2 of the last 5 bars carry 1.5x average', vol15m, persist };
+  }
+  // The spec's "EMA20" is a 20-bar MEAN of closes, and its VWAP is the volume-weighted
+  // price of the prior bars. Both are reproduced as written.
+  const ema20 = b.slice(-20).reduce((s, x) => s + x.c, 0) / 20;
+  const win30 = b.slice(-30);
+  let pv = 0, vv = 0;
+  for (const x of win30) { pv += x.c * (Number(x.v) || 0); vv += Number(x.v) || 0; }
+  if (!(vv > 0)) return { ok: false, why: 'no session VWAP yet' };
+  const vwap = pv / vv;
+  const up = ltp > ema20 && ltp > vwap;
+  const dn = ltp < ema20 && ltp < vwap;
+  if (!up && !dn) {
+    return { ok: false, why: 'trend alignment — price is not on one side of both the 20-bar mean and VWAP', ema20, vwap };
+  }
+  const atr = atrOf(b, UPGRADED.atrPeriod);
+  if (!isFinite(atr) || atr <= 0) return { ok: false, why: 'ATR unavailable' };
+  return { ok: true, atr, ema20, vwap, vol15m, persist, side: up ? 'BUY' : 'SELL' };
+}
+
+// Shares traded over the last five CLOSED minutes. Null when there is no closed
+// bar yet (a brand-new session), which the floor treats as "not enough tape to
+// trade" rather than as zero-and-therefore-fine. Early in the session the window
+// is simply shorter than five bars — it is still a real traded figure.
+function last5MinVolume(bars, nowMs) {
+  const b = closedBars(bars, nowMs);
+  if (!b.length) return null;
+  let s = 0;
+  for (const x of b.slice(-5)) s += Number(x.v) || 0;
+  return s;
+}
+
+// Sum(tp*v)/Sum(v) over the session bars.
+function sessionVwap(bars) {
+  let pv = 0, vv = 0;
+  for (const b of bars) {
+    const tp = b.h !== undefined && b.l !== undefined ? (b.h + b.l + b.c) / 3 : b.c;
+    pv += tp * b.v; vv += b.v;
+  }
+  return vv > 0 ? pv / vv : null;
+}
+// Last 5 days' volume over the last 20 days' average — the "vol accumulation" read.
+function dayVolumeAccumulation(d) {
+  if (!d || d.length < 25) return null;
+  const recent = d.slice(-5).reduce((s, x) => s + (x.v || 0), 0) / 5;
+  const base = d.slice(-20).reduce((s, x) => s + (x.v || 0), 0) / 20;
+  return base > 0 ? recent / base : null;
+}
+
+// ---------------------------------------------------------------------------
+// DAILY BARS
+// ---------------------------------------------------------------------------
+const dailyCache = new Map();
+function loadDaily(sym) {
+  if (dailyCache.has(sym)) return dailyCache.get(sym);
+  let out = null;
+  try {
+    const p = path.join(DAILY_DIR, sym + '.json');
+    if (fs.existsSync(p)) {
+      const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+      const n = Array.isArray(raw.c) ? raw.c.length : 0;
+      const bars = [];
+      for (let i = 0; i < n; i++) {
+        const c = Number(raw.c[i]);
+        if (!isFinite(c)) continue;
+        bars.push({
+          d: raw.dates ? raw.dates[i] : null,
+          o: Number(raw.o && raw.o[i]) || c,
+          h: Number(raw.h && raw.h[i]) || c,
+          l: Number(raw.l && raw.l[i]) || c,
+          c,
+          v: Number(raw.v && raw.v[i]) || 0,
+        });
+      }
+      if (bars.length >= 20) out = bars;
+    }
+  } catch (_) { /* a symbol without daily bars simply cannot be traded by a swing rule */ }
+  dailyCache.set(sym, out);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// HELPERS
+// ---------------------------------------------------------------------------
+function isShortAction(a) {
+  const s = String(a || '').toUpperCase();
+  return s.includes('SELL') || s.includes('SHORT');
+}
+function istNow() {
+  const d = sessionTiming.getISTTime();
+  return {
+    time: d.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    iso: d.toISOString(),
+  };
+}
+function rMultiple(c) {
+  const entry = Number(c.entryPrice), ltp = Number(c.ltp), stop = Number(c.stopLoss);
+  const risk = Math.abs(entry - stop);
+  if (!isFinite(entry) || !isFinite(ltp) || !(risk > 0)) return 0;
+  return (isShortAction(c.action) ? entry - ltp : ltp - entry) / risk;
+}
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length).fill(null);
+  let i = 0;
+  const worker = async () => {
+    while (i < items.length) {
+      const idx = i++;
+      try { out[idx] = await fn(items[idx]); } catch (_) { out[idx] = null; }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(limit, items.length)) }, worker));
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// STATE
+// ---------------------------------------------------------------------------
+let activeCandidates = [];
+let closedHistory = [];
+let lastHeavyScanAt = 0;
+let lastHeavyScanMs = null;
+let heavyInFlight = false;
+let firstScanDone = false;
+let quoteFailNote = null;
+let lastReport = [];
+// Every stock with at least one rule reading, best reading per symbol. This is the
+// "which of our stocks to buy or sell" answer — the tables show the armed calls,
+// this carries the whole book.
+let lastSignals = [];
+let lastQuoted = 0;
+let lastBarsWritten = 0;
+let lastBarsReady = 0;
+let lastLiveBarSaveAt = 0;
+let lastVolFloorBlocked = null;
+let lastUBlocked = null;
+let telegramNote = 'not attempted yet';
+
+// ---------------------------------------------------------------------------
+// TELEGRAM — the calls, pushed as they are armed.
+// ---------------------------------------------------------------------------
+// The user asked for the calls on Telegram. This uses the SAME sender the rest of
+// the app uses (common/notifications/notificationService.js); it does not touch
+// GB_SCALP_TELEGRAM, which belongs to the experimental ROC scalper and stays off.
+// ONE MESSAGE PER NEW CALL. The user asked for the new calls "one one" — a single
+// batched digest meant a fresh call could scroll past unseen, and the side of each
+// row was easy to misread. Each message now carries the symbol, the side in words,
+// the entry / stop / target, and the REASON it fired (the strategy, the measured
+// read it came from, and whether its rule actually met its threshold).
+//
+// SIDE. Upside is what the user asked to be told about: BUY calls are pushed. A
+// SELL is not sent as a buy notification — it is skipped, and the note says so.
+const notificationService = require('../notifications/notificationService');
+function telegramWanted() {
+  return String(process.env.TIER_CALLS_TELEGRAM === undefined ? '1' : process.env.TIER_CALLS_TELEGRAM) !== '0';
+}
+// The one message a single new call produces. Kept as its own function so the
+// wording can be checked without a live send.
+function callTelegramText(c, totals) {
+  const short = isShortAction(c.action);
+  const side = short ? 'SELL / SHORT' : 'BUY / LONG';
+  const head = short ? '🔻 <b>NEW SELL CALL · ' + c.symbol + '</b>'
+    : '🟢 <b>NEW BUY CALL · ' + c.symbol + '</b>';
+  const arrow = short ? '🔻' : '🟢';
+  const risk = Number(c.riskPerShare) > 0 ? Number(c.riskPerShare) : Math.abs(Number(c.entryPrice) - Number(c.stopLoss));
+  const parts = [
+    head + ' · ' + (c.category || c.tier || ''),
+    arrow + ' Side: <b>' + side + '</b> at live LTP <b>₹' + c.entryPrice + '</b>',
+    '🎯 Target 1: ₹' + c.target1 + (c.target2 ? '  ·  Target 2: ₹' + c.target2 : ''),
+    '🛑 Stop loss: ₹' + c.stopLoss + ' (risk ₹' + (isFinite(risk) ? risk.toFixed(2) : '—') + '/share)',
+    '⚙️ Strategy: ' + (c.strategyName || c.strategyId),
+    '📋 Rule: ' + String(c.rule || c.logic || '—'),
+    '📊 Measured read: ' + String(c.measured || '—') +
+      (c.barsUsed !== null && c.barsUsed !== undefined ? ' · barsUsed ' + c.barsUsed : ''),
+    (c.filterNote ? '🧪 Upgraded filters: ' + c.filterNote : null),
+    (c.stopPctUsed !== undefined ? '📐 Levels: stop ' + c.stopPctUsed + '% of price · target ' + c.targetPctUsed +
+      '% (ATR ' + (c.atr === null || c.atr === undefined ? 'n/a' : c.atr) + ')' : null),
+    (c.ruleMet === true ? '✅ The rule MET its threshold' : '▫️ Strongest read — threshold NOT met'),
+    '🕒 Armed ' + (c.time || '') + ' IST',
+  ];
+  if (totals) parts.push('📌 On the board now: ' + totals.total + ' (scalp ' + totals.SCALPING +
+    ' / intraday ' + totals.INTRADAY + ' / swing ' + totals.SWING + ')');
+  parts.push('Levels are the ATR-based geometry from the live LTP. Not investment advice.');
+  // Conditional lines (the filter evidence, the level geometry) are dropped when
+  // absent rather than left as blank lines in the message.
+  return parts.filter(Boolean).join('\n');
+}
+async function pushNewCallsToTelegram(opened, counts) {
+  if (!opened || !opened.length) return;
+  if (!telegramWanted()) { telegramNote = 'TIER_CALLS_TELEGRAM=0 — pushes are switched off'; return; }
+  const cfg = notificationService.loadConfig();
+  if (!cfg.botToken || !cfg.chatId) {
+    telegramNote = 'no Telegram bot token / chat id configured';
+    return;
+  }
+  const now = istNow();
+  // Upside first and in full: every BUY gets its own message, in the order it was
+  // armed. SELLs are not pushed as buy notifications.
+  const buys = opened.filter((c) => !isShortAction(c.action));
+  let sent = 0, failed = 0;
+  for (const c of buys) {
+    try {
+      const res = await notificationService.sendTelegram(callTelegramText(c, counts), cfg);
+      if (res && res.success) sent++; else failed++;
+    } catch (_) { failed++; }
+  }
+  const sellNote = opened.length - buys.length;
+  telegramNote = 'last push ' + now.time + ' · ' + sent + ' new BUY message(s)' +
+    (failed ? ' · ' + failed + ' failed' : '') +
+    (sellNote ? ' · ' + sellNote + ' SELL row(s) not pushed (upside-only alerts)' : '');
+  console.log('[liveStrategyEngine] telegram ' + telegramNote);
+}
+
+// A DISABLED strategy must not surface calls anywhere. This filter is applied to
+// everything the engine publishes, so rows written before the nine were disabled
+// (still sitting in the board file) cannot reappear on the board.
+function isEnabledCandidate(c) {
+  return !!c && STRATEGIES.some((s) => s.id === c.strategyId && s.enabled !== false);
+}
+
+function loadState() {
+  try {
+    if (fs.existsSync(BOARD_JSON_PATH)) {
+      const b = JSON.parse(fs.readFileSync(BOARD_JSON_PATH, 'utf8'));
+      if (Array.isArray(b.candidates) && b.candidates.length) activeCandidates = b.candidates.filter(isEnabledCandidate);
+    }
+    if (fs.existsSync(HISTORY_JSON_PATH)) {
+      const h = JSON.parse(fs.readFileSync(HISTORY_JSON_PATH, 'utf8'));
+      if (Array.isArray(h.history)) closedHistory = h.history;
+      // Older history rows predate `closedAt`. Without it the page cannot sort an
+      // open call against a closed one on a single clock, so derive it from the
+      // close date + IST time once and keep it from then on.
+      let backfilled = 0;
+      for (const row of closedHistory) {
+        if (row && !row.closedAt && row.date) {
+          const m = /^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i.exec(String(row.time || '').trim());
+          if (m) {
+            let hh = Number(m[1]) % 12;
+            if (/pm/i.test(m[4])) hh += 12;
+            const p = Date.parse(row.date + 'T' + String(hh).padStart(2, '0') + ':' + m[2] + ':' + m[3] + '+05:30');
+            if (isFinite(p)) { row.closedAt = p; row.closedAtIST = row.time; backfilled++; }
+          }
+        }
+      }
+      if (backfilled) console.log('[liveStrategyEngine] backfilled closedAt on ' + backfilled + ' history row(s)');
+    }
+  } catch (e) {
+    console.error('[liveStrategyEngine] state load note:', e.message);
+  }
+}
+
+function tierCounts() {
+  const c = { SCALPING: 0, INTRADAY: 0, SWING: 0 };
+  for (const r of activeCandidates) if (c[r.category] !== undefined) c[r.category]++;
+  return c;
+}
+
+function tierMeta() {
+  return {
+    source: 'liveStrategyEngine · 9 core strategies on Angel One live data',
+    asOf: new Date().toISOString(),
+    asOfIST: istNow().time,
+    counts: tierCounts(),
+    scanIntervalMs: HEAVY_INTERVAL_MS,
+    lastScan: lastHeavyScanAt ? new Date(lastHeavyScanAt).toISOString() : null,
+    lastScanMs: lastHeavyScanMs,
+    universeTracked: UNIVERSE.length,
+    quoted: lastQuoted,
+    barsWritten: lastBarsWritten,
+    barsReady: lastBarsReady,
+    signalsBooked: lastSignals.length,
+    // The liquidity floor and the upside-only swing rule, published so the chip can
+    // say WHY a tier is short instead of leaving it to be guessed at.
+    volFloorShares: MIN_5M_VOL_SHARES,
+    volFloorBlocked: lastVolFloorBlocked,
+    swingLongOnly: SWING_LONG_ONLY,
+    // The upgraded filters, so the chip can say what they refused this scan.
+    upgraded: {
+      trendAlign: UPGRADED.trendAlign,
+      volPersistMinBars: UPGRADED.volPersistMinBars,
+      volPersistMult: UPGRADED.volPersistMult,
+      liquidity15mShares: UPGRADED.liquidity15mShares,
+      atrStop: UPGRADED.slAtrMult + 'xATR14 vs ' + (UPGRADED.slMinPct * 100) + '% floor',
+      targetSlMult: UPGRADED.targetSlMult,
+      blocked: lastUBlocked,
+    },
+    telegram: telegramNote,
+    strategies: STRATEGIES.map((s) => ({ id: s.id, tier: s.tier, name: s.name, rule: s.rule })),
+  };
+}
+
+// Open one call for `strat` on `sym` at the live `ltp`, using that strategy's own
+// target/stop geometry. Entry is the live price — never a placeholder.
+function openCall(strat, sym, ltp, r, meta) {
+  const short = r.side === 'SELL';
+  // UPGRADED (ATR) GEOMETRY. Stop distance = max(0.8% of price, 1.5 x ATR14) and
+  // target distance = 2x the stop distance, both from the ATR of the series this
+  // strategy actually reads (today's 1-minute bars for scalping/intraday, the daily
+  // series for swing). This deliberately WIDENS the stop past the old fixed
+  // 0.5-0.8%: a 1-minute stop sitting inside the noise is what produced the stop-out
+  // count. If no ATR is available the strategy's published geometry is used instead,
+  // so a call is never left without levels.
+  const atr = Number(meta && meta.atr);
+  const atrStop = isFinite(atr) && atr > 0 ? atr * UPGRADED.slAtrMult : null;
+  const slDist = Math.max(ltp * UPGRADED.slMinPct, atrStop === null ? ltp * strat.slPct : atrStop);
+  const tgtDist = slDist * UPGRADED.targetSlMult;
+  const target1 = +(short ? ltp - tgtDist : ltp + tgtDist).toFixed(2);
+  const stopLoss = +(short ? ltp + slDist : ltp - slDist).toFixed(2);
+  const now = istNow();
+  return {
+    strategyId: strat.id,
+    strategyName: strat.name,
+    category: strat.category,
+    tier: strat.tier,
+    tradeType: strat.tradeType,
+    action: short ? 'SELL / SHORT' : 'BUY / LONG',
+    symbol: sym,
+    entryPrice: ltp,
+    stopLoss,
+    target1,
+    target2: +(short ? ltp - tgtDist * 1.5 : ltp + tgtDist * 1.5).toFixed(2),
+    riskPerShare: +Math.abs(ltp - stopLoss).toFixed(2),
+    riskRewardRatio: '1:2.0 (ATR-based)',
+    // The geometry this row was actually built from, so the table and the Telegram
+    // message can show a real stop distance instead of the strategy's nominal one.
+    atr: isFinite(atr) && atr > 0 ? +atr.toFixed(4) : null,
+    atrBased: true,
+    filterNote: meta && meta.filterNote ? meta.filterNote : null,
+    stopDistance: +slDist.toFixed(4),
+    targetDistance: +tgtDist.toFixed(4),
+    stopPctUsed: +((slDist / ltp) * 100).toFixed(3),
+    targetPctUsed: +((tgtDist / ltp) * 100).toFixed(3),
+    winRate: strat.winRate,
+    holdingPeriod: strat.holdingPeriod,
+    targetReturn: ((tgtDist / ltp) * 100).toFixed(2) + '%',
+    logic: strat.logic,
+    rule: r.detail,
+    measured: r.measured,
+    ruleMet: r.ruleMet,
+    // The traded tape this call was allowed on, in shares over the last five
+    // closed minutes — the number the liquidity floor is enforced against, carried
+    // on the row so the table and the Telegram message can show it.
+    vol5m: meta && meta.vol5m !== undefined ? meta.vol5m : last5MinVolume(liveBars[sym] || [], Date.now()),
+    barsUsed: r.barsUsed === undefined ? null : r.barsUsed,
+    // The inputs this call was actually read from — so a stale or recorded input
+    // can never pass for a live one.
+    dailyAsOf: meta ? meta.dailyAsOf : null,
+    barsAsOf: meta && meta.barsAsOf ? new Date(meta.barsAsOf).toISOString() : null,
+    barsAgeSec: meta ? meta.barsAgeSec : null,
+    time: now.time,
+    signalTime: now.iso,
+    timeMs: Date.now(),
+    ltp,
+    livePnLPct: 0,
+    livePnLVal: 0,
+    ageMs: 0,
+    direction: 'MOVING_TO_TARGET',
+    status: 'IN_PROFIT',
+    lateEntry: false,
+    source: 'liveStrategyEngine · Angel One SmartAPI live LTP',
+    quoteAt: now.iso,
+    maxAgeMs: strat.maxAgeMs,
+    lateAfterMs: LATE_AFTER_MS[strat.tier] || 15 * 60 * 1000,
+  };
+}
+
+// Move a call off the book at its last marked price and record what it earned.
+function retire(c, why) {
+  const now = istNow();
+  const entry = Number(c.entryPrice), exit = Number(c.ltp);
+  const short = isShortAction(c.action);
+  const move = short ? entry - exit : exit - entry;
+  const pnlPct = entry > 0 ? (move / entry) * 100 : 0;
+  // If stop loss was hit, set 60-minute cooldown on this symbol for this strategy
+  if (why === 'STOP_LOSS_HIT') {
+    symbolCooldowns.set(c.symbol + ':' + c.strategyId, Date.now() + SYMBOL_STOP_COOLDOWN_MS);
+  }
+
+  // Net-of-Cost R calculations (factoring ₹20 brokerage, 0.025% STT, taxes, 0.05% slippage ~ 0.175% friction)
+  const frictionPct = 0.175;
+  const netPnLPct = +(pnlPct - frictionPct).toFixed(2);
+  const grossR = +rMultiple(c).toFixed(3);
+  const riskPct = c.stopPctUsed || 0.6;
+  const netR = +(riskPct > 0 ? netPnLPct / riskPct : grossR - (frictionPct / riskPct)).toFixed(3);
+
+  const row = {
+    date: now.iso.slice(0, 10),
+    time: now.time,
+    closedAt: Date.now(),
+    closedAtIST: now.time,
+    armedAt: c.signalTime || null,
+    symbol: c.symbol,
+    strategyId: c.strategyId,
+    strategyName: c.strategyName,
+    category: c.category,
+    action: c.action,
+    entryPrice: entry,
+    exitPrice: exit,
+    target1: c.target1,
+    stopLoss: c.stopLoss,
+    realizedPnLPct: +pnlPct.toFixed(2),
+    netPnLPct,
+    realizedR: grossR,
+    netR,
+    maePct: c.maxAdvPct ? +c.maxAdvPct.toFixed(2) : 0,
+    mfePct: c.maxFavPct ? +c.maxFavPct.toFixed(2) : 0,
+    maeR: c.maxAdvR ? +c.maxAdvR.toFixed(2) : 0,
+    mfeR: c.maxFavR ? +c.maxFavR.toFixed(2) : 0,
+    verdict: why,
+    status: why === 'TARGET_1_HIT' ? 'CLOSED_TARGET_HIT'
+      : why === 'STOP_LOSS_HIT' ? 'CLOSED_SL_HIT'
+      : why === 'LOW_VOLUME' ? 'CLOSED_LOW_VOLUME'
+      : why === 'UPSIDE_ONLY' ? 'CLOSED_SIDE_ONLY'
+      : why === 'UPGRADE_REBUILD' ? 'CLOSED_UPGRADE_REBUILD' : 'CLOSED_RULE_EXPIRED',
+    reason: why === 'TARGET_1_HIT' ? 'live LTP reached target 1'
+      : why === 'STOP_LOSS_HIT' ? 'live LTP reached the stop (60m symbol cooldown active)'
+      : why === 'RULE_FLIPPED' ? "the strategy's own rule flipped direction after 5-min min hold"
+      : why === 'LOW_VOLUME' ? ('the name fell under the volume/turnover floor')
+      : why === 'UPSIDE_ONLY' ? 'swing is upside-only — this was the short side'
+      : why === 'UPGRADE_REBUILD' ? 'armed before the ATR upgrade — the book was rebuilt onto the upgraded geometry'
+      : "the call outlived its strategy's holding window",
+    heldMs: c.timeMs ? Date.now() - c.timeMs : null,
+  };
+  closedHistory.unshift(row);
+  console.log('[liveStrategyEngine] closed ' + c.symbol + ' ' + c.strategyId + ' → ' + why + ' (' + pnlPct.toFixed(2) + '% gross | Net R ' + netR + 'R)' +
+    (why === 'TARGET_1_HIT' ? ' ✅ TARGET' : why === 'STOP_LOSS_HIT' ? ' 🛑 STOP' : ''));
+  // THE EXIT ALERTS. A target or a stop being hit is exactly what the user asked to
+  // be told about, one message each, whatever the strategy and whichever side. Every
+  // other retirement (a rule flip, a window running out, the volume floor) is still
+  // written to history but is NOT pushed: that is housekeeping, not a filled exit.
+  if (why === 'TARGET_1_HIT' || why === 'STOP_LOSS_HIT') {
+    pushExitToTelegram(row, why).catch(() => {});
+  }
+}
+
+// ONE MESSAGE PER FILLED EXIT — target hit or stop loss hit. Carries the strategy,
+// the side, the two prices it actually traded at, what it realised in % and in R,
+// and how long it was held, so the phone alert and the history row say the same
+// thing.
+async function pushExitToTelegram(row, why) {
+  if (!telegramWanted()) { telegramNote = 'exits not pushed — TIER_CALLS_TELEGRAM=0'; return; }
+  const cfg = notificationService.loadConfig();
+  if (!cfg.botToken || !cfg.chatId) { telegramNote = 'no Telegram bot token / chat id configured'; return; }
+  const hitTarget = why === 'TARGET_1_HIT';
+  const short = isShortAction(row.action);
+  const pct = Number(row.realizedPnLPct) || 0;
+  const r = Number(row.realizedR) || 0;
+  const heldMin = row.heldMs ? Math.round(row.heldMs / 60000) : null;
+  const msg = (hitTarget ? '✅ <b>TARGET 1 HIT</b>' : '🛑 <b>STOP LOSS HIT</b>') +
+    ' · <b>' + row.symbol + '</b> (' + row.category + ')\n' +
+    (short ? '🔻' : '🟢') + ' ' + (short ? 'SELL / SHORT' : 'BUY / LONG') + '\n' +
+    'Entry ₹' + row.entryPrice + ' → Exit ₹' + row.exitPrice + '\n' +
+    'Result: <b>' + (pct >= 0 ? '+' : '') + pct + '%</b> (' + (r >= 0 ? '+' : '') + r + 'R)\n' +
+    '⚙️ Strategy: <b>' + (row.strategyName || row.strategyId) + '</b>\n' +
+    '🕒 closed ' + row.date + ' ' + row.time + ' IST' + (heldMin === null ? '' : ' · held ' + heldMin + ' min') + '\n' +
+    'Not investment advice.';
+  try {
+    const res = await notificationService.sendTelegram(msg, cfg);
+    telegramNote = (res && res.success)
+      ? ((hitTarget ? 'target hit' : 'stop hit') + ' alert ' + row.time + ' · ' + row.symbol)
+      : 'exit alert failed: ' + ((res && res.reason) || 'unknown');
+  } catch (e) {
+    telegramNote = 'exit alert failed: ' + e.message;
+  }
+  console.log('[liveStrategyEngine] telegram ' + telegramNote);
+}
+
+// The measured tier net R — published under `tierNet`, never as dailyNet.
+function measuredNetR() {
+  const now = istNow();
+  const today = now.iso.slice(0, 10);
+  const activeStrats = STRATEGIES.filter((s) => s.enabled !== false);
+  const activeCandidatesOnly = activeCandidates.filter((c) => activeStrats.some((s) => s.id === c.strategyId));
+  const openR = activeCandidatesOnly.reduce((s, c) => s + rMultiple(c), 0);
+  const closedToday = closedHistory.filter((h) => h.date === today && activeStrats.some((s) => s.id === h.strategyId));
+  const activePerf = strategyPerformance().filter((s) => s.enabled);
+  const activeNetR = activePerf.reduce((s, st) => s + (st.netR || 0), 0);
+  const closedR = closedToday.length > 0 ? closedToday.reduce((s, h) => s + (Number(h.realizedR) || 0), 0) : activeNetR;
+  return {
+    measured: true,
+    asOfIST: now.time,
+    openR: +openR.toFixed(2),
+    closedR: +closedR.toFixed(2),
+    totalR: +(openR + closedR).toFixed(2),
+    basis: "+1R = the call's own entry→stop risk",
+    counts: tierCounts(),
+  };
+}
+
+// TODAY, STRATEGY BY STRATEGY — the nine strategies' own scorecard for the session.
+// For each one: what is open right now, how many calls closed, how many of those
+// reached target 1 and how many hit the stop, the closed win rate, and the net R
+// (closed R plus the open calls marked to the live price). This is what the
+// Performance History panel renders, so "how is each strategy doing today" is
+// answered from the calls themselves.
+//
+// REMOVED — EMPIRICAL_BASELINE. It was a table of invented session statistics
+// (100% win rates, netR of 480.00 / 642.40) that THIS function substituted whenever a
+// strategy had no closed calls that day. A strategy with nothing to show therefore
+// reported "100% win, +642R" instead of "nothing yet" — a constant dressed as a
+// measurement. The panel now reports what the calls say, or zero/null when there are
+// none. See reports/strategy_verdicts.md: the measured results are all net-negative.
+
+function strategyPerformance() {
+  const today = istNow().iso.slice(0, 10);
+  const activeStrats = STRATEGIES.filter((s) => s.enabled !== false);
+  const closedToday = closedHistory.filter((h) => h.date === today && activeStrats.some((s) => s.id === h.strategyId));
+  return STRATEGIES.map((s) => {
+    const isEnabled = s.enabled !== false;
+    const rows = isEnabled ? closedToday.filter((h) => h.strategyId === s.id) : [];
+    const open = isEnabled ? activeCandidates.filter((c) => c.strategyId === s.id) : [];
+    
+    if (!isEnabled) {
+      return {
+        id: s.id,
+        tier: s.tier,
+        name: s.name,
+        enabled: false,
+        status: 'DEACTIVATED (no net-positive record)',
+        holdingPeriod: s.holdingPeriod,
+        publishedWinRate: s.winRate,
+        openNow: 0,
+        closed: 0,
+        targetsHit: 0,
+        stopsHit: 0,
+        otherClosed: 0,
+        wins: 0,
+        losses: 0,
+        closedWinRate: null,
+        closedR: 0.00,
+        openR: 0.00,
+        netR: 0.00,
+      };
+    }
+
+    // MEASURED ONLY. Every figure is counted from today's closed calls; a strategy
+    // with no closed calls reports 0 / null rather than an invented baseline.
+    const closedCount = rows.length;
+    const wins = rows.filter((h) => (Number(h.realizedPnLPct) || 0) > 0).length;
+    const targets = rows.filter((h) => h.verdict === 'TARGET_1_HIT').length;
+    const stops = rows.filter((h) => h.verdict === 'STOP_LOSS_HIT').length;
+    const closedR = rows.reduce((a, h) => a + (Number(h.realizedR) || 0), 0);
+    const openR = open.reduce((a, c) => a + rMultiple(c), 0);
+    const closedWinRate = rows.length > 0 ? +((wins / rows.length) * 100).toFixed(1) : null;
+
+    return {
+      id: s.id,
+      tier: s.tier,
+      name: s.name,
+      enabled: isEnabled,
+      status: 'ACTIVE',   // was 'ACTIVE (Net-Positive)' — no measured record supports the claim
+      holdingPeriod: s.holdingPeriod,
+      publishedWinRate: s.winRate,
+      openNow: open.length,
+      closed: closedCount,
+      targetsHit: targets,
+      stopsHit: stops,
+      otherClosed: Math.max(0, closedCount - targets - stops),
+      wins,
+      losses: Math.max(0, closedCount - wins),
+      closedWinRate,
+      closedR: +closedR.toFixed(2),
+      openR: +openR.toFixed(2),
+      netR: +(closedR + openR).toFixed(2),
+    };
+  });
+}
+
+// The board file. `dailyNet` is deliberately NOT marked measured: the page only
+// prints a session total when a payload marks it measured, and these rows are the
+// TIER board, not the strategy ledger. Its measured net R is published under
+// `tierNet` instead, where the name says what it is.
+function saveState() {
+  const now = istNow();
+  const today = now.iso.slice(0, 10);
+  try {
+    const closedToday = closedHistory.filter((h) => h.date === today);
+    const payload = {
+      ok: true,
+      date: today,
+      timestamp: new Date().toISOString(),
+      // MEASURED, NOT ASSERTED. This was the literal 'OPEN_AFTER_0925_IST' on every write,
+      // including a closed weekend, so the board file could not distinguish a session that
+      // is open from one that ended hours ago. The phase is the one sessionTiming already
+      // decides for the scanners (see the `phase` read below), so the file and the scanner
+      // cannot disagree about whether a signal is even allowed.
+      gateStatus: (() => {
+        try {
+          const phase = sessionTiming.getSessionPhase();
+          return phase.isSignalAllowed ? 'OPEN' : 'CLOSED_' + phase.phase;
+        } catch (_) { return 'UNKNOWN'; }
+      })(),
+      angelOneConnected: quoteFailNote === null,
+      pollingInterval: 'live quote poll + ' + (HEAVY_INTERVAL_MS / 1000) + 's strategy scan',
+      costBasis: { brokerage: 'Groww Flat ₹20/trade', stt: '0.025%', label: 'Net of Groww Brokerage & Govt Taxes' },
+      investorMoodRegime: sessionTiming.getInvestorMoodRegime(),
+      dailyNet: {
+        date: today,
+        totalCalls: activeCandidates.length + closedToday.length,
+        positiveCalls: activeCandidates.filter((c) => (c.livePnLPct || 0) >= 0).length +
+          closedToday.filter((h) => (h.realizedPnLPct || 0) >= 0).length,
+        measured: false,
+        note: 'tier board — the measured tier net R is published as tierNet',
+      },
+      tierNet: measuredNetR(),
+      // The nine strategies' own performance today, for the Performance History
+      // panel. Shipped on every save, so the panel reads the same numbers the board
+      // does instead of recomputing them from a subset of rows.
+      strategyPerformance: strategyPerformance(),
+      universe: {
+        tracked: UNIVERSE.length, quoted: lastQuoted,
+        scanned: UNIVERSE.length,
+        feedMode: 'Angel One SmartAPI Live · full universe sweep',
+        note: quoteFailNote || 'live quote poll answered',
+        barsWritten: lastBarsWritten,
+      },
+      candidates: activeCandidates.filter(isEnabledCandidate),
+      watchlist_candidates: activeCandidates.filter(isEnabledCandidate),
+      // The closed calls too — winners AND losers — so the tables can show the
+      // full day, not only what is still open. Newest first.
+      tierHistory: closedHistory.slice(0, 200),
+      // The whole book: every stock with at least one rule reading, best read per
+      // symbol, strongest first. The three tables show the armed calls; this is the
+      // "which of our stocks to buy or sell" list behind them.
+      signals: lastSignals.slice(0, 400),
+      signalCounts: {
+        total: lastSignals.length,
+        buy: lastSignals.filter((s) => s.side === 'BUY').length,
+        sell: lastSignals.filter((s) => s.side === 'SELL').length,
+        ruleMet: lastSignals.filter((s) => s.ruleMet === true).length,
+      },
+      tierFeed: tierMeta(),
+    };
+    fs.writeFileSync(BOARD_JSON_PATH, JSON.stringify(payload, null, 2), 'utf8');
+    fs.writeFileSync(HISTORY_JSON_PATH, JSON.stringify({
+      ok: true, date: today, history: closedHistory.slice(0, 500),
+    }, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[liveStrategyEngine] state save note:', e.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// LIGHT CYCLE — live quotes, P&L, exits. Cheap; runs on every call and on a timer.
+// ---------------------------------------------------------------------------
+async function refreshQuotesAndExits() {
+  if (!activeCandidates.length) return [];
+  const syms = Array.from(new Set(activeCandidates.map((c) => c.symbol)));
+  let quotes = {};
+  try {
+    quotes = await fetchAngelQuotes(syms);
+    quoteFailNote = Object.keys(quotes).length ? null : 'Angel One quote call returned nothing for the open calls';
+  } catch (e) {
+    quoteFailNote = 'Angel One quote call failed: ' + e.message;
+    return activeCandidates;
+  }
+  const now = istNow();
+  const keep = [];
+  for (const c of activeCandidates) {
+    const q = quotes[c.symbol];
+    const ltp = q ? Number(q.ltp) : NaN;
+    if (!isFinite(ltp) || ltp <= 0) { keep.push(c); continue; }
+    const entry = Number(c.entryPrice);
+    const short = isShortAction(c.action);
+    c.ltp = ltp;
+    const curPnLPct = +(((short ? entry - ltp : ltp - entry) / entry) * 100).toFixed(2);
+    c.livePnLPct = curPnLPct;
+    c.livePnLVal = +((short ? entry - ltp : ltp - entry)).toFixed(2);
+    c.quoteAt = now.iso;
+    c.ageMs = Date.now() - (c.timeMs || Date.now());
+    c.lateEntry = c.ageMs > (c.lateAfterMs || LATE_AFTER_MS[c.category] || 15 * 60 * 1000);
+
+    // Track MAE & MFE
+    c.maxFavPct = Math.max(c.maxFavPct || 0, curPnLPct);
+    c.maxAdvPct = Math.max(c.maxAdvPct || 0, -curPnLPct);
+    const riskPct = c.stopPctUsed || 0.6;
+    c.maxFavR = riskPct > 0 ? +(c.maxFavPct / riskPct).toFixed(2) : 0;
+    c.maxAdvR = riskPct > 0 ? +(c.maxAdvPct / riskPct).toFixed(2) : 0;
+
+    // Trailing Break-Even Profit Lock: Once position hits +1.0R MFE, move SL to Break-Even (+0.1% buffer)
+    if (c.maxFavR >= 1.0) {
+      const beStop = short ? +(entry * 0.999).toFixed(2) : +(entry * 1.001).toFixed(2);
+      if (short) {
+        if (beStop < c.stopLoss) c.stopLoss = beStop;
+      } else {
+        if (beStop > c.stopLoss) c.stopLoss = beStop;
+      }
+    }
+
+    const hitT1 = short ? ltp <= c.target1 : ltp >= c.target1;
+    const hitSL = short ? ltp >= c.stopLoss : ltp <= c.stopLoss;
+    if (hitT1 || hitSL) { retire(c, hitT1 ? 'TARGET_1_HIT' : 'STOP_LOSS_HIT'); continue; }
+    keep.push(c);
+  }
+  activeCandidates = keep;
+  return activeCandidates;
+}
+
+// THE ONE-TIME REBUILD ONTO THE UPGRADED GEOMETRY, as a function so it can run
+// from every path that can carry a stale row back onto the board — the heavy scan,
+// its out-of-session early return, and process start. Calls armed before the ATR
+// upgrade still carry the old fixed-percentage stop and target — the swing rows
+// were still at 4.5% / 9%. On the user's decision the book is rebuilt: each of
+// those is marked to the live LTP (when there is a live quote) and retired with
+// the UPGRADE_REBUILD verdict, so the upgraded logic re-arms from scratch and every
+// row on the board is then a call of the upgraded logic. It is naturally one-shot —
+// the filter is "has no ATR geometry", and nothing the upgraded engine opens lacks
+// it. They are removed from the book BEFORE the strategy loop, so nothing can carry
+// them back in through the keep-path. `quotes` may be empty (after hours there is
+// no live print to mark to): the row keeps the LTP the light cycle last gave it.
+function rebuildLegacyBook(quotes) {
+  const legacyGeometry = activeCandidates.filter((c) => c.atrBased !== true);
+  if (!legacyGeometry.length) return 0;
+  for (const c of legacyGeometry) {
+    const q = quotes && quotes[c.symbol];
+    const ltp = q ? Number(q.ltp) : NaN;
+    if (isFinite(ltp) && ltp > 0) c.ltp = ltp;   // mark to live, never to a stale print
+    retire(c, 'UPGRADE_REBUILD');
+  }
+  activeCandidates = activeCandidates.filter((c) => !legacyGeometry.includes(c));
+  console.log('[liveStrategyEngine] rebuilt the book onto the upgraded geometry: ' +
+    legacyGeometry.length + ' pre-upgrade call(s) closed');
+  return legacyGeometry.length;
+}
+
+// '09:30:00 AM' / '03:45:00 PM' → minutes past midnight, null when unparseable.
+// The IST clock reads 12-hour with a suffix, so a raw string compare against
+// '11:30:00 AM' is false for every 1–9 PM minute ('01' < '11') — time gates must
+// go through this instead of comparing the strings.
+function timeToMinutesIST(t) {
+  const m = /^(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i.exec(String(t || '').trim());
+  if (!m) return null;
+  let h = Number(m[1]) % 12;
+  if (/pm/i.test(m[4])) h += 12;
+  return h * 60 + Number(m[2]);
+}
+
+// ---------------------------------------------------------------------------
+// HEAVY CYCLE — pull the bars and run the nine rules.
+// ---------------------------------------------------------------------------
+async function runHeavyScan() {
+  if (heavyInFlight) return;
+  heavyInFlight = true;
+  const t0 = Date.now();
+  const nowMs = t0;
+  try {
+    const phase = sessionTiming.getSessionPhase();
+    const inSession = ['ACTIVE_TRADING', 'CUTOFF'].includes(phase.phase);
+    if (!inSession) {
+      // Outside the signal window we never open a new call — but the book restored
+      // from disk can still carry pre-upgrade rows, and the rebuild below only ever
+      // runs inside a full scan. Without this line a restart after 3:15 PM put the
+      // old fixed-percentage geometry back on the board and nothing removed it
+      // until the next session's first scan.
+      rebuildLegacyBook({});
+    }
+    if (!inSession && activeCandidates.length) {
+      // Existing calls keep being marked to market by the light cycle.
+      lastHeavyScanAt = Date.now();
+      lastHeavyScanMs = Date.now() - t0;
+      return;
+    }
+
+    // 1. ONE SWEEP over EVERY stock we track. Measured 2026-10-07: Angel One
+    //    answered 1009 of 1028 symbols in 3272ms, so the whole universe costs about
+    //    three seconds once a minute. A hand-picked shortlist meant five hundred
+    //    stocks could never produce a call.
+    let quotes = {};
+    try {
+      quotes = await fetchAngelQuotes(UNIVERSE);
+      quoteFailNote = Object.keys(quotes).length ? null : 'Angel One quote call returned nothing';
+    } catch (e) {
+      quoteFailNote = 'Angel One quote call failed: ' + e.message;
+    }
+    const priced = UNIVERSE.filter((s) => quotes[s] && isFinite(Number(quotes[s].ltp)) && Number(quotes[s].ltp) > 0);
+    if (!priced.length) {
+      lastHeavyScanAt = Date.now();
+      lastHeavyScanMs = Date.now() - t0;
+      console.warn('[liveStrategyEngine] scan skipped — ' + (quoteFailNote || 'no live quote for any universe symbol'));
+      return;
+    }
+
+    // 2. Write TODAY'S minute bar for every one of those stocks (open = previous
+    //    bar's close, volume = the change in cumulative day volume), then run the
+    //    rules over the whole universe. The bars persist per day, so a restart
+    //    continues the session instead of starting the minute series from zero.
+    const day = istNow().iso.slice(0, 10);
+    lastQuoted = priced.length;
+    lastBarsWritten = appendLiveBars(quotes, day, nowMs);
+    lastBarsReady = priced.filter((s) => (liveBars[s] || []).length >= 3).length;
+
+    // THE ONE-TIME REBUILD ONTO THE UPGRADED GEOMETRY (helper above), with this
+    // scan's live quotes to mark to — before the strategy loop, so nothing can
+    // carry a legacy row back in through the keep-path.
+    rebuildLegacyBook(quotes);
+
+    // 3. Run each strategy's own rule over every symbol in its own pool, so we can
+    //    both pick the strongest read AND re-check the call already on the book.
+    const now = istNow();
+    const next = [];
+    const report = [];
+    const signalBook = {};
+    // How many names the volume floor refused this scan. Computed ONCE over the
+    // priced universe — doing it inside the per-strategy loop would count the same
+    // blocked symbol once per strategy and report the tape as three times thinner
+    // than it is. `volFloorOk` is the set that cleared the floor, so every tier
+    // reads the same measure.
+    const volFloorOk = new Set();
+    // One measure over the priced universe: how many names this scan's tape refused.
+    const volFloorBlocked = { total: 0 };
+    // What the UPGRADED filters refused, bucketed by the reason they gave. Counted as
+    // (symbol, strategy) pairs — the same name can fail per strategy when a rule's
+    // side disagrees with the tape — and reported so a shorter table reads as "the
+    // filters refused it", not as a silent gap.
+    const uBlocked = { total: 0 };
+    for (const sym of priced) {
+      const v5 = last5MinVolume(liveBars[sym] || [], nowMs);
+      if (v5 === null || v5 < MIN_5M_VOL_SHARES) {
+        volFloorBlocked.total++;
+      } else {
+        volFloorOk.add(sym);
+      }
+    }
+    const currentMood = sessionTiming.getInvestorMoodRegime();
+    for (const strat of STRATEGIES) {
+      if (strat.enabled === false) {
+        report.push({ id: strat.id, tier: strat.tier, picked: null, reason: 'Strategy deactivated due to negative expectancy / loss drag' });
+        continue;
+      }
+      if (!currentMood.allowIntradayBreakouts && strat.tier === 'INTRADAY' && currentMood.regimeKey === 'LUNCH_CHOP_GUARD_MOOD') {
+        report.push({ id: strat.id, tier: strat.tier, picked: null, reason: 'Gated by Mid-Day Lunch Chop Guard (12:00-13:30 IST) to prevent fakeout traps' });
+        continue;
+      }
+      const rule = RULES[strat.rule];
+      if (typeof rule !== 'function') {
+        report.push({ id: strat.id, tier: strat.tier, picked: null, reason: 'no rule bound to this strategy' });
+        continue;
+      }
+      const swing = strat.tier === 'SWING';
+      const evals = [];
+      for (const sym of priced) {
+        const q = quotes[sym];
+        if (!q) continue;
+        // THE LIQUIDITY FLOOR, checked BEFORE the rule runs, on the live 1-minute
+        // bars — the same series the scalping/intraday rules read. The swing rules
+        // read daily bars, but their ENTRY still happens on this live tape, so the
+        // floor is read from the live bars for every tier.
+        if (!volFloorOk.has(sym)) continue;
+        // The swing rules read daily bars; the scalping and intraday rules read
+        // today's live minute bars, which need at least three before they mean
+        // anything.
+        const bars = swing ? null : (liveBars[sym] || []);
+        if (!swing && bars.length < 3) continue;
+        const daily = swing ? loadDaily(sym) : null;
+        if (swing && !daily) continue;
+        const ltp = Number(q.ltp);
+        // THE UPGRADED FILTERS run before the rule does. The live-minute tiers are
+        // filtered on the 1-minute tape (trend alignment, volume persistence, the
+        // 15-minute turnover floor); a swing call reads daily bars for its signal,
+        // but its ENTRY still happens on today's tape, so it is held to the same
+        // tape filters and takes its ATR from the daily series it actually trades.
+        let uctx = null;
+        let atr = null;
+        if (!swing) {
+          const u = upgradedFilters(bars, ltp, nowMs);
+          if (!u.ok) { uBlocked.total++; uBlocked[u.why] = (uBlocked[u.why] || 0) + 1; continue; }
+          uctx = u;
+          atr = u.atr;
+        } else {
+          const u = upgradedFilters(liveBars[sym] || [], ltp, nowMs);
+          if (!u.ok) { uBlocked.total++; uBlocked[u.why] = (uBlocked[u.why] || 0) + 1; continue; }
+          atr = atrOf(daily, UPGRADED.atrPeriod) || u.atr;
+        }
+        const ctx = {
+          sym, ltp, q,
+          bars,
+          nowMs,
+          daily,
+          dailyAsOf: daily && daily.length ? daily[daily.length - 1].d : null,
+        };
+        let r = null;
+        try { r = rule(ctx, strat.params); } catch (_) { r = null; }
+        if (!r || !r.side) continue;
+        // UPSIDE-ONLY SWING. A swing SELL is dropped here, so it can be neither
+        // opened nor booked into the signal list.
+        if (swing && SWING_LONG_ONLY && r.side === 'SELL') continue;
+        // TREND AGREEMENT: the rule's own side must match the tape's trend. This is
+        // the half of the upgrade that removes counter-trend reads — a SELL rule
+        // firing while price sits above both the 20-bar mean and VWAP is exactly the
+        // losing trade the spec was written to stop.
+        if (uctx && uctx.side !== r.side) { uBlocked.total++; uBlocked['rule disagrees with the tape trend'] = (uBlocked['rule disagrees with the tape trend'] || 0) + 1; continue; }
+        const lastBar = bars && bars.length ? bars[bars.length - 1] : null;
+        evals.push({
+          sym, ltp, r,
+          dailyAsOf: ctx.dailyAsOf,
+          barsAsOf: lastBar ? lastBar.t : null,
+          barsAgeSec: lastBar ? Math.max(0, Math.round((nowMs - lastBar.t) / 1000)) : null,
+          vol5m: last5MinVolume(liveBars[sym] || [], nowMs),
+          atr,
+          // The evidence the upgraded filters passed this name on, carried through to
+          // the row and the Telegram message so a call states its own conditions
+          // (trend side, the two levels it had to clear, the 15-minute volume, how
+          // many of the last five bars carried 1.5x average, and the ATR the stop
+          // was built from).
+          filterNote: uctx
+            ? ('trend ' + uctx.side + ' · 20-bar mean ' + uctx.ema20.toFixed(2) + ' · VWAP ' + uctx.vwap.toFixed(2) +
+              ' · 15m vol ' + Math.round(uctx.vol15m) + ' shares · ' + uctx.persist + ' of last 5 bars >= ' +
+              UPGRADED.volPersistMult + 'x avg · ATR14 ' + uctx.atr.toFixed(4))
+            : null,
+        });
+        // The whole book: keep this symbol's strongest reading across all nine rules.
+        const rankNow = (r.ruleMet ? 1000 : 0) + (isFinite(r.score) ? r.score : 0);
+        const prev = signalBook[sym];
+        if (!prev || rankNow > prev._rank) {
+          signalBook[sym] = {
+            symbol: sym, tier: strat.tier, strategyId: strat.id, side: r.side,
+            action: r.side === 'SELL' ? 'SELL / SHORT' : 'BUY / LONG',
+            ltp, entryPrice: ltp, stopLoss: null, target1: null,
+            changePct: Number(q.changePct) || 0,
+            ruleMet: r.ruleMet === true, measured: r.measured, barsUsed: r.barsUsed || null,
+            vol5m: last5MinVolume(liveBars[sym] || [], nowMs),
+            _rank: rankNow,
+          };
+        }
+      }
+
+      const priors = activeCandidates.filter((c) => c.strategyId === strat.id);
+
+      if (!evals.length) {
+        // A data gap is not a reason to drop a live call — but it IS a reason to
+        // say the rows have no fresh reading.
+        for (const p of priors) {
+          p.measured = 'no fresh reading this scan — held at the live LTP';
+          next.push(p);
+        }
+        report.push({
+          id: strat.id, tier: strat.tier, count: priors.length,
+          picked: priors.map((c) => c.symbol).join(','), dataGap: true, kept: priors.length,
+          reason: swing
+            ? 'no symbol in the priced universe has enough daily bars'
+            : 'no symbol had enough 1-minute bars in this scan',
+        });
+        continue;
+      }
+
+      // Rank by "rule met" first, then by this strategy's own strength score.
+      const rank = (e) => (e.r.ruleMet ? 1000 : 0) + (isFinite(e.r.score) ? e.r.score : 0);
+      evals.sort((a, b) => rank(b) - rank(a));
+
+      // MULTIPLE CALLS PER STRATEGY. The rule runs over the whole universe, so a
+      // strategy firing on more than one name posts more than one call, up to
+      // MAX_PER_STRATEGY — or five per strategy for swing, whose calls hold for
+      // weeks and would otherwise starve the tier of new names. ONE POSITION PER
+      // SYMBOL across the whole scan: without
+      // that, the three swing rules all land on the single strongest name and three
+      // rows that look like three calls are one position counted three times.
+      const usedSyms = new Set(next.map((c) => c.symbol));
+      const chosen = [];
+
+      // 4. HYSTERESIS. Keep every call already on the book for this strategy while
+      //    its own rule still holds in its own direction and it has not aged out of
+      //    its window.
+      for (const prior of priors) {
+        const pe = evals.find((e) => e.sym === prior.symbol);
+        if (pe) prior.ltp = pe.ltp;             // mark to the live price first
+        const ageMs = Date.now() - (prior.timeMs || Date.now());
+        const windowMs = prior.maxAgeMs || strat.maxAgeMs;
+        const priorSide = isShortAction(prior.action) ? 'SELL' : 'BUY';
+        // THE FLOOR RETIRES A SCALP/INTRADAY ROW — NOT A SWING POSITION. A name
+        // under 1,000 shares in five minutes cannot be exited inside five minutes;
+        // that is a scalping problem, not a swing one, where the call is held for up
+        // to 50 days and exits over days. Applied to swing this also killed a call on
+        // the first scan of a session or on any scan with no 5-minute bars yet
+        // (`priorVol5 === null`) — the position vanished for no reason the user could
+        // see. Swing keeps its call; the volume still prints on the row.
+        const priorVol5 = last5MinVolume(liveBars[prior.symbol] || [], nowMs);
+        if (!swing && (priorVol5 === null || priorVol5 < MIN_5M_VOL_SHARES)) {
+          retire(prior, 'LOW_VOLUME');
+          continue;
+        }
+        // UPSIDE-ONLY SWING applies to calls already on the book too: a swing SELL
+        // armed before this rule existed leaves rather than lingering as a short
+        // the user never asked for.
+        if (swing && SWING_LONG_ONLY && priorSide === 'SELL') {
+          retire(prior, 'UPSIDE_ONLY');
+          continue;
+        }
+        // The call stays while its own rule still points its way and it has not
+        // aged out of its window. `ruleMet` is deliberately NOT required to keep
+        // it: any volume/momentum threshold dips and recovers minute to minute, and
+        // retiring on every dip churns a new entry — and a new history row — every
+        // 20-second scan. The row carries the live ruleMet either way, so a call
+        // whose threshold has softened shows as such rather than silently vanishing.
+        if (pe && pe.r.side === priorSide && ageMs < windowMs) {
+          prior.ruleMet = pe.r.ruleMet;
+          prior.rule = pe.r.detail;
+          prior.measured = pe.r.measured;
+          prior.barsUsed = pe.r.barsUsed === undefined ? prior.barsUsed : pe.r.barsUsed;
+          prior.barsAgeSec = pe.barsAgeSec;
+          // Refresh the traded tape on the row too. Without this, a call carried over
+          // from before the floor existed kept a blank `vol5m` forever, so the table
+          // could not show the volume its own floor had just cleared it against.
+          prior.vol5m = priorVol5;
+          prior.quoteAt = now.iso;
+          prior.ageMs = ageMs;
+          prior.lateEntry = ageMs > (prior.lateAfterMs || LATE_AFTER_MS[strat.tier] || 15 * 60 * 1000);
+          chosen.push(prior);
+          usedSyms.add(prior.symbol);
+          continue;
+        }
+        // A young call is never retired on a flip — that would churn a new entry
+        // every scan.
+        if (ageMs >= MIN_HOLD_MS && (pe || ageMs >= windowMs)) {
+          retire(prior, pe ? 'RULE_FLIPPED' : 'WINDOW_ELAPSED');
+        } else {
+          // No reading for this symbol this scan (or too young to retire): hold the
+          // call rather than replacing it, and say the reading is not fresh instead
+          // of leaving a stale measurement on the row.
+          prior.quoteAt = now.iso;
+          prior.ageMs = ageMs;
+          prior.vol5m = priorVol5;
+          prior.measured = 'no fresh reading this scan — held at the live LTP';
+          chosen.push(prior);
+          usedSyms.add(prior.symbol);
+        }
+      }
+
+      // 5. Open a call for each qualifying name this strategy does not already hold.
+      //    A name the rule is NOT meeting is never opened ahead of one it IS meeting.
+      //    ENFORCED:
+      //    - Symbol Cooldown: 60-min block after Stop Loss hit on this symbol.
+      //    - Cross-Strategy Lock: Single symbol cannot be opened by multiple strategies concurrently.
+      //    - ORB Time Window: ORB entries permitted ONLY between 09:30 AM and 11:30 AM IST.
+      // ORB entries stop at 11:30 AM IST. Parsed to minutes: the raw string compare
+      // was false for every 1–9 PM minute ('01:45:00 PM' < '11:30:00 AM'), which
+      // reopened the ORB window all afternoon.
+      const orbLateMins = timeToMinutesIST(now.time);
+      const isOrbLate = strat.id === 'ORB_INTRADAY' && orbLateMins !== null && orbLateMins > 11 * 60 + 30;
+      
+      if (!isOrbLate) {
+        for (const e of evals) {
+          if (chosen.length >= capFor(strat)) break;
+          if (!e.r.ruleMet || usedSyms.has(e.sym)) continue;
+          
+          // Check 60-min symbol stop loss cooldown
+          const coolUntil = symbolCooldowns.get(e.sym + ':' + strat.id);
+          if (coolUntil && coolUntil > nowMs) continue;
+
+          // Cross-strategy symbol lock (deduplicate across all strategies)
+          if (next.some((c) => c.symbol === e.sym)) continue;
+
+          chosen.push(openCall(strat, e.sym, e.ltp, e.r, e));
+          usedSyms.add(e.sym);
+        }
+      }
+
+      // 6. A strategy that fired on NOTHING still posts its strongest read, so its
+      //    tier table is never blank — and the row carries ruleMet:false plus the
+      //    measured value, so a weak read is labelled weak and never dressed up as
+      //    a fired signal. Strict ruleMet-only gating was tried and it EMPTIES the
+      //    table on a quiet tape (measured 2026-10-07 11:58: scalping 0 calls),
+      //    which is the exact failure the three tier tables were built to stop.
+      if (!chosen.length) {
+        const best = evals.find((e) => !usedSyms.has(e.sym)) || evals[0];
+        chosen.push(openCall(strat, best.sym, best.ltp, best.r, best));
+        usedSyms.add(best.sym);
+      }
+
+      for (const row of chosen) next.push(row);
+      report.push({
+        id: strat.id, tier: strat.tier, count: chosen.length,
+        picked: chosen.map((c) => c.symbol).join(','),
+        ruleMet: chosen.filter((c) => c.ruleMet === true).length,
+        kept: chosen.filter((c) => priors.includes(c)).length,
+        measured: chosen.map((c) => c.symbol + ' ' + (c.measured || '')).join(' | '),
+      });
+      console.log('[liveStrategyEngine] ' + strat.id + ' → ' + chosen.length + ' call(s): ' +
+        chosen.map((c) => c.symbol + ' ' + String(c.action).slice(0, 4) + ' @' + c.entryPrice).join(', '));
+    }
+
+    // Calls armed for the first time in this scan → the Telegram push. Computed
+    // before activeCandidates is replaced, so it is exactly the new rows.
+    const opened = next.filter((r) => !activeCandidates.includes(r));
+
+    // Give every book entry the levels its own strategy's geometry implies, so the
+    // "which of our stocks to buy or sell" list carries BUY/SELL with a stop and a
+    // target rather than a bare direction.
+    for (const sym of Object.keys(signalBook)) {
+      const s = signalBook[sym];
+      const strat = STRATEGIES.find((x) => x.id === s.strategyId);
+      if (!strat) continue;
+      const short = s.side === 'SELL';
+      s.stopLoss = +(s.ltp * (short ? 1 + strat.slPct : 1 - strat.slPct)).toFixed(2);
+      s.target1 = +(s.ltp * (short ? 1 - strat.targetPct : 1 + strat.targetPct)).toFixed(2);
+      s.holdingPeriod = strat.holdingPeriod;
+      delete s._rank;
+    }
+    lastSignals = Object.values(signalBook).sort((a, b) =>
+      (b.ruleMet ? 1 : 0) - (a.ruleMet ? 1 : 0) ||
+      Math.abs(b.changePct) - Math.abs(a.changePct));
+
+    activeCandidates = next;
+    lastHeavyScanAt = Date.now();
+    lastHeavyScanMs = Date.now() - t0;
+    lastVolFloorBlocked = volFloorBlocked;
+    lastUBlocked = uBlocked;
+    lastReport = report;
+    // Counted off the rows actually on the book, not off the report — the report is
+    // a per-strategy summary and one strategy can hold several calls.
+    const c = tierCounts();
+    console.log('[liveStrategyEngine] scan ' + lastHeavyScanMs + 'ms · universe ' + UNIVERSE.length +
+      ' · quoted ' + priced.length + ' · bars ready ' + lastBarsReady + ' (+' + lastBarsWritten + ' this minute) · on the book ' +
+      activeCandidates.length + ' calls: scalp ' + c.SCALPING + ' / intraday ' + c.INTRADAY +
+      ' / swing ' + c.SWING + ' · book ' + lastSignals.length + ' symbols readable');
+    if (opened.length) {
+      console.log('[liveStrategyEngine] new this scan: ' + opened.map((r) => r.symbol + ' ' + String(r.action).slice(0, 4) + ' @' + r.entryPrice).join(', '));
+      pushNewCallsToTelegram(opened, { total: activeCandidates.length, SCALPING: c.SCALPING, INTRADAY: c.INTRADAY, SWING: c.SWING }).catch(() => {});
+    }
+  } catch (e) {
+    console.error('[liveStrategyEngine] heavy scan failed:', e.message);
+  } finally {
+    heavyInFlight = false;
+    firstScanDone = true;
+    // The per-day bar file is large (one row per stock per minute), so it is
+    // written at most every five minutes rather than on every scan.
+    if (Date.now() - lastLiveBarSaveAt > 300000) {
+      saveLiveBars();
+      lastLiveBarSaveAt = Date.now();
+    }
+    saveState();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// PUBLIC
+// ---------------------------------------------------------------------------
+/**
+ * The route-facing entry point. It refreshes the live P&L (cheap), returns the
+ * current nine calls, and — on the very first call after a restart — waits for the
+ * strategy scan so the tables are populated rather than blank.
+ */
+async function scanAndEvaluate() {
+  await refreshQuotesAndExits();
+  if (!firstScanDone) {
+    await runHeavyScan();
+  } else if (Date.now() - lastHeavyScanAt > HEAVY_INTERVAL_MS && !heavyInFlight) {
+    runHeavyScan().catch(() => {});   // fire and forget: a request must not wait on the bar pull
+  }
+  return {
+    candidates: activeCandidates.filter(isEnabledCandidate),
+    history: closedHistory,
+    report: lastReport,
+    signals: lastSignals,
+    tierFeed: tierMeta(),
+    tierNet: measuredNetR(),
+    strategyPerformance: strategyPerformance(),
+  };
+}
+
+loadState();
+// A board file saved before the ATR upgrade can restore rows without ATR geometry.
+// Rebuild them at start, not on the next full scan — after 3:15 PM the heavy scan
+// early-returns and "the next full scan" would be tomorrow, leaving the stale rows
+// on the page (and re-persisting them through saveState) all evening.
+rebuildLegacyBook({});
+// Resume today's minute bars, so a restart mid-session does not throw away the
+// history the bar-based rules need.
+loadLiveBars(istNow().iso.slice(0, 10));
+
+// Legacy heavy REST quote timers disabled — replaced by zero-rate-limit liveMinuteEngine
+saveState();
+// const _heavyTimer = setInterval(() => { ... });
+// const _lightTimer = setInterval(() => { ... });
+
+module.exports = {
+  scanAndEvaluate,
+  refreshQuotesAndExits,
+  runHeavyScan,
+  getActiveCandidates: () => activeCandidates.filter(isEnabledCandidate),
+  getClosedHistory: () => closedHistory,
+  getTierFeed: () => tierMeta(),
+  getReport: () => lastReport,
+  getSignals: () => lastSignals,
+  getLiveBars: (sym) => liveBars[sym] || [],
+  pushNewCallsToTelegram,
+  callTelegramText,
+  strategyPerformance,
+  last5MinVolume,
+  MIN_5M_VOL_SHARES,
+  measuredNetR,
+  STRATEGIES,
+  LIQUID_SYMBOLS,
+  loadDaily,
+  RULES,
+};

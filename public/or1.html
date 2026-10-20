@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OR1 — Grow Better</title>
+<style>
+  :root { --bg:#0d1117; --fg:#c9d1d9; --dim:#8b949e; --line:#30363d; --buy:#2ea043; --sell:#f85149; --warn:#d29922; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--fg);
+         font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:15px; margin:26px 0 8px; color:#e6edf3; }
+  .sub { color:var(--dim); font-size:12px; }
+  .banner { border:1px solid var(--warn); background:rgba(210,153,34,.12); color:#e3b341;
+            padding:12px 14px; border-radius:6px; margin:16px 0; }
+  .banner b { color:#f0c674; }
+  .row { display:flex; gap:18px; flex-wrap:wrap; margin:14px 0; }
+  .kpi { border:1px solid var(--line); border-radius:6px; padding:10px 14px; min-width:150px; }
+  .kpi .v { font-size:22px; font-weight:600; }
+  .kpi .k { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.06em; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .buy { color:var(--buy); font-weight:600; }
+  .sell { color:var(--sell); font-weight:600; }
+  .pos { color:var(--buy); } .neg { color:var(--sell); }
+  .card { border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin-top:10px; }
+  .card h3 { margin:0 0 8px; font-size:13px; color:#e6edf3; }
+  ul { margin:6px 0 0; padding-left:20px; }
+  li { margin:3px 0; }
+  code { background:#161b22; padding:1px 5px; border-radius:4px; }
+  .log { border-left:2px solid var(--line); padding-left:14px; margin-top:8px; }
+  .log .item { margin:12px 0; }
+  .log .date { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; border:1px solid currentColor; }
+  a { color:#58a6ff; }
+</style>
+</head>
+<body>
+
+<h1>OR1 — Opening-range imbalance → continuation</h1>
+<div class="sub" id="sub">loading…</div>
+
+<!-- THE HONESTY BANNER. It never disappears before the checkpoint does. -->
+<div class="banner" id="banner">
+  <b>PROVISIONAL — NOT CONFIRMED.</b> <span id="why">…</span><br>
+  Every call on this page is a <b>shadow</b> signal. This is research output, not an instruction to trade.
+</div>
+
+<div class="row" id="kpis"></div>
+
+<h2>Signals — buy / sell by session</h2>
+<div class="sub">One row per frozen OR1 signal. Entry = next 1m open; exit = target or time stop. Cost <span id="cost">7</span> bp round trip.</div>
+<table id="t">
+  <thead>
+    <tr>
+      <th>Session</th><th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th>
+      <th>Exit reason</th><th class="n">Gross bp</th><th class="n">Net bp</th>
+    </tr>
+  </thead>
+  <tbody id="tb"><tr><td colspan="8" class="sub">loading…</td></tr></tbody>
+</table>
+
+<h2>By session</h2>
+<table id="s">
+  <thead>
+    <tr><th>Session</th><th class="n">Cover</th><th class="n">Signals</th>
+        <th class="n">Net exp bp</th><th class="n">PF</th><th class="n">Top symbol share</th><th>Verdict</th></tr>
+  </thead>
+  <tbody id="sb"></tbody>
+</table>
+
+<h2>What we did for this strategy</h2>
+<div class="sub">A living record. When a checkpoint resolves FAIL it gets written here — it is never quietly deleted.</div>
+
+<div class="card">
+  <h3>Frozen definition (never edited)</h3>
+  <div id="def">loading…</div>
+</div>
+
+<div class="card">
+  <h3>Pre-declared read rule</h3>
+  <div id="rule">loading…</div>
+</div>
+
+<div class="card">
+  <h3>History</h3>
+  <div class="log" id="log"></div>
+</div>
+
+<div class="card">
+  <h3>Why the number you see here is not a confirmation</h3>
+  <ul>
+    <li>The statistical unit is the <b>session</b>, not the trade. 7 trades over 2 sessions cannot separate skill from luck.</li>
+    <li>Calibration: 79 trades / 17 sessions, net <b>+13.03 bp</b>, session-block CI <b>[−22.75, +34.24]</b> — it straddles zero.</li>
+    <li>Every one of the 7 fresh signals is a <b>SELL</b>: a one-sided sample, so the apparent edge may be a long/short asymmetry of these two days.</li>
+    <li>The read rule is frozen at <b>40</b> sessions (terminal <b>80</b>, no extension). Nothing here is tuned on the 12 dev sessions or the locked five.</li>
+  </ul>
+</div>
+
+<div class="sub" style="margin-top:26px">
+  Source: <code id="src"></code> · Definition sha <code id="sha"></code> ·
+  Generated <span id="gen"></span>
+</div>
+
+<script>
+(function () {
+  function el(id){ return document.getElementById(id); }
+  function fmt(n, d){ return (n === null || n === undefined || isNaN(n)) ? '—'
+        : Number(n).toFixed(d === undefined ? 2 : d); }
+  function side(s){
+    var v = String(s || '').toUpperCase();
+    if (v === 'BUY')  return '<span class="buy">BUY</span>';
+    if (v === 'SELL') return '<span class="sell">SELL</span>';
+    return '<span class="sub">' + (s || '—') + '</span>';
+  }
+  function cls(n){ return n > 0 ? 'pos' : (n < 0 ? 'neg' : ''); }
+
+  fetch('/data/or1_signals.json', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      el('sub').textContent = 'Frozen shadow validation · ' + d.status.label + ' sessions recorded'
+        + ' · cost ' + d.cost_bp + ' bp';
+      el('cost').textContent = d.cost_bp;
+      if (d.provisional) el('why').textContent = d.whyProvisional;
+      el('src').textContent = d.journal;
+      el('sha').textContent = (d.definition_sha || '').slice(0, 16);
+      el('gen').textContent = d.generatedAt;
+
+      var t = d.totals || {};
+      var pos = (d.sessions || []).filter(function (s) { return s.positive; }).length;
+      el('kpis').innerHTML = [
+        ['Sessions', d.status.label],
+        ['Signals', t.trades],
+        ['Wins', t.wins],
+        ['Net exp bp', fmt(t.net_exp_bp)],
+        ['Positive sessions', pos + ' / ' + d.status.sessions]
+      ].map(function (k) {
+        return '<div class="kpi"><div class="k">' + k[0] + '</div><div class="v">' + k[1] + '</div></div>';
+      }).join('');
+
+      el('tb').innerHTML = (d.trades || []).map(function (r) {
+        return '<tr>' +
+          '<td>' + r.session + '</td>' +
+          '<td>' + r.symbol + '</td>' +
+          '<td>' + side(r.side) + '</td>' +
+          '<td>' + r.entry + '</td>' +
+          '<td>' + r.exit + '</td>' +
+          '<td class="sub">' + (r.reason || '') + '</td>' +
+          '<td class="n ' + cls(r.gross_bp) + '">' + fmt(r.gross_bp) + '</td>' +
+          '<td class="n ' + cls(r.net_bp) + '">' + fmt(r.net_bp) + '</td>' +
+        '</tr>';
+      }).join('') || '<tr><td colspan="8" class="sub">No signals recorded yet.</td></tr>';
+
+      el('sb').innerHTML = (d.sessions || []).map(function (s) {
+        return '<tr>' +
+          '<td>' + s.session + '</td>' +
+          '<td class="n">' + s.coverage + '/' + s.eligible + '</td>' +
+          '<td class="n">' + s.signals + '</td>' +
+          '<td class="n ' + cls(s.net_exp_bp) + '">' + fmt(s.net_exp_bp) + '</td>' +
+          '<td class="n">' + fmt(s.net_pf, 2) + '</td>' +
+          '<td class="n">' + fmt(s.max_symbol_share, 2) + '</td>' +
+          '<td class="sub">' + (s.positive === null || s.positive === undefined ? '—'
+              : (s.positive ? 'positive' : 'negative')) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      var def = d.definition || {};
+      el('def').innerHTML = '<ul>' + Object.keys(def).map(function (k) {
+        return '<li><code>' + k + '</code> — ' + def[k] + '</li>';
+      }).join('') + '</ul>';
+
+      var rr = d.readRule || {};
+      el('rule').innerHTML =
+        '<ul>' +
+          '<li>FIRST checkpoint: <b>' + rr.first_checkpoint + '</b> complete sessions</li>' +
+          '<li>TERMINAL checkpoint: <b>' + rr.terminal_checkpoint + '</b> sessions — no extension</li>' +
+          'PASS requires ALL of: ' + (rr.PASS_requires || []).map(function (p) {
+            return '<li><code>' + p + '</code></li>';
+          }).join('') +
+          '<li>' + (rr.note || '') + '</li>' +
+        '</ul>';
+
+      // ---- the living history ----
+      var hist = [
+        ['before recording', 'Calibration on the historical tape: 79 trades / 17 sessions, net +13.03 bp, '
+           + 'session-block CI [−22.75, +34.24]. NOT established — the interval crosses zero.'],
+        ['spec frozen', 'OR1_SHADOW_SPEC.md written with the 40/80 checkpoints and the four PASS conditions, '
+           + 'before any unseen session was recorded.'],
+        ['2026-10-01', 'First fresh session recorded (566/582 complete). 1 signal, +139.0 bp net — a SINGLE trade '
+           + 'in ONE symbol (top-symbol share 1.00).'],
+        ['2026-10-05', 'Second fresh session recorded (565/578 complete). 6 signals, +65.7 bp net, PF 3.97, '
+           + 'max drawdown −82.7 bp. All 6 were SELL.'],
+        ['now', '2 / 40 sessions. Pooled 7 trades, +76.1 bp. Status remains PROVISIONAL — '
+           + 'this is inside the calibration CI and is not confirmation.']
+      ];
+      el('log').innerHTML = hist.map(function (h) {
+        return '<div class="item"><div class="date">' + h[0] + '</div><div>' + h[1] + '</div></div>';
+      }).join('');
+    })
+    .catch(function (e) {
+      el('sub').textContent = 'Could not load /data/or1_signals.json — run '
+        + 'python research/pipeline/export_frontend.py';
+      console.error(e);
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+{
+  "generatedAt": "2026-10-05T16:13:50",
+  "status": {
+    "sessions": 2,
+    "target": 40,
+    "label": "2 / 40"
+  },
+  "provisional": true,
+  "whyProvisional": "FROZEN read rule not reached yet. 7 trades over 2 sessions. Not a finding, not a confirmation, and no rule may act on it as if it were.",
+  "cost_bp": 7.0,
+  "definition_sha": "d3941c1798407a35af694f6ab7c4b3f2923836ea572f7242d5da81e7351c5eed",
+  "definition": {
+    "engine": "OR1 \u2014 opening-range imbalance -> continuation",
+    "or_window": "09:15-09:45 IST",
+    "entry": "next 1m bar open",
+    "target_stop": "entry +/- 1.0 x OR range (OR midpoint)",
+    "time_exit": "15:00",
+    "new_entry_cutoff": "14:50",
+    "independence": "one signal per symbol per session"
+  },
+  "readRule": {
+    "first_checkpoint": 40,
+    "terminal_checkpoint": 80,
+    "PASS_requires": [
+      "mean session net exp > 0",
+      "session-block bootstrap 95% CI lower > 0",
+      "positive-session % >= 60",
+      "aggregate net @10 bp > 0"
+    ],
+    "note": "PRE-DECLARED in research/shadow/OR1_SHADOW_SPEC.md. Fixed before any session was recorded."
+  },
+  "sessions": [
+    {
+      "session": "2026-10-01",
+      "coverage": 566,
+      "eligible": 582,
+      "signals": 1,
+      "net_exp_bp": 138.99,
+      "net_pf": null,
+      "positive": true,
+      "max_symbol_share": 1.0,
+      "nifty_move_bp": null
+    },
+    {
+      "session": "2026-10-05",
+      "coverage": 565,
+      "eligible": 578,
+      "signals": 6,
+      "net_exp_bp": 65.66,
+      "net_pf": 3.965,
+      "positive": true,
+      "max_symbol_share": 0.339,
+      "nifty_move_bp": null
+    }
+  ],
+  "trades": [
+    {
+      "session": "2026-10-01",
+      "symbol": "AWFIS",
+      "side": "SELL",
+      "entry": "12:10",
+      "exit": "13:41",
+      "gross_bp": 145.99,
+      "net_bp": 138.99,
+      "reason": "target",
+      "hold_min": 91
+    },
+    {
+      "session": "2026-10-05",
+      "symbol": "ARVSMART",
+      "side": "SELL",
+      "entry": "10:10",
+      "exit": "15:00",
+      "gross_bp": -43.18,
+      "net_bp": -50.18,
+      "reason": "time",
+      "hold_min": 290
+    },
+    {
+      "session": "2026-10-05",
+      "symbol": "NEOGEN",
+      "side": "SELL",
+      "entry": "10:10",
+      "exit": "12:48",
+      "gross_bp": 230.7,
+      "net_bp": 223.7,
+      "reason": "target",
+      "hold_min": 158
+    },
+    {
+      "session": "2026-10-05",
+      "symbol": "SAMHI",
+      "side": "SELL",
+      "entry": "10:20",
+      "exit": "15:00",
+      "gross_bp": 106.22,
+      "net_bp": 99.22,
+      "reason": "time",
+      "hold_min": 280
+    },
+    {
+      "session": "2026-10-05",
+      "symbol": "GAIL",
+      "side": "SELL",
+      "entry": "10:25",
+      "exit": "11:49",
+      "gross_bp": 167.26,
+      "net_bp": 160.26,
+      "reason": "target",
+      "hold_min": 84
+    },
+    {
+      "session": "2026-10-05",
+      "symbol": "SOLARA",
+      "side": "SELL",
+      "entry": "10:30",
+      "exit": "15:00",
+      "gross_bp": 50.6,
+      "net_bp": 43.6,
+      "reason": "time",
+      "hold_min": 270
+    },
+    {
+      "session": "2026-10-05",
+      "symbol": "GICRE",
+      "side": "SELL",
+      "entry": "10:35",
+      "exit": "15:00",
+      "gross_bp": -75.66,
+      "net_bp": -82.66,
+      "reason": "time",
+      "hold_min": 265
+    }
+  ],
+  "totals": {
+    "trades": 7,
+    "wins": 5,
+    "net_exp_bp": 76.13
+  },
+  "journal": "research/pipeline/journal.jsonl"
+}

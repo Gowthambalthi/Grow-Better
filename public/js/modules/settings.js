@@ -212,13 +212,24 @@ export function initSettingsView() {
     waForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const whatsappApiKey = waKeyInput?.value || '';
-      api('/api/notifications/settings', 'POST', { whatsappApiKey })
+      // `api(path, opts)` spreads opts straight into fetch, so the method has to travel AS a field.
+      // The old call passed the string 'POST' as opts, which produced a GET with no body: the save
+      // silently never reached the POST-only route.
+      api('/api/notifications/settings', { method: 'POST', body: JSON.stringify({ whatsappApiKey }) })
         .then(() => {
           if (statusAlert) {
             statusAlert.style.display = 'block';
             statusAlert.style.background = 'rgba(16,185,129,0.15)';
             statusAlert.style.color = '#10B981';
-            statusAlert.textContent = '✓ Saved WhatsApp API Key for +91 9390219001!';
+            statusAlert.textContent = '✓ Saved WhatsApp API Key!';
+          }
+        })
+        .catch((err) => {
+          if (statusAlert) {
+            statusAlert.style.display = 'block';
+            statusAlert.style.background = 'rgba(239,68,68,0.15)';
+            statusAlert.style.color = 'var(--loss)';
+            statusAlert.textContent = `⚠️ Could not save WhatsApp key: ${err.message}`;
           }
         });
     });
@@ -229,13 +240,21 @@ export function initSettingsView() {
       e.preventDefault();
       const botToken = tgTokenInput?.value || '';
       const chatId = tgChatInput?.value || '';
-      api('/api/notifications/settings', 'POST', { botToken, chatId })
+      api('/api/notifications/settings', { method: 'POST', body: JSON.stringify({ botToken, chatId }) })
         .then(() => {
           if (statusAlert) {
             statusAlert.style.display = 'block';
             statusAlert.style.background = 'rgba(16,185,129,0.15)';
             statusAlert.style.color = '#10B981';
             statusAlert.textContent = '✓ Saved Telegram Bot Token & Chat ID!';
+          }
+        })
+        .catch((err) => {
+          if (statusAlert) {
+            statusAlert.style.display = 'block';
+            statusAlert.style.background = 'rgba(239,68,68,0.15)';
+            statusAlert.style.color = 'var(--loss)';
+            statusAlert.textContent = `⚠️ Could not save Telegram settings: ${err.message}`;
           }
         });
     });
@@ -249,20 +268,39 @@ export function initSettingsView() {
         statusAlert.style.color = '#2563EB';
         statusAlert.textContent = '⏳ Sending multi-channel test push alert...';
       }
-      api('/api/notifications/test', 'POST')
+      // BOUNDED WAIT. The test route builds its message through a function that can throw before it
+      // ever answers, and when it does the request is simply never responded to. Without a deadline
+      // this button sits on "sending..." for ever and the failure is invisible. A timeout turns a
+      // silent hang into something the reader can act on.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      api('/api/notifications/test', { method: 'POST', signal: controller.signal })
         .then((res) => {
-          if (statusAlert) {
-            if (res.success) {
-              statusAlert.style.background = 'rgba(16,185,129,0.15)';
-              statusAlert.style.color = '#10B981';
-              statusAlert.textContent = `📲 TEST PUSH SENT! Delivered to ${res.sentTo?.join(', ') || 'Phone (+91 9390219001)'}!`;
-            } else {
-              statusAlert.style.background = 'rgba(239,68,68,0.15)';
-              statusAlert.style.color = 'var(--loss)';
-              statusAlert.textContent = `⚠️ Notification: ${res.reason || 'Failed to deliver'}`;
-            }
+          if (!statusAlert) return;
+          // `sentTo` comes from the phone-notification transport, `channels` from the alert one;
+          // accept either rather than claiming delivery when the field is simply absent.
+          const delivered = res.sentTo?.length
+            ? res.sentTo.join(', ')
+            : (res.channels || []).filter((c) => c && c.success).map((c) => c.channel).join(', ');
+          if (res.success) {
+            statusAlert.style.background = 'rgba(16,185,129,0.15)';
+            statusAlert.style.color = '#10B981';
+            statusAlert.textContent = `\ud83d\udcf2 TEST PUSH SENT! Delivered to ${delivered || 'Phone'}!`;
+          } else {
+            statusAlert.style.background = 'rgba(239,68,68,0.15)';
+            statusAlert.style.color = 'var(--loss)';
+            statusAlert.textContent = `\u26a0\ufe0f Notification: ${res.reason || 'Failed to deliver'}`;
           }
-        });
+        })
+        .catch((err) => {
+          if (!statusAlert) return;
+          statusAlert.style.background = 'rgba(239,68,68,0.15)';
+          statusAlert.style.color = 'var(--loss)';
+          statusAlert.textContent = err && err.name === 'AbortError'
+            ? '\u26a0\ufe0f No answer from the notification route after 12s \u2014 the request was never responded to. The alert is NOT confirmed sent.'
+            : `\u26a0\ufe0f Test push failed: ${err.message}`;
+        })
+        .finally(() => clearTimeout(timer));
     });
   }
 }

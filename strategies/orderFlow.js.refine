@@ -1,0 +1,420 @@
+/**
+ * strategies/orderFlow.js — ENGINE 3. Exhaustion / failed aggression.
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THIS ENGINE CAN AND CANNOT SEE — READ THIS FIRST
+ * ---------------------------------------------------------------------------
+ * Angel One's best-five packet is RESTING ORDER-BOOK DEPTH. It is not executed
+ * aggressor volume: the broker does not send a trade-side field at all. So a
+ * literal order-flow engine — "who hit the bid" — cannot be built on today's
+ * feed, and any claim to the contrary would be a fabrication. This engine is an
+ * OHLCV PROXY for the order-flow idea the project spec names, and it says so on
+ * every signal (`setupData.basis`).
+ *
+ * What the proxy uses instead is the one honest tell in a single bar: lots of
+ * volume with LITTLE travel means someone absorbed the other side, and lots of
+ * volume that makes a NEW extreme which FAILS TO HOLD means the aggression ran
+ * out of counterparty.
+ *
+ * ---------------------------------------------------------------------------
+ * REMOVED ON 2026-10-15 — OF01 AND OF02
+ * ---------------------------------------------------------------------------
+ * This engine used to carry three setups. Two were removed, and the numbers
+ * that removed them are kept here rather than in a deleted file, because "we
+ * measured this and it lost" is the result, and a result that is not written
+ * down gets re-tried.
+ *
+ * OF01 ABSORPTION REVERSAL — removed. Measured on the 100-symbol tape
+ * (data/ohlcv_1m, 705 sessions, `backtest/runAll.js`, cost 0.05% round trip):
+ * 47 trades, win 38.3%, grossPF 1.145, expectancy +0.0898R — positive but the
+ * thinnest earner in the engine and the lowest win rate of the three. It is also
+ * the reason this engine's own average (45.0% win, +0.1666R) sat so far below
+ * its best setup. Source: data/terminal/backtest_runall_100.json.
+ *
+ * OF02 AGGRESSIVE BREAKOUT CONTINUATION — removed. Measured across five presets
+ * over 1,028 symbols, EVERY variant of the rebuilt breakout arm lost money
+ * (netPF 0.842 loose → 0.677 with every gate), and with it enabled the whole
+ * Order Flow engine fell from netPF 1.292 (absorption alone) to 0.950. It was
+ * disabled rather than deleted for a year of sessions; it is now deleted.
+ * Source: the harness and its artifact were removed from the tree with the
+ * setup they measured; both are in data/quarantine_2026-10-15/.
+ *
+ * WHAT REMAINS: OF03, which was the strongest cell in this engine on every
+ * measure.
+ *
+ * ---------------------------------------------------------------------------
+ * OF03 WAS RETIGHTENED ON 2026-10-17, AND RE-MEASURED THE SAME DAY
+ * ---------------------------------------------------------------------------
+ * Six values moved at once (of03MinVolRatio 1.5→1.7, of03MaxNewExtremeAtr
+ * 0.25→0.20, of03MaxCloseLoc 0.40→0.35, measuredMoveR 1.2→1.0, a NEW 12:30 IST
+ * cutoff, and a tighter extension gate — see DEFAULTS below). The engine had been
+ * measured with the OLD values, so the sentence that used to stand here
+ * (50.0% win · grossPF 1.980 · +0.4900R over 64 trades) described a configuration
+ * that no longer shipped — the exact failure mode Gate F exists to catch, and it
+ * was caught: the recorded hash stopped matching.
+ *
+ * THESE ARE THE NUMBERS FOR THE VALUES THAT ARE ACTUALLY BELOW. Same corpus, same
+ * harness, same rules (backtest/runAll.js, 100 symbols, 705 sessions, one trade
+ * per symbol per day, entry window minus the blocked windows):
+ *
+ *   18 trades · 55.6% win · grossPF 3.049 · gross expectancy +0.9108R
+ *   net of a 5 bps round trip: netPF 2.340 · +0.7301R per trade · +13.1R · maxDD 3.7R
+ *
+ *   The OLD configuration, on the same 705 sessions, made 87 trades at netPF 1.383
+ *   and +0.2347R per trade. Fewer, better trades is the whole of the change.
+ *
+ * ---------------------------------------------------------------------------
+ * v2.1 — THE 12:30 CUTOFF WAS DEAD CODE, AND IS NOW LIVE
+ * ---------------------------------------------------------------------------
+ * `maxSignalTime` was added with v2 and read the clock through
+ * `/(\\d{2}):(\\d{2})/` — TWO backslashes in a regex literal, which matches a
+ * literal backslash followed by 'd', not a timestamp. So `mTime` was always null,
+ * the cutoff never returned early, and the one gate that was supposed to stop new
+ * events after 12:30 could not. It was found by a test that armed a textbook
+ * exhaustion at 12:31 and watched it emit; the regex is fixed and the test now
+ * pins the behaviour.
+ *
+ * THE NUMBERS ABOVE ARE THE RE-MEASUREMENT WITH THE CUTOFF LIVE. Exactly one trade
+ * was removed (a signal stamped after 12:30) and every measure improved:
+ * netPF 2.093 → 2.340, expectancy +0.6308R → +0.7301R, total +12.0R → +13.1R, win
+ * 52.6% → 55.6%. FVG was re-run in the same pass and did not move at all (73
+ * trades, netPF 1.940), which is the control: only OF03 changed.
+ *
+ * THIS ALSO CORRECTS A CLAIM MADE EARLIER THE SAME DAY. The 60-session ablation's
+ * note that "the 12:30 cutoff refused nothing" was measured while the gate was
+ * inert — it was not evidence that no event ever occurs after 12:30, it was
+ * evidence that the check never ran.
+ *
+ * Sources: data/terminal/backtest_results.json (2026-10-17, the numbers above) and
+ * data/terminal/backtest_runall_100_after_prune.json (2026-10-15, the old ones).
+ *
+ * A 60-session ablation (scratch/of03_gate_update_60sessions_ablation.json, 1,031
+ * symbols, day-clustered CIs) then tried to price each of the six changes on its own
+ * and could not: every arm's interval spans zero, the 12:30 cutoff refused nothing,
+ * and the planner retightening changed no trade at all. So this version is MEASURED
+ * but not decomposed — read the numbers as "this configuration did this", not as
+ * "each knob earned its keep".
+ *
+ * WHAT THE HASH PINS. `strategies/frozen/orderFlow.of03v1.js` is a byte copy of
+ * this file and `docs/ORDERFLOW-PHASE2.md` records its sha256 prefix; test/
+ * researchGuard.test.js compares all three. Change any of them and re-measure — a
+ * recorded number attached to a configuration that is not on disk is not evidence.
+ *
+ * Copies of the removed code, and of this file before the prune, are in
+ * data/quarantine_2026-10-15/. The pre-prune engine is also on the remote as
+ * strategies/frozen/orderFlow.of01v2-of03v1.js in the git history.
+ *
+ * ---------------------------------------------------------------------------
+ * THE RULES, IN ORDER (1-minute bars, closed only)
+ * ---------------------------------------------------------------------------
+ * OF03 EXHAUSTION / FAILED AGGRESSION — aggression that made a new extreme and
+ * could not hold it.
+ *    - participation must RISE: volume at least `of03MinVolRatio` × its own
+ *      recent average;
+ *    - the bar must make a NEW extreme against the previous `probeLookback`
+ *      bars (a high above the prior high, or the mirror low);
+ *    - that new extreme must be MARGINAL — at most `of03MaxNewExtremeAtr` × ATR
+ *      beyond the old one. A violent break is continuation, not exhaustion;
+ *    - and the bar must CLOSE BACK AWAY from it, in the bottom
+ *      `of03MaxCloseLoc` share of its own range for a high (the mirror for a
+ *      low). That failure to hold is the signal.
+ *
+ * THE EVENT IS NOT THE SIGNAL. An exhaustion is a CANDIDATE that must be
+ * CONFIRMED by a later bar taking out the candidate's own opposite extreme,
+ * within `of03TriggerBars`. If the candidate's invalidation breaks first, the
+ * event expires and nothing is emitted. The signal records the EVENT bar's own
+ * volume and travel (`volumeRatio`, `rangeAtr`), not the confirming bar's.
+ *
+ * EVERYTHING SHARED: `cooldownBars` between signals, `maxSignalsPerDay` per
+ * symbol, and a plan from strategy-core/tradePlanner.js with the same RR and
+ * extension gates every other engine obeys.
+ */
+'use strict';
+
+const ind = require('../strategy-core/indicators');
+const planner = require('../strategy-core/tradePlanner');
+const marketCore = require('../strategy-core/market');
+const { createSession } = require('../strategy-core/session');
+const { replay } = require('../strategy-core/replay');
+const { T } = ind;
+
+const DEFAULTS = {
+  probeLookback: 20,           // bars that define "the prior extreme"
+  minAtrPct: 0.10,             // calibrated for 1m bars (median ATR% is ~0.15%)
+
+  // --- OF03: exhaustion / failed aggression ---
+  // Aggression RISES into a new extreme and the price RESPONSE falls: the new
+  // extreme is marginal and the bar closes back away from it. This is the mirror
+  // question to absorption — there, effort was absorbed at an old level; here,
+  // effort spent making a NEW extreme fails to hold it.
+  enableOF03: true,
+  of03MinVolRatio: 2.2,
+  of03MaxNewExtremeAtr: 0.15,  // the new extreme may exceed the prior one by at most this much ATR
+  of03MaxCloseLoc: 0.35,       // for a high exhaustion, the close must sit in the bottom 40%
+  of03TriggerBars: 3,
+
+  cooldownBars: 8,
+  maxSignalsPerDay: 4,
+  measuredMoveR: 1.2,
+  maxSignalTime: 1230,
+  // ENGINE-SPECIFIC EXTENSION GATE. These were widened for the removed breakout
+  // arm and are KEPT, deliberately: OF03 was measured with them in force, so
+  // reverting them here would change the one setup whose numbers this file is
+  // allowed to claim, and quietly re-open a question already answered. The hard
+  // rejects stay — the setup is still never entered after the move is over (see
+  // the range position at 92%). Re-tuning these for an OF03-only engine is a
+  // separate change with its own measurement.
+  planner: {
+    maxMove3mPct: 2.0,
+    maxMove5mPct: 3.0,
+    maxVwapDistPct: 2.0,
+    maxRangePosPct: 80,
+    // RECALIBRATED, for the same reason. The shared floor of 0.60% ATR was
+    // calibrated against an engine that entered late; at 1-minute resolution the
+    // median ATR% at a decision bar is ~0.15%, so that floor refused almost
+    // everything.
+    minAtrPct: 0.10,
+  },
+};
+
+const BASIS = 'OHLCV proxy — best-five depth carries no executed aggressor side';
+
+// ---------------------------------------------------------------------------
+// OF03 EXHAUSTION / FAILED AGGRESSION
+// ---------------------------------------------------------------------------
+
+/**
+ * OF03 — EXHAUSTION / FAILED AGGRESSION.
+ *
+ * Absorption asked whether effort at an OLD level was met (removed, see header).
+ * Exhaustion asks whether effort spent making a NEW extreme failed to hold it:
+ * rising participation, a new extreme that is only marginal, and a close back
+ * away from that extreme. The trigger is the candidate bar's opposite extreme
+ * being taken out.
+ */
+function exhaustion({ bar, market, priorHigh, priorLow, cfg }) {
+  const atr = market.atr;
+  const range = bar[T.HIGH] - bar[T.LOW];
+  if (!atr || atr <= 0 || range <= 0) return null;
+  if (market.volumeRatio == null || market.volumeRatio < cfg.of03MinVolRatio) return null;
+  const loc = ind.closeLocation(bar);
+  if (loc == null) return null;
+  const maxPush = cfg.of03MaxNewExtremeAtr * atr;
+
+  // SHORT: a marginal new HIGH that closes back down = failed aggression
+  if (priorHigh != null && bar[T.HIGH] > priorHigh && (bar[T.HIGH] - priorHigh) <= maxPush && loc <= cfg.of03MaxCloseLoc) {
+    return {
+      setup: 'OF03', label: 'Exhaustion / Failed Aggression', side: 'SHORT',
+      invalidation: bar[T.HIGH], probed: priorHigh, closeLoc: loc,
+      triggerLevel: bar[T.LOW],
+    };
+  }
+  // LONG: a marginal new LOW that closes back up
+  if (priorLow != null && bar[T.LOW] < priorLow && (priorLow - bar[T.LOW]) <= maxPush && loc >= (1 - cfg.of03MaxCloseLoc)) {
+    return {
+      setup: 'OF03', label: 'Exhaustion / Failed Aggression', side: 'LONG',
+      invalidation: bar[T.LOW], probed: priorLow, closeLoc: loc,
+      triggerLevel: bar[T.HIGH],
+    };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// THE ENGINE
+// ---------------------------------------------------------------------------
+
+/** Stateless wrapper — one line, shared (strategy-core/replay.js). O(n²). */
+function evaluate(bars1m, index, config) { return replay(module.exports, bars1m, index, config); }
+
+/** One pass, O(bars). The object a live loop and a backtest both drive. */
+function createEngine(config) {
+  const cfg = Object.assign({}, DEFAULTS, config || {});
+  // Day bookkeeping (day array, extremes, previous day, rolling tail, carried
+  // VWAP/POC) is the shared tracker's job; this engine keeps only its cooldowns.
+  const session = createSession(cfg);
+  let cooldownUntil = -1, signalsToday = 0;
+  // THE ARMED CANDIDATE. An exhaustion is not a signal when it is seen — it is
+  // an EVENT that must be CONFIRMED by a later bar taking out the candidate's own
+  // opposite extreme. While one is armed the engine waits, so a single event
+  // cannot become five signals, and an event whose invalidation breaks (or that
+  // is not confirmed in time) simply expires.
+  let pending = null;
+
+  // RESEARCH HOOK. Recording every rejected candidate means seeing the ones that
+  // are never emitted at all: events that were armed, events that expired before
+  // a trigger, events whose invalidation broke first. A trace callback (opt-in,
+  // never required) receives a plain record for each, and is isolated so a faulty
+  // observer can never change what the engine does.
+  function trace(rec) {
+    if (typeof cfg.trace !== 'function') return;
+    try { cfg.trace(Object.assign({ symbol: cfg.symbol || null }, rec)); } catch (_) { /* observe only */ }
+  }
+
+  /** Build the signal for a confirmed event and run it through the shared planner. */
+  function emit(found, bar, index, m) {
+    const d = ind.dayOf(bar);
+    const entry = bar[T.CLOSE];
+    const structure = [found.probed];
+    const targetCandidates = marketCore.targets({
+      side: found.side, entry, market: m, structure, measuredMoveR: cfg.measuredMoveR,
+    });
+    const id = found.setup + '-' + (bar.symbol || '') + '-' + d + '-' + bar[T.TIME];
+    // THE EVENT BAR's OWN MEASUREMENTS vs THE TRIGGER BAR's. The signal is emitted
+    // bars after the event, so `m` here is the TRIGGER bar and recording its
+    // numbers as `volumeRatio`/`rangeAtr` would misdescribe the setup (the event
+    // is what passed the participation floor). Both are kept: the event bar's
+    // values are the setup's own, the trigger bar's are context.
+    const evVol = found.eventVolumeRatio == null ? m.volumeRatio : found.eventVolumeRatio;
+    const evRangeAtr = found.eventRangeAtr == null ? (m.atr ? (bar[T.HIGH] - bar[T.LOW]) / m.atr : null) : found.eventRangeAtr;
+    const base = marketCore.signalBase({
+      engine: 'ORDERFLOW', setup: found.setup, side: found.side, bar, index, setupId: id,
+      market: m, targetCandidates,
+      setupData: {
+        basis: BASIS,
+        setupLabel: found.label,
+        probedLevel: found.probed,
+        closeLocation: found.closeLoc,
+        volumeRatio: evVol,               // the EVENT bar — the setup's own participation
+        triggerVolumeRatio: m.volumeRatio, // the bar that confirmed it
+        rangeAtr: evRangeAtr,             // the EVENT bar's travel
+        // THE VOLATILITY REGIME, recorded for the decomposition: an edge that only
+        // exists in one ATR% regime is a regime, not a setup.
+        atrPct: m.atrPct,
+        eventAtrPct: found.eventAtrPct == null ? m.atrPct : found.eventAtrPct,
+        invalidation: found.invalidation,
+        triggerLevel: found.triggerLevel == null ? null : found.triggerLevel,
+        barsToTrigger: pending ? (index - pending.barIndex) : 0,
+      },
+      extra: { invalidationForFill: found.invalidation },
+    });
+
+    const built = planner.plan({
+      side: found.side, entry, invalidation: found.invalidation,
+      targets: targetCandidates, market: m, config: cfg.planner,
+    });
+    if (!built.ok) return Object.assign(base, { ok: false, gate: built.gate, reject: built.reject });
+
+    cooldownUntil = index + cfg.cooldownBars;
+    signalsToday += 1;
+
+    const withPlan = marketCore.withPlan(base, built, cfg);
+    withPlan.reason = [
+      'EXHAUSTION — aggression into a marginal new extreme on ' + evVol.toFixed(2) + '× average volume',
+      'THE NEW EXTREME FAILED TO HOLD — close at ' + (found.closeLoc * 100).toFixed(0) + '% of the range, back away from it',
+      'CONFIRMED — the event bar\'s opposite extreme ' + found.triggerLevel.toFixed(2) + ' was taken out',
+      'INVALIDATION at the failed extreme ' + found.invalidation.toFixed(2),
+      'RR1 = ' + built.plan.rr1.toFixed(2) + 'R',
+      BASIS,
+    ];
+    return withPlan;
+  }
+
+  function onBar(bars, index) {
+    const bar = bars[index];
+    if (!bar) return null;
+    const d = ind.dayOf(bar);
+
+    if (session.onBar(bar)) { cooldownUntil = -1; signalsToday = 0; pending = null; }
+
+    if (index < cooldownUntil) return null;
+
+    if (cfg.maxSignalTime != null) {
+      // ONE BACKSLASH, NOT TWO. This read `/(\\d{2}):(\\d{2})/`, which is a
+      // regex for a literal backslash followed by 'd' — it never matched a clock,
+      // so `maxSignalTime` was DEAD CODE from the day it was added and the 12:30
+      // cutoff could not refuse anything. Fixed 2026-10-17; the pin in
+      // test/ofEngine.test.js now fails if it ever goes back.
+      const mTime = /(\d{2}):(\d{2})/.exec(String(bar[T.TIME]));
+      if (mTime) {
+        const tNum = Number(mTime[1]) * 100 + Number(mTime[2]);
+        if (tNum > cfg.maxSignalTime) { pending = null; return null; }
+      }
+    }
+
+    const entry = bar[T.CLOSE];
+    const m = marketCore.measure({ session, entry });
+
+    if (signalsToday >= cfg.maxSignalsPerDay) { pending = null; return null; }
+
+    // 1) A PENDING EVENT IS RESOLVED FIRST. The candidate's own opposite extreme
+    //    must be taken out by a CLOSED bar within the expiry window; if price
+    //    breaks the invalidation first, or the window passes, the event is gone
+    //    and the bar is free to look for a new one.
+    if (pending) {
+      const p = pending;
+      const breached = p.cand.side === 'LONG'
+        ? bar[T.LOW] <= p.cand.invalidation
+        : bar[T.HIGH] >= p.cand.invalidation;
+      if (breached || index > p.expiryIndex) {
+        trace({
+          stage: breached ? 'breached' : 'expired', setup: p.cand.setup, side: p.cand.side,
+          time: p.barTime, barsToTrigger: index - p.barIndex,
+          volumeRatio: p.cand.eventVolumeRatio == null ? null : p.cand.eventVolumeRatio,
+          closeLocation: p.cand.closeLoc, probedLevel: p.cand.probed,
+        });
+        pending = null;
+      } else {
+        const fired = p.cand.side === 'LONG'
+          ? bar[T.CLOSE] > p.triggerLevel
+          : bar[T.CLOSE] < p.triggerLevel;
+        if (!fired) return null;                     // still waiting; nothing new is armed
+        const sig = emit(p.cand, bar, index, m);
+        pending = null;
+        return sig;
+      }
+    }
+
+    // the prior extreme, measured on CLOSED bars BEFORE this one
+    const before = session.tail.slice(0, session.tail.length - 1);
+    if (before.length < cfg.probeLookback) return null;
+    const priorHigh = ind.highest(before, cfg.probeLookback);
+    const priorLow = ind.lowest(before, cfg.probeLookback);
+
+    if (m.atrPct != null && m.atrPct < cfg.minAtrPct) return null;
+
+    const cand = cfg.enableOF03 ? exhaustion({ bar, market: m, priorHigh, priorLow, cfg }) : null;
+    if (!cand) return null;
+
+    // FREEZE THE EVENT BAR'S MEASUREMENTS ON THE CANDIDATE. The signal may not be
+    // emitted until several bars later, and the analysis has to be able to ask
+    // what the EVENT looked like, not what the confirmation bar looked like.
+    cand.eventVolumeRatio = m.volumeRatio;
+    cand.eventRangeAtr = m.atr ? (bar[T.HIGH] - bar[T.LOW]) / m.atr : null;
+    cand.eventAtrPct = m.atrPct;
+
+    // OF03 is an EVENT THAT STILL HAS TO BE CONFIRMED, so it is armed, not
+    // emitted: the candidate's own opposite extreme must be taken out.
+    const expiryBars = cfg.of03TriggerBars;
+    pending = { cand, barIndex: index, barTime: bar[T.TIME], triggerLevel: cand.triggerLevel, expiryIndex: index + expiryBars };
+    trace({
+      stage: 'armed', setup: cand.setup, side: cand.side, time: bar[T.TIME], barsToTrigger: 0,
+      price: entry,
+      volumeRatio: cand.eventVolumeRatio == null ? null : cand.eventVolumeRatio,
+      rangeAtr: cand.eventRangeAtr, atrPct: cand.eventAtrPct == null ? null : cand.eventAtrPct,
+      closeLocation: cand.closeLoc, probedLevel: cand.probed,
+      triggerLevel: cand.triggerLevel, invalidation: cand.invalidation, expiryBars,
+    });
+    return null;
+  }
+
+  return {
+    onBar,
+    evaluate: (bars, idx) => onBar(bars, idx),
+    cfg,
+    session,
+    state: () => ({ day: session.day, prevDay: session.prevDay, pending }),
+  };
+}
+
+module.exports = {
+  id: 'ORDERFLOW', setup: 'OF03', name: 'Order Flow (OHLCV proxy)',
+  families: [
+    { setup: 'OF03', label: 'Exhaustion / Failed Aggression' },
+  ],
+  BASIS, DEFAULTS, evaluate, createEngine, exhaustion,
+};
+
+
+
+

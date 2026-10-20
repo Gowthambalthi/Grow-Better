@@ -41,7 +41,7 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'fvg-conf-'));
 process.env.GB_ORDERFLOW_DIR = TMP;
 delete process.env.GB_FVG_CONFLUENCE_WEIGHT; // test the shipped default
 
-const engine = require('../orderflow/liveMinuteEngine');
+const engine = require('../strategies/orderflow/liveMinuteEngine');
 
 /** Convenience: a confluence count with every input at its neutral (absent) value. */
 function count(dir, over, weight) {

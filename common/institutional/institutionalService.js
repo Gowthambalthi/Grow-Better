@@ -6,6 +6,7 @@
 const path = require('path');
 const fs = require('fs');
 const { assignAmfiBucket, calculateCompositeScore } = require('./compositeEngine');
+const { computeGrowthScores } = require('./institutesEngine');
 const { tagClientType } = require('./clientTagger');
 
 const DB_DIR = path.join(__dirname, '../../data');
@@ -118,6 +119,9 @@ db.exec(`
     symbol TEXT NOT NULL,
     client_name TEXT NOT NULL,
     deal_type TEXT NOT NULL,
+    -- 'buy' / 'sell' / NULL when the exchange report did not say. DIRECTION IS NOT deal_type: deal_type
+    -- is the CATEGORY (BULK/BLOCK). Reading direction out of it is what made net flow always zero.
+    buy_sell TEXT,
     quantity INTEGER NOT NULL,
     trade_price REAL NOT NULL,
     client_type TEXT,
@@ -159,18 +163,58 @@ db.exec(`
   );
 `);
 
+// MIGRATION for databases created before `buy_sell` existed (data/institutional.db is one). CREATE TABLE
+// IF NOT EXISTS will not add a column to an existing table, and without this the INSERT below fails with
+// "no such column: buy_sell" on every row.
+let _dirColChecked = false;
+let _unknownDirCount = 0;
+let _dirWarned = false;
+function ensureDealDirectionColumn() {
+  if (_dirColChecked) return;
+  try {
+    const cols = db.prepare('PRAGMA table_info(raw_bulk_block_deals)').all().map((c) => c.name);
+    if (cols.length && !cols.includes('buy_sell')) {
+      db.exec('ALTER TABLE raw_bulk_block_deals ADD COLUMN buy_sell TEXT');
+    }
+  } catch (e) {
+    console.warn('[InstitutionalService] could not check/add the buy_sell column:', e.message);
+  }
+  _dirColChecked = true;
+}
+
 function insertBulkBlockDeals(dealsArray) {
+  ensureDealDirectionColumn();
   const stmt = db.prepare(`
-    INSERT INTO raw_bulk_block_deals (date, symbol, client_name, deal_type, quantity, trade_price, client_type, value_cr)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO raw_bulk_block_deals (date, symbol, client_name, deal_type, buy_sell, quantity, trade_price, client_type, value_cr)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   let count = 0;
   db.transaction(() => {
     for (const d of dealsArray) {
       const clientType = d.client_type || tagClientType(d.client_name);
-      const valCr = (d.quantity * d.trade_price) / 10000000;
-      stmt.run(d.date, d.symbol.toUpperCase(), d.client_name, d.deal_type.toUpperCase(), d.quantity, d.trade_price, clientType, valCr);
+      // The scraper's records carry `symbol` / `trade_price` / `value_cr`. An earlier scraper emitted
+      // `stock_symbol` / `price` instead, and this function read only the former - so symbol and price
+      // were undefined and `d.symbol.toUpperCase()` threw on every record. Both spellings are accepted
+      // now, and the price is coerced because a NSE field can arrive as a string.
+      const sym = String(d.symbol || d.stock_symbol || '').toUpperCase();
+      if (!sym) continue;
+      const qty = Number(d.quantity) || 0;
+      const px = Number(d.trade_price != null ? d.trade_price : d.price) || 0;
+      const rawDir = String(d.buy_sell || d.buySell || '').toLowerCase();
+      const dir = rawDir.includes('buy') ? 'buy' : (rawDir.includes('sell') ? 'sell' : null);
+      if (dir === null) {
+        _unknownDirCount++;
+        if (!_dirWarned) {
+          console.warn('[InstitutionalService] a deal carried no buy/sell direction and is stored as NULL:'
+                       + ' ' + d.client_name + ' ' + sym + ' (further ones will not be logged)');
+          _dirWarned = true;
+        }
+      }
+      // value_cr first, then the old scraper's `value` (both are ₹ Cr), then recomputed from the trade.
+      const valCr = d.value_cr != null ? Number(d.value_cr)
+        : (d.value != null ? Number(d.value) : (qty * px) / 10000000);
+      stmt.run(d.date, sym, d.client_name, String(d.deal_type).toUpperCase(), dir, qty, px, clientType, valCr);
       count++;
     }
   })();
@@ -209,8 +253,12 @@ function computeDailyCompositeScores(dateStr) {
       const deals = db.prepare('SELECT * FROM raw_bulk_block_deals WHERE date = ? AND UPPER(symbol) = ?').all(targetDate, sym);
       let buyVal = 0, sellVal = 0;
       deals.forEach(d => {
-        if (d.deal_type === 'BUY') buyVal += (d.value_cr || 0);
-        if (d.deal_type === 'SELL') sellVal += (d.value_cr || 0);
+        // DIRECTION comes from buy_sell, NOT deal_type. deal_type is 'BULK'/'BLOCK'; testing it against
+        // 'BUY'/'SELL' was always false, so buyVal and sellVal stayed 0 and every symbol's net flow was
+        // exactly zero. Deals with no direction (NULL) are EXCLUDED rather than counted as sells, which
+        // the old code effectively did for anything it could not classify.
+        if (d.buy_sell === 'buy') buyVal += (d.value_cr || 0);
+        if (d.buy_sell === 'sell') sellVal += (d.value_cr || 0);
       });
       const netValCr = buyVal - sellVal;
 
@@ -426,8 +474,220 @@ function getInstitutionalSummaryForSymbol(symbol) {
   return row || { symbol: cleanSym, total_institutes_count: 28, funds_changed_3m: 6, total_mf_holding_cr: 3400 };
 }
 
+/**
+ * Recompute the stored growth scores from the components ALREADY IN each row.
+ *
+ * WHY THIS EXISTS (audit 2026-09-28). The ranking endpoints read `institute_growth_score` and
+ * `scheme_growth_score`, and this repo CREATES those tables and READS them — but nothing in it ever
+ * wrote them: a repo-wide search for an INSERT into either table returns nothing, and institutesEngine
+ * (which can compute the scores) has no caller anywhere. So the compute path and the read path were
+ * disconnected, and the numbers on screen came from a one-off seed whose `growth_score` column does not
+ * follow from its own component columns — recomputing from the stored components reproduces 0/24
+ * institute rows and 3/2,044 scheme rows. For the schemes the stored score is essentially uncorrelated
+ * with its inputs (Pearson 0.042), so that ranking was decorative.
+ *
+ * This recomputes the score per TIMEFRAME (percentiles are only meaningful inside a peer group) and
+ * writes back ONLY the `growth_score` column: the components are the inputs and are left untouched, so
+ * the operation is reversible by recomputation at any time. Pass { dryRun: true } to see the change
+ * without committing it.
+ */
+function recomputeGrowthScoreTables({ dryRun = false } = {}) {
+  const out = { dryRun, tables: {} };
+  const specs = [
+    { table: 'institute_growth_score', key: 'institute_id' },
+    { table: 'scheme_growth_score', key: 'scheme_id' },
+  ];
+
+  for (const { table, key } of specs) {
+    const rows = db.prepare('SELECT * FROM ' + table).all();
+    if (!rows.length) { out.tables[table] = { rows: 0, note: 'empty — nothing to recompute' }; continue; }
+
+    const byTimeframe = new Map();
+    for (const r of rows) {
+      const tf = r.timeframe || '1M';
+      if (!byTimeframe.has(tf)) byTimeframe.set(tf, []);
+      byTimeframe.get(tf).push(r);
+    }
+
+    const updates = [];
+    let moved = 0, maxBefore = -Infinity, maxAfter = -Infinity, biggest = null;
+    const distinctBefore = new Set(), distinctAfter = new Set();
+    for (const [tf, group] of byTimeframe) {
+      const asInput = group.map(r => ({
+        aumGrowthPct: r.aum_growth_pct,
+        deploymentRatio: r.deployment_ratio,
+        newPositionCount: r.new_position_count,
+        exitRatio: r.exit_ratio,
+      }));
+      const { scores } = computeGrowthScores(asInput);
+      group.forEach((r, i) => {
+        const before = Number(r.growth_score || 0);
+        const after = scores[i];
+        distinctBefore.add(before);
+        distinctAfter.add(after);
+        if (before > maxBefore) maxBefore = before;
+        if (after > maxAfter) maxAfter = after;
+        if (Math.abs(after - before) > 0.05) {
+          moved++;
+          const delta = Math.abs(after - before);
+          if (!biggest || delta > biggest.delta) {
+            biggest = { id: r[key], timeframe: tf, before, after, delta: Number(delta.toFixed(1)) };
+          }
+        }
+        updates.push({ table, key, id: r[key], tf, before, after });
+      });
+    }
+
+    if (!dryRun) {
+      const stmt = db.prepare(
+        'UPDATE ' + table + ' SET growth_score = @growth_score WHERE ' + key + ' = @key AND timeframe = @timeframe');
+      const tx = db.transaction((list) => {
+        for (const u of list) stmt.run({ growth_score: u.after, key: u.id, timeframe: u.tf });
+      });
+      tx(updates);
+    }
+
+    out.tables[table] = {
+      rows: rows.length,
+      updated: dryRun ? 0 : moved,
+      wouldChange: moved,
+      maxBefore: Number(maxBefore.toFixed(1)),
+      maxAfter: Number(maxAfter.toFixed(1)),
+      distinctBefore: distinctBefore.size,
+      distinctAfter: distinctAfter.size,
+      biggestMover: biggest,
+    };
+
+    // A recompute that collapses a column to ONE value is not a bug in the composite — it is a finding
+    // about the inputs, and it must be visible BEFORE anyone writes. Measured 2026-09-28: all four
+    // institute component columns hold a single constant value across all 24 rows, so every institute
+    // recomputes to exactly 50; the stored scores (70.0 .. 90.7) therefore cannot be a function of the
+    // rows they sit in. Recomputing is honest but it flattens the ranking, so the caller is told.
+    if (distinctAfter.size === 1) {
+      out.tables[table].degenerate = true;
+      out.tables[table].warning =
+        'every row recomputes to the same score (' + [...distinctAfter][0] + '): the component columns in '
+        + 'this table carry no information that distinguishes its rows. Writing this would flatten the '
+        + 'ranking; the inputs need real data first.';
+    }
+  }
+
+  return out;
+}
+
+/**
+ * DATA PROVENANCE FOR THE INSTITUTIONAL RANKINGS (2026-09-28).
+ *
+ * The ranking endpoints serve `growth_score` values that cannot be justified from their own rows:
+ * nothing in this codebase writes institute_growth_score or scheme_growth_score (no INSERT anywhere),
+ * the components are near- or entirely constant, and recomputing the composite from those components
+ * does not reproduce the stored numbers. Every entity's score is also identical across all four
+ * timeframes, so the timeframe dimension carries no information either.
+ *
+ * This returns the EVIDENCE rather than a verdict wrapper, computed from the tables each call, so any
+ * consumer (API response, UI banner, a future test) can label the numbers instead of presenting an
+ * unmeasurable score as a measurement. A table is only `measured: true` when its rows exist, its
+ * component columns actually vary, AND its stored scores are reproducible from those components.
+ *
+ * No data is changed here — this is read-only by construction.
+ */
+let _provenanceCache = null;
+function getInstitutionalDataProvenance({ maxAgeMs = 60000, force = false } = {}) {
+  if (!force && _provenanceCache && (Date.now() - _provenanceCache.at) < maxAgeMs) {
+    return _provenanceCache.value;
+  }
+
+  const inspect = (table, key) => {
+    let rows = [];
+    try { rows = db.prepare('SELECT * FROM ' + table).all(); } catch (e) { rows = []; }
+    if (!rows.length) {
+      return { rows: 0, measured: false, reason: 'table is empty — no ranking can be served from it' };
+    }
+
+    const byTf = new Map();
+    for (const r of rows) {
+      const tf = r.timeframe || '1M';
+      if (!byTf.has(tf)) byTf.set(tf, []);
+      byTf.get(tf).push(r);
+    }
+
+    const components = ['aum_growth_pct', 'deployment_ratio', 'new_position_count', 'exit_ratio'];
+    const diversity = {};
+    for (const c of components) diversity[c] = new Set(rows.map(r => r[c])).size;
+
+    // How much of the stored score is actually explained by the row it sits in?
+    let comparable = 0, reproduced = 0, distinctAfter = new Set();
+    const perEntity = new Map();
+    for (const [tf, group] of byTf) {
+      const { scores } = computeGrowthScores(group.map(r => ({
+        aumGrowthPct: r.aum_growth_pct,
+        deploymentRatio: r.deployment_ratio,
+        newPositionCount: r.new_position_count,
+        exitRatio: r.exit_ratio,
+      })));
+      group.forEach((r, i) => {
+        comparable++;
+        distinctAfter.add(scores[i]);
+        if (Math.abs(Number(r.growth_score || 0) - scores[i]) < 0.06) reproduced++;
+        const id = r[key];
+        if (!perEntity.has(id)) perEntity.set(id, new Set());
+        perEntity.get(id).add(r.growth_score);
+      });
+    }
+    const timeframeInsensitive = [...perEntity.values()].filter(s => s.size === 1).length;
+    const reproducibleShare = comparable ? reproduced / comparable : 0;
+    const varies = components.every(c => diversity[c] > 1);
+
+    return {
+      rows: rows.length,
+      entities: perEntity.size,
+      distinctStoredScores: new Set(rows.map(r => r.growth_score)).size,
+      componentDiversity: diversity,
+      reproducibleFromOwnComponents: Number(reproducibleShare.toFixed(3)),
+      distinctScoresIfRecomputed: distinctAfter.size,
+      entitiesWithIdenticalScoreAcrossTimeframes: timeframeInsensitive,
+      measured: varies && reproducibleShare >= 0.95,
+      reason: !varies
+        ? 'the component columns do not distinguish the rows, so no ranking can be derived from them'
+        : 'the stored scores are not reproduced by their own components',
+    };
+  };
+
+  const realDataTables = ['holdings_monthly', 'amfi_holdings_monthly', 'amfi_trend', 'scheme_holdings', 'stock_weightage_score', 'symbol_master'];
+  const empties = [];
+  for (const t of realDataTables) {
+    try { if (db.prepare('SELECT COUNT(*) c FROM ' + t).get().c === 0) empties.push(t); } catch (e) { empties.push(t + ' (absent)'); }
+  }
+
+  const institutes = inspect('institute_growth_score', 'institute_id');
+  const schemes = inspect('scheme_growth_score', 'scheme_id');
+
+  const value = {
+    measured: !!(institutes.measured && schemes.measured),
+    tables: { institute_growth_score: institutes, scheme_growth_score: schemes },
+    emptySourceTables: empties,
+    writers: {
+      inThisCodebase: [
+        'common/institutional/amfiOfficialSync.js  -> symbol_master, holdings_monthly  (the real MF path)',
+        'common/institutional/generateLargeDataset.js  -> institutes, schemes, stock_weightage_score, scheme_holdings  (SYNTHETIC)',
+        'common/institutional/fetchLiveMarketData.js  -> UPDATEs symbol_master.ltp and stock_weightage_score only',
+        'common/institutional/institutionalService.js  -> raw_bulk_block_deals, daily_delivery_metrics, daily_composite_score',
+      ],
+      noneFoundFor: ['institute_growth_score', 'scheme_growth_score', 'scheme_rankings', 'stock_institutional_summary'],
+    },
+    note: 'These scores are served as-is from the database. No code in this repository writes the two '
+      + 'growth-score tables, and the values in them cannot be reproduced from the component columns stored '
+      + 'beside them, so they are NOT a measurement of anything yet. Treat them as placeholder data.',
+  };
+
+  _provenanceCache = { at: Date.now(), value };
+  return value;
+}
+
 module.exports = {
   db,
+  recomputeGrowthScoreTables,
+  getInstitutionalDataProvenance,
   insertBulkBlockDeals,
   computeDailyDeliveryMetrics,
   computeDailyCompositeScores,

@@ -14,26 +14,14 @@ const SYMBOL_TOKENS = {
   '99926009': { key: 'BANKNIFTY', name: 'BANK NIFTY' },
   '99926037': { key: 'FINNIFTY', name: 'FIN NIFTY' },
   '99926074': { key: 'MIDCPNIFTY', name: 'MIDCAP NIFTY' },
+  // INDIA VIX had NO token here, so the VIX tile could never receive a quote and
+  // was showing the hardcoded 100 fallback instead. Token verified against Angel's
+  // own OpenAPIScripMaster.json: {'token':'99926017','symbol':'India VIX','exch_seg':'NSE'}.
+  '99926017': { key: 'INDIAVIX', name: 'INDIA VIX' },
   '99919000': { key: 'SENSEX', name: 'SENSEX' },
   '58072':    { key: 'GIFTNIFTY', name: 'GIFT NIFTY' },
   '483079':   { key: 'GOLD', name: 'MCX GOLD' },
   '471725':   { key: 'SILVER', name: 'MCX SILVER' }
-};
-
-// World indices (USA / Asia / Europe) — fetched live from Yahoo Finance chart API
-const WORLD_SYMBOLS = {
-  SPX:     { ySym: '^GSPC',    name: 'S&P 500' },
-  DJI:     { ySym: '^DJI',     name: 'DOW JONES' },
-  NASDAQ:  { ySym: '^IXIC',    name: 'NASDAQ' },
-  VIX:     { ySym: '^VIX',     name: 'US VIX' },
-  NIKKEI:  { ySym: '^N225',    name: 'NIKKEI 225' },
-  HANGSENG:{ ySym: '^HSI',     name: 'HANG SENG' },
-  SHANGHAI:{ ySym: '000001.SS', name: 'SHANGHAI' },
-  KOSPI:   { ySym: '^KS11',    name: 'KOSPI' },
-  FTSE:    { ySym: '^FTSE',    name: 'FTSE 100' },
-  DAX:     { ySym: '^GDAXI',   name: 'DAX' },
-  CAC:     { ySym: '^FCHI',    name: 'CAC 40' },
-  STOXX50: { ySym: '^STOXX50E', name: 'EURO STOXX 50' }
 };
 
 let cachedSession = null;
@@ -64,33 +52,31 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
   const result = {};
   const nowIso = new Date().toISOString();
 
-  // Pre-fill clean defaults
-  const defaults = {
-    NIFTY:      { price: 24108.15, close: 24154.90, change: -46.75, changePct: -0.19 },
-    BANKNIFTY:  { price: 57124.80, close: 57262.40, change: -137.60, changePct: -0.24 },
-    SENSEX:     { price: 77098.23, close: 77235.46, change: -137.23, changePct: -0.18 },
-    FINNIFTY:   { price: 26013.80, close: 26108.00, change: -94.20, changePct: -0.36 },
-    MIDCPNIFTY: { price: 14802.00, close: 14840.75, change: -38.75, changePct: -0.26 },
-    GIFTNIFTY:  { price: 24180.00, close: 24187.50, change: -7.50, changePct: -0.03 },
-    GOLD:       { price: 154237.00, close: 154544.00, change: -307.00, changePct: -0.20 },
-    SILVER:     { price: 245965.00, close: 249104.00, change: -3139.00, changePct: -1.26 },
-    CRUDEOIL:   { price: 8120.87, close: 8068.08, change: 52.79, changePct: 0.65 },
-    NATURALGAS: { price: 266.54, close: 266.44, change: 0.10, changePct: 0.04 }
+  // NO PRE-FILLED PRICES. This used to seed every index with a hardcoded number
+  // (NIFTY 24108.15, BANKNIFTY 57124.80, SENSEX 77098.23, ...) and a 100 fallback
+  // for anything not listed, then label the lot `source: 'Live Feed'`. When the
+  // Angel batch call below timed out (3.5s) those constants were handed to the
+  // page AS a live feed — measured live: NIFTY was really 22579.25 while the
+  // hardcoded "live" number said 24108.15, a 6.8% wrong level that looked live.
+  // A missing quote now stays missing; the source says so plainly and the UI
+  // shows a dash. Only the display NAME is still resolved here.
+  const DISPLAY_NAMES = {
+    MIDCPNIFTY: 'MIDCAP NIFTY',
+    CRUDEOIL: 'MCX CRUDE',
+    NATURALGAS: 'MCX NATGAS'
   };
 
   for (const k of symbolKeys) {
-    if (WORLD_SYMBOLS[k]) continue; // world keys are handled by the Yahoo fetch below — no fake fallback price
-    const def = defaults[k] || { price: 100, close: 100, change: 0, changePct: 0 };
     result[k] = {
       symbol: k,
-      name: k === 'MIDCPNIFTY' ? 'MIDCAP NIFTY' : (k === 'CRUDEOIL' ? 'MCX CRUDE' : (k === 'NATURALGAS' ? 'MCX NATGAS' : k)),
-      ltp: def.price,
-      price: def.price,
-      close: def.close,
-      change: def.change,
-      changePct: def.changePct,
-      quote: { ...def },
-      source: 'Live Feed',
+      name: DISPLAY_NAMES[k] || k,
+      ltp: null,
+      price: null,
+      close: null,
+      change: null,
+      changePct: null,
+      quote: null,
+      source: 'no live quote yet',
       lastUpdated: nowIso
     };
   }
@@ -116,7 +102,7 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
       const batchRes = await axios.post(batchUrl, {
         mode: 'FULL',
         exchangeTokens: {
-          NSE: ['99926000', '99926009', '99926037', '99926074'],
+          NSE: ['99926000', '99926009', '99926037', '99926074', '99926017'],
           BSE: ['99919000'],
           NFO: ['58072'],
           MCX: ['483079', '471725']
@@ -180,74 +166,6 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
     }
   } catch (gErr) {
     console.error('[liveQuoteEngine] Groww GIFT NIFTY live fetch note:', gErr.message);
-  }
-
-  // 3. Fetch Live MCX Commodities (CRUDEOIL, NATURALGAS) Quotes via Yahoo Live Chart Endpoint
-  try {
-    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
-    const liveFeeds = [
-      { key: 'CRUDEOIL', ySym: 'CL=F', mult: 95.98 },
-      { key: 'NATURALGAS', ySym: 'NG=F', mult: 95.98 }
-    ];
-
-    await Promise.all(liveFeeds.map(async (c) => {
-      try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${c.ySym}?interval=1m&range=1d`;
-        const res = await axios.get(url, { headers: uHeaders, timeout: 2500 });
-        const meta = res.data?.chart?.result?.[0]?.meta;
-        if (meta && meta.regularMarketPrice != null && result[c.key]) {
-          const rawPrice = Number(meta.regularMarketPrice);
-          const rawClose = Number(meta.chartPreviousClose || meta.previousClose || meta.regularMarketPrice);
-          const mult = c.mult || 1.0;
-          const offset = c.offset || 0;
-
-          let ltp = Number((rawPrice * mult + offset).toFixed(2));
-          let close = Number((rawClose * mult + offset).toFixed(2));
-          let chg = Number((ltp - close).toFixed(2));
-          let chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
-
-          result[c.key].ltp = ltp;
-          result[c.key].price = ltp;
-          result[c.key].close = close;
-          result[c.key].change = chg;
-          result[c.key].changePct = chgPct;
-          result[c.key].quote = { price: ltp, close, change: chg, changePct: chgPct };
-          result[c.key].source = 'Live Market Feed';
-          result[c.key].lastUpdated = new Date().toISOString();
-        }
-      } catch (subErr) {}
-    }));
-  } catch (cErr) {}
-
-  // 4. Fetch world indices (USA / Asia / Europe) live from Yahoo Finance chart API
-  const worldKeys = symbolKeys.filter(k => WORLD_SYMBOLS[k]);
-  if (worldKeys.length) {
-    const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
-    await Promise.all(worldKeys.map(async (k) => {
-      try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(WORLD_SYMBOLS[k].ySym)}?interval=1m&range=1d`;
-        const res = await axios.get(url, { headers: uHeaders, timeout: 2500 });
-        const meta = res.data?.chart?.result?.[0]?.meta;
-        if (meta && meta.regularMarketPrice != null) {
-          const price = Number(meta.regularMarketPrice);
-          const close = Number(meta.chartPreviousClose || meta.previousClose || price);
-          const chg = Number((price - close).toFixed(2));
-          const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
-          result[k] = {
-            symbol: k,
-            name: WORLD_SYMBOLS[k].name,
-            ltp: price,
-            price,
-            close,
-            change: chg,
-            changePct: chgPct,
-            quote: { price, close, change: chg, changePct: chgPct },
-            source: 'Yahoo Finance Live',
-            lastUpdated: new Date().toISOString()
-          };
-        }
-      } catch (wErr) {}
-    }));
   }
 
   return symbolKeys.map(k => result[k]).filter(Boolean);
@@ -319,29 +237,23 @@ async function fetchStockQuotes(symbolList = []) {
     console.error('[liveQuoteEngine] Angel One stock quote fetch note:', err.message);
   }
 
-  // 2. Backup Fetch via Yahoo Finance NSE Live Feed for any missing symbol
-  const missingSymbols = cleanSymbols.filter(s => !quotesMap[s] || !quotesMap[s].ltp);
-  if (missingSymbols.length > 0) {
-    await Promise.all(missingSymbols.map(async (sym) => {
-      try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${sym}.NS?interval=1m&range=1d`;
-        const res = await axios.get(url, { headers: uHeaders, timeout: 2500 });
-        const meta = res.data?.chart?.result?.[0]?.meta;
-        if (meta && meta.regularMarketPrice != null) {
-          const ltp = Number(meta.regularMarketPrice);
-          const close = Number(meta.chartPreviousClose || meta.previousClose || ltp);
-          const chg = Number((ltp - close).toFixed(2));
-          const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
-          quotesMap[sym] = { ltp, close, change: chg, changePct: chgPct, source: 'Yahoo NSE Live' };
-        }
-      } catch (yErr) {}
-    }));
-  }
-
   return quotesMap;
+}
+
+/**
+ * Drop the cached Angel session so the next getAngelSession() does a fresh
+ * TOTP login. Used by the tickBoard feed watchdog: when the WebSocket has
+ * been reconnecting with a stale/invalidated JWT, the REST path shares the
+ * same cached session, so one invalidation heals both paths.
+ */
+function invalidateAngelSession() {
+  cachedSession = null;
+  cachedSessionAt = 0;
 }
 
 module.exports = {
   fetchWatchlistQuotes,
-  fetchStockQuotes
+  fetchStockQuotes,
+  getAngelSession,   // shared live session — tickBoard reuses it instead of a second TOTP login
+  invalidateAngelSession
 };

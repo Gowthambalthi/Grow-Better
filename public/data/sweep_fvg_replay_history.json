@@ -1,0 +1,128 @@
+{
+  "source": "engine tape replay (orderflow/sweepFvgLive.js replayed over data/orderflow/ticks-*.jsonl)",
+  "generatedAt": "2026-10-11T11:55:02.343Z",
+  "note": "One lot per call. Net is after the engines' itemised toll. Sessions whose tape is a fragment produce no calls and are kept, not dropped.",
+  "totals": {
+    "days": 9,
+    "daysWithCalls": 7,
+    "calls": 757,
+    "executed": 318,
+    "won": 120,
+    "lost": 198,
+    "netPoints1Lot": 431.01,
+    "netInr1Lot": -29.72,
+    "scalping": 12,
+    "intraday": 745,
+    "winRatePct": 37.7
+  },
+  "sessions": [
+    {
+      "date": "2026-09-28",
+      "calls": 100,
+      "executed": 52,
+      "won": 34,
+      "lost": 18,
+      "winRatePct": 65.4,
+      "netPoints1Lot": 271.92,
+      "netInr1Lot": 199.86,
+      "scalping": 2,
+      "intraday": 98
+    },
+    {
+      "date": "2026-09-29",
+      "calls": 158,
+      "executed": 70,
+      "won": 8,
+      "lost": 62,
+      "winRatePct": 11.4,
+      "netPoints1Lot": -189.54,
+      "netInr1Lot": -280.18,
+      "scalping": 2,
+      "intraday": 156
+    },
+    {
+      "date": "2026-09-30",
+      "calls": 142,
+      "executed": 50,
+      "won": 26,
+      "lost": 24,
+      "winRatePct": 52,
+      "netPoints1Lot": -57.04,
+      "netInr1Lot": -112.7,
+      "scalping": 0,
+      "intraday": 142
+    },
+    {
+      "date": "2026-10-01",
+      "calls": 40,
+      "executed": 8,
+      "won": 4,
+      "lost": 4,
+      "winRatePct": 50,
+      "netPoints1Lot": -8.94,
+      "netInr1Lot": -12.42,
+      "scalping": 0,
+      "intraday": 40
+    },
+    {
+      "date": "2026-10-05",
+      "calls": 0,
+      "executed": 0,
+      "won": 0,
+      "lost": 0,
+      "winRatePct": 0,
+      "netPoints1Lot": 0,
+      "netInr1Lot": 0,
+      "scalping": 0,
+      "intraday": 0
+    },
+    {
+      "date": "2026-10-06",
+      "calls": 36,
+      "executed": 20,
+      "won": 8,
+      "lost": 12,
+      "winRatePct": 40,
+      "netPoints1Lot": 125.42,
+      "netInr1Lot": 16.78,
+      "scalping": 0,
+      "intraday": 36
+    },
+    {
+      "date": "2026-10-07",
+      "calls": 236,
+      "executed": 106,
+      "won": 40,
+      "lost": 66,
+      "winRatePct": 37.7,
+      "netPoints1Lot": 319.94,
+      "netInr1Lot": 195.42,
+      "scalping": 2,
+      "intraday": 234
+    },
+    {
+      "date": "2026-10-08",
+      "calls": 45,
+      "executed": 12,
+      "won": 0,
+      "lost": 12,
+      "winRatePct": 0,
+      "netPoints1Lot": -30.75,
+      "netInr1Lot": -36.48,
+      "scalping": 6,
+      "intraday": 39
+    },
+    {
+      "date": "2026-10-09",
+      "calls": 0,
+      "executed": 0,
+      "won": 0,
+      "lost": 0,
+      "winRatePct": 0,
+      "netPoints1Lot": 0,
+      "netInr1Lot": 0,
+      "scalping": 0,
+      "intraday": 0
+    }
+  ]
+}

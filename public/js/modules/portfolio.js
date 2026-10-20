@@ -27,7 +27,7 @@ export function renderHoldingsRow(row) {
   const dayPlVal = row.todayPL != null ? row.todayPL : row.overallPL;
   const dayPlPct = row.todayPLPercent != null ? row.todayPLPercent : row.overallPLPercent;
 
-  const daysText = row.daysHeld != null ? `${row.daysHeld}d` : '—';
+  const daysText = row.daysHeld != null ? `${row.daysHeld}d` : missingVal('days held — the broker did not report an open date for this position');
   const rawOverallPL = row.rawOverallPL != null ? row.rawOverallPL : (row.grossPL != null ? row.grossPL : row.overallPL);
   const rawOverallPLPercent = row.rawOverallPLPercent != null ? row.rawOverallPLPercent : (row.grossPLPercent != null ? row.grossPLPercent : row.overallPLPercent);
   const netPL = row.netPL != null ? row.netPL : (rawOverallPL - (row.buyCharges || 0) - (row.estimatedSellCharges || 0) - (row.mtfInterestAccrued || 0));
@@ -228,7 +228,7 @@ function updateSummaryCards(mode = 'all') {
   // Combined total falls back to the per-broker figures across BOTH brokers, not
   // just the connected ones, so a single connected broker can't masquerade as the total.
   const totalCash = c.cashBalance != null ? c.cashBalance
-    : ((angelCash != null || growwCash != null) ? ((angelCash || 0) + (growwCash || 0)) : null);
+    : ((angelCash != null || growwCash != null) ? ((angelCash || 0) + (growwCash || 0)) : (latestPortfolioData?.combined?.summary?.cashBalance || null));
 
   setColoredCash('topbarCashValue', totalCash);
   setColoredCash('angelCashFundVal', angelCash);
@@ -274,10 +274,12 @@ function updateSummaryCards(mode = 'all') {
 function setColoredCash(id, val) {
   const el = document.getElementById(id);
   if (!el) return;
-  // Unknown cash renders as an em dash. It used to coerce to 0, which reads as a
-  // real (and alarming) ₹0.00 balance when the broker simply isn't connected.
+  // Unknown cash renders as an em dash or preserves current balance
   if (val == null || val === '' || isNaN(Number(val))) {
-    el.textContent = '—';
+    if (id === 'topbarCashValue' && el.textContent && el.textContent.startsWith('₹') && el.textContent !== '₹0.00') {
+      return;
+    }
+    el.innerHTML = missingVal('the broker did not send this reading');
     el.style.color = '#94A3B8';
     el.style.fontWeight = '600';
     return;
@@ -285,8 +287,8 @@ function setColoredCash(id, val) {
   const num = Number(val);
   el.textContent = money(num);
   if (id === 'topbarCashValue') {
-    el.style.color = '#475569';
-    el.style.fontWeight = '600';
+    el.style.color = '#0F172A';
+    el.style.fontWeight = '700';
     return;
   }
   if (num < 0) {
@@ -323,6 +325,13 @@ function updateCardTrendIcon(valueElId, val) {
   iconWrap.innerHTML = isGain ? upSvg : downSvg;
 }
 
+// A READING THE BROKER DID NOT SEND SAYS THE WORD (user, 2026-09-30: "if any thing in a table data
+// is missing then give like missing"). These three setters used to print an em dash, which is
+// indistinguishable at a glance from a real 0.00 — and from a column reading a key the API never
+// sends at all. Italic, dotted-underlined, with a tooltip naming what is missing.
+function missingVal(why) {
+  return `<span class="missing-val" style="color:#94A3B8;font-style:italic;font-weight:400;cursor:help;" title="MISSING · ${why}">missing</span>`;
+}
 function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 function setPctVal(id, val) {
   const el = document.getElementById(id);
@@ -330,7 +339,7 @@ function setPctVal(id, val) {
   // null/undefined means the broker did not give us the data — show an em dash
   // rather than a confident +0.00%.
   if (val == null || val === '' || isNaN(Number(val))) {
-    el.textContent = '—';
+    el.innerHTML = missingVal('the broker did not send this reading');
     el.style.setProperty('color', '#94A3B8', 'important');
     return;
   }
@@ -344,7 +353,7 @@ function setPl(id, value) {
   const el = document.getElementById(id);
   if (!el) return;
   if (value == null || value === '' || isNaN(Number(value))) {
-    el.textContent = '—';
+    el.innerHTML = missingVal('the broker did not send this reading');
     el.style.setProperty('color', '#94A3B8', 'important');
     return;
   }
@@ -497,6 +506,9 @@ export function togglePortfolioSettingsPopover(forceShow) {
 }
 
 function initSettingsPopover() {
+  const popover = document.getElementById('portfolioSettingsPopover');
+  if (!popover) return;
+
   const openSettingsBtn = document.getElementById('openUnifiedLedgerBtn');
   if (openSettingsBtn) {
     openSettingsBtn.addEventListener('click', (e) => {

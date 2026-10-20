@@ -16,7 +16,12 @@ const angelMarketQuote = require('../../angelone/marketQuote');
 const env = require('../../config/env');
 const axios = require('axios');
 const ledger = require('../ledger/ledgerService');
-const institutionalService = require('../institutional/institutionalService');
+let institutionalService = null;
+try {
+  institutionalService = require('../institutional/institutionalService');
+} catch (e) {
+  institutionalService = { getInstitutionalSummaryForSymbol: () => null };
+}
 const liveQuoteEngine = require('../market/liveQuoteEngine');
 
 // Live-only price caches. These used to be seeded with hardcoded CUPID/EMMVEE/

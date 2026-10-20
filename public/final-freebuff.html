@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow Better — Freebuff Live Calls (Sweep + FVG)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="/logo.png">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #131b2e;
+      --card-border: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --gain: #00e091;
+      --loss: #ff4d6d;
+      --accent: #3b82f6;
+      --warn: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif;
+      line-height: 1.5; padding: 22px;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px; flex-wrap: wrap; padding-bottom: 16px; margin-bottom: 20px;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .header h1 {
+      font-size: 23px; font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #00e091);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+    .badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px;
+      border-radius: 20px; font-weight: 600; font-size: 12.5px;
+      border: 1px solid transparent; white-space: nowrap;
+    }
+    .badge.ok    { background: rgba(0,224,145,.1);  border-color: rgba(0,224,145,.3);  color: var(--gain); }
+    .badge.off   { background: rgba(148,163,184,.1); border-color: rgba(148,163,184,.3); color: var(--text-muted); }
+    .badge.warn  { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.35); color: var(--warn); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .dot.live { box-shadow: 0 0 10px currentColor; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+    /* THE ARM SWITCH. Deliberately a two-step: nothing on this page can send an order until it is
+       on, it resets on every reload, and it is never persisted. Real money, so no sticky state. */
+    .arm-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      flex-wrap: wrap; padding: 14px 18px; margin-bottom: 20px; border-radius: 12px;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+    }
+    .arm-bar.armed { border-color: rgba(255,77,109,.5); background: rgba(255,77,109,.06); }
+    .arm-bar .arm-text b { font-size: 14px; }
+    .arm-bar .arm-text div { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+    .switch {
+      position: relative; width: 60px; height: 30px; border-radius: 15px; cursor: pointer;
+      background: #334155; border: 1px solid var(--card-border); transition: background .18s; flex: 0 0 auto;
+    }
+    .switch::after {
+      content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+      border-radius: 50%; background: #94a3b8; transition: transform .18s, background .18s;
+    }
+    .switch.on { background: rgba(255,77,109,.35); border-color: var(--loss); }
+    .switch.on::after { transform: translateX(30px); background: var(--loss); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; }
+    .stat .label { color: var(--text-muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+    .stat .value { font-size: 22px; font-weight: 700; margin-top: 5px; font-family: 'JetBrains Mono', monospace; }
+    .stat .sub { color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
+    .gain { color: var(--gain); } .loss { color: var(--loss); } .muted { color: var(--text-muted); }
+
+    .panel { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; }
+    /* The action column is the point of the table, so it must never be the thing scrolled off the
+       edge - pin it right and let the data columns scroll under it. */
+    .table-scroll { overflow-x: auto; }
+    /* The Send column is pinned to the right edge ONLY where there is room for it. Pinned on a narrow
+       panel, it floats over the columns it is supposed to sit beside - it covered Net and My order
+       entirely, which is worse than making the reader scroll to reach Send. */
+    @media (min-width: 1150px) {
+      th.act, td.act { position: sticky; right: 0; background: var(--card-bg); box-shadow: -8px 0 12px -8px rgba(0,0,0,.55); }
+      tr:hover td.act { background: #17213a; }
+    }
+    .panel-head {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 13px 16px; border-bottom: 1px solid var(--card-border); flex-wrap: wrap;
+    }
+    .panel-head h2 { font-size: 15px; font-weight: 700; }
+    .panel-head .hint { color: var(--text-muted); font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 9px 12px; color: var(--text-muted); font-weight: 600;
+      font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em;
+      border-bottom: 1px solid var(--card-border); white-space: nowrap;
+    }
+    td { padding: 10px 12px; border-bottom: 1px solid rgba(30,41,59,.6); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(59,130,246,.05); }
+    .pill {
+      display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px;
+      font-weight: 700; letter-spacing: .02em;
+    }
+    .pill.ARMED { background: rgba(59,130,246,.16); color: #93c5fd; }
+    .pill.FILLED { background: rgba(245,158,11,.16); color: var(--warn); }
+    .pill.WON { background: rgba(0,224,145,.16); color: var(--gain); }
+    .pill.LOST, .pill.REJECTED_RISK { background: rgba(255,77,109,.16); color: var(--loss); }
+    .pill.SESSION_CLOSE, .pill.TIME_EXIT { background: rgba(148,163,184,.16); color: var(--text-muted); }
+    .pill.OPEN { background: rgba(148,163,184,.16); color: #cbd5e1; }
+    .pill.SESSION_CLOSE { background: rgba(148,163,184,.16); color: var(--text-muted); }
+    .pill.NOT_FILLED, .pill.NO_TAPE { background: rgba(148,163,184,.10); color: var(--text-muted); }
+    .pill.EXPIRED, .pill.INVALIDATED, .pill.CANCELLED_EXHAUSTION, .pill.CANCELLED_TRADE_LIMIT {
+      background: rgba(148,163,184,.1); color: #64748b;
+    }
+    button {
+      font-family: inherit; font-size: 12px; font-weight: 650; cursor: pointer;
+      border-radius: 7px; padding: 6px 12px; border: 1px solid var(--card-border);
+      background: #1e293b; color: var(--text); transition: all .15s;
+    }
+    button:hover:not(:disabled) { background: #273449; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.primary:hover:not(:disabled) { background: #2563eb; }
+    button.danger { background: var(--loss); border-color: var(--loss); color: #fff; }
+    button.danger:hover:not(:disabled) { background: #e11d48; }
+    /* A disabled button must READ as disabled - an armed-looking control that silently does nothing
+       is how a guardrail turns into a bug report. */
+    button:disabled { opacity: .38; cursor: not-allowed; }
+    .empty { padding: 26px 16px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+    .drawer {
+      position: fixed; inset: 0; background: rgba(2,6,23,.72); display: none;
+      align-items: center; justify-content: center; padding: 20px; z-index: 50;
+    }
+    .drawer.open { display: flex; }
+    .drawer-box {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px;
+      width: 100%; max-width: 560px; overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;
+    }
+    .drawer-box .panel-head { border-bottom: 1px solid var(--card-border); }
+    .drawer-body { padding: 16px; overflow: auto; }
+    .kv { display: grid; grid-template-columns: 130px 1fr; gap: 7px 12px; font-size: 13px; margin-bottom: 16px; }
+    .kv dt { color: var(--text-muted); }
+    .kv dd { font-family: 'JetBrains Mono', monospace; }
+    pre {
+      background: #0b1220; border: 1px solid var(--card-border); border-radius: 9px;
+      padding: 12px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+      overflow: auto; color: #cbd5e1;
+    }
+    .drawer-foot { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 16px; border-top: 1px solid var(--card-border); }
+    .note { color: var(--text-muted); font-size: 12px; margin-top: 12px; }
+    .warnbox {
+      background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.35); color: #fcd34d;
+      padding: 10px 13px; border-radius: 9px; font-size: 12.5px; margin-bottom: 16px;
+    }
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; z-index: 80; display: flex; flex-direction: column; gap: 9px;
+    }
+    .toast .item {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-left: 3px solid var(--accent);
+      padding: 11px 15px; border-radius: 9px; font-size: 13px; min-width: 260px; max-width: 420px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    .toast .item.ok { border-left-color: var(--gain); }
+    .toast .item.err { border-left-color: var(--loss); }
+    input[type="text"], input[type="number"] {
+      font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #0b1220; color: var(--text);
+      border: 1px solid var(--card-border); border-radius: 7px; padding: 7px 10px; width: 100%;
+    }
+    .row-input { display: flex; gap: 8px; align-items: center; }
+    .row-input input { width: 78px; }
+    .warnlist { margin: 6px 0 0 16px; padding: 0; }
+    .warnlist li { color: var(--warn); font-size: 12.5px; margin-bottom: 3px; }
+    .drawer-foot button.locked { opacity: .55; }
+    .arm-bar.needs-arm { box-shadow: 0 0 0 2px var(--warn) inset; }
+    /* The ledger strip: what YOU took measured against what the engine emitted. */
+    .ledger-strip {
+      padding: 10px 13px; border-bottom: 1px solid var(--card-border); font-size: 12.5px; line-height: 1.9;
+    }
+    .decisionBtn {
+      font-size: 11.5px; padding: 4px 9px; border-radius: 6px; margin-right: 4px; cursor: pointer;
+      background: #0b1220; color: var(--text-muted); border: 1px solid var(--card-border);
+    }
+    .decisionBtn.taken { background: rgba(0,224,145,.16); color: var(--gain); border-color: rgba(0,224,145,.35); }
+    .decisionBtn.skipped { background: rgba(255,77,109,.14); color: var(--loss); border-color: rgba(255,77,109,.3); }
+    .artifactRow td { opacity: .55; }
+    /* The reference columns (side/limit/stop/target/R:R) are the first thing to go when the panel is
+       narrow: outcome, money and the reader's own decision must never need a horizontal scroll. */
+    @media (max-width: 1150px) { th.ref, td.ref { display: none; } }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Freebuff Live Calls — Sweep + FVG</h1>
+    <p>Every call the orderflow engine emitted today, and the guarded path from a call to a live Angel One order.</p>
+  </div>
+  <div class="badges">
+    <span class="badge off" id="engineBadge"><span class="dot"></span><span>Engine</span></span>
+    <span class="badge off" id="brokerBadge"><span class="dot"></span><span>Angel One</span></span>
+    <span class="badge off" id="keyBadge"><span class="dot"></span><span>API key</span></span>
+    <span class="badge off" id="refreshBadge"><span class="dot"></span><span>–</span></span>
+  </div>
+</div>
+
+<div class="arm-bar" id="armBar">
+  <div class="arm-text">
+    <b id="armTitle">Live ordering is OFF</b>
+    <div id="armSub">Calls can be previewed but not sent. Arming lasts until this page is reloaded.</div>
+  </div>
+  <div class="switch" id="armSwitch" role="switch" aria-checked="false" tabindex="0" title="Arm live ordering"></div>
+</div>
+
+<div class="grid">
+  <div class="stat"><div class="label">Trades</div><div class="value" id="mN">–</div><div class="sub" id="mNSub">closed today</div></div>
+  <div class="stat"><div class="label">Net win rate</div><div class="value" id="mWin">–</div><div class="sub">of closed trades</div></div>
+  <div class="stat"><div class="label">Mean net</div><div class="value" id="mMean">–</div><div class="sub">bps per trade after costs</div></div>
+  <div class="stat"><div class="label">Net P&amp;L</div><div class="value" id="mPnl">–</div><div class="sub">at one lot</div></div>
+  <div class="stat"><div class="label">Calls</div><div class="value" id="mCalls">–</div><div class="sub" id="mCallsSub">armed / filled</div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>Today's calls</h2>
+    <div class="row-input">
+      <span class="hint">Qty per order</span>
+      <input type="number" id="qtyInput" value="1" min="1" step="1">
+      <button id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+  <div id="ledgerStrip" class="ledger-strip"></div>
+  <div id="callsWrap"><div class="empty">Loading calls…</div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <h2>Executed trades <span class="hint">(engine journal — what the strategy actually did)</span></h2>
+    <span class="hint" id="tradeCount"></span>
+  </div>
+  <div id="tradesWrap"><div class="empty">Loading trades…</div></div>
+</div>
+
+<!-- THE TWO-AI EXCHANGE, ON THE PAGE.
+     exchange.md is where Freebuff and Antigravity record their research rounds, and it
+     could only be read in a text editor until now. This panel renders the LATEST round
+     of each side verbatim from /api/exchange, plus the next action, so both AIs' work is
+     visible where the trading decisions are made. It re-words nothing on purpose: a
+     summarised finding is a lost finding. -->
+<div class="panel" id="exchangePanel">
+  <div class="panel-head">
+    <h2>Research exchange <span class="hint">(exchange.md — latest round of each AI)</span></h2>
+    <div class="row-input">
+      <span class="hint" id="exchangeStamp"></span>
+      <button id="exchangeRefresh">Refresh</button>
+    </div>
+  </div>
+  <div id="exchangeWrap"><div class="empty">Loading the exchange…</div></div>
+</div>
+
+<script>
+(function () {
+  // Self-contained so it cannot break the existing board refresh: it reads one route
+  // and writes one element, and any failure degrades to a readable message.
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+    });
+  }
+  function block(side, label) {
+    if (!side) return '<div class="empty">No ' + esc(label) + ' round recorded yet.</div>';
+    return '<div class="stat-block">' +
+      '<div class="hint" style="margin-bottom:4px"><b>' + esc(label) + '</b> &middot; ' +
+      esc(side.roundCount) + ' round(s) recorded &middot; latest below</div>' +
+      '<div class="mono" style="font-weight:600;margin:6px 0">' + esc(side.title) + '</div>' +
+      '<pre class="mono" style="white-space:pre-wrap;max-height:260px;overflow:auto;font-size:11px;line-height:1.45">' +
+      esc(side.body) + '</pre></div>';
+  }
+  function load() {
+    var wrap = document.getElementById('exchangeWrap');
+    fetch('/api/exchange', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.ok) {
+          wrap.innerHTML = '<div class="empty">exchange.md not readable' +
+            (d && d.error ? ': ' + esc(d.error) : '') + '</div>';
+          return;
+        }
+        document.getElementById('exchangeStamp').textContent =
+          d.lines + ' lines' + (d.updatedAt ? ' \u00b7 ' + new Date(d.updatedAt).toLocaleString() : '');
+        wrap.innerHTML =
+          '<div class="grid">' + block(d.freebuff, 'FREEBUFF') + block(d.antigravity, 'ANTIGRAVITY') + '</div>' +
+          (d.nextAction
+            ? '<div class="stat-block" style="margin-top:10px"><div class="hint"><b>NEXT ACTION</b></div>' +
+              '<pre class="mono" style="white-space:pre-wrap;max-height:200px;overflow:auto;font-size:11px;line-height:1.45">' +
+              esc(d.nextAction) + '</pre></div>'
+            : '');
+      })
+      .catch(function (e) {
+        wrap.innerHTML = '<div class="empty">Could not load the exchange: ' + esc(e && e.message) + '</div>';
+      });
+  }
+  document.getElementById('exchangeRefresh').addEventListener('click', load);
+  load();
+})();
+</script>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-box">
+    <div class="panel-head">
+      <h2 id="dTitle">Confirm order</h2>
+      <button id="dClose">Close</button>
+    </div>
+    <div class="drawer-body">
+      <div class="warnbox" id="dWarn">
+        This sends a real order to Angel One. Check the symbol, side and price before you confirm.
+      </div>
+      <dl class="kv" id="dKv"></dl>
+      <div class="row-input" style="margin:2px 0 10px">
+        <span class="hint">Quantity to send</span>
+        <input type="number" id="dQty" value="1" min="1" max="1000" step="1">
+        <span class="hint" id="dQtyNote">shares</span>
+      </div>
+      <div class="hint" style="margin-bottom:7px">Exact request body sent to <span class="mono">POST /api/angelone/orders</span>:</div>
+      <pre id="dPayload">{}</pre>
+      <div class="note" id="dResp"></div>
+    </div>
+    <div class="drawer-foot">
+      <button id="dCancel">Cancel</button>
+      <button id="dCheck">Check only (no order)</button>
+      <button class="danger" id="dSend">Send live order</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // The server enforces X-API-Key when SERVER_API_KEY is set in .env, so the page has to be able to
+  // present one. Same storage key as public/js/core/api.js so the two pages share a key.
+  var API_KEY_STORAGE = 'openalgo_api_key';
+  var BROKER = 'angelone';
+
+  var state = { calls: [], trades: [], perf: null, armed: false, brokerOk: false, pending: null,
+    callsSig: null, tradesSig: null, outcomes: null, outcomeSig: null };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function apiKey() { try { return localStorage.getItem(API_KEY_STORAGE) || ''; } catch (e) { return ''; } }
+
+  function request(path, opts) {
+    opts = opts || {};
+    var headers = { 'Content-Type': 'application/json' };
+    var k = apiKey();
+    if (k) headers['X-API-Key'] = k;
+    return fetch(path, { method: opts.method || 'GET', headers: headers, body: opts.body })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (data) {
+          if (!res.ok) throw new Error(data.error || ('Request failed (' + res.status + ')'));
+          return data;
+        });
+      });
+  }
+
+  function toast(msg, kind) {
+    var el = document.createElement('div');
+    el.className = 'item ' + (kind || '');
+    el.textContent = msg;
+    $('toast').appendChild(el);
+    setTimeout(function () { el.remove(); }, kind === 'err' ? 12000 : 7000);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function num(v, dp) { return (v == null || isNaN(v)) ? '–' : Number(v).toFixed(dp == null ? 2 : dp); }
+  function signClass(v) { return v > 0 ? 'gain' : (v < 0 ? 'loss' : 'muted'); }
+  function signed(v, dp) { return (v > 0 ? '+' : '') + num(v, dp); }
+
+  // ---------- rendering ----------
+
+  function badge(el, ok, text) {
+    el.className = 'badge ' + (ok ? 'ok' : 'off');
+    var dot = el.querySelector('.dot');
+    var span = el.querySelector('span:last-child');
+    if (dot) dot.className = 'dot' + (ok ? ' live' : '');
+    if (span) span.textContent = text;
+  }
+
+  function renderPerf() {
+    var p = state.perf || {};
+    $('mN').textContent = p.n == null ? '–' : p.n;
+    $('mWin').textContent = p.winRateNet == null ? '–' : p.winRateNet + '%';
+    $('mMean').textContent = p.meanNet == null ? '–' : signed(p.meanNet, 1);
+    $('mMean').className = 'value ' + signClass(p.meanNet);
+    var resolved = state.calls.filter(function (c) { return c.netInr1Lot != null; });
+    var inr = resolved.reduce(function (s, c) { return s + (c.netInr1Lot || 0); }, 0);
+    $('mPnl').textContent = resolved.length ? signed(inr, 2) : '–';
+    $('mPnl').className = 'value ' + (resolved.length ? signClass(inr) : '');
+    $('mCalls').textContent = state.calls.length;
+    $('mCallsSub').textContent = state.calls.filter(function (c) { return c.status === 'ARMED'; }).length + ' armed / ' +
+      resolved.length + ' resolved';
+  }
+
+  // ONE quantity, two boxes. The page field and the drawer field are the same number: editing either
+  // updates the other, and the payload always reads the live value at the moment of the request, so a
+  // quantity typed after opening the drawer is the quantity that goes out. Bounded here AND validated
+  // again server-side (validateOrder rejects a non-positive quantity) - a client-side cap alone would
+  // be a suggestion, not a limit.
+  var MAX_QTY = 1000;
+  function clampQty(v) {
+    var n = parseInt(v, 10);
+    if (isNaN(n) || n < 1) return 1;
+    return Math.min(n, MAX_QTY);
+  }
+  function currentQty() {
+    var d = $('dQty');
+    var drawerOpen = $('drawer').className.indexOf('open') !== -1;
+    return clampQty(drawerOpen && d ? d.value : $('qtyInput').value);
+  }
+  function setQty(v) {
+    var q = clampQty(v);
+    $('qtyInput').value = q;
+    if ($('dQty')) $('dQty').value = q;
+    syncArmAvailability();
+  }
+
+  function orderPayload(call) {
+    // Bank the instrument as a plain symbol: POST /api/:broker/orders resolves it to
+    // tradingsymbol + symboltoken server-side via the instrument master, so the page never has to
+    // carry a token that could go stale.
+    return {
+      symbol: String(call.symbol).replace(/-EQ$/i, ''),
+      exchange: 'NSE',
+      transactionType: call.action === 'BUY' ? 'BUY' : 'SELL',
+      orderType: 'LIMIT',
+      productType: 'INTRADAY',
+      quantity: currentQty(),
+      price: call.limitEntry,
+      validity: 'DAY'
+    };
+  }
+
+  // WHAT THE CALL ACTUALLY DID. The record's own status says ARMED for the rest of the day when a
+  // limit is never reached, and the quick marking used to call a call WON from the latest price alone
+  // - which credits a trade whose limit was never touched. The outcomes endpoint replays the engine's
+  // own fill / anti-chase / exit rules over the recorded tape, so this column says what happened:
+  // filled and won, filled and stopped, filled and still open, never filled (Rs 0), or refused before
+  // it could fill. It reads the tape, so it is the same for every reader.
+  var OUTCOME_LABEL = {
+    WON: 'WON', LOST: 'LOST', OPEN: 'OPEN', SESSION_CLOSE: 'CLOSE 15:30', NOT_FILLED: 'NEVER FILLED',
+    CANCELLED_EXHAUSTION: 'ANTI-CHASE', NO_TAPE: 'NO TAPE'
+  };
+
+  function outcomeLabel(s) { return OUTCOME_LABEL[s] || s || '–'; }
+
+  function renderLedger() {
+    var strip = $('ledgerStrip');
+    if (!strip) return;
+    var o = state.outcomes;
+    if (!o || !o.summary) {
+      strip.innerHTML = '<span class="hint">Taking-order ledger unavailable — the outcomes endpoint did not answer. ' +
+        'The table below still shows the record\'s own status.</span>';
+      return;
+    }
+    var s = o.summary;
+    strip.innerHTML =
+      '<b>MY NET</b> (calls I took) <span class="' + signClass(s.myNet) + '">' + signed(s.myNet, 2) + ' ₹</span>' +
+      ' <span class="hint">over ' + s.myCalls + ' call(s)</span>' +
+      ' &nbsp;·&nbsp; <b>ENGINE NET</b> (every call) <span class="' + signClass(s.engineNet) + '">' + signed(s.engineNet, 2) + ' ₹</span>' +
+      ' <span class="hint">over ' + s.calls + ' call(s)</span><br>' +
+      '<span class="hint">filled ' + s.filled + ' · never filled ' + s.notFilled + ' · won ' + s.won + ' · lost ' + s.lost +
+      ' · open ' + s.open + (s.sessionClosed ? ' · squared off ' + s.sessionClosed : '') + ' · anti-chase ' + s.cancelled +
+      ' · skipped ' + s.missedCalls + ' worth <span class="' + signClass(s.missedNet) + '">' + signed(s.missedNet, 2) + ' ₹</span>' +
+      ' · undecided ' + s.undecidedCalls +
+      (s.artifacts ? ' · ' + s.artifacts + ' replay artifact(s) excluded' : '') +
+      (o.tapeThroughIST ? ' · tape to ' + esc(o.tapeThroughIST) + ' IST' : '') + '</span>';
+  }
+
+  function rowFromRecord(c) {
+    // Fallback row when the outcomes endpoint has not answered yet: the record's own fields, and its
+    // own status, so the page degrades to what it showed before rather than to nothing.
+    return {
+      id: c.id, symbol: c.symbol, side: c.side, action: c.action, entry: c.limitEntry,
+      stopLoss: c.stopLoss, target: c.target, armedAtIST: c.timeIST, state: c.status,
+      netInr: c.netInr1Lot, filled: c.netInr1Lot != null, sector: c.sector, record: c, legacy: true
+    };
+  }
+
+  function renderCalls() {
+    var wrap = $('callsWrap');
+    var list = (state.outcomes && Array.isArray(state.outcomes.calls) && state.outcomes.calls.length)
+      ? state.outcomes.calls : state.calls.map(rowFromRecord);
+    if (!list.length) {
+      wrap.innerHTML = '<div class="empty">No calls recorded for today yet. The 1-minute engine reads the live tape ' +
+        'every 60 seconds and arms setups from 09:15 to 15:00 IST — so an empty list before the first setup that ' +
+        'clears its rules, or after 15:00, is expected. Nothing is closed: the feed stays live until 15:30.</div>';
+      return;
+    }
+    var decisions = (state.outcomes && state.outcomes.decisions) || {};
+    var byId = {};
+    state.calls.forEach(function (c) { if (c.id) byId[c.id] = c; });
+    var rows = list.slice().reverse().map(function (r) {
+      var record = byId[r.id] || r.record || null;
+      var outcome = r.state || (record && record.status) || '–';
+      var netInr = (r.netInr == null ? null : r.netInr);
+      var canSend = !!record && record.status === 'ARMED';
+      var decided = decisions[r.id] ? decisions[r.id].state : null;
+      var symbol = (record && record.symbol) || r.symbol;
+      // Only a call that filled can be worth anything, so an unfilled row reads Rs 0 rather than blank -
+      // "never filled" and "flat" are different facts and the note column spells out which one it is.
+      var netCell = r.filled
+        ? '<span class="' + signClass(netInr) + '">' + signed(netInr, 2) + ' ₹</span>'
+        : '<span class="hint">Rs 0</span>';
+      return '<tr' + (r.artifact ? ' class="artifactRow"' : '') + '>' +
+        '<td class="mono">' + esc(r.armedAtIST || (record && record.timeIST) || '') + '</td>' +
+        '<td><b>' + esc(symbol) + '</b><div class="hint">' + esc((record && record.sector) || '') + '</div></td>' +
+        // Outcome, money and the user's own decision come FIRST: those are what the page is read for,
+        // and burying them behind five reference columns pushed them off the right edge on a laptop
+        // screen - the reader had to scroll to find the two things the table exists to answer.
+        '<td><span class="pill ' + esc(outcome) + '" title="' + esc(r.note || '') + '">' + esc(outcomeLabel(outcome)) + '</span></td>' +
+        '<td class="mono">' + netCell + '</td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="decisionBtn' + (decided === 'TAKEN' ? ' taken' : '') + '" data-id="' + esc(r.id) + '" data-state="TAKEN"' +
+            ' title="I took this order">Took it</button>' +
+          '<button class="decisionBtn' + (decided === 'SKIPPED' ? ' skipped' : '') + '" data-id="' + esc(r.id) + '" data-state="SKIPPED"' +
+            ' title="I did not take this order">Skipped</button>' +
+        '</td>' +
+        '<td class="ref">' + esc((record && record.action) || r.action || (r.side === 'SHORT' ? 'SELL' : 'BUY')) + '</td>' +
+        '<td class="mono ref">' + num((record && record.limitEntry) || r.entry) + '</td>' +
+        '<td class="mono loss ref">' + num((record && record.stopLoss) || r.stopLoss) + '</td>' +
+        '<td class="mono gain ref">' + num((record && record.target) || r.target) + '</td>' +
+        '<td class="mono ref">' + esc((record && record.riskReward) || '') + '</td>' +
+        // Keyed by the call's own id, never its array position: the list re-renders every 15s, and a
+        // new call arriving between render and click would otherwise shift the index and open the
+        // confirmation drawer for a DIFFERENT symbol than the row that was clicked - with a live Send
+        // button on it. Cheap to do right, expensive to get wrong.
+        '<td class="act" style="white-space:nowrap">' +
+          (r.artifact ? '<span class="hint">replay artifact</span>' :
+            '<button class="primary sendBtn" data-id="' + esc(record ? record.id : '') + '"' +
+              (canSend ? '' : ' disabled title="Only an ARMED call that is still on the book can be sent"') +
+            '>Send to Angel</button>') +
+        '</td>' +
+      '</tr>';
+    }).join('');
+    wrap.innerHTML = '<div class="table-scroll"><table><thead><tr>' +
+      // The header is what sets the column width: "Outcome (from the tape)" was costing 60px of a
+      // narrow panel for words the panel already says.
+      '<th>Time IST</th><th>Symbol</th><th title="Filled or not, target or stop first, read off the recorded tape">Outcome</th>' +
+      '<th>Net 1 share</th><th>My order</th>' +
+      '<th class="ref">Side</th><th class="ref">Limit</th><th class="ref">Stop</th><th class="ref">Target</th>' +
+      '<th class="ref">R:R</th><th class="act"></th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function renderTrades() {
+    var wrap = $('tradesWrap');
+    $('tradeCount').textContent = state.trades.length + ' trade(s)';
+    if (!state.trades.length) {
+      wrap.innerHTML = '<div class="empty">No trades closed yet today.</div>';
+      return;
+    }
+    var rows = state.trades.slice().reverse().map(function (t) {
+      return '<tr>' +
+        '<td><b>' + esc(t.symbol) + '</b></td>' +
+        '<td>' + esc(t.side) + '</td>' +
+        '<td class="mono">' + num(t.entryPx) + ' → ' + num(t.exitPx) + '</td>' +
+        '<td>' + esc(t.exitReason) + '</td>' +
+        '<td class="mono">' + num(t.grossBps, 1) + '</td>' +
+        '<td class="mono">' + num(t.tollBps, 1) + '</td>' +
+        '<td class="mono ' + signClass(t.netBps) + '">' + signed(t.netBps, 1) + '</td>' +
+        '<td class="mono ' + signClass(t.netInr) + '">' + signed(t.netInr, 2) + '</td>' +
+      '</tr>';
+    }).join('');
+    wrap.innerHTML = '<div class="table-scroll"><table><thead><tr><th>Symbol</th><th>Side</th><th>Entry → Exit</th>' +
+      '<th>Reason</th><th>Gross bps</th><th>Toll bps</th><th>Net bps</th><th>Net ₹</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  // ---------- data ----------
+
+  // A table that is rebuilt every 15s swallows a click that lands while it is being replaced, and it
+  // throws away the reader's scroll position. Both were real: a coordinate click on "Send to Angel"
+  // did nothing at all until the redraw was skipped. So render ONLY when the data actually changed,
+  // and keep the horizontal scroll when it does.
+  function signature(rows, keys) {
+    return rows.map(function (r) {
+      return keys.map(function (k) { return r[k] == null ? '' : r[k]; }).join(':');
+    }).join('|');
+  }
+
+  function renderPreservingScroll(fn) {
+    var box = document.querySelector('#callsWrap .table-scroll');
+    var left = box ? box.scrollLeft : 0;
+    fn();
+    var after = document.querySelector('#callsWrap .table-scroll');
+    if (after && left) after.scrollLeft = left;
+  }
+
+  function load() {
+    return Promise.all([
+      request('/api/orderflow/sweep-fvg/performance').catch(function () { return { status: 'error' }; }),
+      request('/api/orderflow/sweep-fvg/calls').catch(function () { return { status: 'error', calls: [] }; }),
+      request('/api/orderflow/sweep-fvg/signals').catch(function () { return { status: 'error', trades: [] }; }),
+      request('/api/status').catch(function () { return {}; }),
+      // The tape verdicts and the taken/skipped ledger. Read on the same clock as everything else, so
+      // an outcome that changes (a stop hit five minutes ago) shows up without a manual refresh.
+      request('/api/orderflow/sweep-fvg/outcomes').catch(function () { return { status: 'error', calls: [] }; })
+    ]).then(function (r) {
+      var armed = r[0].status === 'ok';
+      state.perf = r[0].performance || null;
+      state.calls = Array.isArray(r[1].calls) ? r[1].calls : [];
+      state.trades = Array.isArray(r[2].trades) ? r[2].trades : [];
+      state.outcomes = (r[4] && r[4].status === 'ok') ? r[4] : state.outcomes;
+      var angel = (r[3] && r[3].angelone) || {};
+      state.brokerOk = !!angel.connected;
+
+      badge($('engineBadge'), armed, armed ? 'Engine live' : 'Engine not armed');
+      // Informational, NOT a gate. The server only requires X-API-Key when SERVER_API_KEY is set, and
+      // these reads already succeeded without one - so blocking the arm switch on a key that the
+      // server is not asking for would refuse to trade for no reason.
+      badge($('keyBadge'), !!apiKey(), apiKey() ? 'API key set' : 'No API key (server accepted)');
+      badge($('brokerBadge'), state.brokerOk,
+        state.brokerOk ? 'Angel One connected' : ('Angel One ' + (angel.lastError || 'disconnected')));
+
+      renderPerf();
+      renderLedger();
+      var callsSig = signature(state.calls, ['id', 'status', 'netInr1Lot', 'limitEntry']) + '||' +
+        JSON.stringify(state.outcomes ? {
+          c: state.outcomes.calls.map(function (x) { return [x.id, x.state, x.filled, x.netInr]; }),
+          d: state.outcomes.decisions
+        } : null);
+      if (callsSig !== state.callsSig) {
+        state.callsSig = callsSig;
+        renderPreservingScroll(renderCalls);
+      }
+      var tradesSig = signature(state.trades, ['symbol', 'side', 'exitPx', 'netInr']);
+      if (tradesSig !== state.tradesSig) {
+        state.tradesSig = tradesSig;
+        renderTrades();
+      }
+      syncArmAvailability();
+      badge($('refreshBadge'), true, 'Updated ' + new Date().toLocaleTimeString('en-IN', { hour12: false }));
+    });
+  }
+
+  // ---------- the arm switch ----------
+
+  function syncArmAvailability() {
+    var sw = $('armSwitch');
+    var bar = $('armBar');
+    if (state.armed) {
+      sw.className = 'switch on'; sw.setAttribute('aria-checked', 'true');
+      bar.className = 'arm-bar armed';
+      $('armTitle').textContent = 'Live ordering is ARMED';
+      $('armSub').textContent = 'A confirmed send places a real ' +
+        ($('qtyInput').value || 1) + '-share INTRADAY LIMIT order on Angel One.';
+    } else {
+      sw.className = 'switch'; sw.setAttribute('aria-checked', 'false');
+      bar.className = 'arm-bar';
+      $('armTitle').textContent = 'Live ordering is OFF';
+      $('armSub').textContent = 'Calls can be previewed but not sent. Arming lasts until this page is reloaded.';
+    }
+    // The row buttons stay enabled: opening the preview is always safe, and the guard belongs on the
+    // send inside the drawer, not on the ability to look. Drawing the lock on the wrong control is
+    // how a guardrail teaches people to click past it.
+    syncSendState();
+  }
+
+  function toggleArm() {
+    if (!state.armed) {
+      // Refuse to arm into a state where every send would fail anyway.
+      if (!state.brokerOk) { toast('Angel One is not connected — cannot arm live ordering.', 'err'); return; }
+      if (!window.confirm('Arm live ordering?\n\nA confirmed send will place a REAL order on Angel One.')) return;
+    }
+    state.armed = !state.armed;
+    syncArmAvailability();
+  }
+
+  // ---------- order drawer ----------
+
+  // THE SEND BUTTON IS NEVER DISABLED. It used to be, while disarmed - and a disabled button does not
+  // fire its own handler, so the message explaining what was missing could never appear. Clicking it
+  // did nothing, which is precisely the "send live order is not working" report. It is now styled as
+  // locked and its click says which lock is closed.
+  function syncSendState() {
+    var b = $('dSend');
+    if (!b) return;
+    b.disabled = false;
+    b.className = 'danger' + (state.armed ? '' : ' locked');
+    b.title = state.armed ? '' : 'Live ordering is OFF — click to see what to do';
+    $('dWarn').style.display = state.armed ? 'none' : '';
+  }
+
+  function openDrawer(callId) {
+    var call = state.calls.filter(function (c) { return c.id === callId; })[0];
+    if (!call) { toast('That call is no longer in the list — refresh and try again.', 'err'); return; }
+    state.pending = call;
+    $('dQty').value = clampQty($('qtyInput').value);
+    renderDrawer();
+    $('dResp').textContent = '';
+    syncSendState();
+    $('drawer').className = 'drawer open';
+  }
+
+  /** Redraws the preview from the CURRENT quantity - the drawer used to be built once at open time, so
+   *  a quantity typed afterwards was invisible in the figures even though it went into the payload. */
+  function renderDrawer() {
+    var call = state.pending;
+    if (!call) return;
+    var payload = orderPayload(call);
+    var money = payload.price * payload.quantity;
+
+    $('dTitle').textContent = 'Confirm ' + payload.transactionType + ' ' + payload.symbol;
+    $('dKv').innerHTML =
+      '<dt>Symbol</dt><dd>' + esc(payload.symbol) + '</dd>' +
+      '<dt>Side</dt><dd>' + esc(payload.transactionType) + ' (' + esc(call.side) + ' call)</dd>' +
+      '<dt>Quantity</dt><dd>' + payload.quantity + '</dd>' +
+      '<dt>Order type</dt><dd>LIMIT @ ₹' + num(payload.price) + '</dd>' +
+      '<dt>Stop (engine)</dt><dd class="loss">₹' + num(call.stopLoss) + '</dd>' +
+      '<dt>Target (engine)</dt><dd class="gain">₹' + num(call.target) + '</dd>' +
+      '<dt>Notional</dt><dd>₹' + num(money) + '</dd>' +
+      '<dt>Risk at stop</dt><dd class="loss">₹' + num(Math.abs(payload.price - call.stopLoss) * payload.quantity) + '</dd>';
+    $('dPayload').textContent = JSON.stringify(payload, null, 2);
+    $('dQtyNote').textContent = payload.quantity + ' share' + (payload.quantity === 1 ? '' : 's') +
+      ' · notional ₹' + num(money) + (payload.quantity >= MAX_QTY ? ' (capped at ' + MAX_QTY + ')' : '');
+  }
+
+  function closeDrawer() { $('drawer').className = 'drawer'; state.pending = null; }
+
+  /**
+   * Check without sending. This is the answer to "send live order is not working": it runs the SAME
+   * resolution, validation and body build the real send uses, proves the session is readable, and
+   * reports what the broker knows (funds) - while never touching the order endpoint. A button that
+   * does nothing is indistinguishable from a button that was never wired, so the check button always
+   * says something.
+   */
+  function checkOrder() {
+    if (!state.pending) return;
+    var payload = orderPayload(state.pending);
+    $('dCheck').disabled = true;
+    $('dResp').innerHTML = '<span class="muted">Checking (no order will be sent)…</span>';
+    request('/api/' + BROKER + '/orders/preflight', { method: 'POST', body: JSON.stringify(payload) })
+      .then(function (res) {
+        var warns = Array.isArray(res.warnings) ? res.warnings : [];
+        $('dResp').innerHTML = (res.ok
+          ? '<span class="gain">Check passed — the order would be accepted by this path.</span>'
+          : '<span class="loss">Check found ' + warns.length + ' problem(s) — sending now would likely fail:</span>') +
+          (warns.length ? '<ul class="warnlist">' + warns.map(function (w) {
+            return '<li>' + esc(w) + '</li>';
+          }).join('') + '</ul>' : '') +
+          '<div class="hint" style="margin-top:6px">Broker would receive ' + esc(res.symbol || payload.symbol) +
+          ' · ' + esc(String(res.notional)) + ' notional · ' + esc(payload.quantity) + ' share(s)</div>';
+      })
+      .catch(function (err) {
+        $('dResp').innerHTML = '<span class="loss">Check failed: ' + esc(err.message) + '</span>';
+      })
+      .then(function () { $('dCheck').disabled = false; });
+  }
+
+  function sendPending() {
+    if (!state.pending) return;
+    if (!state.armed) {
+      // Silence here reads as a broken button. Say which lock is closed, and point at it.
+      toast('Live ordering is OFF — flip the ARM switch at the top, then send.', 'err');
+      $('dResp').innerHTML = '<span class="loss">Not sent: live ordering is OFF. Flip the ARM switch ' +
+        'at the top of the page, then press Send again.</span>';
+      var bar = $('armBar');
+      if (bar) {
+        bar.className = 'arm-bar needs-arm';
+        setTimeout(function () { syncArmAvailability(); }, 2000);
+      }
+      return;
+    }
+    var payload = orderPayload(state.pending);
+    $('dSend').disabled = true;
+    $('dResp').textContent = 'Sending…';
+    request('/api/' + BROKER + '/orders', { method: 'POST', body: JSON.stringify(payload) })
+      .then(function (res) {
+        $('dResp').innerHTML = '<span class="gain">Accepted by the broker. Order id ' +
+          esc(res.orderId || '(none returned)') + '</span>';
+        toast('Order placed: ' + payload.transactionType + ' ' + payload.symbol +
+          ' x' + payload.quantity + ' @ ₹' + payload.price, 'ok');
+        setTimeout(load, 1500);
+      })
+      .catch(function (err) {
+        // The broker's own words, verbatim: "insufficient funds", "RMS blocked", "session expired" all
+        // mean very different things and paraphrasing them hides which one happened.
+        $('dResp').innerHTML = '<span class="loss">Rejected: ' + esc(err.message) + '</span>';
+        toast('Order rejected: ' + err.message, 'err');
+        syncSendState();
+      });
+  }
+
+  // ---------- wiring ----------
+
+  $('armSwitch').addEventListener('click', toggleArm);
+  $('armSwitch').addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleArm(); }
+  });
+  // Both quantity fields stay in step, on `input` as well as `change`. `change` alone only fires when
+  // the field is committed (blur or Enter), so a number typed into the box looked ignored until the
+  // user clicked somewhere else - verified in the browser: typing 3 left the preview and the payload
+  // at 1. `input` updates the figures as the digits arrive.
+  $('qtyInput').addEventListener('input', function () {
+    setQty($('qtyInput').value);
+    if (state.pending) renderDrawer();
+  });
+  $('dQty').addEventListener('input', function () {
+    setQty($('dQty').value);
+    renderDrawer();
+  });
+  $('qtyInput').addEventListener('change', function () {
+    setQty($('qtyInput').value);
+    if (state.pending) renderDrawer();
+  });
+  $('dQty').addEventListener('change', function () {
+    setQty($('dQty').value);
+    renderDrawer();
+  });
+  $('dCheck').addEventListener('click', checkOrder);
+  $('refreshBtn').addEventListener('click', function () {
+    request('/api/orderflow/sweep-fvg/calls') // ping first so a 401 surfaces as a clear message
+      .then(load)
+      .catch(function (e) { toast(e.message, 'err'); });
+  });
+  /**
+   * "Did I take this order?" - the one thing the tape cannot know. Clicking the active choice clears it.
+   * The reply carries the updated summary, so the strip and the row are updated from it directly: the
+   * verdicts come from a tape replay, and making the user wait for one to see their own click land
+   * would be measuring the tape, not the decision.
+   */
+  /** Repaints the two buttons of ONE row. The table is deliberately not rebuilt here (see decide). */
+  function paintDecision(rowEl, id, decided) {
+    if (!rowEl) return;
+    Array.prototype.forEach.call(rowEl.querySelectorAll('.decisionBtn'), function (b) {
+      if (b.dataset.id !== id) return;
+      var on = (b.dataset.state === decided);
+      b.className = 'decisionBtn' + (on ? (decided === 'TAKEN' ? ' taken' : ' skipped') : '');
+    });
+  }
+
+  function decide(id, want, rowEl) {
+    if (!id) { toast('This row has no call id — the decision cannot be stored for it.', 'err'); return; }
+    var cur = (state.outcomes && state.outcomes.decisions && state.outcomes.decisions[id])
+      ? state.outcomes.decisions[id].state : null;
+    var next = (cur === want) ? null : want;
+    var call = ((state.outcomes && state.outcomes.calls) || []).filter(function (c) { return c.id === id; })[0];
+    var label = call ? call.symbol : id;
+    request('/api/orderflow/sweep-fvg/outcomes/decision', {
+      method: 'POST', body: JSON.stringify({ id: id, state: next })
+    }).then(function (res) {
+      if (state.outcomes) {
+        if (next) state.outcomes.decisions[id] = { state: next, at: Date.now() };
+        else delete state.outcomes.decisions[id];
+        if (res && res.summary) state.outcomes.summary = res.summary;
+      }
+      // IN PLACE, not by rebuilding the table: a rebuilt table moves every button, so the reader's
+      // next click lands wherever the row that slid under the cursor happens to be - which is how a
+      // decision can end up on the wrong call. The name in the toast is the check that it did not.
+      paintDecision(rowEl, id, next);
+      renderLedger();
+      toast(next ? ('Marked ' + next + ': ' + label) : ('Cleared: ' + label), 'ok');
+      state.callsSig = null;   // the next 15s refresh redraws from the server's own numbers
+    }).catch(function (e2) { toast(e2.message, 'err'); });
+  }
+
+  $('callsWrap').addEventListener('click', function (e) {
+    var btn = e.target.closest('.sendBtn');
+    if (btn) { openDrawer(btn.dataset.id); return; }
+    var d = e.target.closest('.decisionBtn');
+    if (d) decide(d.dataset.id, d.dataset.state, d.closest('tr'));
+  });
+  $('dClose').addEventListener('click', closeDrawer);
+  $('dCancel').addEventListener('click', closeDrawer);
+  $('dSend').addEventListener('click', sendPending);
+  $('drawer').addEventListener('click', function (e) { if (e.target === $('drawer')) closeDrawer(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+
+  // No toast on load failure: the badges already say which piece is down (engine / broker / key), and
+  // a red bubble on every poll would just train people to ignore the toast area.
+  load().catch(function () {});
+  // FIVE SECONDS, NOT FIFTEEN. Every figure on this page is a live mark against the tape, so the interval
+  // is how stale the reader's view is: at 15s an intraday call can move half its target between two
+  // renders. The outcomes endpoint replays the tape only when the tape itself changed (and costs ~3ms
+  // when it has not), so the faster clock costs nothing but one small JSON per tick.
+  setInterval(function () { load().catch(function () {}); }, 5000);
+})();
+</script>
+</body>
+</html>

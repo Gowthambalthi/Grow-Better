@@ -16,7 +16,17 @@
 
 const RATES = {
   // Brokerage
-  DELIVERY_BROKERAGE: 0,                    // ₹0 flat for equity delivery
+  //
+  // EQUITY DELIVERY IS NO LONGER FREE. Angel One revised this rate card in Oct 2024: delivery is now
+  // charged exactly like intraday — the lower of ₹20 or 0.1% of trade value per EXECUTED ORDER, with a
+  // ₹5 minimum. The old `DELIVERY_BROKERAGE: 0` under-reported every delivery and MTF trade by up to
+  // ₹23.60 per leg (₹20 + 18% GST) — and this module feeds real ledger and portfolio P&L, not just
+  // backtests, so those numbers were wrong in the optimistic direction. Source (checked 2026-09-28):
+  // angelone.in/exchange-transaction-charges and angelone.in/calculators/brokerage-calculator, both of
+  // which list delivery as "lower of ₹20 or 0.1% per executed order, minimum ₹5".
+  DELIVERY_BROKERAGE_PCT: 0.001,            // 0.1% of trade value
+  DELIVERY_BROKERAGE_CAP: 20,               // ...or ₹20, whichever is lower
+  DELIVERY_BROKERAGE_MIN: 5,                // minimum ₹5 per executed order
   INTRADAY_BROKERAGE_PCT: 0.001,            // 0.1% of trade value
   INTRADAY_BROKERAGE_CAP: 20,               // ...or ₹20, whichever is lower
   INTRADAY_BROKERAGE_MIN: 5,                // minimum ₹5 per order
@@ -58,7 +68,8 @@ function calculateTradeCharges(trade) {
 
   let brokerage = 0;
   if (isDelivery) {
-    brokerage = RATES.DELIVERY_BROKERAGE;
+    // Same tiered rule as intraday since the Oct-2024 revision (min ₹5, cap ₹20, 0.1% of value).
+    brokerage = Math.max(RATES.DELIVERY_BROKERAGE_MIN, Math.min(RATES.DELIVERY_BROKERAGE_CAP, value * RATES.DELIVERY_BROKERAGE_PCT));
   } else if (isIntraday) {
     brokerage = Math.max(RATES.INTRADAY_BROKERAGE_MIN, Math.min(RATES.INTRADAY_BROKERAGE_CAP, value * RATES.INTRADAY_BROKERAGE_PCT));
   } else {

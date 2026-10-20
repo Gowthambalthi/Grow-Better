@@ -8,27 +8,20 @@ import { rawMoney, pct, plSign } from '../core/formatters.js';
 
 // Core symbols polled every tick — they feed the always-visible topbar ticker
 // Core symbols polled every tick — they feed the always-visible topbar ticker
-const CORE_SYMBOLS = ['NIFTY', 'SENSEX', 'BANKNIFTY', 'FINNIFTY', 'BANKEX', 'MIDCPNIFTY', 'INDIAVIX', 'NIFTYNXT50'];
-// Extra rows (MCX + world indices) fetched ONLY while the Indices List popover is open (lazy)
-const EXTRA_SYMBOLS = ['GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS', 'SPX', 'DJI', 'NASDAQ', 'VIX', 'NIKKEI', 'HANGSENG', 'SHANGHAI', 'KOSPI', 'FTSE', 'DAX', 'CAC', 'STOXX50'];
-// India rows shown in the popover (order matches Image 1)
-const INDIA_SYMBOLS = [...CORE_SYMBOLS, 'GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
-// World rows per region tab
-const REGION_SYMBOLS = {
-  usa: ['SPX', 'DJI', 'NASDAQ', 'VIX'],
-  asia: ['NIKKEI', 'HANGSENG', 'SHANGHAI', 'KOSPI'],
-  europe: ['FTSE', 'DAX', 'CAC', 'STOXX50'],
-};
+const CORE_SYMBOLS = ['GIFTNIFTY', 'NIFTY', 'SENSEX', 'BANKNIFTY', 'FINNIFTY', 'BANKEX', 'MIDCPNIFTY', 'INDIAVIX', 'NIFTYNXT50'];
+// Extra Indian rows (MCX commodities) fetched while the Indices List popover is open
+const EXTRA_SYMBOLS = ['GOLD', 'SILVER', 'CRUDEOIL', 'NATURALGAS'];
+// Indian indices and commodities shown in the popover
+const INDIA_SYMBOLS = [...CORE_SYMBOLS, ...EXTRA_SYMBOLS];
+
 const DISPLAY_NAMES = {
-  NIFTY: 'NIFTY', SENSEX: 'SENSEX', BANKNIFTY: 'BANKNIFTY', FINNIFTY: 'FINNIFTY',
+  GIFTNIFTY: 'GIFT Nifty', NIFTY: 'NIFTY', SENSEX: 'SENSEX', BANKNIFTY: 'BANKNIFTY', FINNIFTY: 'FINNIFTY',
   BANKEX: 'BANKEX', MIDCPNIFTY: 'MIDCPNIFTY', INDIAVIX: 'INDIA VIX', NIFTYNXT50: 'NIFTYNXT50',
   GOLD: 'MCX GOLD', SILVER: 'MCX SILVER', CRUDEOIL: 'MCX CRUDE', NATURALGAS: 'MCX NATGAS',
-  SPX: 'S&P 500', DJI: 'DOW JONES', NASDAQ: 'NASDAQ', VIX: 'US VIX',
-  NIKKEI: 'NIKKEI 225', HANGSENG: 'HANG SENG', SHANGHAI: 'SHANGHAI', KOSPI: 'KOSPI',
-  FTSE: 'FTSE 100', DAX: 'DAX', CAC: 'CAC 40', STOXX50: 'EURO STOXX 50',
 };
 const ALL_SYMBOLS = Array.from(new Set([...INDIA_SYMBOLS, ...EXTRA_SYMBOLS]));
 const tickerPrices = {
+  GIFTNIFTY: { price: 22888.95, prevPrice: 23146.15, change: -257.20, changePct: -1.11 },
   NIFTY: { price: 23398.10, prevPrice: 23477.80, change: -79.70, changePct: -0.34 },
   SENSEX: { price: 74781.76, prevPrice: 74902.59, change: -120.83, changePct: -0.16 },
   BANKNIFTY: { price: 56606.55, prevPrice: 56471.95, change: 134.60, changePct: 0.24 },
@@ -50,8 +43,10 @@ export function isIndianMarketOpen() {
   const mins = ist.getMinutes();
   const timeNum = hours * 100 + mins;
 
-  // Indian Market hours (including 09:00 AM pre-open to 15:30 IST)
-  return timeNum >= 900 && timeNum <= 1530;
+  // Indian market hours: 09:15 to 15:30 IST. This used to start at 09:00 to cover the pre-open
+  // session, but the pre-open feature was removed — so the ticker no longer calls itself "open"
+  // for a quarter of an hour during which no continuous trading exists.
+  return timeNum >= 915 && timeNum <= 1530;
 }
 
 export function togglePopover(popoverId, buttonId) {
@@ -68,50 +63,14 @@ export function togglePopover(popoverId, buttonId) {
     popover.classList.add('show');
     if (btn) btn.classList.add('active');
     popoverOpen = true;
-    if (popoverId === 'watchlistPopover') applyRegionFilter();
-    updateTickerData(); // lazy-load MCX + world quotes on open
+    updateTickerData(); // lazy-load MCX quotes on open
   } else {
     popoverOpen = false;
   }
 }
 
 let selectedSymbolOverride = null;
-let activeRegion = 'india';
-let popoverOpen = false; // extra (MCX + world) quotes are fetched only while this is true
-
-function ensureWorldRows() {
-  const body = document.querySelector('#watchlistPopover .popover-body');
-  if (!body) return;
-  for (const [region, syms] of Object.entries(REGION_SYMBOLS)) {
-    for (const sym of syms) {
-      if (body.querySelector(`.watch-row[data-symbol="${sym}"]`)) continue;
-      const row = document.createElement('div');
-      row.className = 'watch-row world-row';
-      row.setAttribute('data-symbol', sym);
-      row.setAttribute('data-region', region);
-      row.style.display = 'none';
-      row.innerHTML = `<div class="w-name"><svg class="w-diamond outline" viewBox="0 0 24 24"><polygon points="12 3, 21 12, 12 21, 3 12" fill="none" stroke="currentColor" stroke-width="2.2"/></svg><span>${DISPLAY_NAMES[sym] || sym}</span></div>`
-        + `<div class="w-right"><span class="w-price">–</span><span class="w-change">…</span></div>`;
-      row.addEventListener('click', () => {
-        selectedSymbolOverride = sym;
-        renderTickerUI();
-        document.querySelectorAll('.dropdown-popover').forEach((p) => p.classList.remove('show'));
-      });
-      body.appendChild(row);
-    }
-  }
-}
-
-function applyRegionFilter() {
-  document.querySelectorAll('#watchlistPopover .watch-row').forEach((row) => {
-    const rowRegion = row.getAttribute('data-region') || 'india';
-    if (rowRegion === activeRegion) {
-      row.style.setProperty('display', 'flex', 'important');
-    } else {
-      row.style.setProperty('display', 'none', 'important');
-    }
-  });
-}
+let popoverOpen = false; // extra MCX quotes are fetched only while this is true
 
 export function initPopovers() {
   const indexPill = document.getElementById('topbarIndexPill');
@@ -129,16 +88,6 @@ export function initPopovers() {
       togglePopover('cashPopover', 'cashCardPill');
     });
   }
-
-  // Region tabs (India / USA / Asia / Europe) — switch which rows show
-  document.querySelectorAll('#watchlistPopover .inder-region-tab').forEach((tab) => {
-    tab.addEventListener('click', (e) => {
-      e.stopPropagation();
-      activeRegion = tab.getAttribute('data-region') || 'india';
-      document.querySelectorAll('#watchlistPopover .inder-region-tab').forEach((t) => t.classList.toggle('active', t === tab));
-      applyRegionFilter();
-    });
-  });
 
   // Click Watchlist Row to switch active topbar index
   document.querySelectorAll('.watch-row').forEach((row) => {
@@ -163,7 +112,6 @@ export function initPopovers() {
 let tickerTimer = null;
 
 export async function startTicker() {
-  ensureWorldRows();
   renderTickerUI();
   await updateTickerData();
   if (!tickerTimer) {
@@ -203,16 +151,15 @@ async function updateTickerData() {
 
 function renderTickerUI() {
   const open = isIndianMarketOpen();
-  const defaultSym = open ? 'NIFTY' : 'GIFTNIFTY';
+  const defaultSym = 'NIFTY';
   const activeSymbol = selectedSymbolOverride || defaultSym;
   const topData = tickerPrices[activeSymbol] || tickerPrices[defaultSym] || tickerPrices.NIFTY;
 
-  // Determine market phase (Pre-Open 9:00-9:15 vs Live 9:15-15:30)
+  // There is no pre-open phase any more (the 09:00-09:15 tag and its `isPreOpen` flag were
+  // removed with the pre-open feature); the clock below is only used for the header time.
   const now = new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const ist = new Date(utc + (3600000 * 5.5));
-  const timeNum = ist.getHours() * 100 + ist.getMinutes();
-  const isPreOpen = open && timeNum >= 900 && timeNum < 915;
 
   // Header Title & Market Tag Update
   const nameEl = document.getElementById('mainHeaderIndexName');
@@ -243,9 +190,13 @@ function renderTickerUI() {
     const chgVal = Number(change || 0);
     const isPos = chgVal >= 0;
     if (arrowEl) {
-      arrowEl.textContent = isPos ? '▲' : '▼';
+      arrowEl.style.display = 'none';
     }
-    if (subEl) subEl.textContent = `${plSign(chgVal)}${Math.abs(chgVal).toFixed(2)} (${pct(changePct)})`;
+    if (subEl) {
+      const chgStr = Math.abs(chgVal).toFixed(2);
+      const pctStr = Math.abs(changePct).toFixed(2);
+      subEl.textContent = isPos ? `+${chgStr} (+${pctStr}%)` : `${chgStr} (-${pctStr}%)`;
+    }
     if (valRow) {
       valRow.className = `index-val-row ${isPos ? 'positive' : 'negative'}`;
     }

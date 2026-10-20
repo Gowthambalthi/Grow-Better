@@ -42,20 +42,25 @@ class AngelTrading {
       Accept: 'application/json',
       'X-UserType': 'USER',
       'X-SourceID': 'WEB',
-      'X-ClientLocalIP': '127.0.0.1',
-      'X-ClientPublicIP': '127.0.0.1',
-      'X-MACAddress': '00:00:00:00:00:00',
+      'X-ClientLocalIP': process.env.CLIENT_LOCAL_IP || '127.0.0.1',
+      'X-ClientPublicIP': process.env.CLIENT_PUBLIC_IP || '127.0.0.1',
+      'X-MACAddress': process.env.CLIENT_MAC_ADDRESS || '00:00:00:00:00:00',
       'X-PrivateKey': apiKey,
     };
   }
 
-  async placeOrder(order, { variety = 'NORMAL' } = {}) {
+  /**
+   * The EXACT body placeOrder would POST, in one place, so a preflight cannot describe a different
+   * order from the one that would actually go out. Validation lives here too: every caller gets the
+   * full list of reasons the order cannot be sent instead of the first one. Not exported as a public
+   * API on its own - placeOrder and preflightOrder are the two callers.
+   */
+  buildOrderBody(order, { variety = 'NORMAL' } = {}) {
     validateOrder(order);
     if (!order.symboltoken) {
       throw new Error('Angel One placeOrder requires order.symboltoken (instrument token)');
     }
-
-    const body = {
+    return {
       variety,
       tradingsymbol: order.tradingsymbol,
       symboltoken: order.symboltoken,
@@ -69,6 +74,32 @@ class AngelTrading {
       quantity: String(order.quantity),
       disclosedquantity: String(order.disclosedQuantity ?? 0),
     };
+  }
+
+  /**
+   * VALIDATE AND SHOW, SEND NOTHING. Answers "is live ordering working" without spending money on
+   * the answer: it resolves the unified order into the broker body, and proves the session is
+   * actually usable by making one real read call (an order cannot be placed on a session that cannot
+   * be read). It never touches the order endpoint.
+   */
+  async preflightOrder(order, opts = {}) {
+    const body = this.buildOrderBody(order, opts);
+    const endpoint = `${this.baseUrl}/rest/secure/angelbroking/order/v1/placeOrder`;
+    const warnings = [];
+    let sessionOk = true;
+    try {
+      await axios.get(`${this.baseUrl}/rest/secure/angelbroking/order/v1/getOrderBook`, { headers: this._headers() });
+    } catch (err) {
+      sessionOk = false;
+      const status = err.response && err.response.status;
+      warnings.push(`The order-book read failed (${status || err.message}) - an order placed on this ` +
+        `session would most likely fail too. The websocket can still be up while the REST session is not.`);
+    }
+    return { ok: warnings.length === 0, sessionOk, wouldSend: body, endpoint, warnings };
+  }
+
+  async placeOrder(order, opts = {}) {
+    const body = this.buildOrderBody(order, opts);
 
     const { data } = await axios.post(
       `${this.baseUrl}/rest/secure/angelbroking/order/v1/placeOrder`,

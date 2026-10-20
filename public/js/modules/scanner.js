@@ -21,6 +21,31 @@ let stkSortCol = 'weightage_score';
 let stkSortDir = 'DESC';
 let stockSearchQuery = '';
 
+/**
+ * A caution row for scores the API reports as not measurable from their own data.
+ *
+ * The rankings endpoints now send `provenance`. When `measured` is false the numbers cannot be
+ * reproduced from the component columns stored beside them, so rendering them under a bare score
+ * heading presents placeholder data as a measurement. The row states that, and names the row counts and
+ * component diversity so the claim is checkable rather than a vague caveat.
+ */
+function provenanceWarningRow(prov, colspan = 8) {
+  if (!prov || prov.measured !== false) return '';
+  const detail = prov.tables
+    ? Object.entries(prov.tables).map(([t, s]) => {
+        const div = s.componentDiversity ? Object.entries(s.componentDiversity).map(([c, n]) => `${c}=${n}`).join(' ') : '';
+        return `${t}: ${s.rows} rows (${div})`;
+      }).join(' · ')
+    : '';
+  return `
+    <tr class="empty-row" style="background:rgba(248,92,86,0.08);">
+      <td colspan="${colspan}" style="text-align:left;line-height:1.5;padding:10px 14px;">
+        <b style="color:#F85C56;">Unverified data</b>
+        <span style="color:var(--text-muted);"> — these scores are served as-is from the database and cannot be reproduced from the metric columns stored beside them, so this ranking is not a measurement yet.${detail ? ' ' + detail + '.' : ''}</span>
+      </td>
+    </tr>`;
+}
+
 export function initInstitutionalScanner() {
   bindControls();
   loadData();
@@ -189,7 +214,7 @@ export async function loadInstitutesViewData() {
         `;
       });
 
-      tbody.innerHTML = html;
+      tbody.innerHTML = provenanceWarningRow(res.provenance) + html;
     } catch (err) {
       console.error('loadInstitutesViewData AMC error:', err);
     }
@@ -268,7 +293,7 @@ export async function loadInstitutesViewData() {
         `;
       });
 
-      tbody.innerHTML = html;
+      tbody.innerHTML = provenanceWarningRow(res.provenance) + html;
     } catch (err) {
       console.error('loadInstitutesViewData Scheme error:', err);
     }
@@ -433,7 +458,7 @@ async function loadStockWeightageRanking() {
       `;
     });
 
-    tbody.innerHTML = html;
+    tbody.innerHTML = provenanceWarningRow(res.provenance) + html;
 
     // Attach click listeners for breakdown modal
     tbody.querySelectorAll('[data-breakdown-sym]').forEach(td => {

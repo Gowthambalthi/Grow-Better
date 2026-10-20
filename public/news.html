@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>News — Grow Better</title>
+<link rel="icon" href="/logo.png">
+<link rel="stylesheet" href="/css/style.css">
+<style>
+  body { background: var(--bg-void); color: var(--text-primary); font-family: var(--font-sans); margin: 0; }
+  .page { padding: 16px 20px 70px; max-width: 1800px; margin: 0 auto; width: 100%; }
+  h1 { font-size: 20px; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.01em; }
+  h2 { font-size: 15px; font-weight: 700; margin: 0; }
+  h3 { font-size: 12.5px; font-weight: 700; margin: 0; }
+  .sub { font-size: 12px; color: var(--text-muted); }
+  .row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .chip { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700;
+          padding:3px 10px; border-radius:12px; border:1px solid var(--line-bright); color: var(--text-muted); }
+  .chip.ok { color: var(--gain); border-color: rgba(0,230,153,.35); }
+  .chip.warn { color: var(--warn); border-color: rgba(255,184,107,.35); }
+  .chip.bad { color: var(--loss); border-color: rgba(255,77,109,.35); }
+  .card { background: var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:14px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .stat { background: var(--bg-raised); border:1px solid var(--line); border-radius:10px; padding:9px 12px; }
+  .stat .k { font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color: var(--text-dim); font-weight:700; }
+  .stat .v { font-size:19px; font-weight:800; margin-top:2px; font-variant-numeric: tabular-nums; }
+  .stat .n { font-size:10.5px; color: var(--text-dim); margin-top:1px; }
+  .cats { display:flex; gap:8px; flex-wrap:wrap; }
+  .pill { background: var(--bg-raised); border:1px solid var(--line-bright); border-radius:9px; padding:5px 11px;
+          font-size:12px; font-weight:700; color: var(--text-muted); cursor:pointer; font-family:inherit; }
+  .pill.on { border-color: var(--accent); color: var(--gain); background: var(--bg-raised-hover); }
+  .pill .c { opacity:.6; font-variant-numeric: tabular-nums; margin-left:5px; }
+  .grid2 { display:grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); gap:14px; align-items:start; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } }
+  .scroll { overflow:auto; max-height:66vh; border:1px solid var(--line); border-radius:10px; }
+  table { width:100%; border-collapse: collapse; font-size:12px; }
+  thead th { position:sticky; top:0; background: var(--bg-header); color: var(--text-muted);
+             font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; text-align:right;
+             padding:7px 8px; border-bottom:1px solid var(--line-bright); white-space:nowrap; z-index:2; }
+  thead th.l { text-align:left; }
+  tbody td { padding:7px 8px; border-bottom:1px solid var(--line); text-align:right;
+             font-variant-numeric: tabular-nums; vertical-align:top; }
+  tbody td.l { text-align:left; }
+  tbody tr:hover { background: rgba(74,158,255,.07); }
+  .pos { color: var(--gain); } .neg { color: var(--loss); } .mut { color: var(--text-dim); }
+  .tag { font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:6px; letter-spacing:.04em; white-space:nowrap; }
+  .tag.promoter { background: rgba(74,158,255,.16); color: #7cc0ff; }
+  .tag.results  { background: rgba(0,230,153,.14); color: var(--gain); }
+  .tag.deals    { background: rgba(178,132,255,.16); color: #c4a4ff; }
+  .tag.bulk     { background: rgba(255,184,107,.15); color: var(--warn); }
+  .tag.oil      { background: rgba(255,140,80,.15); color: #ffa060; }
+  .tag.war      { background: rgba(255,77,109,.15); color: var(--loss); }
+  .tag.fed      { background: rgba(120,220,232,.15); color: #7fd9e6; }
+  .tag.ceo      { background: rgba(255,214,102,.15); color: #ffd666; }
+  .tag.ai       { background: rgba(0,230,153,.10); color: #37d6c0; }
+  .tag.other    { background: rgba(148,163,184,.12); color: var(--text-dim); }
+  .hl { color: var(--text-primary); text-decoration:none; }
+  .hl:hover { color: var(--accent); text-decoration:underline; }
+  .src { font-size:10.5px; color: var(--text-dim); }
+  .symBtn { font-size:10px; font-weight:800; padding:2px 6px; border-radius:5px; border:1px solid var(--line-bright);
+            background: var(--bg-raised); color: var(--text-muted); cursor:pointer; font-family:inherit; margin-left:4px; }
+  .symBtn:hover { color: var(--gain); border-color: var(--accent); }
+  .dir { font-weight:800; font-size:12px; }
+  .empty { padding:26px 14px; text-align:center; color: var(--text-dim); font-size:12.5px; }
+  input[type=search] { background: var(--bg-raised); border:1px solid var(--line-bright); color: var(--text-primary);
+                       border-radius:8px; padding:6px 10px; font-size:12px; font-family:inherit; min-width:220px; }
+  .seg { display:inline-flex; border:1px solid var(--line-bright); border-radius:10px; overflow:hidden; }
+  .seg button { background: var(--bg-raised); color: var(--text-muted); border:0; padding:5px 11px;
+                font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .seg button + button { border-left:1px solid var(--line-bright); }
+  .seg button.on { background: var(--bg-raised-hover); color: var(--text-primary); }
+  .foot { font-size:11px; color: var(--text-dim); margin-top:14px; line-height:1.75; }
+  .ctl { background: rgba(255,184,107,.07); }
+  code { font-family: var(--font-mono); font-size:11px; background: var(--bg-raised); padding:1px 5px; border-radius:4px; }
+  .note { font-size:11.5px; color: var(--text-muted); line-height:1.7; }
+  .bar { display:inline-block; height:7px; border-radius:3px; vertical-align:middle; }
+  .bar.up { background: var(--gain); } .bar.dn { background: var(--loss); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="row" style="justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h1>News</h1>
+      <div class="sub">Every headline the harvester found — promoters, results, deals, bulk deals, oil, war, the Fed, CEOs, AI capex — and beside each category, what the stock actually did next.</div>
+    </div>
+    <div class="row" id="chips"></div>
+  </div>
+
+  <div class="card">
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;">
+      <div class="cats" id="cats"></div>
+      <div class="row">
+        <div class="seg" id="winSeg">
+          <button data-w="1">Today</button>
+          <button data-w="7">7 days</button>
+          <button data-w="30">30 days</button>
+          <button data-w="90">90 days</button>
+          <button data-w="0" class="on">All stored</button>
+        </div>
+        <input type="search" id="q" placeholder="search headline or ticker…">
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card" style="padding:8px 10px;">
+        <div class="row" style="justify-content:space-between; margin-bottom:6px;">
+          <h2 id="feedHead">The feed</h2>
+          <span class="sub" id="feedCount"></span>
+        </div>
+        <div class="scroll" id="feedHost"><div class="empty">loading…</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+          <h2>What happened after</h2>
+          <span class="sub" id="reactWhen">—</span>
+        </div>
+        <div id="reactHost"><div class="empty">loading…</div></div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+          <h2>Stocks whose news moved them most</h2>
+          <span class="sub">median, &ge;3 headlines</span>
+        </div>
+        <div class="scroll" style="max-height:38vh;" id="symHost"><div class="empty">loading…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+'use strict';
+/* eslint-disable no-undef */
+const $ = (id) => document.getElementById(id);
+const CAT_LABEL = {};   // id -> {label, blurb}
+let SUMMARY = null;
+let REACT = null;
+let state = { cat: 'all', window: 0, q: '' };
+let feedTimer = null;
+
+function pct(x, digits) {
+  if (x === null || x === undefined || !isFinite(x)) return '—';
+  const d = digits === undefined ? 2 : digits;
+  return (x * 100).toFixed(d) + '%';
+}
+function cls(x) { return x === null || x === undefined ? 'mut' : (x > 0 ? 'pos' : (x < 0 ? 'neg' : 'mut')); }
+function esc(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d + 'T00:00:00Z');
+  return dt.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: '2-digit', timeZone: 'UTC' });
+}
+
+function chips() {
+  const t = (SUMMARY && SUMMARY.totals) || {};
+  const h = (SUMMARY && SUMMARY.harvest) || {};
+  const out = [];
+  out.push('<span class="chip">' + (t.total || 0).toLocaleString() + ' headlines</span>');
+  out.push('<span class="chip">' + (t.taggged || t.tagged || 0).toLocaleString() + ' name a stock</span>');
+  out.push('<span class="chip">' + (t.days || 0).toLocaleString() + ' days stored</span>');
+  out.push('<span class="chip ' + (h.chunksDone > 500 ? 'ok' : 'warn') + '">harvest ' + (h.chunksDone || 0) + ' chunks</span>');
+  out.push('<span class="chip warn">date-only timestamps</span>');
+  $('chips').innerHTML = out.join('');
+}
+
+function stats() {
+  const t = (SUMMARY && SUMMARY.totals) || {};
+  const r = SUMMARY && SUMMARY.reaction;
+  const cells = [
+    ['Headlines stored', (t.total || 0).toLocaleString(), 'from Google News RSS'],
+    ['Naming a stock', (t.tagged || 0).toLocaleString(), 'the rest are market-wide'],
+    ['Days covered', (t.days || 0).toLocaleString(), (t.from || '—') + ' → ' + (t.to || '—')],
+    ['Events measured', r && r.overall ? (r.overall.n || 0).toLocaleString() : '—', r && r.counts ? r.counts.symbols.toLocaleString() + ' stocks, ' + r.counts.droppedNoSession.toLocaleString() + ' had no session near the date' : 'news with price around it'],
+    ['Control (no news)', r && r.control ? pct(r.control.h0c2c.mean, 3) : '—', r && r.control ? r.control.h0c2c.n.toLocaleString() + ' ordinary symbol-days' : ''],
+    ['Last harvest', SUMMARY && SUMMARY.harvest && SUMMARY.harvest.lastRun ? new Date(SUMMARY.harvest.lastRun).toLocaleString() : '—', (SUMMARY && SUMMARY.harvest ? SUMMARY.harvest.runs : 0) + ' run(s)'],
+  ];
+  $('stats').innerHTML = cells.map((c) =>
+    '<div class="stat"><div class="k">' + esc(c[0]) + '</div><div class="v">' + esc(c[1]) + '</div><div class="n">' + esc(c[2]) + '</div></div>'
+  ).join('');
+}
+
+function cats() {
+  const t = (SUMMARY && SUMMARY.totals) || { byCategory: {} };
+  const list = [{ id: 'all', label: 'All' }].concat(
+    (SUMMARY && SUMMARY.categories ? SUMMARY.categories : []).map((c) => ({ id: c.id, label: c.label })));
+  list.push({ id: 'other', label: 'Other' });
+  $('cats').innerHTML = list.map((c) => {
+    const n = c.id === 'all' ? (t.total || 0) : ((t.byCategory || {})[c.id] || 0);
+    return '<button class="pill ' + (state.cat === c.id ? 'on' : '') + '" data-cat="' + esc(c.id) + '">' +
+      esc(c.label) + '<span class="c">' + n.toLocaleString() + '</span></button>';
+  }).join('');
+  Array.prototype.forEach.call($('cats').querySelectorAll('button'), (b) => {
+    b.onclick = () => { state.cat = b.getAttribute('data-cat'); cats(); loadFeed(); };
+  });
+}
+
+function feedRows(items) {
+  if (!items.length) return '<div class="empty">nothing stored for this filter yet — the harvester runs month by month, so widen the window</div>';
+  const rows = items.map((it) => {
+    const syms = (it.symbols || []).map((s) =>
+      '<button class="symBtn" data-sym="' + esc(s) + '">' + esc(s) + '</button>').join('');
+    const dir = it.direction === 'UP' ? '<span class="dir pos">▲</span>'
+      : it.direction === 'DOWN' ? '<span class="dir neg">▼</span>'
+      : it.direction === 'MIXED' ? '<span class="dir mut">◆</span>' : '<span class="dir mut">·</span>';
+    return '<tr>' +
+      '<td class="l" style="white-space:nowrap;">' + fmtDate(it.date) + '</td>' +
+      '<td class="l"><span class="tag ' + esc(it.category) + '">' + esc(it.category) + '</span></td>' +
+      '<td class="l">' + (it.url ? '<a class="hl" href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.title) + '</a>'
+        : esc(it.title)) + ' <span class="src">· ' + esc(it.source) + '</span>' + syms + '</td>' +
+      '<td style="width:26px;">' + dir + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<table><thead><tr><th class="l">Date</th><th class="l">Category</th><th class="l">Headline</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function wireSymButtons(host) {
+  Array.prototype.forEach.call(host.querySelectorAll('.symBtn'), (b) => {
+    b.onclick = () => { state.q = b.getAttribute('data-sym'); $('q').value = state.q; loadFeed(); };
+  });
+}
+
+async function loadFeed() {
+  const host = $('feedHost');
+  const params = new URLSearchParams();
+  if (state.cat !== 'all') params.set('category', state.cat);
+  if (state.q) params.set('q', state.q);
+  if (state.window > 0) {
+    const d = new Date(Date.now() - state.window * 86400000).toISOString().slice(0, 10);
+    params.set('from', d);
+  }
+  params.set('limit', '400');
+  try {
+    const r = await fetch('/api/news?' + params.toString());
+    const j = await r.json();
+    host.innerHTML = feedRows(j.items || []);
+    wireSymButtons(host);
+    $('feedHead').textContent = state.cat === 'all' ? 'The feed' : (CAT_LABEL[state.cat] ? CAT_LABEL[state.cat].label : state.cat);
+    $('feedCount').textContent = (j.count || 0).toLocaleString() + ' of ' + (j.total || 0).toLocaleString() +
+      (state.q ? ' matching “' + state.q + '”' : '') + (j.total > (j.count || 0) ? ' · newest first' : '');
+  } catch (e) {
+    host.innerHTML = '<div class="empty">the news API did not answer: ' + esc(e.message) + '</div>';
+  }
+}
+
+function reactTable() {
+  const r = SUMMARY && SUMMARY.reaction;
+  if (!r || r.available === false || !r.byCategory) {
+    return '<div class="note">Not measured yet. <code>node scripts/newsEventStudy.js</code> walks the stored headlines against the 1-minute corpus and writes the distribution. Until it has run, this panel shows nothing rather than a guess.</div>';
+  }
+  const H = r.horizons || [0, 1, 5, 20];
+  const show = [0, 1, 5, 20].filter((h) => H.indexOf(h) >= 0);
+  const head = '<tr><th class="l">Category</th><th>n</th>' +
+    show.map((h) => '<th>d+' + h + '</th>').join('') + '<th>%&uarr; d0</th><th>t</th><th>vol&times;</th></tr>';
+  const rows = Object.keys(r.byCategory).map((cat) => {
+    const s = r.byCategory[cat];
+    if (!s || !s.n) return '';
+    const h = s.horizons || {};
+    const dirs = s.byDirection || {};
+    const up = dirs.UP && dirs.UP.horizons ? dirs.UP.horizons[0] : null;
+    const dn = dirs.DOWN && dirs.DOWN.horizons ? dirs.DOWN.horizons[0] : null;
+    const label = CAT_LABEL[cat] ? CAT_LABEL[cat].label : cat;
+    return '<tr>' +
+      '<td class="l"><span class="tag ' + esc(cat) + '">' + esc(cat) + '</span> <span class="src">' + esc(label) + '</span>' +
+      (up || dn ? '<div class="src" style="margin-top:3px;">up-news ' + pct(up ? up.mean : null) + ' · down-news ' + pct(dn ? dn.mean : null) + '</div>' : '') +
+      '</td>' +
+      '<td>' + s.n + '</td>' +
+      show.map((hh) => '<td class="' + cls(h[hh] ? h[hh].mean : null) + '">' + pct(h[hh] ? h[hh].mean : null) + '</td>').join('') +
+      '<td>' + (h[0] && h[0].posRate !== undefined ? (h[0].posRate * 100).toFixed(0) + '%' : '—') + '</td>' +
+      '<td>' + (h[0] && h[0].t !== null && h[0].t !== undefined ? h[0].t.toFixed(2) : '—') + '</td>' +
+      '<td>' + (s.volume ? s.volume.median.toFixed(2) : '—') + '</td>' +
+      '</tr>';
+  }).join('');
+  const c = r.control;
+  const ctlRow = c && c.h0c2c ? '<tr class="ctl"><td class="l"><b>NO NEWS AT ALL</b><div class="src">every symbol-day in the corpus</div></td>' +
+    '<td>' + c.h0c2c.n.toLocaleString() + '</td>' +
+    show.map((hh) => '<td>' + (hh === 0 ? pct(c.h0c2c.mean) : '—') + '</td>').join('') +
+    '<td>' + (c.h0c2c.posRate * 100).toFixed(0) + '%</td><td>—</td><td>—</td></tr>' : '';
+  return '<div class="scroll" style="max-height:none;"><table><thead>' + head + '</thead><tbody>' + rows + ctlRow + '</tbody></table></div>' +
+    '<div class="note" style="margin-top:8px;">Market-adjusted: the equal-weighted corpus return over the same sessions is subtracted, so a green market is not scored as a news win. The amber row is the control — what an ORDINARY day looks like. If a category row is no better than the control, the news did not move the stock.</div>' +
+    '<div class="note" style="margin-top:6px;"><b>Window:</b> ' + esc((r.window && r.window.mode) || '?') + (r.window && r.window.to ? ' (≤ ' + esc(r.window.to) + ')' : '') +
+    ' · ' + (r.counts ? r.counts.events.toLocaleString() + ' events over ' + r.counts.symbols.toLocaleString() + ' stocks' : '') + '</div>';
+}
+
+function symTable() {
+  const r = SUMMARY && SUMMARY.reaction;
+  const list = (r && r.perSymbol) || [];
+  if (!list.length) return '<div class="empty">no per-stock rows yet — a stock needs at least three headlines with price around them</div>';
+  const rows = list.slice(0, 60).map((s) => {
+    const width = Math.min(60, Math.abs(s.h0 || 0) * 400);
+    const bar = s.h0 === null || s.h0 === undefined ? '' :
+      '<span class="bar ' + (s.h0 > 0 ? 'up' : 'dn') + '" style="width:' + width.toFixed(0) + 'px;"></span>';
+    return '<tr><td class="l"><button class="symBtn" data-sym="' + esc(s.symbol) + '">' + esc(s.symbol) + '</button></td>' +
+      '<td>' + s.n + '</td>' +
+      '<td class="' + cls(s.h0) + '">' + pct(s.h0) + '</td>' +
+      '<td class="' + cls(s.h1) + '">' + pct(s.h1) + '</td>' +
+      '<td class="' + cls(s.h5) + '">' + pct(s.h5) + '</td>' +
+      '<td style="width:70px;">' + bar + '</td></tr>';
+  }).join('');
+  return '<table><thead><tr><th class="l">Stock</th><th>news</th><th>d0</th><th>d1</th><th>d5</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/news/summary');
+    SUMMARY = await r.json();
+  } catch (e) {
+    $('feedHost').innerHTML = '<div class="empty">the news API did not answer: ' + esc(e.message) + '</div>';
+    return;
+  }
+  (SUMMARY.categories || []).forEach((c) => { CAT_LABEL[c.id] = c; });
+  chips(); stats(); cats();
+  const r = SUMMARY.reaction;
+  $('reactWhen').textContent = r && r.generatedAt ? 'measured ' + new Date(r.generatedAt).toLocaleString() : 'not measured yet';
+  $('reactHost').innerHTML = reactTable();
+  $('symHost').innerHTML = symTable();
+  wireSymButtons($('symHost'));
+  loadFeed();
+
+  $('foot').innerHTML =
+    '<b>Where this comes from.</b> ' + esc(SUMMARY.source || '') + '. Category and direction are keyword reads of the headline by <code>common/news/newsStore.js</code>; a ticker is tagged only when it is in the 1-minute corpus, so a stock with no price file cannot appear as an event. ' +
+    '<b>The honest limit.</b> ' + esc(SUMMARY.limitNote || '') + ' A headline is not a signal, direction is not a decision, and none of this bypasses a gate.' +
+    '<br><b>Nothing here is tuned.</b> The study runs once over the LEARNING window; VALIDATION and FINAL sessions are never read by it.';
+}
+
+Array.prototype.forEach.call($('winSeg').querySelectorAll('button'), (b) => {
+  b.onclick = () => {
+    Array.prototype.forEach.call($('winSeg').querySelectorAll('button'), (x) => x.classList.remove('on'));
+    b.classList.add('on');
+    state.window = Number(b.getAttribute('data-w'));
+    loadFeed();
+  };
+});
+$('q').addEventListener('input', (e) => {
+  state.q = e.target.value.trim();
+  if (feedTimer) clearTimeout(feedTimer);
+  feedTimer = setTimeout(loadFeed, 250);
+});
+
+load();
+</script>
+</body>
+</html>

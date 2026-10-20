@@ -5,7 +5,10 @@
   "main": "broker.js",
   "scripts": {
     "demo": "node demo.js",
-    "start": "node Server.js"
+    "start": "node Server.js",
+    "test": "node --test test/*.test.js",
+    "board": "node scripts/buildBoard.js",
+    "backtest": "node backtest/runAll.js"
   },
   "engines": {
     "node": ">=20.0.0 <23.0.0"
@@ -19,7 +22,9 @@
     "node-cron": "^4.6.0",
     "otplib": "^12.0.1",
     "pdf-parse": "^2.4.5",
+    "rss-parser": "^3.13.0",
     "ws": "^8.18.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "yahoo-finance2": "^4.0.2"
   }
 }

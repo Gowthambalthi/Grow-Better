@@ -122,7 +122,12 @@ async function scrapeBulkAndBlockDeals(targetDate = null) {
       if (!symbol) continue;
 
       const clientName = r.clientName || r.BD_CLIENT_NAME || r.CLIENT_NAME || 'Unknown';
-      const buySell = (r.buySell || r.BD_BUY_SELL || r.BUY_SELL || '').toLowerCase().includes('buy') ? 'buy' : 'sell';
+      // A MISSING DIRECTION FIELD IS NOT A SELL. This used to fall back to 'sell', so an NSE field-name
+      // change would have silently booked every unparsed deal as an institutional SELL, and the net-flow
+      // figure would have been wrong in one direction instead of absent. It is null now, and the service
+      // stores NULL for those rather than counting them as either side.
+      const dirRaw = String(r.buySell || r.BD_BUY_SELL || r.BUY_SELL || '').toLowerCase();
+      const buySell = dirRaw.includes('buy') ? 'buy' : (dirRaw.includes('sell') ? 'sell' : null);
       const quantity = Number(r.quantity || r.BD_QTY_TRADED || r.QTY || 0);
       const price = Number(r.price || r.BD_TP_PRICE || r.PRICE || 0);
       const value = (quantity * price) / 10000000; // Value in ₹ Cr
@@ -131,14 +136,14 @@ async function scrapeBulkAndBlockDeals(targetDate = null) {
 
       allRecords.push({
         date: todayStr,
-        stock_symbol: symbol,
+        symbol,                       // institutionalService.insertBulkBlockDeals reads THESE names
         client_name: clientName,
         client_type: clientType,
         deal_type: dealType,
         buy_sell: buySell,
         quantity,
-        price,
-        value: Number(value.toFixed(2))
+        trade_price: price,
+        value_cr: Number(value.toFixed(2))
       });
     }
   };

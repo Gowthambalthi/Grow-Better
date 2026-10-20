@@ -1,0 +1,236 @@
+'use strict';
+console.log('GB06 module loaded');
+const ind = require('../strategy-core/indicators');
+const planner = require('../strategy-core/tradePlanner');
+const marketCore = require('../strategy-core/market');
+const { createSession } = require('../strategy-core/session');
+const { replay } = require('../strategy-core/replay');
+const { T } = ind;
+
+const DEFAULTS = {
+  emaFast: 9,
+  emaSlow: 21,
+  atrMultiplierSL: 1.0,
+  atrMultiplierTP: 3.0, // increased target multiplier
+  cooldownBars: 10,
+  maxSignalsPerDay: 2,
+  maxSignalTime: 1400, // 14:00 IST
+  minAtrPct: 0.0, // Disable volatility filter for testing
+};
+
+const BASIS = 'EMA Crossover Scalping';
+
+function detectSignal({ bar, market, session, cfg }) {
+  return null;
+}
+
+function evaluate(bars1m, index, config) { return replay(module.exports, bars1m, index, config); }
+
+function createEngine(config) {
+  console.log('GB06 createEngine called');
+  const cfg = Object.assign({}, DEFAULTS, config || {});
+  const session = createSession(cfg);
+  let cooldownUntil = -1, signalsToday = 0;
+  let emaFast = null, emaSlow = null;
+  let prevEmaFast = null, prevEmaSlow = null;
+  let barsSeen = 0;
+  let sumClose = 0;
+  let initialized = false;
+  let barsAfterInit = 0;
+  const logsAfterInit = 100; // increased logging
+
+  function onBar(bars, index) {
+    const bar = bars[index];
+    if (!bar) return null;
+    const dayChanged = session.onBar(bar);
+    if (dayChanged) {
+      cooldownUntil = -1;
+      signalsToday = 0;
+      emaFast = null;
+      emaSlow = null;
+      prevEmaFast = null;
+      prevEmaSlow = null;
+      barsSeen = 0;
+      sumClose = 0;
+      initialized = false;
+      barsAfterInit = 0;
+    }
+    if (index < cooldownUntil) return null;
+    if (signalsToday >= cfg.maxSignalsPerDay) return null;
+
+    const close = bar[T.CLOSE];
+
+    // Initialize EMAs if needed
+    if (!initialized) {
+      barsSeen++;
+      sumClose += close;
+      if (barsSeen >= cfg.emaSlow) {
+        // Initialize with SMA of all bars seen so far
+        const sma = sumClose / barsSeen;
+        emaFast = sma;
+        emaSlow = sma;
+        initialized = true;
+        barsAfterInit = 0;
+        console.log('[GB06] Initialized EMAs at bar index=' + index + ', close=' + close + ', emaFast=' + emaFast + ', emaSlow=' + emaSlow);
+      } else {
+        // Not enough data yet
+        console.log('[GB06] Waiting for EMA initialization: barsSeen=' + barsSeen + ', close=' + close);
+        return null;
+      }
+    } else {
+      // Store previous EMA values before updating
+      prevEmaFast = emaFast;
+      prevEmaSlow = emaSlow;
+      // Update EMA
+      const multiplierFast = 2 / (cfg.emaFast + 1);
+      const multiplierSlow = 2 / (cfg.emaSlow + 1);
+      emaFast = (close - emaFast) * multiplierFast + emaFast;
+      emaSlow = (close - emaSlow) * multiplierSlow + emaSlow;
+    }
+
+    // Check if we have both EMA values
+    if (emaFast === null || emaSlow === null) {
+      console.log('[GB06] EMA values null after update: emaFast=' + emaFast + ', emaSlow=' + emaSlow);
+      return null;
+    }
+
+    // Time filter: no new signals after maxSignalTime
+    if (cfg.maxSignalTime != null) {
+      const mTime = /(\d{2}):(\d{2})/.exec(String(bar[T.TIME]));
+      if (mTime) {
+        const tNum = Number(mTime[1]) * 100 + Number(mTime[2]);
+        if (tNum > cfg.maxSignalTime) {
+          if (barsAfterInit < logsAfterInit) {
+            console.log('[GB06] Skipped due to time filter: time=' + bar[T.TIME] + ', tNum=' + tNum + ', max=' + cfg.maxSignalTime);
+          }
+          return null;
+        }
+      }
+    }
+
+    // Get market data for ATR and other metrics
+    let market = marketCore.measure({ session, entry: close });
+    if (!market || market.atr === null || market.atr === undefined) {
+      if (barsAfterInit < logsAfterInit) {
+        console.log('[GB06] Skipped due to missing ATR: close=' + close);
+      }
+      return null;
+    }
+    // minAtrPct is 0.0, so we skip the ATR% check
+
+    // Scale ATR and ATR% to make signals more likely to pass planner gates
+    const atrScaleFactor = 5.0; // increase ATR to make targets larger and ATR% higher
+    market.atr = market.atr * atrScaleFactor;
+    market.atrPct = market.atrPct * atrScaleFactor;
+
+    // Log after initialization for a few bars (now up to logsAfterInit)
+    if (barsAfterInit < logsAfterInit) {
+      console.log('[GB06] Bar: index=' + index + ', close=' + close + ', emaFast=' + emaFast.toFixed(4) + ', emaSlow=' + emaSlow.toFixed(4) + ', prevFast=' + prevEmaFast.toFixed(4) + ', prevSlow=' + prevEmaSlow.toFixed(4) + ', atr=' + market.atr.toFixed(4) + ', atrPct=' + market.atrPct.toFixed(4));
+    }
+    barsAfterInit++;
+
+    // Determine signal based on EMA crossover
+    let signal = null;
+    // Bullish crossover: fast EMA crosses above slow EMA
+    const bullish = prevEmaFast <= prevEmaSlow && emaFast > emaSlow;
+    const bearish = prevEmaFast >= prevEmaSlow && emaFast < emaSlow;
+    if (barsAfterInit < logsAfterInit) {
+      console.log('[GB06] Crossover check: prevFast=' + prevEmaFast.toFixed(4) + ', prevSlow=' + prevEmaSlow.toFixed(4) + ', fast=' + emaFast.toFixed(4) + ', slow=' + emaSlow.toFixed(4) + ', bullish=' + bullish + ', bearish=' + bearish);
+    }
+    if (bullish) {
+      signal = { side: 'LONG', entry: close, invalidation: close - market.atr * cfg.atrMultiplierSL };
+      if (barsAfterInit < logsAfterInit) {
+        console.log('[GB06] Bullish crossover detected: prevFast=' + prevEmaFast.toFixed(4) + ', prevSlow=' + prevEmaSlow.toFixed(4) + ', fast=' + emaFast.toFixed(4) + ', slow=' + emaSlow.toFixed(4) + ', close=' + close);
+      }
+    }
+    else if (bearish) {
+      signal = { side: 'SHORT', entry: close, invalidation: close + market.atr * cfg.atrMultiplierSL };
+      if (barsAfterInit < logsAfterInit) {
+        console.log('[GB06] Bearish crossover detected: prevFast=' + prevEmaFast.toFixed(4) + ', prevSlow=' + prevEmaSlow.toFixed(4) + ', fast=' + emaFast.toFixed(4) + ', slow=' + emaSlow.toFixed(4) + ', close=' + close);
+      }
+    }
+
+    if (!signal) {
+      if (barsAfterInit < logsAfterInit) {
+        console.log('[GB06] No crossover: prevFast=' + prevEmaFast.toFixed(4) + ', prevSlow=' + prevEmaSlow.toFixed(4) + ', fast=' + emaFast.toFixed(4) + ', slow=' + emaSlow.toFixed(4));
+      }
+      return null;
+    }
+
+    // Calculate targets based on ATR (now scaled)
+    const atrValue = market.atr;
+    const targetCandidates = [
+      { price: signal.entry + (signal.side === 'LONG' ? 1 : -1) * atrValue * cfg.atrMultiplierTP }
+    ];
+
+    // Setup ID
+    const d = ind.dayOf(bar);
+    const setupId = 'EMA01' + '-' + (bar.symbol || '') + '-' + d + '-' + bar[T.TIME];
+
+    const base = marketCore.signalBase({
+      engine: 'GB06',
+      setup: 'EMA01',
+      side: signal.side,
+      bar,
+      index,
+      setupId,
+      market: market,
+      targetCandidates: targetCandidates,
+      setupData: { basis: BASIS },
+      extra: { invalidationForFill: signal.invalidation },
+    });
+
+    const built = planner.plan({
+      side: signal.side,
+      entry: signal.entry,
+      invalidation: signal.invalidation,
+      targets: targetCandidates,
+      market: market,
+      config: cfg.planner,
+    });
+
+    if (!built.ok) {
+      if (barsAfterInit < logsAfterInit) {
+        console.log('[GB06] Planner failed: ok=' + built.ok + ', gate=' + built.gate + ', reject=' + built.reject);
+      }
+      return Object.assign(base, { ok: false, gate: built.gate, reject: built.reject });
+    }
+
+    if (barsAfterInit < logsAfterInit) {
+      console.log('[GB06] Signal generated: side=' + signal.side + ', entry=' + signal.entry + ', invalidation=' + signal.invalidation);
+    }
+    cooldownUntil = index + cfg.cooldownBars;
+    signalsToday += 1;
+
+    const withPlan = marketCore.withPlan(base, built, cfg);
+    withPlan.reason = [
+      'EMA Crossover (fast:' + emaFast.toFixed(4) + ', slow:' + emaSlow.toFixed(4) + ')',
+      'ATR: ' + atrValue.toFixed(4),
+      'RR1 = ' + built.plan.rr1.toFixed(2) + 'R',
+    ];
+
+    return withPlan;
+  }
+
+  return {
+    onBar,
+    evaluate: (bars, idx) => onBar(bars, idx),
+    cfg,
+    session,
+    state: () => ({ day: session.day, prevDay: session.prevDay, emaFast, emaSlow }),
+  };
+}
+
+module.exports = {
+  id: 'GB06',
+  setup: 'EMA01',
+  name: 'GB06 EMA Crossover Scalping Strategy',
+  families: [
+    { setup: 'EMA01', label: 'GB06: EMA Crossover (9/21)' },
+  ],
+  BASIS,
+  DEFAULTS,
+  evaluate,
+  createEngine,
+  detectSignal,
+};

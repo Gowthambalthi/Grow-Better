@@ -191,6 +191,7 @@ button { font-family: inherit; }
   text-align: left;
   width: 100%;
   position: relative;
+  text-decoration: none !important;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
   transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease;
@@ -198,6 +199,25 @@ button { font-family: inherit; }
 .nav-icon {
   width: 18px; height: 18px; flex-shrink: 0; color: currentColor;
   transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.18s ease;
+}
+
+.sidebar a,
+.sidebar a:hover,
+.sidebar a:focus,
+.sidebar a:active,
+.sidebar a:visited,
+a.nav-item,
+a.nav-item:hover,
+a.nav-item:focus,
+a.nav-item:active,
+a.nav-item:visited,
+.nav-item,
+.nav-item:hover,
+.nav-item:focus,
+.nav-item:active,
+.nav-item:visited,
+.nav-item span {
+  text-decoration: none !important;
 }
 
 /* Hover: slide + green tint, no box */

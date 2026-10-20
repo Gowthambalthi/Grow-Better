@@ -21,10 +21,10 @@ function loadConfig() {
     if (fs.existsSync(CONFIG_FILE)) {
       const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
       return {
-        phoneNumber: cfg.phoneNumber || '9390219001',
-        fullPhone: cfg.fullPhone || '+919390219001',
-        botToken: cfg.botToken || process.env.TELEGRAM_BOT_TOKEN || '8886769745:AAFE2sx7vv-peheZJBxxjlyMfG-rVv5c0nA',
-        chatId: cfg.chatId || process.env.TELEGRAM_CHAT_ID || '5443969190',
+        phoneNumber: cfg.phoneNumber || process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE || '',
+        fullPhone: cfg.fullPhone || ((cfg.phoneNumber || process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE) ? '+91' + (cfg.phoneNumber || process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE) : ''),
+        botToken: cfg.botToken || process.env.TELEGRAM_BOT_TOKEN || '',
+        chatId: cfg.chatId || process.env.TELEGRAM_CHAT_ID || '',
         whatsappPhoneId: cfg.whatsappPhoneId || process.env.WHATSAPP_PHONE_ID || '',
         whatsappAccessToken: cfg.whatsappAccessToken || process.env.WHATSAPP_ACCESS_TOKEN || '',
         whatsappApiKey: cfg.whatsappApiKey || process.env.WHATSAPP_API_KEY || '',
@@ -36,10 +36,10 @@ function loadConfig() {
   }
 
   return {
-    phoneNumber: '9390219001',
-    fullPhone: '+919390219001',
-    botToken: process.env.TELEGRAM_BOT_TOKEN || '8886769745:AAFE2sx7vv-peheZJBxxjlyMfG-rVv5c0nA',
-    chatId: process.env.TELEGRAM_CHAT_ID || '5443969190',
+    phoneNumber: process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE || '',
+    fullPhone: (process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE) ? '+91' + (process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE) : '',
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    chatId: process.env.TELEGRAM_CHAT_ID || '',
     whatsappPhoneId: process.env.WHATSAPP_PHONE_ID || '',
     whatsappAccessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
     whatsappApiKey: process.env.WHATSAPP_API_KEY || '',
@@ -81,15 +81,15 @@ async function autoDetectTelegramChatId(token) {
 }
 
 async function sendTelegram(message, cfg) {
-  let token = cfg.botToken || '8886769745:AAFE2sx7vv-peheZJBxxjlyMfG-rVv5c0nA';
-  let chatId = cfg.chatId || '5443969190';
+  let token = cfg.botToken || process.env.TELEGRAM_BOT_TOKEN || '';
+  let chatId = cfg.chatId || process.env.TELEGRAM_CHAT_ID || '';
 
-  if (!chatId) {
+  if (!chatId && token) {
     chatId = await autoDetectTelegramChatId(token);
   }
 
   if (!token || !chatId) {
-    return { channel: 'telegram', success: false, reason: 'Chat ID missing' };
+    return { channel: 'telegram', success: false, reason: 'Bot token or Chat ID missing' };
   }
 
   try {
@@ -111,7 +111,7 @@ async function sendTelegram(message, cfg) {
 }
 
 async function sendWhatsApp(message, cfg) {
-  const phone = cfg.phoneNumber || '9390219001';
+  const phone = cfg.phoneNumber || process.env.USER_PHONE_NUMBER || process.env.PRIMARY_PHONE || '';
 
   if (cfg.whatsappApiKey) {
     try {
@@ -132,14 +132,27 @@ async function sendAlert(alert) {
     return { success: false, reason: 'Notifications disabled in settings' };
   }
 
-  const title = alert.title || 'GB TERMINAL ALERT';
-  const symbol = alert.symbol ? `<b>${alert.symbol}</b>` : '';
-  const priceStr = alert.price ? `Price: ₹${alert.price}` : '';
-  const reasonStr = alert.reason ? `Reason: ${alert.reason}` : '';
-  const bodyMsg = alert.message || '';
+  const isScalping = (alert.tradeType === 'SCALPING') ||
+                     (alert.strategy && String(alert.strategy).toLowerCase().includes('scalp')) ||
+                     (alert.title && String(alert.title).toLowerCase().includes('scalp')) ||
+                     (alert.message && String(alert.message).toLowerCase().includes('scalp')) ||
+                     (alert.kind === 'SIGNAL' && alert.reason && String(alert.reason).toLowerCase().includes('scalp'));
+  const typeBadge = isScalping
+    ? '⚡ <b>[SCALPING TRADE]</b> (0.55% Target | 5-6 Min Hold)'
+    : '📈 <b>[INTRADAY TRADE]</b> (Target +1.5% to +3% | Auto Exit 3:15 PM)';
 
-  const formattedMsg = `🔔 <b>${title}</b>\n\n` +
-    (symbol ? `${symbol}\n` : '') +
+  const symbol = alert.symbol || '';
+  const title = alert.title || '';
+  const bodyMsg = alert.message || '';
+  const priceStr = alert.price ? `💵 Price: ₹${alert.price}` : '';
+  const reasonStr = alert.reason ? `📋 Reason: ${alert.reason}` : '';
+  const stratStr = alert.strategy ? `⚙️ <b>Strategy</b>: ${alert.strategy}\n` : '';
+
+  const formattedMsg =
+    `${typeBadge}\n\n` +
+    (symbol ? `🎯 <b>SYMBOL: #${symbol}</b>\n\n` : '') +
+    stratStr +
+    `🔔 <b>${title}</b>\n\n` +
     (bodyMsg ? `${bodyMsg}\n` : '') +
     (priceStr ? `${priceStr}\n` : '') +
     (reasonStr ? `${reasonStr}\n` : '');
@@ -249,7 +262,7 @@ async function generatePnlSummaryText(headerTitle = '📊 GROWBETTER ALGO LIVE P
  */
 function initTelegramBotListener() {
   const cfg = loadConfig();
-  const token = cfg.botToken || '8886769745:AAFE2sx7vv-peheZJBxxjlyMfG-rVv5c0nA';
+  const token = cfg.botToken || process.env.TELEGRAM_BOT_TOKEN || '';
   if (!token) return;
 
   setInterval(async () => {
@@ -312,8 +325,44 @@ function initTelegramBotListener() {
   }, 30000);
 }
 
-// Boot Telegram bot listener immediately
-initTelegramBotListener();
+/**
+ * THE TEXT HALF OF THE LISTENER, callable by whichever poller owns the update stream.
+ *
+ * WHY THIS WAS EXTRACTED (2026-10-19). Two pollers ran against one bot: this interval and the
+ * order-approval long poll. Telegram serves getUpdates to ONE consumer at a time, so each would
+ * kick the other off with a 409 — which, for the approval path, means a tapped ✅ could simply
+ * never arrive. There can only be one owner of the stream, so the owner asks this function about
+ * plain text and the old interval is no longer started by default.
+ *
+ * Returns true when it answered, false when the text was not a command it knows.
+ */
+async function handleTelegramText(text, cfg) {
+  if (!text || !cfg) return false;
+  const userText = String(text).toLowerCase().trim();
+  const wants = ['live', 'holding', 'holdings', 'today', 'gain', 'pnl', 'overall', 'status', 'signal', 'signals', '/start'];
+  if (!wants.some((w) => userText.includes(w))) return false;
+  const replyText = await generatePnlSummaryText('📊 GROWBETTER ALGO LIVE RESPONSE');
+  await sendTelegram(replyText, cfg);
+  return true;
+}
+
+// Boot Telegram bot listener immediately — EXCEPT INSIDE A TEST PROCESS, AND EXCEPT WHEN TOLD NOT TO.
+// The listener polls Telegram every 3 seconds and holds the event loop open, so requiring this module from
+// a unit test both hit the network and hung the run on exit (found 2026-10-01 when the signal-source
+// policy test timed out). node:test sets NODE_TEST_CONTEXT in its child processes; GB_TELEGRAM_LISTENER=0
+// is the manual off switch. Production is unchanged: neither is set there.
+//
+// THE APPROVAL POLLER OWNS getUpdates NOW. Starting both meant neither reliably received anything
+// (409 Conflict, observed 2026-10-19), so the legacy interval is opt-in: TELEGRAM_LEGACY_POLLER=1.
+if (!process.env.NODE_TEST_CONTEXT && process.env.NODE_ENV !== 'test' && process.env.GB_TELEGRAM_LISTENER !== '0') {
+  if (process.env.TELEGRAM_LEGACY_POLLER === '1') {
+    initTelegramBotListener();
+  } else {
+    console.log('[notificationService] text poller NOT started — the approval listener owns getUpdates (set TELEGRAM_LEGACY_POLLER=1 for the old one).');
+  }
+} else {
+  console.log('[notificationService] bot listener NOT started (test process or GB_TELEGRAM_LISTENER=0)');
+}
 
 module.exports = {
   loadConfig,
@@ -323,5 +372,6 @@ module.exports = {
   sendWhatsApp,
   autoDetectTelegramChatId,
   generatePnlSummaryText,
-  initTelegramBotListener
+  initTelegramBotListener,
+  handleTelegramText
 };

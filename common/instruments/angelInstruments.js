@@ -19,7 +19,16 @@ let all = [];
 let lastRefreshed = null;
 let refreshPromise = null;
 
-async function refresh() {
+const REFRESH_TTL_MS = 6 * 3600e3;   // the master changes ~daily; 6h is generous
+
+async function refresh(force = false) {
+  // TTL GUARD. This download is ~25-30s and fetchAngelQuotes called refresh()
+  // on EVERY quote batch — so a scan fetching 700 quotes serially re-downloaded
+  // the whole scrip master 700 times (measured: a single quote took 26-29s,
+  // nearly all of it this download). The heavy scan then ran 25+ minutes and
+  // the signals board went stale. Fresh enough is fresh enough: skip the
+  // download when the map is younger than the TTL unless forced.
+  if (!force && lastRefreshed && (Date.now() - lastRefreshed.getTime()) < REFRESH_TTL_MS) return;
   if (refreshPromise) return refreshPromise; // de-dupe concurrent refreshes
 
   refreshPromise = (async () => {
@@ -103,6 +112,34 @@ function search(query, { exchSeg, limit = 20 } = {}) {
   return results;
 }
 
+/**
+ * equitySymbols(exchSeg, opts) → EVERY cash-equity scrip in the broker's master, as {symbol, token, series}.
+ *
+ * THE COMPLAINT THIS ANSWERS (user, 2026-09-29): "i want all total market". The board's universe was a
+ * 2,934-line FILE (`data/nse_universe_3000.txt`) that nothing regenerated — so the market could list a new
+ * name and the board would never see it, and anything the file missed was invisible by construction. The
+ * scrip master is downloaded every 6 hours and already holds every tradeable symbol; this is the one place
+ * that can enumerate it.
+ *
+ * SERIES: `-EQ` is the normal rolling-settlement series and `-BE` is trade-for-trade (illiquid, wide
+ * spreads, no intraday leverage). Both are real tradeable NSE scrips, so both are returned — the board's
+ * own liquidity gates decide what is worth a trade, not the universe builder. Pass
+ * `{ series: ['EQ'] }` to hold it to the main series only.
+ */
+function equitySymbols(exchSeg = 'NSE', opts = {}) {
+  ensureLoaded();
+  const want = (opts.series && opts.series.length) ? opts.series.map((s) => String(s).toUpperCase()) : ['EQ', 'BE'];
+  const out = [];
+  for (const rec of all) {
+    if (!rec || rec.exch_seg !== exchSeg) continue;
+    const sym = String(rec.symbol || '');
+    const m = /-([A-Z]+)$/.exec(sym);
+    if (!m || want.indexOf(m[1]) < 0) continue;
+    out.push({ symbol: sym.replace(/-[A-Z]+$/, ''), token: String(rec.token), series: m[1] });
+  }
+  return out;
+}
+
 function status() {
   return { loaded: !!lastRefreshed, lastRefreshed, count: all.length };
 }
@@ -174,4 +211,4 @@ function findIndex(name) {
   return null;
 }
 
-module.exports = { refresh, findBySymbol, findByToken, findEquity, findNearestFuture, findIndex, search, status };
+module.exports = { refresh, findBySymbol, findByToken, findEquity, equitySymbols, findNearestFuture, findIndex, search, status };

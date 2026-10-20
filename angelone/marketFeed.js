@@ -52,32 +52,43 @@ class AngelMarketFeed extends EventEmitter {
 
     this.ws.on('open', () => {
       this._reconnectAttempt = 0;
+      this._lastErr = null;
       this.emit('open');
       this.heartbeatTimer = setInterval(() => {
         if (this.ws.readyState === WebSocket.OPEN) this.ws.send('ping');
       }, HEARTBEAT_INTERVAL_MS);
       // Replay subscriptions after a reconnect
       for (const sub of this.pendingSubscriptions) this._send(sub);
+      this._opens = (this._opens || 0) + 1;
+      this._openedAt = Date.now();
+      console.log('[AngelMarketFeed] socket open (#' + this._opens + ') — ' +
+        this.pendingSubscriptions.length + ' subscription(s) replayed');
     });
 
     this.ws.on('message', (data) => {
       if (data.toString() === 'pong') return;
       try {
         const tick = this._parseBinary(data);
+        this._ticks = (this._ticks || 0) + 1;
+        this._lastTickAt = Date.now();
         this.emit('tick', tick);
       } catch (err) {
         this.emit('error', err);
       }
     });
 
-    this.ws.on('close', () => {
+    this.ws.on('close', (code, reason) => {
       clearInterval(this.heartbeatTimer);
+      const reasonStr = reason ? reason.toString() : '';
+      if (/429/.test(reasonStr) || code === 429) {
+        this._lastErr = '429 Rate Limit Exceeded';
+      }
       this.emit('close');
       this._scheduleReconnect();
     });
 
     this.ws.on('error', (err) => {
-      this._lastErr = err.message || '';
+      this._lastErr = err ? (err.message || String(err)) : '';
       this.emit('error', err);
       if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
         this._scheduleReconnect();
@@ -133,6 +144,58 @@ class AngelMarketFeed extends EventEmitter {
     if (this.ws) this.ws.close();
   }
 
+  /**
+   * WHAT THIS SOCKET IS DOING, READABLE FROM OUTSIDE.
+   *
+   * The feed was invisible: no endpoint reported whether the socket was open, what it was
+   * subscribed to, or when it last received a tick — so "no live data" and "a quiet market"
+   * were indistinguishable, and a socket that had been displaced by a newer connection (or
+   * whose session token had been superseded) looked exactly like a healthy one. This is what
+   * /api/status publishes.
+   */
+  status() {
+    const now = Date.now();
+    return {
+      socketState: this.ws ? this.ws.readyState : null,   // 0 CONNECTING, 1 OPEN, 2 CLOSING, 3 CLOSED
+      connected: !!(this.ws && this.ws.readyState === 1),
+      opens: this._opens || 0,
+      reconnects: this._reconnectAttempt || 0,
+      ticks: this._ticks || 0,
+      lastTickAt: this._lastTickAt || null,
+      silentForMs: this._lastTickAt ? (now - this._lastTickAt) : null,
+      // How long this socket has been open with nothing to show for it. A socket opened
+      // seconds ago is not "silent", it is new — the watchdog needs the difference.
+      openedAt: this._openedAt || null,
+      openForMs: this._openedAt ? (now - this._openedAt) : null,
+      subscriptions: this.pendingSubscriptions.map((s) => ({
+        correlationId: s.correlationID, mode: s.params.mode,
+        tokens: (s.params.tokenList || []).reduce((n, g) => n + ((g.tokens || []).length), 0),
+      })),
+      lastError: this._lastErr || null,
+    };
+  }
+
+  /**
+   * RECONNECT ON PURPOSE. A DISPLACED SOCKET NEVER TELLS YOU.
+   *
+   * Angel accepts the handshake and then, if the account's feed has been taken over by a
+   * newer connection (or the jwtToken was superseded by a later login), simply stops pushing
+   * frames. No 'close', no 'error', readyState stays OPEN, and TCP stays ESTABLISHED — so the
+   * existing reconnect logic can never fire and the feed is silently dead until someone
+   * restarts the server. This tears the socket down and rebuilds it, replaying every
+   * subscription, which is the only thing that recovers that state.
+   */
+  recycle(reason) {
+    console.log('[AngelMarketFeed] recycling the feed socket: ' + (reason || 'requested'));
+    if (this._recycles == null) this._recycles = 0;
+    this._recycles += 1;
+    try { clearInterval(this.heartbeatTimer); } catch (_) {}
+    try { if (this.ws) this.ws.terminate(); } catch (_) {}
+    this.isReconnecting = false;
+    this.manualClose = false;   // a recycle is not a shutdown: subscriptions must be replayed
+    this.connect();
+  }
+
   _send(payload) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(payload));
@@ -146,7 +209,15 @@ class AngelMarketFeed extends EventEmitter {
       subscriptionMode: buf.readUInt8(0),
       exchangeType: buf.readUInt8(1),
       token: this._parseToken(buf.slice(2, 27)),
-      sequenceNumber: buf.readBigInt64LE(27),
+      // NUMBER, NOT BigInt. This was the only BigInt on the tick object, and a BigInt cannot
+      // be JSON-serialised — `JSON.stringify(tick)` throws "Do not know how to serialize a
+      // BigInt", which is exactly what the SSE tick stream (/api/<broker>/live/stream) does
+      // with every tick it forwards. So the socket authenticated, ticks arrived, and the one
+      // endpoint that hands them to a browser died on the first one: live data that looks
+      // like no data. The value is a monotonically increasing counter and is read by nothing
+      // in this repo, so a Number is both safe and sufficient (exact far past any session's
+      // tick count).
+      sequenceNumber: Number(buf.readBigInt64LE(27)),
       exchangeTimestamp: Number(buf.readBigInt64LE(35)),
       lastTradedPrice: Number(buf.readBigInt64LE(43)) / 100,
     };
@@ -184,10 +255,35 @@ class AngelMarketFeed extends EventEmitter {
     return (nullIdx === -1 ? slice : slice.slice(0, nullIdx)).toString('ascii');
   }
 
+  /**
+   * BEST-5 DEPTH -> { buy, sell } where `buy` is the BID ladder sorted best-first
+   * (highest price first) and `sell` the ASK ladder sorted best-first (lowest first),
+   * so index 0 is level 1 on its own side.
+   *
+   * THE FLAG IS NOT A SIDE MARKER, AND THE PRICES ARE. Each 20-byte entry starts with a
+   * 16-bit `flag`; treating 0 as "buy" put the ASK ladder in `bestBids` on 1,656,566 of
+   * 1,656,566 depth snapshots on 2026-10-12 — every level-1 row in the tape read
+   * bid > ask (an impossible book) and a big ASK quantity was recorded as a big BID.
+   * From 15:20 IST the same flag began arriving the OTHER way round on some symbols
+   * (flag 0 holding the bids, e.g. FEDERALBNK), so it is not stable enough to decide
+   * anything with — and Angel's own smartWebSocketV2.py contradicts itself here too
+   * (SDK issue #71).
+   *
+   * Two things the old code also got wrong and this one does not:
+   *   - LEVEL ORDER. Entries do not reliably arrive best-first: after 15:20 the tape's
+   *     `bid` was the FURTHEST bid (317.25 when the best was 325.15), because level 1
+   *     was taken as array index 0. Sorting by price makes index 0 mean level 1.
+   *   - WHOLE GROUPS. Keeping the flag groups (the only structure available) but
+   *     ORIENTING them by price range is what orderflow/depth5_recorder.js already does,
+   *     and it matches Groww's ladder level for level.
+   *
+   * When the two ranges overlap — locked, halted, or a malformed packet — there is no
+   * honest way to say which group is which, so BOTH are dropped. An absent level-1 is a
+   * gap a reader can see; a crossed one is a lie a strategy would trade on.
+   */
   _parseBest5(slice) {
-    const buy = [];
-    const sell = [];
-    for (let i = 0; i < slice.length; i += 20) {
+    const g1 = [], g2 = [];
+    for (let i = 0; i + 20 <= slice.length; i += 20) {
       const packet = slice.slice(i, i + 20);
       const entry = {
         flag: packet.readUInt16LE(0),
@@ -195,10 +291,19 @@ class AngelMarketFeed extends EventEmitter {
         price: Number(packet.readBigInt64LE(10)) / 100,
         numOrders: packet.readUInt16LE(18),
       };
-      if (entry.flag === 0) buy.push(entry);
-      else sell.push(entry);
+      if (!(entry.price > 0)) continue;          // padding / absent level: never published
+      (entry.flag === 0 ? g1 : g2).push(entry);
     }
-    return { buy, sell };
+    if (!g1.length || !g2.length) return { buy: [], sell: [] };
+    const max1 = Math.max(...g1.map((e) => e.price)), min1 = Math.min(...g1.map((e) => e.price));
+    const max2 = Math.max(...g2.map((e) => e.price)), min2 = Math.min(...g2.map((e) => e.price));
+    let bids, asks;
+    if (max1 < min2) { bids = g1; asks = g2; }        // group 1 is the lower (buy) side
+    else if (max2 < min1) { bids = g2; asks = g1; }   // group 1 is the higher (sell) side
+    else return { buy: [], sell: [] };                // crossed/overlapping: cannot orient
+    bids.sort((a, b) => b.price - a.price);
+    asks.sort((a, b) => a.price - b.price);
+    return { buy: bids, sell: asks };
   }
 }
 
