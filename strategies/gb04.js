@@ -42,17 +42,14 @@ const { T } = ind;
 const DEFAULTS = {
   cooldownBars: 10,
   maxSignalsPerDay: 3,
-  maxSignalTime: 1400,          // no new signals after 14:00 IST
-  sides: 'both',                // 'both' | 'long' | 'short'
-  confirmAtr: 0.10,             // close must clear the level by this many ATR
-  stopBufferAtr: 0.25,          // stop sits this far ATR beyond the level
-  targetR: 2.0,                 // minimum measured move, in R
-  requireDirectionalClose: true, // LONG bar must close above its open, SHORT below
-  // TRADE WITH THE VWAP SIDE, OR NOT AT ALL. Measured on the full corpus, the resistance
-  // rejection (SHORT) made +0.12R per trade and the support bounce (LONG) −0.07R; the short
-  // side is the one with an edge, and a rejection is a trend-continuation idea. 'aligned'
-  // keeps a SHORT only below VWAP and a LONG only above it; 'none' takes every reclaim.
-  vwapFilter: 'none',           // 'none' | 'aligned'
+  maxSignalTime: 1400,
+  sides: 'both',
+  confirmAtr: 0.10,
+  stopBufferAtr: 0.25,
+  targetR: 2.0,
+  requireDirectionalClose: true,
+  vwapFilter: 'none',
+  longTrendFilter: 'none',
   minAtrPct: 0.10,
   planner: { minAtrPct: 0.10 },
 };
@@ -107,6 +104,12 @@ function createEngine(config) {
     if (allowLong && low < support && close > support + margin &&
       (!cfg.requireDirectionalClose || close > open)) {
       side = 'LONG'; setup = 'RL'; level = support;
+      if (cfg.longTrendFilter === 'up' && prev) {
+        const prevDayUp = prev.close > prev.open;
+        if (!prevDayUp) {
+          side = null; setup = null; level = null;
+        }
+      }
     } else if (allowShort && high > resistance && close < resistance - margin &&
       (!cfg.requireDirectionalClose || close < open)) {
       side = 'SHORT'; setup = 'RS'; level = resistance;

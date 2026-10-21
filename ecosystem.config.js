@@ -27,6 +27,7 @@ module.exports = {
         PORT: 4000,
         GB_TICK_CAPTURE: "1",
         GB03_SIDES: "short",
+        GB_OF_MOMENTUM_LIVE: "0",
       },
       error_file: path.join(__dirname, "logs", "pm2-error.log"),
       out_file: path.join(__dirname, "logs", "pm2-out.log"),

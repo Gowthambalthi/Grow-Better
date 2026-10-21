@@ -1099,7 +1099,7 @@ function requireApiKey(req, res, next) {
   // are allowed through; the POST that triggers a fetch is NOT (it makes outbound requests on the
   // server's behalf), and /api/portfolio and /api/notifications/settings stay key-protected
   // because they expose holdings and the bot's own configuration.
-  const PUBLIC_READS = new Set(['/api/news', '/api/news/summary', '/api/news/reaction', '/api/news/refresh/status', '/api/client-config']);
+  const PUBLIC_READS = new Set(['/api/news', '/api/news/summary', '/api/news/reaction', '/api/news/moves', '/api/news/signals', '/api/news/refresh/status', '/api/client-config']);
   if (req.method === 'GET' && PUBLIC_READS.has(req.path)) return next();
 
   const provided = req.get('X-API-Key');
@@ -1947,6 +1947,10 @@ const newsStore = require('./common/news/newsStore');
 // The ONE lean computation — /api/news/signals, the morning Telegram digest
 // (cronJobs) and the tests all read it, so page and phone cannot disagree.
 const newsSignalsMod = require('./common/news/newsSignals');
+// PER-HEADLINE COMPANY MOVES: "this headline named TCS — how much did TCS move?"
+// Precomputed by scripts/buildNewsMoves.js so a feed request is a lookup, not a
+// walk over 834 daily bar files.
+const newsMoves = require('./common/news/newsMoves');
 let _newsCache = { mtime: 0, items: [] };
 function newsItems() {
   try {
@@ -1963,7 +1967,22 @@ app.get('/api/news', (req, res) => {
     const { category, symbol, date, from, to, q } = req.query;
     const limit = Math.min(Number(req.query.limit) || 250, 3000);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
+    // SINCE-LAST-CLOSE (the default view on the news page): only news published
+    // at or after the most recent 15:30 IST close — what can still move the
+    // next session. Everything before it already moved the market and is not
+    // presented as live unless the reader asks for history.
+    const close = sessionTiming.lastMarketClose();
+    const sinceClose = String(req.query.sinceClose || '') === '1' || String(req.query.sinceClose || '') === 'true';
     let items = newsItems();
+    if (sinceClose) items = items.filter((i) => Number.isFinite(i.ts) ? i.ts >= close.instant : i.date >= close.date);
+    // GLOBAL → INDIA FILTER (the board's 🌍 chip): keep only the headlines
+    // whose (category, direction) cleared the measured bridge gate — the same
+    // rows the mapping section can act on, so the two views can never disagree.
+    const wantGlobal = String(req.query.global || '') === '1' || String(req.query.global || '') === 'true';
+    if (wantGlobal) {
+      const gk = newsSignalsMod.passingBridgeKeys(items, new Date());
+      items = items.filter((i) => gk.has(i.category + '_' + i.direction));
+    }
     if (category && category !== 'all') items = items.filter((i) => i.category === category);
     if (symbol) items = items.filter((i) => (i.symbols || []).includes(String(symbol).toUpperCase()));
     if (date) items = items.filter((i) => i.date === date);
@@ -1982,7 +2001,22 @@ app.get('/api/news', (req, res) => {
       date: i.date, ts: i.ts, category: i.category, direction: i.direction,
       symbols: i.symbols || [],
     }));
-    res.json({ generatedAt: new Date().toISOString(), total, offset, limit, count: page.length, items: page });
+    // HOW MUCH EACH NAMED COMPANY MOVED AFTER ITS OWN HEADLINE. Measured from
+    // the daily bars: one row per (headline, company) pair, and a pair with no
+    // bar is simply absent rather than shown as a zero.
+    const mv = newsMoves.read();
+    newsMoves.attach(page, mv);
+    const lastSession = mv && mv.lastSession ? mv.lastSession : null;
+    res.json({ generatedAt: new Date().toISOString(), total, offset, limit, count: page.length, items: page,
+      sinceClose: { date: close.date, label: close.label },
+      moves: {
+        available: !!(mv && mv.byPair),
+        lastSession,
+        generatedAt: mv ? mv.generatedAt : null,
+        note: lastSession
+          ? 'the session after each headline, measured through ' + lastSession + '; a headline from today is measured after the close (scripts/topUpNewsBars.js)'
+          : 'no company move measurement yet — run node scripts/buildNewsMoves.js',
+      } });
   } catch (e) {
     res.status(500).json({ error: e.message, note: 'the news store could not be read' });
   }
@@ -1994,6 +2028,10 @@ app.get('/api/news/summary', (req, res) => {
     const sum = newsStore.summarize(items);
     const state = newsStore.readState();
     const reaction = newsStore.readReaction();
+    // the count behind the board's 🌍 Global → India chip: how many stored
+    // headlines belong to a (category, direction) class the bridge measured.
+    const gk = newsSignalsMod.passingBridgeKeys(items, new Date());
+    sum.globalLeanCount = items.reduce((n, i) => n + (gk.has(i.category + '_' + i.direction) ? 1 : 0), 0);
     res.json({
       generatedAt: new Date().toISOString(),
       source: 'Google News RSS (en-IN) — free, no key, honours after:/before:',
@@ -2005,6 +2043,11 @@ app.get('/api/news/summary', (req, res) => {
         chunksDone: Object.keys(state.cursor || {}).length,
         runs: state.runs || 0,
       },
+      // EVERY COMPANY, AND WHAT ITS OWN NEWS DID TO IT — data/news/company_moves.json
+      // (scripts/buildNewsMoves.js). This is the per-headline measurement, NOT the
+      // event study: it describes what happened after stored headlines, while the
+      // `reaction` block below stays on its declared learning window.
+      moves: movesSummary(),
       reaction: reaction ? {
         generatedAt: reaction.generatedAt,
         window: reaction.window,
@@ -2117,19 +2160,72 @@ console.log('[News] live headline pull scheduled: once at boot (45s) and every '
 // ≥ 55% on ≥ 30 measured events — that may produce a lean. Everything else
 // stays a headline, and macro stories (oil/war/fed) are reported as market
 // backdrop, never as a lean on one stock.
-app.get('/api/news/signals', (req, res) => {
+app.get('/api/news/signals', async (req, res) => {
   try {
     // THE ONE IMPLEMENTATION. common/news/newsSignals.js owns the reliability
     // rule and the lean aggregation; the morning Telegram digest reads the same
     // function, so the page and the phone can never disagree about a lean.
     // The payload also carries `policy` — the backtested trade rule (skip if the
     // entry open already gapped the class's expected move, SL %, exit horizon).
-    res.json(newsSignalsMod.computeSignals(
+    const sig = newsSignalsMod.computeSignals(
       newsItems(), newsStore.readReaction(), Number(req.query.days) || 3,
-    ));
+    );
+    // THE LIVE "ALREADY MOVED?" CHECK. The top leans get a live quote so the
+    // board can say SKIP or OK against the class's expected move — the exact
+    // rule the holdout measured. A dead quote leaves 'unknown', never a guess,
+    // and a quote failure must never fail the endpoint.
+    // Quote the whole lean list, not the first twelve. The already-moved check
+    // re-sorts the rows (priced-in ones go last), so a row that ends up on the
+    // page must not be 'unknown' merely because it was 13th before the sort.
+    const top = (sig.stocks || []).slice(0, 50).map((s) => s.symbol);
+    if (top.length) {
+      try {
+        const quotes = await liveQuoteEngine.fetchStockQuotes(top);
+        newsSignalsMod.attachLiveState(sig, quotes);
+      } catch (e) {
+        for (const r of sig.stocks) r.live = { status: 'unknown', note: 'quote fetch failed: ' + e.message };
+      }
+    }
+    res.json(sig);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+/**
+ * The per-company table, shaped once for both readers (the summary panel and
+ * /api/news/moves): counts, the bar cache's last session, and every company
+ * with at least one measured news session.
+ */
+function movesSummary() {
+  const mv = newsMoves.read();
+  if (!mv || !mv.byPair) {
+    return { available: false, note: 'run node scripts/buildNewsMoves.js to measure what each company did after its news' };
+  }
+  return {
+    available: true,
+    generatedAt: mv.generatedAt,
+    window: mv.window,
+    lastSession: mv.lastSession,
+    counts: mv.counts,
+    method: mv.method,
+    note: mv.note,
+    byCompany: mv.byCompany || [],
+  };
+}
+
+// The full per-company table on its own, for anything that does not want the
+// whole summary payload.
+app.get('/api/news/moves', (req, res) => {
+  const mv = newsMoves.read();
+  if (!mv || !mv.byPair) return res.json({ available: false, note: 'run node scripts/buildNewsMoves.js' });
+  const symbol = req.query.symbol && String(req.query.symbol).toUpperCase();
+  if (symbol) {
+    const row = (mv.byCompany || []).find((r) => r.symbol === symbol) || null;
+    return res.json({ available: true, symbol, row, lastSession: mv.lastSession, generatedAt: mv.generatedAt });
+  }
+  res.json({ available: true, generatedAt: mv.generatedAt, window: mv.window, lastSession: mv.lastSession,
+    counts: mv.counts, method: mv.method, note: mv.note, byCompany: mv.byCompany });
 });
 
 app.get('/api/news/reaction', (req, res) => {
@@ -3126,7 +3222,7 @@ try { initScheduler(); } catch (e) { console.warn('Scheduler init warning:', e.m
 // condition for re-arming an unverified prototype — at most 3 of the 6 board slots, at most 12
 // calls a session (counted from the day's own book, so a restart cannot reset it), and every
 // admission logged with its score and its rank. GB_OF_MOMENTUM_LIVE=0 turns it off.
-if (process.env.GB_OF_MOMENTUM_LIVE !== '0') {
+if (process.env.GB_OF_MOMENTUM_LIVE === '1') {
   try {
     liveMinuteEngine.enableOfMomentumLive({
       maxSlots: Number(process.env.GB_OF_MOMENTUM_SLOTS) || 3,
