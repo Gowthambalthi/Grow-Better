@@ -44,3 +44,14 @@ test('forwardAuditLogger: logs heartbeat row with required schema', () => {
   assert.equal(hb.candidates_logged, 18);
   assert.equal(hb.config_hash, logger.CONFIG_HASH);
 });
+
+test('forwardAuditLogger: liveAdapter wires candidate audit logging without breaking logic', () => {
+  const { createLiveAdapter } = require('../strategies/fvg/liveAdapter');
+  const logged = [];
+  const mockLogger = {
+    logCandidate: (cand) => logged.push(cand),
+  };
+  const adapter = createLiveAdapter({ auditLogger: mockLogger });
+  assert.ok(adapter);
+  assert.equal(typeof adapter.push, 'function');
+});

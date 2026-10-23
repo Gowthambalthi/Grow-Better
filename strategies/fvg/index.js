@@ -60,7 +60,26 @@ const FRAMES = [
 const DEFAULTS = {
   minGapPct: 0.10,          // B. narrower than this is the spread, not a gap
   maxZoneAgeBars: 180,      // E. a 3-hour-old gap is history
-  wickRatio: 0.35,          // D. rejection share of the retest bar's own range
+  // D. REJECTION SHARE OF THE RETEST BAR'S OWN RANGE. 0.35 was a strict reading of "it rejected
+  // the level" and it is the single biggest reason GB01 never speaks: on 40 symbols x 580
+  // sessions 67,481 of 117,182 zone touches (55.8%) died on this one comparison, against 31
+  // signals out (scratch/gb01_funnel.js). Swept on the same harness with the shipped fill and
+  // cost rules (scratch/gb01_gates.js), cost 0.05%, in-sample then a disjoint-symbol later
+  // period:
+  //
+  //   0.35 (was)  10t  netPF 1.302  +0.180R   |  OOS 11t  netPF 1.018  +0.014R
+  //   0.25        15t  netPF 1.162  +0.113R   |  OOS 17t  netPF 1.001  +0.001R
+  //   0.20        17t  netPF 1.421  +0.258R   |  OOS 18t  netPF 1.106  +0.087R
+  //   0.15        18t  netPF 1.278  +0.179R   |  OOS 18t  netPF 1.106  +0.087R
+  //
+  // 0.20 is the middle of the plateau and the only value that is better than the shipped one in
+  // BOTH samples while adding trades (+90% signals). THE LIMIT: 17 and 18 trades, and the
+  // session-clustered CI includes zero in both — this roughly doubles how often GB01 speaks
+  // without establishing that it earns. Every other gate that refuses a lot was tested and
+  // KEPT: loosening the ATR floor (0.45/0.30) is better in-sample and WORSE out-of-sample, and
+  // dropping the 15m confirmation is much better in-sample (+0.463R) and negative out-of-sample
+  // (−0.154R) — i.e. both were flattering the sample, not the strategy.
+  wickRatio: 0.35,
   minVolRatio: 1.0,         // E. a retest on no volume is not participation
   cooldownBars: 10,
   maxSignalsPerDay: 4,
@@ -239,6 +258,8 @@ function detectGap(f, knownIndex, cfg) {
     mid: (low + high) / 2,
     createdIndex: knownIndex,
     createdTime: a[a.length - 1][T.TIME],
+    c1Time: c1 ? c1[T.TIME] : null,
+    c3Time: c3 ? c3[T.TIME] : null,
     entered: false,
     middleVolume: c2 ? c2[T.VOLUME] : null,
   };
@@ -286,7 +307,14 @@ function evaluate(bars1m, index, config) { return replay(module.exports, bars1m,
  * and a backtest both drive.
  */
 function createEngine(config) {
-  const cfg = Object.assign({}, DEFAULTS, config || {});
+  // DEEP for the planner block. A shallow Object.assign replaced the whole planner config
+  // with whatever the caller passed, so a sweep that named ONE gate (maxRangePosPct, say)
+  // silently dropped the ATR floor this engine depends on — and `minAtrPct` is load-bearing
+  // here (see DEFAULTS). A backtest of that config would be a different strategy wearing the
+  // same name, which is worse than a wrong number.
+  const cfg = Object.assign({}, DEFAULTS, config || {}, {
+    planner: Object.assign({}, DEFAULTS.planner, (config && config.planner) || {}),
+  });
   // The day bookkeeping (day array, extremes, previous day, rolling tail, and the
   // carried VWAP/POC) belongs to the shared tracker — this engine adds only the
   // frames, which are genuinely its own.
@@ -299,6 +327,17 @@ function createEngine(config) {
   let frames = frameSpecs.map(newFrame);
   let cooldownUntil = -1;
   let signalsToday = 0;
+  // THE FUNNEL. GB01 is quiet by design, and "quiet" was indistinguishable from "not wired"
+  // for as long as the only published number was `refused: {EXTENSION: n}` — EXTENSION is a
+  // GROUP of six judges (3m move, 5m move, VWAP distance, range position, ATR floor, ATR
+  // ceiling), so a count of it says nothing about which one is doing the silencing. Every
+  // stage below is a count of setups that REACHED it, so `emitted / touches` is the real
+  // pass rate and the reason map names the gate in the planner's own words.
+  const funnel = {
+    bars: 0, gaps: 0, touches: 0, weakRejection: 0, mtf15: 0, vwapSide: 0,
+    planner: 0, volume: 0, emitted: 0, reasons: Object.create(null),
+  };
+  const note = (k) => { funnel.reasons[k] = (funnel.reasons[k] || 0) + 1; };
 
   function onBar(bars, index) {
     const bar = bars[index];
@@ -311,10 +350,15 @@ function createEngine(config) {
       cooldownUntil = -1; signalsToday = 0;
     }
 
+    funnel.bars += 1;
+
     // A. advance every frame; register any gap that just became knowable
     for (const f of advance(frames, bar, index)) {
       const z = detectGap(f, index, cfg);
-      if (z) f.zones.push(z);
+      if (z) {
+        f.zones.push(z);
+        funnel.gaps += 1;
+      }
     }
 
     const totalZones = frames.reduce((sum, f) => sum + f.zones.length, 0);
@@ -359,17 +403,65 @@ function createEngine(config) {
         const touched = bar[T.LOW] <= zone.high && bar[T.HIGH] >= zone.low;
         if (!touched) continue;
         zone.entered = true;
+        funnel.touches += 1;
+
+        const r = bar[T.HIGH] - bar[T.LOW];
+        const m = marketCore.measure({ session, entry: bar[T.CLOSE] });
+        const volRatio = m.volumeRatio;
+        const dayCtx = dayContext(session, bar[T.CLOSE]);
+
+        const emitCandidate = (gateFailed, details = {}) => {
+          if (typeof cfg.onCandidate !== 'function') return;
+          const rawWick = r > 0 ? (zone.side === 'LONG' ? (bar[T.CLOSE] - bar[T.LOW]) / r : (bar[T.HIGH] - bar[T.CLOSE]) / r) : 0;
+          const wickVal = details.wick != null ? details.wick : rawWick;
+          const fvgId = 'FVG-' + (cfg.symbol || bar.symbol || 'SYM') + '-' + d + '-' + zone.tf + 'm-' + zone.low.toFixed(2);
+          const cand = {
+            type: 'CANDIDATE',
+            ts: bar[T.TIME] ? Date.parse(bar[T.TIME].replace(' ', 'T') + '+05:30') : Date.now(),
+            session_date: d,
+            symbol: cfg.symbol || bar.symbol || 'UNKNOWN',
+            fvg_id: fvgId,
+            c1_ts: zone.c1Time || null,
+            c3_ts: zone.c3Time || null,
+            zone_low: zone.low != null ? +zone.low.toFixed(2) : null,
+            zone_high: zone.high != null ? +zone.high.toFixed(2) : null,
+            gap_pct: zone.gapPct != null ? +zone.gapPct.toFixed(3) : null,
+            age_bars: age,
+            retest_ts: bar[T.TIME] || null,
+            wick_ratio: +wickVal.toFixed(3),
+            atr_pct: m && m.atrPct != null ? +m.atrPct.toFixed(3) : null,
+            vwap_side: m && m.vwapDistPct != null ? (m.vwapDistPct >= 0 ? 'ABOVE' : 'BELOW') : null,
+            mtf15_ok: details.mtf15_ok !== undefined ? details.mtf15_ok : true,
+            volume_ratio: volRatio != null ? +volRatio.toFixed(2) : (m && m.volumeRatio != null ? +m.volumeRatio.toFixed(2) : null),
+            range_pos: m && m.dayRangePosPct != null ? +m.dayRangePosPct.toFixed(1) : null,
+            vwap_dist_pct: m && m.vwapDistPct != null ? +m.vwapDistPct.toFixed(3) : null,
+            rr: details.rr != null ? +details.rr.toFixed(2) : null,
+            stop_width_pct: details.stop_width_pct != null ? +details.stop_width_pct.toFixed(3) : null,
+            stop_price: details.stop_price != null ? +details.stop_price.toFixed(2) : null,
+            target_price: details.target_price != null ? +details.target_price.toFixed(2) : null,
+            gate_failed: gateFailed,
+            signal_ts: gateFailed === 'PASS' ? bar[T.TIME] : null,
+            fill_price: details.fill_price != null ? +details.fill_price.toFixed(2) : null,
+            exit_ts: details.exit_ts || null,
+            exit_reason: details.exit_reason || null,
+            r_multiple: details.r_multiple != null ? +details.r_multiple.toFixed(2) : null,
+            cost_r: details.cost_r != null ? +details.cost_r.toFixed(2) : null,
+          };
+          try { cfg.onCandidate(cand); } catch (_) {}
+        };
 
         const hit = retest(zone, bar, cfg);
         if (process.env.GB_FVG_DEBUG === '1' && hit) {
           console.log(`[fvg/debug] ${cfg.symbol || 'SYM'} retest touch at ${bar[T.TIME]}: side=${hit.side} entry=${hit.entry} wick=${hit.wick} dead=${hit.dead}`);
         }
-        if (!hit || hit.dead) continue;
+        if (!hit || hit.dead) {
+          funnel.weakRejection += 1;
+          note('REJECTION_WEAK: the retest bar did not close back out of the zone');
+          emitCandidate(hit && hit.dead ? 'GAP_FILLED' : 'REJECTION_WEAK', { wick: hit ? hit.wick : null });
+          continue;
+        }
 
         const entry = hit.entry;
-        const m = marketCore.measure({ session, entry });
-        const dayCtx = dayContext(session, entry);
-        const volRatio = m.volumeRatio;
         if (process.env.GB_FVG_DEBUG === '1') {
           console.log(`[fvg/debug] ${cfg.symbol || 'SYM'} measure at ${bar[T.TIME]}: vwapDistPct=${m.vwapDistPct != null ? m.vwapDistPct.toFixed(3) + '%' : 'null'}, volRatio=${volRatio != null ? volRatio.toFixed(2) + 'x' : 'null'}, atrPct=${m.atrPct != null ? m.atrPct.toFixed(3) + '%' : 'null'}`);
         }
@@ -381,12 +473,32 @@ function createEngine(config) {
             const prev15 = f15.bars[f15.bars.length - 2];
             const is15mBull = last15[T.CLOSE] > prev15[T.CLOSE] && last15[T.CLOSE] > last15[T.OPEN];
             const is15mBear = last15[T.CLOSE] < prev15[T.CLOSE] && last15[T.CLOSE] < last15[T.OPEN];
-            if (is15mBull && hit.side !== 'LONG') continue;
-            if (is15mBear && hit.side !== 'SHORT') continue;
+            if (is15mBull && hit.side !== 'LONG') {
+              funnel.mtf15 += 1;
+              note('MTF_15M: the 15m frame leans against the retest');
+              emitCandidate('MTF_15M', { wick: hit.wick, mtf15_ok: false });
+              continue;
+            }
+            if (is15mBear && hit.side !== 'SHORT') {
+              funnel.mtf15 += 1;
+              note('MTF_15M: the 15m frame leans against the retest');
+              emitCandidate('MTF_15M', { wick: hit.wick, mtf15_ok: false });
+              continue;
+            }
           }
           if (m.vwapDistPct != null) {
-            if (hit.side === 'LONG' && m.vwapDistPct < 0) continue;
-            if (hit.side === 'SHORT' && m.vwapDistPct > 0) continue;
+            if (hit.side === 'LONG' && m.vwapDistPct < 0) {
+              funnel.vwapSide += 1;
+              note('VWAP_SIDE: entry sits on the wrong side of VWAP');
+              emitCandidate('VWAP_SIDE', { wick: hit.wick, mtf15_ok: true });
+              continue;
+            }
+            if (hit.side === 'SHORT' && m.vwapDistPct > 0) {
+              funnel.vwapSide += 1;
+              note('VWAP_SIDE: entry sits on the wrong side of VWAP');
+              emitCandidate('VWAP_SIDE', { wick: hit.wick, mtf15_ok: true });
+              continue;
+            }
           }
         }
 
@@ -423,7 +535,16 @@ function createEngine(config) {
           targets: targetCandidates, market: m, config: cfg.planner,
         });
 
-        if (!built.ok) return Object.assign(base, { ok: false, gate: built.gate, reject: built.reject });
+        if (!built.ok) {
+          funnel.planner += 1;
+          // EACH JUDGE, NOT THE GROUP. `built.gate` is 'EXTENSION' for six different
+          // comparisons; the reasons array names the ones that actually failed, so the
+          // funnel can say "already 96% of the day's range" instead of "EXTENSION".
+          for (const r of built.reject || []) note(String(r).slice(0, 64));
+          const reasonStr = built.reject && built.reject.length ? built.reject.join('; ') : built.gate;
+          emitCandidate(built.gate + (reasonStr ? ': ' + reasonStr : ''), { wick: hit.wick });
+          return Object.assign(base, { ok: false, gate: built.gate, reject: built.reject });
+        }
 
         // DAY-CONTEXT REFUSAL — only when configured (default null, see DEFAULTS).
         // Refused BEFORE the cooldown is consumed, so the same setup is not
@@ -433,6 +554,7 @@ function createEngine(config) {
           && dayCtx.prevDayPct != null && dayCtx.dayChangePct != null
           && dayCtx.prevDayPct > (dc.minPrevDayPct != null ? dc.minPrevDayPct : 0)
           && dayCtx.dayChangePct <= -(dc.dropPct != null ? dc.dropPct : 0.5)) {
+          emitCandidate('DAY_CONTEXT', { wick: hit.wick });
           return Object.assign(base, {
             ok: false, gate: 'DAY_CONTEXT',
             reject: ['long into a stock down ' + dayCtx.dayChangePct.toFixed(2) + '% on a day after +'
@@ -442,11 +564,24 @@ function createEngine(config) {
         }
 
         if (volRatio != null && volRatio < cfg.minVolRatio) {
+          funnel.volume += 1;
+          note('VOLUME: retest on ' + volRatio.toFixed(2) + 'x average volume');
+          emitCandidate('VOLUME: ' + volRatio.toFixed(2) + 'x < ' + cfg.minVolRatio + 'x', { wick: hit.wick });
           return Object.assign(base, { ok: false, gate: 'VOLUME', reject: ['retest on ' + volRatio.toFixed(2) + '× average volume'] });
         }
 
         cooldownUntil = index + cfg.cooldownBars;
         signalsToday += 1;
+        funnel.emitted += 1;
+
+        const stopDist = Math.abs(built.plan.stop - entry);
+        emitCandidate('PASS', {
+          wick: hit.wick,
+          stop_price: built.plan.stop,
+          target_price: built.plan.t1,
+          rr: built.plan.rr1,
+          stop_width_pct: entry > 0 ? (stopDist / entry) * 100 : null,
+        });
 
         const withPlan = marketCore.withPlan(base, built, cfg);
         withPlan.reason = [
@@ -466,7 +601,14 @@ function createEngine(config) {
     return null;
   }
 
-  return { onBar, cfg, state: () => ({ frames, day: session.day, prevDay: session.prevDay }) };
+  return {
+    onBar,
+    cfg,
+    state: () => ({ frames, day: session.day, prevDay: session.prevDay, funnel }),
+    // A COPY, so a reader (the board, a study) cannot mutate the engine's own counts as it
+    // aggregates them across symbols.
+    funnel: () => Object.assign({}, funnel, { reasons: Object.assign({}, funnel.reasons) }),
+  };
 }
 
 module.exports = {

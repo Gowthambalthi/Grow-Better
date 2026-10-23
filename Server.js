@@ -225,7 +225,7 @@ const { exchangeDigest } = require('./common/market/exchangeDigest');
 // actually hit, everything else = an exit without a level). Every win rate this server
 // publishes goes through them, so the history tables, the strategy table and the sweep
 // panel can never disagree about the same call.
-const { callBookHistory, classify, tallyOutcomes, liveRollingRecord } = require('./common/market/callBookHistory');
+const { callBookHistory, classify, tallyOutcomes, liveRollingRecord, entryRiskBps } = require('./common/market/callBookHistory');
 
 /**
  * PER-STRATEGY PERFORMANCE, MEASURED FROM TODAY'S OWN CALL BOOK.
@@ -243,20 +243,21 @@ const { callBookHistory, classify, tallyOutcomes, liveRollingRecord } = require(
  * stop. Dividing them gives R without inventing a figure, and a strategy cannot look
  * better by taking wider stops — the same convention backtest/metrics.js uses.
  */
-function liveStrategyPerformance() {
+function liveStrategyPerformance(opts) {
   let active = [], closed = [];
   try {
     active = liveMinuteEngine.getActiveCandidates() || [];
     closed = liveMinuteEngine.getClosedHistory() || [];
   } catch (_) { return []; }
 
-  const riskBpsOf = (c) => {
-    const entry = Number(c.entryPrice != null ? c.entryPrice : c.limitEntry);
-    const stop = Number(c.stopLoss);
-    if (!(entry > 0) || !isFinite(stop)) return null;
-    const bps = Math.abs(entry - stop) / entry * 10000;
-    return bps > 0 ? bps : null;
-  };
+  const armedRows = (opts && Array.isArray(opts.armed)) ? opts.armed : [];
+  const funnel = (opts && opts.funnel) || null;
+
+  // THE RISK THE CALL WAS ENTERED WITH, NOT THE STOP IT HAPPENS TO CARRY NOW. One implementation
+  // (callBookHistory.entryRiskBps) serves this table and the tier ledger; the copy that used to
+  // live here read the stop at request time, and that is what painted NET +3.70R on 2026-10-21's
+  // honest −₹1,722 day (docs/OF-MOMENTUM-LOSS-2026-10-21.md).
+  const riskBpsOf = (c) => entryRiskBps(c);
   const rOf = (c) => {
     const risk = riskBpsOf(c);
     const net = Number(c.netBps);
@@ -317,6 +318,119 @@ function liveStrategyPerformance() {
     r.netInr += Number(c.netInr1Lot) || 0;
   }
 
+  // ---------------------------------------------------------------------------
+  // AN ARMED STRATEGY WITH NO CALLS IS NOT A MISSING STRATEGY.
+  //
+  // The rows above come from the book, so a strategy that ran all session and found
+  // nothing simply did not appear. On 2026-10-21 that hid BOTH verified setups — GB01
+  // and GB03a — while the one row on the page belonged to OF_MOMENTUM, which the same
+  // payload reported as disarmed (`ofMomentum.armed: false`). The owner read three
+  // zeros as "OF1/OF3a are not connected to live data", and nothing on the page could
+  // contradict him. So every armed setup gets a row whether or not it traded, and the
+  // row carries the EVIDENCE of being evaluated (closed bars fed, symbol-minutes
+  // handed to the engine, refusals by gate) — a count of zero calls beside a count of
+  // 120,748 bars fed is a base rate; zero beside zero bars is a broken wire.
+  //
+  // A call row whose engine is NOT armed is marked the same way, because after a
+  // disarm its calls are history, not the live portfolio.
+  const ALIASES = {
+    FG01: ['FG01', 'GB01', 'FVG', 'SWEEP_FVG'],
+    OF03: ['OF03', 'GB03a', 'GB03A', 'GB03', 'ORDERFLOW'],
+    EMA01: ['EMA01', 'GB06'],
+  };
+  // The label already carries its GB code ("GB06: EMA Crossover…"), and the row prints the
+  // code in its own strong tag — repeating it read "GB06: GB06: EMA Crossover".
+  const stripCode = (label, code) => String(label || '').replace(new RegExp('^' + String(code).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ':?\\s*'), '').trim();
+  const armedBySetup = new Map();
+  for (const a of armedRows) {
+    const setup = String(a.setup || '');
+    // "GB06: EMA Crossover…" must yield "GB06", not "GB06:" — the label's colon is punctuation.
+    const code = setup === 'FG01' ? 'GB01'
+      : setup === 'OF03' ? 'GB03a'
+      : (String(a.label || '').match(/^(GB\S+?)(?=:|$)/) || [setup])[0];
+    const aliases = ALIASES[setup] || [setup];
+    const live = (() => {
+      if (!funnel) return null;
+      if (setup === 'FG01') {
+        const f = funnel.fvg || null;
+        if (!f || !f.sinceBoot) return null;
+        return { evaluated: f.sinceBoot.barsFed, unit: 'closed 1m bars fed', signals: f.sinceBoot.signals, refusedGates: f.sinceBoot.refused || {}, note: f.note || null };
+      }
+      if (setup === 'OF03') {
+        const g = funnel.gb03 || null;
+        if (!g || !g.sinceBoot) return null;
+        return { evaluated: g.sinceBoot.evaluated, unit: 'symbol-minutes evaluated', signals: g.sinceBoot.armed, refusedGates: g.sinceBoot.refusedGates || {}, note: g.note || null };
+      }
+      return null;
+    })();
+    const isArmed = process.env.GB_ONLY_GB01 === '1' ? (code === 'GB01' && !a.disabled) : !a.disabled;
+    armedBySetup.set(setup, { code, aliases, armed: isArmed, meta: a, live, name: stripCode(a.label || code, code) || code });
+  }
+
+  // Fold any call rows into their armed setup so one strategy is one row.
+  for (const a of armedBySetup.values()) {
+    for (const alias of a.aliases) {
+      const row = byId.get(alias);
+      if (!row) continue;
+      row.id = a.code;
+      row.name = a.name;
+      byId.delete(alias);
+      a.merged = row;
+      break;
+    }
+  }
+
+  // EVERY ARMED SETUP GETS A ROW, EVEN AT ZERO CALLS — and the row says whether the
+  // engine was actually fed. Folded rows keep their counts; the rest are zeroed.
+  for (const a of armedBySetup.values()) {
+    if (a.merged) {
+      a.merged.armed = a.armed;
+      a.merged.live = a.live;
+      a.merged.name = a.meta.label || a.merged.name;
+      continue;
+    }
+    byId.set('__armed__' + a.code, {
+      id: a.code,
+      name: a.name,
+      tier: 'INTRADAY',
+      openNow: 0, closed: 0, targetsHit: 0, stopsHit: 0, otherExits: 0, netR: 0, netInr: 0,
+      enabled: a.armed, _win: 0, _loss: 0,
+      armed: a.armed,
+      live: a.live,
+      statusNote: a.armed
+        ? (a.live
+          ? 'wired and evaluating — ' + a.live.evaluated.toLocaleString() + ' ' + a.live.unit
+            + (Object.keys(a.live.refusedGates).length ? ', refused by gate ' + Object.entries(a.live.refusedGates).map(([k, v]) => k + ' ' + v).join(' / ') : '')
+            + ' · 0 calls is the measured base rate, not a missing wire'
+          : 'armed, but this session has published no evaluation evidence yet')
+        : 'disabled in the registry',
+    });
+  }
+
+  // A DISARMED ENGINE'S CALLS ARE HISTORY. After `GB_OF_MOMENTUM_LIVE=0` the current
+  // process cannot add one, so its row must not read as the live portfolio — which is
+  // exactly how a −₹1,722 day belonging to a prototype got presented as the master
+  // table while both verified setups were absent.
+  const ofMomentumArmedNow = (() => {
+    try {
+      const g = (funnel && funnel.ofMomentum) || null;
+      return !!(g && g.armed);
+    } catch (_) { return false; }
+  })();
+  const seenArmedIds = new Set([...armedBySetup.values()].map((a) => a.code));
+  for (const row of byId.values()) {
+    if (seenArmedIds.has(row.id)) continue;
+    const isOfMomentum = /OF_MOMENTUM/i.test(String(row.id)) || /OF_MOMENTUM/i.test(String(row.name || ''));
+    row.armed = isOfMomentum ? ofMomentumArmedNow : false;
+    if (isOfMomentum && !ofMomentumArmedNow) {
+      row.enabled = false;
+      row.statusNote = 'DISARMED in this process — the ' + row.closed + ' call(s) on this row were made before '
+        + 'it was turned off (GB_OF_MOMENTUM_LIVE=0) and cannot repeat today. It is not one of the armed setups.';
+    } else if (!row.armed) {
+      row.statusNote = 'not in the armed set — its calls are historical, not the live portfolio';
+    }
+  }
+
   // The fields are listed explicitly so the accumulator's own bookkeeping (_win,
   // _loss) never leaks into a payload the page polls every three seconds.
   return [...byId.values()]
@@ -340,8 +454,18 @@ function liveStrategyPerformance() {
         ? +((r.targetsHit / (r.targetsHit + r.stopsHit)) * 100).toFixed(1)
         : null,
       enabled: r.enabled,
+      // What the row KNOWS beyond its calls: the armed flag, and the evaluation evidence.
+      armed: r.armed !== false,
+      live: r.live || null,
+      statusNote: r.statusNote || null,
     }))
-    .sort((a, b) => (b.closed + b.openNow) - (a.closed + a.openNow));
+    .sort((a, b) => {
+      // Armed-and-evaluated first, then anything with calls, then the rest — so the
+      // three strategies the application is actually running cannot be pushed off the
+      // table by a disarmed engine's closed calls.
+      const rank = (r) => (r.armed ? 0 : 10) + (r.closed + r.openNow > 0 ? 0 : 1);
+      return rank(a) - rank(b) || (b.closed + b.openNow) - (a.closed + a.openNow);
+    });
 }
 
 /**
@@ -401,7 +525,38 @@ app.get('/api/final/board', (req, res) => {
     const dailyNet = liveMinuteEngine.getDailyNet();
     // Built once: the per-strategy rows are both the payload's own table and the source of the
     // session's R total below, and computing them twice would let the two disagree.
-    const perfRows = liveStrategyPerformance();
+    // ARMED AND FUNNEL ARE READ ONCE, BEFORE THE TABLE, because the table now needs both:
+    // it lists every armed setup (with its evaluation evidence) and marks engines that are
+    // not armed, instead of only listing whatever happened to produce a call.
+    const armedStrategies = (() => {
+      try {
+        const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'terminal', 'backtest_results.json'), 'utf8'));
+        return engineCatalogue().flatMap((e) => (e.families || []).map((s) => {
+          const eng = bt && bt.engines ? bt.engines[e.key] : null;
+          // THE SETUP'S OWN RECORD, not the engine average: FG01 and OF03 are the only
+          // setups left, and each row must stand on its own measurement.
+          const rec = eng && eng.bySetup ? eng.bySetup[s.setup] : null;
+          const at05 = eng && eng.byCost ? eng.byCost['0.05'] : null;
+          const src = rec || at05 || {};
+          return {
+            engine: e.key,
+            setup: s.setup,
+            label: s.label,
+            frameMinutes: s.frameMinutes || null,
+            disabled: !!s.disabled,
+            trades: src.trades != null ? src.trades : null,
+            winPct: src.winPct != null ? src.winPct : null,
+            netPF: src.netPF != null ? src.netPF : null,
+            netR: src.netR != null ? src.netR : null,
+            // A setup record is gross of cost; say which one this row is.
+            costBasis: rec ? 'gross' : '0.05% round trip',
+            basis: 'measured on the replayed corpus, not a live call — the live book has no row yet',
+          };
+        }));
+      } catch (_) { return []; }
+    })();
+    const scanFunnelNow = (() => { try { return liveMinuteEngine.getScanFunnel(); } catch (_) { return null; } })();
+    const perfRows = liveStrategyPerformance({ armed: armedStrategies, funnel: scanFunnelNow });
     const closedR = +perfRows.reduce((s, r) => s + (Number(r.netR) || 0), 0).toFixed(2);
 
     // THE TWO FACTS THAT USED TO BE ASSERTED RATHER THAN MEASURED. `gateStatus` was the
@@ -483,33 +638,7 @@ app.get('/api/final/board', (req, res) => {
       // registry (strategy-core/engines.js) and the measured artifact, and they say so in their
       // own `basis`: they are NOT live calls, and the page prints them under "ARMED — no live
       // calls today" rather than as trades.
-      armedStrategies: (() => {
-        try {
-          const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'terminal', 'backtest_results.json'), 'utf8'));
-          return engineCatalogue().flatMap((e) => (e.families || []).map((s) => {
-            const eng = bt && bt.engines ? bt.engines[e.key] : null;
-            // THE SETUP'S OWN RECORD, not the engine average: FG01 and OF03 are the only
-            // setups left, and each row must stand on its own measurement.
-            const rec = eng && eng.bySetup ? eng.bySetup[s.setup] : null;
-            const at05 = eng && eng.byCost ? eng.byCost['0.05'] : null;
-            const src = rec || at05 || {};
-            return {
-              engine: e.key,
-              setup: s.setup,
-              label: s.label,
-              frameMinutes: s.frameMinutes || null,
-              disabled: !!s.disabled,
-              trades: src.trades != null ? src.trades : null,
-              winPct: src.winPct != null ? src.winPct : null,
-              netPF: src.netPF != null ? src.netPF : null,
-              netR: src.netR != null ? src.netR : null,
-              // A setup record is gross of cost; say which one this row is.
-              costBasis: rec ? 'gross' : '0.05% round trip',
-              basis: 'measured on the replayed corpus, not a live call — the live book has no row yet',
-            };
-          }));
-        } catch (_) { return []; }
-      })(),
+      armedStrategies,
       signals: candidates,
       // HOW FRESH THE PRICES BEHIND `signals` ARE. Without it, a frozen LTP and a quiet
       // market are the same picture on the page.
@@ -520,7 +649,7 @@ app.get('/api/final/board', (req, res) => {
       // WHY NOTHING ARMED, per gate, for the scan that just ran — plus how many names were actually
       // in play. "Candidates: 0 qualified" used to be the entire report. See getScanFunnel() and
       // IN_PLAY_MOVE15_BPS in the engine for the two pre-registered studies behind these numbers.
-      scanFunnel: (() => { try { return liveMinuteEngine.getScanFunnel(); } catch (_) { return null; } })(),
+      scanFunnel: scanFunnelNow,
       candidates,
       watchlist_candidates: candidates,
       // THE WHOLE DAY'S BOOK, not just the closed half of it. This was `history` (closed
@@ -732,7 +861,17 @@ async function armOrderflowCapture(angel) {
       }
     } catch (_) {}
 
-    const chosen = chooseCaptureSymbols({ board, extras, limit });
+    // Include the 500 tested simulation symbols for the GB01 forward test
+    let prioritySymbols = [];
+    const pPath = path.join(__dirname, 'data', 'universe_gb01_500.json');
+    if (fs.existsSync(pPath)) {
+      try {
+        const p = JSON.parse(fs.readFileSync(pPath, 'utf8'));
+        prioritySymbols = (Array.isArray(p) ? p : (p.symbols || [])).map((s) => String(s).replace(/-EQ$/i, '').toUpperCase());
+      } catch (_) {}
+    }
+
+    const chosen = chooseCaptureSymbols({ board, extras, prioritySymbols, limit });
     const symbols = chosen.symbols;
     if (!symbols.length) {
       console.log('[orderflow/capture] NOT ARMED: no symbol list — board.json has neither ' +
@@ -1099,7 +1238,7 @@ function requireApiKey(req, res, next) {
   // are allowed through; the POST that triggers a fetch is NOT (it makes outbound requests on the
   // server's behalf), and /api/portfolio and /api/notifications/settings stay key-protected
   // because they expose holdings and the bot's own configuration.
-  const PUBLIC_READS = new Set(['/api/news', '/api/news/summary', '/api/news/reaction', '/api/news/moves', '/api/news/signals', '/api/news/refresh/status', '/api/client-config']);
+  const PUBLIC_READS = new Set(['/api/news', '/api/news/summary', '/api/news/reaction', '/api/news/moves', '/api/news/signals', '/api/news/flash', '/api/news/refresh/status', '/api/client-config']);
   if (req.method === 'GET' && PUBLIC_READS.has(req.path)) return next();
 
   const provided = req.get('X-API-Key');
@@ -1951,6 +2090,11 @@ const newsSignalsMod = require('./common/news/newsSignals');
 // Precomputed by scripts/buildNewsMoves.js so a feed request is a lookup, not a
 // walk over 834 daily bar files.
 const newsMoves = require('./common/news/newsMoves');
+// THE FLASH LANE — the exchange's own filing feed, timestamped to the second.
+// Separate store, separate endpoint (/api/news/flash) and separate page tab: the
+// archive above can say "this headline ran on Tuesday", this one can say "this
+// filing landed four seconds ago", and merging the two would hide which is which.
+const flashNews = require('./common/news/flashNews');
 let _newsCache = { mtime: 0, items: [] };
 function newsItems() {
   try {
@@ -2147,6 +2291,90 @@ const NEWS_PULL_INTERVAL_MS = 30 * 60 * 1000;
 setTimeout(() => { try { pullNewsLive(false); } catch (e) { console.error('[News] boot pull failed:', e.message); } }, 45 * 1000);
 setInterval(() => { try { pullNewsLive(false); } catch (e) { console.error('[News] scheduled pull failed:', e.message); } }, NEWS_PULL_INTERVAL_MS);
 console.log('[News] live headline pull scheduled: once at boot (45s) and every ' + (NEWS_PULL_INTERVAL_MS / 60000) + ' min');
+
+// ---------------------------------------------------------------------------
+// THE FLASH LANE — exchange filings, polled in seconds.
+//
+// The Google-News harvester above is an ARCHIVE query: measured on 2026-10-21 its
+// current-month "Q2 results" feed returned a newest item 129 minutes old and a
+// median age of 94 hours, because Google ranks a month of stories by relevance.
+// No polling interval fixes that. NSE's corporate-announcements feed answers with
+// the ticker, the filing category and a timestamp to the second — the same minute
+// we ask — so this is the lane that can actually say "something just happened".
+//
+// 20s while the session is open (the exchange publishes continuously, and a
+// minute of lag is the difference between trading a filing and reading it); 5
+// minutes outside it, when only the backlog changes.
+// ---------------------------------------------------------------------------
+const FLASH_OPEN_MS = 20 * 1000;
+const FLASH_CLOSED_MS = 5 * 60 * 1000;
+let _flash = { running: false, lastPollAt: null, lastOk: null, lastAdded: 0, lastError: null, polls: 0, latency: null };
+
+async function pollFlashOnce() {
+  if (_flash.running) return _flash;
+  _flash.running = true;
+  try {
+    const r = await flashNews.poll();
+    _flash = {
+      running: false,
+      lastPollAt: r.at,
+      lastOk: !!r.ok,
+      lastAdded: r.added || 0,
+      lastError: r.ok ? null : (r.error || 'poll failed'),
+      polls: (_flash.polls || 0) + 1,
+      latency: r.latency || _flash.latency,
+      newest: r.newest || _flash.newest || null,
+    };
+  } catch (e) {
+    _flash = Object.assign({}, _flash, { running: false, lastPollAt: new Date().toISOString(), lastOk: false, lastError: e.message });
+  }
+  return _flash;
+}
+
+let _flashTimer = null;
+function scheduleFlash() {
+  const open = (() => { try { return sessionTiming.getSessionPhase().isSignalAllowed; } catch (e) { return false; } })();
+  const ms = open ? FLASH_OPEN_MS : FLASH_CLOSED_MS;
+  _flashTimer = setTimeout(async () => {
+    await pollFlashOnce();
+    scheduleFlash();
+  }, ms);
+  if (_flashTimer.unref) _flashTimer.unref();
+}
+
+app.get('/api/news/flash', (req, res) => {
+  const minutes = Math.min(Math.max(Number(req.query.minutes) || 180, 5), 2880);
+  const items = flashNews.readRecent(minutes);
+  const byMateriality = {};
+  for (const i of items) byMateriality[i.materiality] = (byMateriality[i.materiality] || 0) + 1;
+  res.json({
+    ok: true,
+    available: items.length > 0,
+    lane: 'flash',
+    source: 'NSE corporate announcements',
+    minutes,
+    count: items.length,
+    byMateriality,
+    // THE ONE NUMBER THAT SAYS WHETHER THIS IS A WIRE OR A CRAWL: the measured
+    // gap between the exchange's timestamp and when this process first saw the
+    // row. Median and p95, never a "real-time" adjective.
+    latency: flashNews.latencyStats(items),
+    poll: Object.assign({}, _flash, {
+      intervalSec: (() => { try { return sessionTiming.getSessionPhase().isSignalAllowed ? FLASH_OPEN_MS / 1000 : FLASH_CLOSED_MS / 1000; } catch (e) { return null; } })(),
+    }),
+    items: items.slice(0, 60).map((i) => ({
+      id: i.id, symbol: i.symbol, name: i.name, kind: i.kind, title: i.title,
+      url: i.url, ts: i.ts, firstSeenAt: i.firstSeenAt, lagMs: i.lagMs,
+      materiality: i.materiality, category: i.category, direction: i.direction,
+      industry: i.industry,
+    })),
+    note: 'Flash = the exchange\'s own filing feed (NSE), seconds-level. The Google-News store is an archive lane and stays separate. A filing is not a signal — see scratch/flash_study.js for what the stock did after one.',
+  });
+});
+
+try { flashNews.poll(); } catch (e) { /* a failed first poll is reported on the endpoint */ }
+scheduleFlash();
+console.log('[News] flash lane armed: NSE corporate announcements, ' + (FLASH_OPEN_MS / 1000) + 's during the session / ' + (FLASH_CLOSED_MS / 60000) + 'min outside it');
 
 // ---------------------------------------------------------------------------
 // WHICH STOCK LEANS UP OR DOWN ON THE NEWS — with the MEASURED reliability of

@@ -43,6 +43,10 @@ const parityStamp = require('./parityStamp');
 // See strategies/fvg/liveAdapter.js for the three rules it enforces (closed bars
 // only, each fed once, stale answers are not signals).
 const { createLiveAdapter, istBarTime } = require('../fvg/liveAdapter');
+let forwardAuditLogger = null;
+try {
+  forwardAuditLogger = require('../../strategy-core/forwardAuditLogger');
+} catch (_) {}
 // THE MEASURED CONFIGURATION, NOT A SECOND OPINION. `createEngine()` below used to
 // pass only `{ symbol, minAtrPct }`, so `maxSignalTime` fell through to the module's
 // DEFAULTS (12:30) while `strategy-core/engines.js` pinned the MEASURED 11:00 — i.e.
@@ -154,9 +158,10 @@ function strategyNameOf(c) {
 //   GB03_SIDES=short (default) | both | long
 const GB03_SIDES = (() => {
   const raw = String(process.env.GB03_SIDES || 'short').trim().toLowerCase();
-  return ['short', 'long', 'both'].includes(raw) ? raw : 'short';
+  return ['short', 'long', 'both', 'off', 'none'].includes(raw) ? raw : 'short';
 })();
 function gb03SideAllowed(side) {
+  if (GB03_SIDES === 'off' || GB03_SIDES === 'none' || process.env.GB_ONLY_GB01 === '1') return false;
   if (GB03_SIDES === 'both') return true;
   return GB03_SIDES === 'short' ? side === 'SHORT' : side === 'LONG';
 }
@@ -464,6 +469,27 @@ function ofMomentumArmed() {
   return ENABLE_OF_MOMENTUM || OF_MOMENTUM_LIVE.armed;
 }
 
+// GB03a COUNTERS THAT OUTLIVE THE SCAN.
+//
+// `funnel.gb03` is rebuilt on every pass, so an OF03 emission the planner refused at
+// 11:04 was gone from the payload by 11:06. That is precisely the number that answers
+// "is GB03a connected and simply finding nothing, or is it not being evaluated at
+// all?" — the empty-book question the 2026-10-19 review could not answer. `evaluated`
+// counts symbol-minutes handed to the OF03 engine, so it must be non-zero on any live
+// session; `refusedGates` names every emission the planner turned down, so a silent
+// day is distinguishable from a dead one.
+const GB03_SINCE_BOOT = { evaluated: 0, armed: 0, sideRefused: 0, refusedPlanner: 0, refusedGates: {}, lastArmedAt: null };
+function gb03Bump(key, gate) {
+  if (key === 'refusedPlanner') {
+    GB03_SINCE_BOOT.refusedPlanner += 1;
+    const g = String(gate || 'REFUSED');
+    GB03_SINCE_BOOT.refusedGates[g] = (GB03_SINCE_BOOT.refusedGates[g] || 0) + 1;
+    return;
+  }
+  GB03_SINCE_BOOT[key] = (GB03_SINCE_BOOT[key] || 0) + 1;
+  if (key === 'armed') GB03_SINCE_BOOT.lastArmedAt = new Date().toISOString();
+}
+
 // ---- FVG STRUCTURAL RULES (research/fvg/FVG_DEEP_RESEARCH.md, Part 6.1) -------------
 // The research conclusion is that an FVG is a LOCATION, not a signal: a bare mechanical
 // gap has no measurable edge (PF 0.43 over 2,232 trades; the FVG component alone is
@@ -724,23 +750,59 @@ function getTodayIST() {
 }
 
 /**
- * THE ONE FRICTION RULE, IN RUPPES — and it must be the SAME rule `netBps` applies.
- * `netBps` charges a flat 15 bps of the entry for a full round trip (₹20×2 brokerage,
- * STT 0.025% sell-side, NSE 0.00297%, SEBI ₹10/cr, 18% GST on those, 0.003% stamp on
- * the buy — ≈13 bps on a ₹50,000 Angel One MIS round trip; 15 bps keeps the margin).
- * The rupee figure used to charge a FLAT ₹0.20 against a `pts × shares` P&L, i.e.
- * ₹0.20 of "taxes" on a ₹50,000-notional position that really costs ~₹75 to close.
- * Every closed call therefore overstated its net by ~₹75, and the day's verdict
- * (getDailyNet → Telegram scorecard → /final) inherited the whole difference while the
- * card claimed "net of brokerage and exchange taxes". Charging the same rate on the
- * same notional makes the two metrics agree exactly: netInr = netBps/10000 × entry ×
- * shares. A call that never moved still reports 0 — pinned by test/depthOrientation.
+ * THE ONE FRICTION RULE — THE SAME GROWW BASIS THE PAYLOAD CLAIMS, priced per
+ * trade instead of assumed flat.
+ *
+ * This used to charge a flat 15 bps of notional (`notional * 0.0015`) and a flat
+ * 15 bps in `netBps`. That rate was calibrated on a ₹50,000 NOTIONAL, where flat
+ * brokerage dominates: ₹40 + STT + exchange ≈ ₹66 ≈ 13 bps. Sizing switched to
+ * risk (`GB_RISK_INR`, 1R = ₹1,000) — GARUDA's 0.87-pt stop buys 1,149 shares,
+ * an ₹182,000 notional — and at that size the flat ₹40 is 2.2 bps, not 8: the
+ * real round trip was ~₹112 while the model booked ₹273. On 2026-10-21 that one
+ * substitution turned a GROSS-POSITIVE day (+₹262) into a −₹1,722 "loss" while
+ * the row it sat on said NET +3.69R. The same charges the header already names
+ * (Groww flat ₹20/side, STT 0.025% sell-side, NSE 0.00297% both sides, SEBI
+ * ₹10/cr, 18% GST on brokerage+exchange, 0.003% stamp on the buy) are now
+ * computed on the trade's OWN buy and sell notionals, so a small trade and a
+ * large one each pay what they cost — and netInr = netBps/10000 × entry × shares
+ * still holds exactly, because both read this one function.
  */
+const GROWW_CHARGES = {
+  brokeragePerSide: 20,       // flat ₹20 per executed order
+  sttSell: 0.00025,           // intraday STT, sell side only
+  exchangeBoth: 0.0000297,    // NSE transaction charge, both sides
+  sebiPerCr: 10,              // ₹10 per crore of turnover
+  gst: 0.18,                  // on brokerage + exchange + SEBI
+  stampBuy: 0.00003,          // stamp duty, buy side only
+};
+
+function growwCostInr(buyNotional, sellNotional) {
+  const buy = Number(buyNotional) || 0;
+  const sell = Number(sellNotional) || 0;
+  if (buy <= 0 || sell <= 0) return 0;
+  const brokerage = GROWW_CHARGES.brokeragePerSide * 2;
+  const stt = GROWW_CHARGES.sttSell * sell;
+  const exchange = GROWW_CHARGES.exchangeBoth * (buy + sell);
+  const sebi = GROWW_CHARGES.sebiPerCr * ((buy + sell) / 1e7);
+  const gst = GROWW_CHARGES.gst * (brokerage + exchange + sebi);
+  const stamp = GROWW_CHARGES.stampBuy * buy;
+  return brokerage + stt + exchange + sebi + gst + stamp;
+}
+
 function netInrAfterCosts(pts, entry, shares) {
   const sh = shares || 1;
   if (!pts) return 0;
-  const notional = (Number(entry) || 0) * sh;
-  return +(pts * sh - notional * 0.0015).toFixed(2);
+  const buy = (Number(entry) || 0) * sh;
+  if (!(buy > 0)) return 0;
+  return +(pts * sh - growwCostInr(buy, buy + pts * sh)).toFixed(2);
+}
+
+/** `netBps` with the SAME cost rule, so the bps figure and the rupee figure cannot disagree. */
+function netBpsAfterCosts(pts, entry, shares) {
+  const sh = shares || 1;
+  const buy = (Number(entry) || 0) * sh;
+  if (!pts || !(buy > 0)) return 0;
+  return ((pts * sh - growwCostInr(buy, buy + pts * sh)) / buy) * 10000;
 }
 
 function getISTTimeString(ms = Date.now()) {
@@ -1134,6 +1196,13 @@ class LiveMinuteEngine {
       // When trade reaches +0.50% profit (50 bps MFE), automatically trail stop to entry + 15 bps friction floor.
       // This protects winning runners from round-tripping into full stop-outs.
       if (!c.breakevenArmed) {
+        // THE STOP IT WAS ENTERED ON, KEPT. `c.stopLoss` is about to be OVERWRITTEN by
+        // the lock below, and the board measured R off whatever `stopLoss` held at
+        // read time — so a winner's risk denominator shrank from ~52 bps to 15 bps and
+        // its R was inflated ~3.5x while every loser kept the full structural stop.
+        // (2026-10-21: +3.69R printed against an honest −₹1,722.) `entryStopLoss` is
+        // never mutated after this line, and `riskBps`/`riskPts` are stamped at creation.
+        if (c.entryStopLoss == null) c.entryStopLoss = c.stopLoss;
         if (!isShort && pnlPct >= 0.50) {
           c.breakevenArmed = true;
           const beStop = +(entry * 1.0015).toFixed(2); // entry + 15 bps to cover all taxes & brokerage
@@ -1170,7 +1239,7 @@ class LiveMinuteEngine {
         c.exitTimeIST = nowIST;
         c.exitReason = 'STAGNATION_EXIT';
         c.grossPoints1Lot = +pts.toFixed(2);
-        c.netBps = +((pts / entry) * 10000 - 15).toFixed(1);
+        c.netBps = +netBpsAfterCosts(pts, entry, c.shares).toFixed(1);
         c.netInr1Lot = netInrAfterCosts(pts, entry, c.shares);
         c.note = (c.note || '') + ` [⏱️ 45M STAGNATION EXIT: Momentum faded (peak +${(c.mfePct || 0).toFixed(2)}% MFE)]`;
         this.closedCalls.push(c);
@@ -1188,9 +1257,10 @@ class LiveMinuteEngine {
         c.exitTimeIST = nowIST;
         c.exitReason = 'TARGET_HIT';
         c.grossPoints1Lot = +pts.toFixed(2);
-        c.netBps = +((pts / entry) * 10000 - 15).toFixed(1);
+        c.netBps = +netBpsAfterCosts(pts, entry, c.shares).toFixed(1);
         c.netInr1Lot = netInrAfterCosts(pts, entry, c.shares);
         this.closedCalls.push(c);
+        this.logTradeAuditIfGb01(c);
         this.saveCalls();
         console.log(`[liveMinuteEngine] 🎯 TARGET REACHED: ${c.symbol} WON +${pts.toFixed(2)} pts (+${pnlPct.toFixed(2)}%) at ${nowIST}`);
         this.dispatchTelegramExit(c, true);
@@ -1200,9 +1270,10 @@ class LiveMinuteEngine {
         c.exitTimeIST = nowIST;
         c.exitReason = 'TARGET_HIT';
         c.grossPoints1Lot = +pts.toFixed(2);
-        c.netBps = +((pts / entry) * 10000 - 15).toFixed(1);
+        c.netBps = +netBpsAfterCosts(pts, entry, c.shares).toFixed(1);
         c.netInr1Lot = netInrAfterCosts(pts, entry, c.shares);
         this.closedCalls.push(c);
+        this.logTradeAuditIfGb01(c);
         this.saveCalls();
         console.log(`[liveMinuteEngine] 🎯 TARGET REACHED: ${c.symbol} WON +${pts.toFixed(2)} pts (+${pnlPct.toFixed(2)}%) at ${nowIST}`);
         this.dispatchTelegramExit(c, true);
@@ -1218,9 +1289,10 @@ class LiveMinuteEngine {
         c.exitTimeIST = nowIST;
         c.exitReason = c.breakevenArmed ? 'BREAKEVEN_EXIT' : 'STOP_LOSS_HIT';
         c.grossPoints1Lot = +pts.toFixed(2);
-        c.netBps = +((pts / entry) * 10000 - 15).toFixed(1);
+        c.netBps = +netBpsAfterCosts(pts, entry, c.shares).toFixed(1);
         c.netInr1Lot = netInrAfterCosts(pts, entry, c.shares);
         this.closedCalls.push(c);
+        this.logTradeAuditIfGb01(c);
         this.saveCalls();
         const won = c.status === 'WON';
         console.log(`[liveMinuteEngine] ${c.exitReason === 'BREAKEVEN_EXIT' ? '🛡️ BREAKEVEN SCRATCH' : '🛑 STOP LOSS HIT'}: ${c.symbol} ${c.status} ${pts.toFixed(2)} pts (${pnlPct.toFixed(2)}%) at ${nowIST}`);
@@ -1235,14 +1307,48 @@ class LiveMinuteEngine {
         c.exitTimeIST = nowIST;
         c.exitReason = c.breakevenArmed ? 'BREAKEVEN_EXIT' : 'STOP_LOSS_HIT';
         c.grossPoints1Lot = +pts.toFixed(2);
-        c.netBps = +((pts / entry) * 10000 - 15).toFixed(1);
+        c.netBps = +netBpsAfterCosts(pts, entry, c.shares).toFixed(1);
         c.netInr1Lot = netInrAfterCosts(pts, entry, c.shares);
         this.closedCalls.push(c);
+        this.logTradeAuditIfGb01(c);
         this.saveCalls();
         const won = c.status === 'WON';
         console.log(`[liveMinuteEngine] ${c.exitReason === 'BREAKEVEN_EXIT' ? '🛡️ BREAKEVEN SCRATCH' : '🛑 STOP LOSS HIT'}: ${c.symbol} ${c.status} ${pts.toFixed(2)} pts (${pnlPct.toFixed(2)}%) at ${nowIST}`);
         this.dispatchTelegramExit(c, won);
       }
+    }
+  }
+
+  logTradeAuditIfGb01(c) {
+    if (!c || !forwardAuditLogger) return;
+    const isGb01 = c.engineType === 'FVG' || c.strategyId === 'FG01' || c.strategyId === 'GB01';
+    if (!isGb01) return;
+    try {
+      const entry = Number(c.limitEntry) || 0;
+      const stop = Number(c.stopLoss) || 0;
+      const target = Number(c.target) || 0;
+      const riskPts = Math.abs(entry - stop);
+      const isShort = String(c.action || '').toUpperCase().includes('SELL') || String(c.side || '').toUpperCase() === 'SHORT';
+      const exitPrice = Number(c.exitPrice) || entry;
+      const rMult = riskPts > 0 ? ((exitPrice - entry) / riskPts) * (isShort ? -1 : 1) : 0;
+      const costR = (riskPts > 0 && entry > 0) ? (0.0005 * entry) / riskPts : 0;
+      forwardAuditLogger.logCandidate({
+        ts: Date.now(),
+        session_date: this.today,
+        symbol: c.symbol,
+        fvg_id: c.fvg_id || c.id,
+        gate_failed: 'PASS',
+        signal_ts: c.signalTime || c.time,
+        fill_price: entry,
+        exit_ts: c.exitTimeIST,
+        exit_reason: c.exitReason,
+        r_multiple: +rMult.toFixed(2),
+        cost_r: +costR.toFixed(2),
+        stop_price: stop,
+        target_price: target,
+      });
+    } catch (err) {
+      console.error('[liveMinuteEngine] Error logging trade audit:', err.message);
     }
   }
 
@@ -1374,7 +1480,7 @@ class LiveMinuteEngine {
         c.exitTimeIST = nowIST;
         c.exitReason = 'SESSION_CLOSE';
         c.grossPoints1Lot = +pts.toFixed(2);
-        c.netBps = +((pts / entry) * 10000 - 15).toFixed(1);
+        c.netBps = +netBpsAfterCosts(pts, entry, c.shares).toFixed(1);
         c.netInr1Lot = netInrAfterCosts(pts, entry, c.shares);
         // A 15:30 flatten is an EXIT, not a result: the call was closed at the bell with
         // the price it happened to be at. Stamped WON here it became a "win" in every
@@ -1382,10 +1488,32 @@ class LiveMinuteEngine {
         // (TARGET_HIT / STOP_LOSS_HIT) are the only ones that write WON or LOST.
         c.status = 'CLOSED';
         this.closedCalls.push(c);
+        this.logTradeAuditIfGb01(c);
         n++;
       }
     }
     this.sessionClosed = true;
+    if (forwardAuditLogger) {
+      try {
+        const totalSymbols = this.symBars.size;
+        let completeBars = 0;
+        let totalMissing = 0;
+        const targetBars = 375;
+        for (const bars of this.symBars.values()) {
+          if (bars.length >= 360) completeBars++;
+          if (bars.length < targetBars) totalMissing += (targetBars - bars.length);
+        }
+        forwardAuditLogger.logHeartbeat({
+          session_date: this.today,
+          symbols_expected: totalSymbols || 494,
+          symbols_with_complete_bars: completeBars,
+          bars_missing: totalMissing,
+          candidates_logged: (this.fvgLive && typeof this.fvgLive.stats === 'function' ? this.fvgLive.stats().funnel.touches : 0),
+        });
+      } catch (err) {
+        console.error('[liveMinuteEngine] Error logging session heartbeat:', err.message);
+      }
+    }
     if (n) {
       this.saveCalls();
       console.log('[liveMinuteEngine] SESSION CLOSED (15:30 IST) — ' + n + ' open call(s) settled at market close');
@@ -1968,6 +2096,7 @@ class LiveMinuteEngine {
             this.ofEngLastFedBarT.set(sym, Number(bars[lastClosed].t));
             funnel.gb03 = funnel.gb03 || { armed: 0, sideRefused: 0, evaluated: 0 };
             funnel.gb03.evaluated += 1;
+            gb03Bump('evaluated');
             const formatted = bars.map(b => [istBarTime(b.t), b.o, b.h, b.l, b.c, b.v]);
             // A process that missed minutes (a restart, a scan that ran late) feeds the bars
             // in between rather than jumping the gap: the engine's session state and its
@@ -1996,6 +2125,7 @@ class LiveMinuteEngine {
               funnel.gb03.refusedGates = funnel.gb03.refusedGates || {};
               const g = String(ofSig.gate || 'REFUSED');
               funnel.gb03.refusedGates[g] = (funnel.gb03.refusedGates[g] || 0) + 1;
+              gb03Bump('refusedPlanner', g);
             }
           }
 
@@ -2005,11 +2135,13 @@ class LiveMinuteEngine {
           if (ofSig && ofSig.ok && ofSig.plan && !gb03SideAllowed(ofSig.side)) {
             funnel.gb03 = funnel.gb03 || { armed: 0, sideRefused: 0, evaluated: 0 };
             funnel.gb03.sideRefused += 1;
+            gb03Bump('sideRefused');
             ofSig = null;
           }
           if (ofSig && ofSig.ok && ofSig.plan) {
             funnel.gb03 = funnel.gb03 || { armed: 0, sideRefused: 0, evaluated: 0 };
             funnel.gb03.armed += 1;
+            gb03Bump('armed');
             const ofEntry = ofSig.entry;
             const ofStop = ofSig.plan.stop;
             const ofT1 = ofSig.plan.t1;
@@ -2104,6 +2236,7 @@ class LiveMinuteEngine {
                 score: 96,
                 engineType: 'FVG',
                 setupType: fvgSig.setup,
+                fvg_id: fvgSig.setupId || ('FVG-' + sym + '-' + this.today + '-' + (fvgSig.setup || '5m') + '-' + (fvgSig.plan && fvgSig.plan.stop)),
                 // WHICH GB SYSTEM THIS IS (GB01 on 5m FVG).
                 strategyId: fvgSig.setup,
                 strategyName: 'GB01 — 5m FVG Retest',
@@ -2322,11 +2455,34 @@ class LiveMinuteEngine {
           const was = (fvgBefore && fvgBefore.refused[g]) || 0;
           if (a.refused[g] - was !== 0) refusedDelta[g] = a.refused[g] - was;
         }
+        // THE STAGE COUNTS. `refused` only sees setups that lived long enough to build a
+        // signal, so the 67,000 touches that died on the retest bar itself were invisible and
+        // `EXTENSION 329` could not name which of its six judges fired. The engine counts every
+        // stage and every judge's own words; the adapter folds retired engines in. Published
+        // beside the counters so "GB01 is quiet" always comes with WHERE it went quiet.
+        const stage = (k) => (a.funnel && a.funnel[k] != null) ? a.funnel[k] : null;
+        const stageWas = (k) => (fvgBefore && fvgBefore.funnel && fvgBefore.funnel[k] != null) ? fvgBefore.funnel[k] : 0;
+        const stagesThisScan = a.funnel ? {
+          bars: stage('bars') - stageWas('bars'), gaps: stage('gaps') - stageWas('gaps'),
+          touches: stage('touches') - stageWas('touches'),
+          emitted: stage('emitted') - stageWas('emitted'),
+        } : null;
+        const reasons = (a.funnel && a.funnel.reasons) || {};
+        const topRefusal = Object.keys(reasons).sort((x, y) => reasons[y] - reasons[x])[0] || null;
         funnel.fvg = {
           symbolsTracked: a.symbols,
           fedThisScan: delta('calls'), barsFedThisScan: delta('barsFed'),
           signalsThisScan: delta('signals'),
           refusedThisScan: refusedDelta,
+          stagesThisScan,
+          stages: a.funnel ? {
+            bars: stage('bars'), gaps: stage('gaps'), touches: stage('touches'),
+            weakRejection: stage('weakRejection'), mtf15: stage('mtf15'),
+            vwapSide: stage('vwapSide'), planner: stage('planner'),
+            volume: stage('volume'), emitted: stage('emitted'),
+            topRefusal,
+            reasons,
+          } : null,
           sinceBoot: {
             symbolsTracked: a.symbols, barsFed: a.barsFed, signals: a.signals,
             refused: a.refused, staleDropped: a.staleDropped, noClosedBar: a.noClosedBar,
@@ -2335,9 +2491,19 @@ class LiveMinuteEngine {
           // WHAT TO EXPECT, stated where the numbers are read: GB01's measured base rate is ~1 call
           // per 1,022 symbol-days, so a five-hundred-name tape should produce roughly one call every
           // two sessions. An empty row is the base rate; a row with barsFed 0 is a fault.
-          note: 'GB01 base rate ~1 per 1,022 symbol-days (authorized window: 33 trades / 172 sessions / 100 symbols, netPF 2.36, +0.812R per trade). barsFed 0 means the adapter never saw a closed bar.',
+          note: 'GB01 base rate ~1 per 1,022 symbol-days (authorized window: 33 trades / 172 sessions / 100 symbols, netPF 2.36, +0.812R per trade). barsFed 0 means the adapter never saw a closed bar. stages is the engine\'s own funnel since boot: of `touches` (a retest actually happened), `weakRejection` died on the retest bar, `mtf15`/`vwapSide` on confirmation, `planner` on a gate named in `topRefusal` — read that before concluding the row is broken.',
         };
       }
+
+      // GB03a's DAY, NOT THIS SCAN'S. Published even when no symbol was evaluated,
+      // because `evaluated: 0` all session is itself the finding: it means the OF03
+      // branch never ran (no clocked bars, or every name in play). Without this the
+      // board could only show an empty book, which reads as "disconnected" whether the
+      // engine is dead or merely refusing — the two facts the owner needs to tell apart.
+      funnel.gb03 = Object.assign({ armed: 0, sideRefused: 0, evaluated: 0 }, funnel.gb03 || {}, {
+        sinceBoot: Object.assign({}, GB03_SINCE_BOOT, { refusedGates: Object.assign({}, GB03_SINCE_BOOT.refusedGates) }),
+        note: 'GB03a measured base rate ~25 planned trades / 705 sessions / 100 symbols, so a 500-name tape expects roughly one call every six sessions. sinceBoot.evaluated counts symbol-minutes handed to the OF03 engine; sinceBoot.refusedGates names every emission the planner refused. evaluated 0 all day means the branch never ran — that is a fault, not a base rate.',
+      });
 
       // L3 GATE TELEMETRY WRITE (measure-only; see strategies/orderflow/gateTelemetry.js).
       // One bundle per actually-scanned pass: the published funnel UNCHANGED, the day's
@@ -2408,8 +2574,23 @@ class LiveMinuteEngine {
       // GB01/GB02: null until a scan has actually walked the universe, then the adapter's own
       // counters (see liveAdapter.stats) plus this scan's delta. The board reads `fvg.sinceBoot`
       // to tell "armed and quiet" from "never ran".
-      fvg: f.fvg || null,
-      gb03: f.gb03 || null,
+      // THE NESTED BLOCKS ARE COPIED TOO. This getter is documented as handing back a COPY so
+      // a poller cannot mutate the running scan's ledger, but `fvg` and `gb03` were returned by
+      // reference — assigning to `funnel.gb03.sinceBoot.evaluated` from a request handler would
+      // have edited the published counts in place, and the next request would have read the
+      // edited number. Only the two levels a board actually writes to are copied.
+      fvg: f.fvg ? Object.assign({}, f.fvg, {
+        sinceBoot: f.fvg.sinceBoot ? Object.assign({}, f.fvg.sinceBoot, {
+          refused: Object.assign({}, f.fvg.sinceBoot.refused || {}),
+        }) : undefined,
+        refusedThisScan: Object.assign({}, f.fvg.refusedThisScan || {}),
+      }) : null,
+      gb03: f.gb03 ? Object.assign({}, f.gb03, {
+        refusedGates: Object.assign({}, f.gb03.refusedGates || {}),
+        sinceBoot: f.gb03.sinceBoot ? Object.assign({}, f.gb03.sinceBoot, {
+          refusedGates: Object.assign({}, f.gb03.sinceBoot.refusedGates || {}),
+        }) : undefined,
+      }) : null,
       // OF_MOMENTUM's own line: whether it is armed for this session, how much of its cap is used,
       // and how many candidates the session cap refused — so "the prototype is filling the board"
       // and "the prototype is being held back" are both visible without reading the log.
@@ -2523,6 +2704,12 @@ class LiveMinuteEngine {
       entryPrice: entry,
       exitPrice: exit,
       stopLoss: c.stopLoss,
+      // THE RISK THE CALL WAS ENTERED WITH — never the trailed stop. `stopLoss` above
+      // may have been moved to breakeven by the lock, and a reader that divides netBps
+      // by the CURRENT stop width measures a 15-bps scratch as a +4.8R winner.
+      entryStopLoss: c.entryStopLoss != null ? c.entryStopLoss : c.stopLoss,
+      riskPts: Number.isFinite(Number(c.riskPts)) ? Number(c.riskPts) : null,
+      riskBps: Number.isFinite(Number(c.riskBps)) ? Number(c.riskBps) : null,
       target1: c.target,
       status: c.status,
       // THE BACKTEST CROSS-CHECK, ON EVERY ROW. Stamped when the call armed (parityStamp), it
@@ -2676,6 +2863,11 @@ liveEngine.gb03SideAllowed = gb03SideAllowed;
 liveEngine.gb03RiskReward = gb03RiskReward;
 // The new-call and exit alert wording, so its side, its GB code and strategy branding are pinned without a send.
 liveEngine.newCallTelegramText = newCallTelegramText;
+// THE ONE FRICTION RULE, exported so a test can price a trade by hand and prove the
+// rupee figure and the bps figure come from the same Groww charges.
+liveEngine.growwCostInr = growwCostInr;
+liveEngine.netBpsAfterCosts = netBpsAfterCosts;
+liveEngine.netInrAfterCosts = netInrAfterCosts;
 liveEngine.exitTelegramText = exitTelegramText;
 liveEngine.strategyNameOf = strategyNameOf;
 liveEngine.gbCodeOf = gbCodeOf;

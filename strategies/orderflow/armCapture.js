@@ -78,10 +78,11 @@ const CAPTURE_CORRELATION = 'gb_capture';
  * cap. The counts returned are what the caller logs, so "armed 500 of 1,006 available" is a line in
  * the startup log instead of something to infer.
  */
-function chooseCaptureSymbols({ board, extras, limit, defaultLimit = DEFAULT_CAPTURE_LIMIT } = {}) {
+function chooseCaptureSymbols({ board, extras, prioritySymbols, limit, defaultLimit = DEFAULT_CAPTURE_LIMIT } = {}) {
   const clean = (s) => String(s == null ? '' : s).replace(/-EQ$/i, '').trim().toUpperCase();
   const b = board || {};
 
+  const priorityList = (prioritySymbols || []).map(clean).filter(Boolean);
   const okList = (b.universe && Array.isArray(b.universe.okSymbols)) ? b.universe.okSymbols.map(clean).filter(Boolean) : [];
   const rowList = Array.isArray(b.rows)
     ? b.rows.filter((r) => r && r.symbol && !r.blocked).map((r) => clean(r.symbol)).filter(Boolean)
@@ -91,6 +92,7 @@ function chooseCaptureSymbols({ board, extras, limit, defaultLimit = DEFAULT_CAP
   const seen = new Set();
   const symbols = [];
   const add = (arr) => { for (const s of arr) if (!seen.has(s)) { seen.add(s); symbols.push(s); } };
+  if (priorityList.length) add(priorityList);
   if (okList.length) { add(okList); add(extraList); } else { add(rowList); add(extraList); }
 
   // AN EXPLICIT 0 IS NOT THE SAME AS "NOT GIVEN". `GB_TICK_CAPTURE_LIMIT=0` means the operator asked
@@ -104,8 +106,9 @@ function chooseCaptureSymbols({ board, extras, limit, defaultLimit = DEFAULT_CAP
 
   return {
     symbols: armed,
-    source: okList.length ? 'board.universe.okSymbols' : (rowList.length ? 'board.rows (legacy shape)' : 'extras only'),
+    source: priorityList.length ? 'prioritySymbols + board' : (okList.length ? 'board.universe.okSymbols' : (rowList.length ? 'board.rows (legacy shape)' : 'extras only')),
     counts: {
+      fromPriority: priorityList.length,
       fromOkList: okList.length,
       fromRows: rowList.length,
       fromExtras: extraList.length,

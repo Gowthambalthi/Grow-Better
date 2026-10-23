@@ -14,7 +14,14 @@ const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
-const LOG_FILE = path.join(ROOT, 'data', 'orderflow', 'forward_audit_2026.jsonl');
+
+function getLogDir() {
+  return process.env.GB_ORDERFLOW_DIR || path.join(ROOT, 'data', 'orderflow');
+}
+
+function getLogFile() {
+  return path.join(getLogDir(), 'forward_audit_2026.jsonl');
+}
 
 // Frozen production parameters for config hashing
 const FROZEN_CONFIG = {
@@ -44,7 +51,7 @@ const CONFIG_HASH = crypto
   .slice(0, 16);
 
 function ensureLogDir() {
-  const dir = path.dirname(LOG_FILE);
+  const dir = getLogDir();
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -54,7 +61,7 @@ function appendRow(rowObj) {
   try {
     ensureLogDir();
     const line = JSON.stringify(rowObj) + '\n';
-    fs.appendFileSync(LOG_FILE, line, 'utf8');
+    fs.appendFileSync(getLogFile(), line, 'utf8');
   } catch (err) {
     console.error('[forwardAuditLogger] Error writing audit log:', err.message);
   }
@@ -116,7 +123,7 @@ function logHeartbeat(heartbeat) {
 module.exports = {
   CONFIG_HASH,
   FROZEN_CONFIG,
-  LOG_FILE,
+  get LOG_FILE() { return getLogFile(); },
   logCandidate,
   logHeartbeat,
 };

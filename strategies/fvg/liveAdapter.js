@@ -93,6 +93,49 @@ function createLiveAdapter(opts) {
     lastSignal: null,    // { symbol, setup, side, barTimeIST, at } of the newest one returned
   };
 
+  // THE ENGINE'S OWN FUNNEL, WHICH `refused` CANNOT REPLACE.
+  // `counters.refused` only sees setups that got far enough to build a signal, so it says
+  // "EXTENSION 329" while the 67,000 touches that died on the retest bar itself are invisible —
+  // and EXTENSION is a group of six judges, so even that number cannot name the one at fault.
+  // The engine counts every stage (gaps, touches, weak rejection, 15m, VWAP side, planner) and
+  // the reason strings of the judges that failed. Those counters live on each per-symbol engine,
+  // which this adapter THROWS AWAY at every session rollover, so they are folded into a running
+  // total whenever an engine is dropped, and the live engines are summed on read.
+  const FUNNEL_KEYS = ['bars', 'gaps', 'touches', 'weakRejection', 'mtf15', 'vwapSide', 'planner', 'volume', 'emitted'];
+  const funnelTotals = { reasons: Object.create(null) };
+  for (const k of FUNNEL_KEYS) funnelTotals[k] = 0;
+
+  function addFunnel(dst, fn) {
+    if (!fn) return dst;
+    for (const k of FUNNEL_KEYS) dst[k] = (dst[k] || 0) + (fn[k] || 0);
+    const reasons = fn.reasons || {};
+    for (const r of Object.keys(reasons)) dst.reasons[r] = (dst.reasons[r] || 0) + reasons[r];
+    return dst;
+  }
+
+  /** Fold a per-symbol engine's funnel into the running total BEFORE the engine is discarded. */
+  function foldEngine(st) {
+    if (st && st.engine && typeof st.engine.funnel === 'function') addFunnel(funnelTotals, st.engine.funnel());
+  }
+
+  /**
+   * Retired engines + live engines. `resetStats()` records a snapshot of THIS as its baseline, so
+   * zeroing the telemetry never has to rebuild a per-symbol engine that is mid-session on a set of
+   * frames and zones — rebuilding one would change what it decides for the rest of the session, and
+   * a telemetry call must never do that.
+   */
+  function currentFunnel() {
+    const f = { reasons: Object.assign({}, funnelTotals.reasons) };
+    for (const k of FUNNEL_KEYS) f[k] = funnelTotals[k] || 0;
+    for (const st of states.values()) {
+      if (st.engine && typeof st.engine.funnel === 'function') addFunnel(f, st.engine.funnel());
+    }
+    return f;
+  }
+
+  let funnelBaseline = { reasons: Object.create(null) };
+  for (const k of FUNNEL_KEYS) funnelBaseline[k] = 0;
+
   /** Remember a finished session's close, deduped by day, keeping the newest two. */
   function rememberClose(sym, st) {
     if (!st || st.day == null || !st.rows.length) return;
@@ -103,10 +146,24 @@ function createLiveAdapter(opts) {
     sessionCloses.set(sym, hist.slice(-2));
   }
 
+  const auditLogger = (opts && opts.auditLogger) || require('../../strategy-core/forwardAuditLogger');
+  const enableAuditLog = (opts && opts.enableAuditLog !== undefined) ? Boolean(opts.enableAuditLog) : (process.env.GB_AUDIT_LOG !== '0');
+
   function fresh(symbol, day) {
     const prior = (sessionCloses.get(symbol) || []).map((h) => h.close);
     return {
-      engine: fvg.createEngine(Object.assign({}, config, { symbol, priorDayCloses: prior })),
+      engine: fvg.createEngine(Object.assign({}, config, {
+        symbol,
+        priorDayCloses: prior,
+        onCandidate: (cand) => {
+          if (enableAuditLog && auditLogger && typeof auditLogger.logCandidate === 'function') {
+            auditLogger.logCandidate(cand);
+          }
+          if (opts && typeof opts.onCandidate === 'function') {
+            opts.onCandidate(cand);
+          }
+        },
+      })),
       rows: [], fed: 0, day,
     };
   }
@@ -140,7 +197,7 @@ function createLiveAdapter(opts) {
       // (a tape that got shorter) is not a completed session, and recording it
       // would make today's price look like a close.
       if (st && st.day !== day) rememberClose(sym, st);
-      if (st) counters.dayResets++; else counters.newStates++;
+      if (st) { counters.dayResets++; foldEngine(st); } else counters.newStates++;
       st = fresh(sym, day);
       states.set(sym, st);
     }
@@ -191,11 +248,12 @@ function createLiveAdapter(opts) {
      */
     reset(symbol) {
       if (symbol == null) {
-        for (const [sym, st] of states) rememberClose(sym, st);
+        for (const [sym, st] of states) { rememberClose(sym, st); foldEngine(st); }
         states.clear();
       } else {
         const sym = String(symbol).toUpperCase();
         rememberClose(sym, states.get(sym));
+        foldEngine(states.get(sym));
         states.delete(sym);
       }
     },
@@ -214,7 +272,21 @@ function createLiveAdapter(opts) {
      * so a caller (the scan funnel, the board payload, a test) cannot mutate the live counters.
      */
     stats() {
-      return Object.assign({}, counters, { symbols: states.size, refused: Object.assign({}, counters.refused) });
+      // THE FUNNEL IS THE SUM OF THE RETIRED ENGINES AND THE LIVE ONES, LESS THE BASELINE a
+      // `resetStats()` took. A retired engine was folded when it was dropped, so nothing is
+      // counted twice, and a live engine is read here so the number is current.
+      const current = currentFunnel();
+      const funnel = { reasons: {} };
+      for (const k of FUNNEL_KEYS) funnel[k] = Math.max(0, (current[k] || 0) - (funnelBaseline[k] || 0));
+      for (const r of Object.keys(current.reasons)) {
+        const n = current.reasons[r] - (funnelBaseline.reasons[r] || 0);
+        if (n > 0) funnel.reasons[r] = n;
+      }
+      return Object.assign({}, counters, {
+        symbols: states.size,
+        refused: Object.assign({}, counters.refused),
+        funnel,
+      });
     },
     /** Zero the telemetry without dropping any engine state — for a new session's baseline. */
     resetStats() {
@@ -223,6 +295,9 @@ function createLiveAdapter(opts) {
         else if (k === 'lastSignal') counters.lastSignal = null;
         else counters[k] = 0;
       }
+      // The funnel restarts from HERE rather than from zero: the live engines keep their counts
+      // (they are mid-session), so the baseline is what they have already reported.
+      funnelBaseline = currentFunnel();
     },
   };
 }
