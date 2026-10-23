@@ -53,6 +53,24 @@ const ENGINES = [
     file: 'strategies/orderFlow.js',
     maxHoldBars: 90,
     config: {
+      // 11:30 — AND IT IS A MEASURED CHOICE, NOT A LEFTOVER. Swept on the authorized window
+      // (172 sessions, 100 symbols, 5 bps) with ONLY this key changed
+      // (scratch/of03_cutoff_1130_vs_1230.js, 2026-10-21):
+      //
+      //   10:30   7 trades  win 43%  netPF 0.703  −0.213R/trade
+      //   11:30   8 trades  win 38%  netPF 0.572  −0.331R/trade   ← shipped
+      //   12:00   9 trades  win 33%  netPF 0.482  −0.423R/trade
+      //   12:30   9 trades  win 33%  netPF 0.482  −0.423R/trade   ← previously pinned
+      //   14:30  10 trades  win 30%  netPF 0.408  −0.513R/trade
+      //
+      // 11:30 dominates the previously pinned 12:30 on every column by dropping the last
+      // hour of entries, and later cutoffs are monotonically worse. This also reproduces
+      // docs/GB-EDGE-REVIEW-2026-10-18.md exactly at 12:30 (9 trades, PF 0.482, −0.423R),
+      // which is why that number is trusted and the "25 trades / netPF 1.997" in the old
+      // test comment is not: it does not reproduce on this harness or window.
+      //
+      // THE HONEST LIMIT: every row is negative and the intervals overlap at n=8. This
+      // bounds the damage, it does not create an edge. 10:30 measures better still.
       maxSignalTime: 1230,
     },
     setups: [
