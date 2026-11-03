@@ -1,4 +1,6 @@
 node_modules/
+__pycache__/
+*.pyc
 broker/
 data/*.db
 data/*.db-journal
@@ -22,3 +24,26 @@ data/amfi_*.json
 *.log
 .DS_Store
 data/hdfc_mutual_funds.db
+# order-flow engine's own tape and replay logs: append-only, one file per session day, and far
+# too large to belong in git (they exist to be READ by the Phase 8 validation, not to be diffed)
+data/orderflow/
+.freebuff/
+.tmpcmp/
+
+# Derived 1-minute corpora built by docs/measurements/scratch/gb_live_fetch.js (restore it to
+# scratch/ to run it; re-creatable, ~530 MB).
+data/ohlcv_1m_live/
+data/ohlcv_1m_live_b/
+
+# 1-minute corpora REBUILT from the tick tapes by scripts/tapesToCorpus.js — the prints the live
+# process actually saw, used to measure an engine out of sample (backtest/gb01Tape.js). Derived
+# data: re-created in ~5 minutes from data/orderflow/, never diffed.
+data/ohlcv_1m_tapes/
+data/ohlcv_1m_tape14/
+
+# Throwaway run output: module replays and windowed backtests that are NOT the record. The
+# canonical artifact is data/terminal/backtest_results.json, which a windowed run never touches.
+data/backtests/
+
+# javac output for the Java key-idea module (src/main/run.sh rebuilds it).
+target/

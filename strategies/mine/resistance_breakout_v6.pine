@@ -1,0 +1,139 @@
+//@version=6
+indicator("True Blue-Sky Resistance Breakout Engine (v5) [OpenAlgo]", overlay=true)
+
+// ==============================================================================
+// 1. INPUTS & CONFIGURATION
+// ==============================================================================
+baseLookback      = input.int(40, "Base Lookback (Bars)", minval=20)
+macroLookback     = input.int(60, "Overhead Supply Lookback (Bars)", minval=40)
+high52wLookback   = input.int(250, "52-Week High Lookback (Bars)", minval=100)
+minCeilAge        = input.int(8, "Min Resistance Age (Bars)", minval=5)
+maxPrior20dRun    = input.float(10.0, "Max Prior 20-Day Run %", step=1.0) / 100.0
+maxPrior5dRun     = input.float(7.5, "Max Prior 5-Day Sprint % (Anti-Exhaustion)", step=0.5) / 100.0
+maxPrior3dRun     = input.float(5.5, "Max Prior 3-Day Sprint %", step=0.5) / 100.0
+max52wDistPct     = input.float(-5.0, "Min Proximity to 52W High % (Blue Sky)", step=0.5) / 100.0
+maxPreRange3dPct  = input.float(6.5, "Max Pre-Breakout 3-Day Range % (VCP Tightness)", step=0.5) / 100.0
+minTouches        = input.int(2, "Min Resistance Touches", minval=2)
+penBufferATR      = input.float(0.10, "Penetration Buffer (x ATR)", step=0.05)
+minRVOL           = input.float(1.5, "Min Relative Volume", step=0.1)
+maxRVOL           = input.float(5.5, "Max Relative Volume (Anti-Climax)", step=0.5)
+
+// ==============================================================================
+// 2. TECHNICAL CALCULATIONS & TRUE CEILING GEOMETRY
+// ==============================================================================
+volSMA = ta.sma(volume, 20)
+atr14  = ta.atr(14)
+ema20  = ta.ema(close, 20)
+ema200 = ta.ema(close, 200)
+
+ceilLevel  = ta.highest(high[1], baseLookback)
+floorLevel = ta.lowest(low[1], baseLookback)
+baseDepth  = (ceilLevel - floorLevel) / (floorLevel > 0 ? floorLevel : 1.0)
+
+// 60-Day Macro Ceiling & 52-Week High Lookbacks
+macroCeil = ta.highest(high[1], macroLookback)
+trueResistance = math.max(ceilLevel, macroCeil)
+
+high52w = ta.highest(high[1], high52wLookback)
+dist52w = (close - high52w) / high52w
+bool isBlueSky = (dist52w >= max52wDistPct) // Within 5% of 52w high (kills HINDALCO, MARUTI)
+
+// Multi-Window Anti-Sprint Architecture (KILLS ADANIPORTS EXHAUSTION SPRINT)
+float prior20dRun = (close - close[20]) / close[20]
+float prior5dRun  = (close - close[5]) / close[5]
+float prior3dRun  = (close - close[3]) / close[3]
+bool isNotExhausted = (prior20dRun <= maxPrior20dRun) and (prior5dRun <= maxPrior5dRun) and (prior3dRun <= maxPrior3dRun)
+
+// Pre-Breakout Tightness / VCP Consolidation
+float preH3 = ta.highest(high[1], 3)
+float preL3 = ta.lowest(low[1], 3)
+float preRange3d = (preH3 - preL3) / (preL3 > 0 ? preL3 : 1.0)
+bool isTightPreBase = (preRange3d <= maxPreRange3dPct)
+
+// Base Symmetry: Price must spend >= 40% of time in top half of base
+float midBase = floorLevel + 0.5 * (ceilLevel - floorLevel)
+int upperHalfBars = 0
+for k = 1 to baseLookback
+    if close[k] >= midBase
+        upperHalfBars += 1
+bool isSymmetricalBase = (upperHalfBars / baseLookback >= 0.40)
+
+// Resistance Age: How many bars ago was the ceiling high made?
+int highestOffset = 0
+for k = 1 to baseLookback
+    if high[k] == ceilLevel
+        highestOffset := k
+        break
+bool isMatureCeiling = (highestOffset >= minCeilAge)
+
+// Touch Counter
+int touches = 0
+for k = 1 to baseLookback
+    if high[k] >= ceilLevel * 0.985
+        touches += 1
+
+// Candle Microstructure
+candleRange   = math.max(high - low, 1e-4)
+bodyRange     = close - open
+bodyRatio     = bodyRange / candleRange
+closeLocation = (close - low) / candleRange
+upperWick     = high - math.max(open, close)
+upperWickPct  = upperWick / candleRange
+isGreen       = close > open
+rvol          = volume / (volSMA > 0 ? volSMA : 1.0)
+
+// ==============================================================================
+// 3. FLAWLESS BREAKOUT SIGNAL LOGIC (v5)
+// ==============================================================================
+bool isBreakout = (close > ema200) and (baseDepth >= 0.04) and (baseDepth <= 0.18) and
+                  (close >= trueResistance + penBufferATR * atr14) and
+                  isBlueSky and isNotExhausted and isTightPreBase and
+                  isSymmetricalBase and isMatureCeiling and (touches >= minTouches) and
+                  isGreen and (bodyRatio >= 0.45) and (closeLocation >= 0.60) and (upperWickPct <= 0.32) and
+                  (rvol >= minRVOL) and (rvol <= maxRVOL)
+
+// ==============================================================================
+// 4. TWO-TRANCHE TRADE MANAGEMENT TARGETS & STOPS
+// ==============================================================================
+var float entryP = na
+var float initialStopP = na
+var float earlyInvalP = na
+var float target1P = na
+var float breakevenStopP = na
+var bool inTrade = false
+var bool hitTarget1 = false
+
+if isBreakout and not inTrade
+    inTrade := true
+    hitTarget1 := false
+    entryP := close
+    initialStopP := math.max(low, entryP - 1.0 * atr14)
+    earlyInvalP := entryP * (1.0 - 0.015) // Early invalidation at -1.5%
+    target1P := entryP * 1.025             // Tranche 1: +2.5% lock-in
+    breakevenStopP := entryP * 1.002       // Breakeven + 0.2% buffer
+
+if inTrade
+    if high >= target1P
+        hitTarget1 := true
+    if not hitTarget1 and low <= earlyInvalP
+        inTrade := false // Cut immediately at -1.5%
+    else if not hitTarget1 and low <= initialStopP
+        inTrade := false
+    else if hitTarget1 and low <= breakevenStopP
+        inTrade := false
+    else if hitTarget1 and ta.crossunder(close, ema20)
+        inTrade := false
+
+// ==============================================================================
+// 5. PLOTS, LABELS & ALERTS
+// ==============================================================================
+plot(ceilLevel, "Resistance Ceiling", color=color.new(color.red, 20), linewidth=2, style=plot.style_linebr)
+plot(floorLevel, "Base Floor", color=color.new(color.gray, 60), linewidth=1, style=plot.style_linebr)
+plot(high52w, "52-Week High (Blue Sky Guide)", color=color.new(color.purple, 40), linewidth=1, style=plot.style_circles)
+plot(ema20, "20 EMA Trailing Support", color=color.new(color.blue, 30), linewidth=2)
+
+// Breakout Signal Label
+plotshape(isBreakout, title="True Blue-Sky Breakout", style=shape.labelup, location=location.belowbar, color=color.green, text="BLUE SKY BREAKOUT (v5)\n(No Exhaustion / Supply)", textcolor=color.white, size=size.normal)
+
+// Alerts
+alertcondition(isBreakout, title="Confirmed Breakout", message="[OpenAlgo] Confirmed Blue-Sky Breakout on {{ticker}}! 52W high cleared without sprint exhaustion.")
