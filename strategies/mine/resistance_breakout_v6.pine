@@ -1,138 +1,92 @@
 //@version=6
-indicator("True Blue-Sky Resistance Breakout Engine (v5) [OpenAlgo]", overlay=true)
+indicator("Trio Pattern Breakout Engine (Cup&Handle, IHS, Rectangle + RSI) [OpenAlgo]", overlay=true)
 
 // ==============================================================================
 // 1. INPUTS & CONFIGURATION
 // ==============================================================================
-baseLookback      = input.int(40, "Base Lookback (Bars)", minval=20)
-macroLookback     = input.int(60, "Overhead Supply Lookback (Bars)", minval=40)
-high52wLookback   = input.int(250, "52-Week High Lookback (Bars)", minval=100)
-minCeilAge        = input.int(3, "Min Resistance Age (Bars)", minval=2)
-maxPrior20dRun    = input.float(18.0, "Max Prior 20-Day Run % (Allows Leaders)", step=1.0) / 100.0
-maxPrior5dRun     = input.float(10.0, "Max Prior 5-Day Sprint % (Anti-Exhaustion)", step=0.5) / 100.0
-maxPrior3dRun     = input.float(7.5, "Max Prior 3-Day Sprint %", step=0.5) / 100.0
-max52wDistPct     = input.float(-16.0, "Min Proximity to 52W High % (Multi-Week Base)", step=0.5) / 100.0
-maxPreRange3dPct  = input.float(8.0, "Max Pre-Breakout 3-Day Range % (VCP Tightness)", step=0.5) / 100.0
-minTouches        = input.int(2, "Min Resistance Touches", minval=2)
-penBufferATR      = input.float(0.05, "Penetration Buffer (x ATR)", step=0.05)
-minRVOL           = input.float(1.4, "Min Relative Volume", step=0.1)
-maxRVOL           = input.float(5.5, "Max Relative Volume (Anti-Climax)", step=0.5)
+rsiPeriod         = input.int(14, "RSI Period", minval=5)
+rsiMin            = input.float(48.0, "RSI Min (Healthy Momentum)", step=1.0)
+rsiMax            = input.float(75.0, "RSI Max (Anti-Exhaustion Cap)", step=1.0)
+
+minRiskPct        = input.float(2.5, "Min Stop Distance %", step=0.5) / 100.0
+maxRiskPct        = input.float(7.5, "Max Stop Distance %", step=0.5) / 100.0
+target1Pct        = input.float(8.0, "Target 1 % (Take 50% Profit)", step=0.5) / 100.0
 
 // ==============================================================================
-// 2. TECHNICAL CALCULATIONS & TRUE CEILING GEOMETRY
+// 2. TECHNICAL CALCULATIONS
 // ==============================================================================
-volSMA = ta.sma(volume, 20)
-atr14  = ta.atr(14)
-ema20  = ta.ema(close, 20)
-ema200 = ta.ema(close, 200)
+atr14 = ta.atr(14)
+rsi14 = ta.rsi(close, rsiPeriod)
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
 
-ceilLevel  = ta.highest(high[1], baseLookback)
-floorLevel = ta.lowest(low[1], baseLookback)
-baseDepth  = (ceilLevel - floorLevel) / (floorLevel > 0 ? floorLevel : 1.0)
-
-// 60-Day Macro Ceiling & 52-Week High Lookbacks
-macroCeil = ta.highest(high[1], macroLookback)
-trueResistance = math.max(ceilLevel, macroCeil)
-
-high52w = ta.highest(high[1], high52wLookback)
-dist52w = (close - high52w) / high52w
-bool isBlueSky = (dist52w >= max52wDistPct) // Within 5% of 52w high (kills HINDALCO, MARUTI)
-
-// Multi-Window Anti-Sprint Architecture (KILLS ADANIPORTS EXHAUSTION SPRINT)
-float prior20dRun = (close - close[20]) / close[20]
-float prior5dRun  = (close - close[5]) / close[5]
-float prior3dRun  = (close - close[3]) / close[3]
-bool isNotExhausted = (prior20dRun <= maxPrior20dRun) and (prior5dRun <= maxPrior5dRun) and (prior3dRun <= maxPrior3dRun)
-
-// Pre-Breakout Tightness / VCP Consolidation
-float preH3 = ta.highest(high[1], 3)
-float preL3 = ta.lowest(low[1], 3)
-float preRange3d = (preH3 - preL3) / (preL3 > 0 ? preL3 : 1.0)
-bool isTightPreBase = (preRange3d <= maxPreRange3dPct)
-
-// Base Symmetry: Price must spend >= 40% of time in top half of base
-float midBase = floorLevel + 0.5 * (ceilLevel - floorLevel)
-int upperHalfBars = 0
-for k = 1 to baseLookback
-    if close[k] >= midBase
-        upperHalfBars += 1
-bool isSymmetricalBase = (upperHalfBars / baseLookback >= 0.25)
-
-// Resistance Age: How many bars ago was the ceiling high made? (Waived on fresh ATH breaks)
-int highestOffset = 0
-for k = 1 to baseLookback
-    if high[k] == ceilLevel
-        highestOffset := k
-        break
-bool isMatureCeiling = (highestOffset >= minCeilAge) or (dist52w >= -0.02)
-
-// Touch Counter (Waived on fresh ATH breaks)
-int touches = 0
-for k = 1 to baseLookback
-    if high[k] >= ceilLevel * 0.985
-        touches += 1
-bool hasTouches = (touches >= minTouches) or (dist52w >= -0.02)
-
-// Candle Microstructure
-candleRange   = math.max(high - low, 1e-4)
-bodyRange     = close - open
-bodyRatio     = bodyRange / candleRange
-closeLocation = (close - low) / candleRange
-upperWick     = high - math.max(open, close)
-upperWickPct  = upperWick / candleRange
-isGreen       = close > open
-rvol          = volume / (volSMA > 0 ? volSMA : 1.0)
+// RSI Momentum Filter
+bool rsiValid = (rsi14 >= rsiMin and rsi14 <= rsiMax)
 
 // ==============================================================================
-// 3. FLAWLESS BREAKOUT SIGNAL LOGIC (v5)
+// 3. PATTERN DETECTORS
 // ==============================================================================
-bool isBreakout = (close > ema200) and (baseDepth >= 0.04) and (baseDepth <= 0.22) and
-                  (close >= trueResistance + penBufferATR * atr14) and
-                  isBlueSky and isNotExhausted and isTightPreBase and
-                  isSymmetricalBase and isMatureCeiling and hasTouches and
-                  isGreen and (bodyRatio >= 0.45) and (closeLocation >= 0.60) and (upperWickPct <= 0.32) and
-                  (rvol >= minRVOL) and (rvol <= maxRVOL)
 
-// ==============================================================================
-// 4. TWO-TRANCHE TRADE MANAGEMENT TARGETS & STOPS
-// ==============================================================================
-var float entryP = na
-var float initialStopP = na
-var float earlyInvalP = na
-var float target1P = na
-var float breakevenStopP = na
-var bool inTrade = false
-var bool hitTarget1 = false
+// --- Pattern 1: Rectangle Consolidation (30 bars, range <= 14%) ---
+rectH = ta.highest(high[1], 30)
+rectL = ta.lowest(low[1], 30)
+rectRangePct = ((rectH - rectL) / rectL) * 100.0
+bool rectBreakout = (rectRangePct <= 14.0) and (close > rectH) and (close[1] <= rectH * 1.005)
 
-if isBreakout and not inTrade
-    inTrade := true
-    hitTarget1 := false
-    entryP := close
-    initialStopP := math.max(low, entryP - 1.0 * atr14)
-    riskDist = entryP - initialStopP
-    target1P := entryP + 1.2 * riskDist    // Model A: +1.2R dynamic target lock-in
-    breakevenStopP := entryP * 1.002       // Breakeven + 0.2% buffer
+// --- Pattern 2: Cup and Handle (55-bar rounded base with shallow handle) ---
+cupH = ta.highest(high[10], 45) // Left/Right rim peak
+cupL = ta.lowest(low[10], 45)   // Bowl bottom
+handleL = ta.lowest(low[1], 10)  // Handle pullback
+cupDepth = (cupH - cupL) / cupH
+handleDepth = (cupH - handleL) / cupH
+bool cupBreakout = (cupDepth >= 0.10 and cupDepth <= 0.38) and (handleDepth <= cupDepth * 0.45) and (close > cupH * 0.998) and (close[1] <= cupH * 1.005)
 
-if inTrade
-    if high >= target1P
-        hitTarget1 := true
-    if not hitTarget1 and low <= initialStopP
-        inTrade := false
-    else if hitTarget1 and low <= breakevenStopP
-        inTrade := false
-    else if hitTarget1 and ta.crossunder(close, ema20)
-        inTrade := false
+// --- Pattern 3: Inverse Head & Shoulders ---
+lsLow = ta.lowest(low[45], 25)
+headLow = ta.lowest(low[20], 25)
+rsLow = ta.lowest(low[1], 20)
+neckH = math.min(ta.highest(high[45], 25), ta.highest(high[1], 20))
+bool ihsValid = (headLow < lsLow) and (headLow < rsLow) and (math.abs(rsLow / lsLow - 1.0) <= 0.06)
+bool ihsBreakout = ihsValid and (close > neckH) and (close[1] <= neckH * 1.005)
 
 // ==============================================================================
-// 5. PLOTS, LABELS & ALERTS
+// 4. SIGNAL SELECTION & STRUCTURAL RISK
 // ==============================================================================
-plot(ceilLevel, "Resistance Ceiling", color=color.new(color.red, 20), linewidth=2, style=plot.style_linebr)
-plot(floorLevel, "Base Floor", color=color.new(color.gray, 60), linewidth=1, style=plot.style_linebr)
-plot(high52w, "52-Week High (Blue Sky Guide)", color=color.new(color.purple, 40), linewidth=1, style=plot.style_circles)
-plot(ema20, "20 EMA Trailing Support", color=color.new(color.blue, 30), linewidth=2)
+bool isSignal = false
+string detectedPattern = ""
+float stopLevel = 0.0
 
-// Breakout Signal Label
-plotshape(isBreakout, title="True Blue-Sky Breakout", style=shape.labelup, location=location.belowbar, color=color.green, text="BLUE SKY BREAKOUT (v5)\n(No Exhaustion / Supply)", textcolor=color.white, size=size.normal)
+if cupBreakout and rsiValid
+    isSignal := true
+    detectedPattern := "Cup & Handle"
+    stopLevel := handleL
+else if ihsBreakout and rsiValid
+    isSignal := true
+    detectedPattern := "Inverse H&S"
+    stopLevel := rsLow
+else if rectBreakout and rsiValid
+    isSignal := true
+    detectedPattern := "Rectangle"
+    stopLevel := rectL
 
-// Alerts
-alertcondition(isBreakout, title="Confirmed Breakout", message="[OpenAlgo] Confirmed Blue-Sky Breakout on {{ticker}}! 52W high cleared without sprint exhaustion.")
+// Structural Stop Distance bounds
+float rawRisk = (close - stopLevel) / close
+float activeStop = stopLevel
+if rawRisk < minRiskPct
+    activeStop := close * (1.0 - minRiskPct)
+else if rawRisk > maxRiskPct
+    activeStop := close * (1.0 - maxRiskPct)
+
+float target1Price = close * (1.0 + target1Pct)
+
+// ==============================================================================
+// 5. VISUALIZATION & LABELS
+// ==============================================================================
+plotshape(isSignal, title="Trio Breakout Signal", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), text="TRIO BREAK", textcolor=color.white, size=size.small)
+
+if isSignal
+    label.new(bar_index, high, text=detectedPattern + "\nEntry: " + str.tostring(close, "#.##") + "\nSL: " + str.tostring(activeStop, "#.##") + "\nT1: " + str.tostring(target1Price, "#.##"), color=color.new(color.teal, 10), textcolor=color.white, style=label.style_label_down)
+
+plot(isSignal ? activeStop : na, "Stop Loss", color=color.red, style=plot.style_linebr, linewidth=2)
+plot(isSignal ? target1Price : na, "Target 1 (+8%)", color=color.green, style=plot.style_linebr, linewidth=2)
+plot(ema20, "20 EMA (Runner Trail)", color=color.orange, linewidth=1)
