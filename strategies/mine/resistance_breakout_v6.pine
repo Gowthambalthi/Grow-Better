@@ -7,15 +7,15 @@ indicator("True Blue-Sky Resistance Breakout Engine (v5) [OpenAlgo]", overlay=tr
 baseLookback      = input.int(40, "Base Lookback (Bars)", minval=20)
 macroLookback     = input.int(60, "Overhead Supply Lookback (Bars)", minval=40)
 high52wLookback   = input.int(250, "52-Week High Lookback (Bars)", minval=100)
-minCeilAge        = input.int(5, "Min Resistance Age (Bars)", minval=3)
-maxPrior20dRun    = input.float(10.0, "Max Prior 20-Day Run %", step=1.0) / 100.0
-maxPrior5dRun     = input.float(7.5, "Max Prior 5-Day Sprint % (Anti-Exhaustion)", step=0.5) / 100.0
-maxPrior3dRun     = input.float(5.5, "Max Prior 3-Day Sprint %", step=0.5) / 100.0
+minCeilAge        = input.int(3, "Min Resistance Age (Bars)", minval=2)
+maxPrior20dRun    = input.float(18.0, "Max Prior 20-Day Run % (Allows Leaders)", step=1.0) / 100.0
+maxPrior5dRun     = input.float(10.0, "Max Prior 5-Day Sprint % (Anti-Exhaustion)", step=0.5) / 100.0
+maxPrior3dRun     = input.float(7.5, "Max Prior 3-Day Sprint %", step=0.5) / 100.0
 max52wDistPct     = input.float(-16.0, "Min Proximity to 52W High % (Multi-Week Base)", step=0.5) / 100.0
-maxPreRange3dPct  = input.float(6.5, "Max Pre-Breakout 3-Day Range % (VCP Tightness)", step=0.5) / 100.0
+maxPreRange3dPct  = input.float(8.0, "Max Pre-Breakout 3-Day Range % (VCP Tightness)", step=0.5) / 100.0
 minTouches        = input.int(2, "Min Resistance Touches", minval=2)
-penBufferATR      = input.float(0.10, "Penetration Buffer (x ATR)", step=0.05)
-minRVOL           = input.float(1.5, "Min Relative Volume", step=0.1)
+penBufferATR      = input.float(0.05, "Penetration Buffer (x ATR)", step=0.05)
+minRVOL           = input.float(1.4, "Min Relative Volume", step=0.1)
 maxRVOL           = input.float(5.5, "Max Relative Volume (Anti-Climax)", step=0.5)
 
 // ==============================================================================
@@ -56,21 +56,22 @@ int upperHalfBars = 0
 for k = 1 to baseLookback
     if close[k] >= midBase
         upperHalfBars += 1
-bool isSymmetricalBase = (upperHalfBars / baseLookback >= 0.40)
+bool isSymmetricalBase = (upperHalfBars / baseLookback >= 0.25)
 
-// Resistance Age: How many bars ago was the ceiling high made?
+// Resistance Age: How many bars ago was the ceiling high made? (Waived on fresh ATH breaks)
 int highestOffset = 0
 for k = 1 to baseLookback
     if high[k] == ceilLevel
         highestOffset := k
         break
-bool isMatureCeiling = (highestOffset >= minCeilAge)
+bool isMatureCeiling = (highestOffset >= minCeilAge) or (dist52w >= -0.02)
 
-// Touch Counter
+// Touch Counter (Waived on fresh ATH breaks)
 int touches = 0
 for k = 1 to baseLookback
     if high[k] >= ceilLevel * 0.985
         touches += 1
+bool hasTouches = (touches >= minTouches) or (dist52w >= -0.02)
 
 // Candle Microstructure
 candleRange   = math.max(high - low, 1e-4)
@@ -85,10 +86,10 @@ rvol          = volume / (volSMA > 0 ? volSMA : 1.0)
 // ==============================================================================
 // 3. FLAWLESS BREAKOUT SIGNAL LOGIC (v5)
 // ==============================================================================
-bool isBreakout = (close > ema200) and (baseDepth >= 0.04) and (baseDepth <= 0.18) and
+bool isBreakout = (close > ema200) and (baseDepth >= 0.04) and (baseDepth <= 0.22) and
                   (close >= trueResistance + penBufferATR * atr14) and
                   isBlueSky and isNotExhausted and isTightPreBase and
-                  isSymmetricalBase and isMatureCeiling and (touches >= minTouches) and
+                  isSymmetricalBase and isMatureCeiling and hasTouches and
                   isGreen and (bodyRatio >= 0.45) and (closeLocation >= 0.60) and (upperWickPct <= 0.32) and
                   (rvol >= minRVOL) and (rvol <= maxRVOL)
 

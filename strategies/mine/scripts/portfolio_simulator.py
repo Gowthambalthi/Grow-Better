@@ -11,7 +11,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from strategies.mine.config import (
-    FRICTION_DECIMAL, OOS_SPLIT_DATE, MIN_TURNOVER_CR, REQUIRE_NIFTY_BULL,
+    FRICTION_BPS, FRICTION_DECIMAL, OOS_SPLIT_DATE, MIN_TURNOVER_CR, REQUIRE_NIFTY_BULL,
     BASE_LOOKBACK, MACRO_LOOKBACK, MIN_BASE_DEPTH, MAX_BASE_DEPTH, MIN_CEIL_AGE,
     MAX_PRIOR_20D_RUN, MAX_PRIOR_5D_RUN, MAX_PRIOR_3D_RUN, MIN_DIST_52W, MAX_PRE_RANGE_3D,
     ALLOW_INTERMEDIATE_BASE, INTERMEDIATE_BASE_MIN_DIST_52W, INTERMEDIATE_BASE_MAX_DIST_EMA200,
@@ -98,33 +98,34 @@ def extract_all_signals(stock_data, nifty_map):
             if cur_c < true_ceil + PENETRATION_BUFFER_ATR * cur_atr:
                 continue
                 
-            # Base Symmetry: >= 40% of closes in upper half
+            # Base Symmetry: >= 25% of closes in upper half (allows cup-with-handle & ascending bases)
             mid_base = floor_40 + 0.5 * (true_ceil - floor_40)
             upper_half_pct = np.sum(c[i-BASE_LOOKBACK : i] >= mid_base) / float(BASE_LOOKBACK)
-            if upper_half_pct < 0.40:
+            if upper_half_pct < 0.25:
                 continue
                 
-            # Ceiling Age: True resistance must not have been formed yesterday
+            # Ceiling Age: Allow fresh 52W high breakout or established resistance >= MIN_CEIL_AGE
+            w52 = max(0, i - 250)
+            high_52w = np.max(h[w52 : i])
+            dist_52w = (cur_c - high_52w) / high_52w
+            
             ceil_bar_idx = np.argmax(h[i-MACRO_LOOKBACK : i])
             ceil_age = MACRO_LOOKBACK - ceil_bar_idx
-            if ceil_age < MIN_CEIL_AGE:
+            if ceil_age < MIN_CEIL_AGE and dist_52w < -0.02:
                 # Check if recent high is just a pre-breakout test wick of an earlier established resistance
                 earlier_touches = [k for k in range(MACRO_LOOKBACK - 3) if h[i-MACRO_LOOKBACK + k] >= true_ceil * 0.985]
                 if earlier_touches:
                     ceil_age = MACRO_LOOKBACK - earlier_touches[0]
-            if ceil_age < MIN_CEIL_AGE:
+            if ceil_age < MIN_CEIL_AGE and dist_52w < -0.02:
                 continue
                 
-            # Anti-Runaway: Prior 20-day return <= 10%
+            # Anti-Runaway: Prior 20-day return <= MAX_PRIOR_20D_RUN (18%)
             prior_20d_ret = (cur_c - c[i-20]) / c[i-20]
             if prior_20d_ret > MAX_PRIOR_20D_RUN:
                 continue
                 
             # --- V5 ANTI-EXHAUSTION & DUAL-GATE 52W / BASE PROXIMITY ---
             # Gate 1: 52-Week High Proximity or Multi-Week Base Launch
-            w52 = max(0, i - 250)
-            high_52w = np.max(h[w52 : i])
-            dist_52w = (cur_c - high_52w) / high_52w
             dist_200 = (cur_c - ema200[i]) / ema200[i]
             
             passed_proximity = False
@@ -148,9 +149,9 @@ def extract_all_signals(stock_data, nifty_map):
             if (pre_h3 - pre_l3) / pre_l3 > MAX_PRE_RANGE_3D:
                 continue
                 
-            # Touches near True Ceiling (within 1.5%)
+            # Touches near True Ceiling (within 1.5%) - required for range bases, waived for ATH blue sky
             touches = int(np.sum(h[i-MACRO_LOOKBACK : i] >= true_ceil * 0.985))
-            if touches < MIN_TOUCHES:
+            if touches < MIN_TOUCHES and dist_52w < -0.02:
                 continue
                 
             # 4. Candle Microstructure & RVOL
@@ -553,7 +554,7 @@ def run_all_models_simulation():
     print(f"Results written to {out_path}")
     
     print("\n" + "="*115)
-    print("      TRUE DATED PORTFOLIO SIMULATION RESULTS (FRICTION = 41.56 BPS, MAX 5 CONCURRENT POS)      ")
+    print(f"      TRUE DATED PORTFOLIO SIMULATION RESULTS (FRICTION = {FRICTION_BPS:.2f} BPS, MAX {MAX_CONCURRENT_POSITIONS} CONCURRENT POS)      ")
     print("="*115)
     
     print(f"{'Metric':<30} | {'Model A (Original)':<18} | {'Model B (+1R BE)':<18} | {'Model C (-0.65R Cut)':<18} | {'Model E (V5 Flagship)':<18}")

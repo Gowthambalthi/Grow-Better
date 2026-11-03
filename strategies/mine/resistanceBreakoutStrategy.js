@@ -30,17 +30,17 @@ class ResistanceBreakoutStrategy {
         this.macroLookback = config.macroLookback ?? 60; // 60-day overhead supply check
         this.high52wLookback = config.high52wLookback ?? 250; // 52-week lookback
         this.minBaseDepth = config.minBaseDepth ?? 0.04;
-        this.maxBaseDepth = config.maxBaseDepth ?? 0.20;     // 20% max base depth
-        this.minCeilAge = config.minCeilAge ?? 5;             // 5 bars (1 week) base age
-        this.maxPrior20dRun = config.maxPrior20dRun ?? 0.10;
-        this.maxPrior5dRun = config.maxPrior5dRun ?? 0.075;   // 7.5% 5-day sprint cap (kills ADANIPORTS)
-        this.maxPrior3dRun = config.maxPrior3dRun ?? 0.055;   // 5.5% 3-day sprint cap
-        this.minDist52w = config.minDist52w ?? -0.160;        // Within 16% of 52w high (allows mature bases like RELIANCE)
-        this.maxPreRange3d = config.maxPreRange3d ?? 0.065;   // 6.5% pre-breakout consolidation range
-        this.minRVOL = config.minRVOL ?? 1.5;
+        this.maxBaseDepth = config.maxBaseDepth ?? 0.22;     // 22% max base depth
+        this.minCeilAge = config.minCeilAge ?? 3;             // 3 bars base age (allows continuation re-breakouts)
+        this.maxPrior20dRun = config.maxPrior20dRun ?? 0.18; // 18% 20-day run cap (allows leaders like BHARTIARTL)
+        this.maxPrior5dRun = config.maxPrior5dRun ?? 0.100;  // 10.0% 5-day sprint cap
+        this.maxPrior3dRun = config.maxPrior3dRun ?? 0.075;  // 7.5% 3-day sprint cap
+        this.minDist52w = config.minDist52w ?? -0.160;       // Within 16% of 52w high (allows mature bases like RELIANCE)
+        this.maxPreRange3d = config.maxPreRange3d ?? 0.080;  // 8.0% pre-breakout consolidation range
+        this.minRVOL = config.minRVOL ?? 1.4;
         this.maxRVOL = config.maxRVOL ?? 5.5;
-        this.minTurnoverCr = config.minTurnoverCr ?? 50.0;     // Large Cap ₹50 Cr turnover
-        this.maxChasePct = config.maxChasePct ?? 0.020;       // 2.0% chase cap
+        this.minTurnoverCr = config.minTurnoverCr ?? 20.0;    // ₹20 Cr turnover (Large + Liquid Midcap)
+        this.maxChasePct = config.maxChasePct ?? 0.020;      // 2.0% chase cap
     }
 
     evaluateBreakout(dailyBars, currentIndex, niftyCandle = null) {
@@ -108,7 +108,14 @@ class ResistanceBreakoutStrategy {
             return null;
         }
 
-        // Ceiling Age >= 5 bars (with pre-breakout test-wick protection)
+        // 52-Week High Proximity (Blue Sky / Zero Trapped Overhead Supply)
+        const w52Start = Math.max(0, currentIndex - this.high52wLookback);
+        const bars52w = dailyBars.slice(w52Start, currentIndex);
+        const high52w = Math.max(...bars52w.map(b => b.high));
+        const dist52w = (close - high52w) / high52w;
+        if (dist52w < this.minDist52w) return null;
+
+        // Ceiling Age >= 3 bars (with pre-breakout test-wick protection; waived on fresh ATH breaks)
         let ceilAge = baseBars.length - highestBarRelIdx;
         if (ceilAge < this.minCeilAge) {
             for (let j = 0; j < baseBars.length - 3; j++) {
@@ -118,7 +125,7 @@ class ResistanceBreakoutStrategy {
                 }
             }
         }
-        if (ceilAge < this.minCeilAge) return null;
+        if (ceilAge < this.minCeilAge && dist52w < -0.02) return null;
 
         // 5. Anti-Runaway & Multi-Window Sprint Filters
         // 20-day check
@@ -128,7 +135,7 @@ class ResistanceBreakoutStrategy {
             if (prior20dRun > this.maxPrior20dRun) return null;
         }
 
-        // 5-day check (KILLS ADANIPORTS EXHAUSTION SPRINT)
+        // 5-day check
         const bar5Ago = dailyBars[Math.max(0, currentIndex - 5)];
         if (bar5Ago) {
             const prior5dRun = (close - bar5Ago.close) / bar5Ago.close;
@@ -143,7 +150,7 @@ class ResistanceBreakoutStrategy {
         }
 
         // 6. Pre-Breakout Tightness / VCP Consolidation
-        // Range of the 3 days preceding the breakout candle must be <= 6.5%
+        // Range of the 3 days preceding the breakout candle must be <= 8.0%
         const pre3Bars = dailyBars.slice(Math.max(0, currentIndex - 3), currentIndex);
         if (pre3Bars.length >= 3) {
             const preH3 = Math.max(...pre3Bars.map(b => b.high));
@@ -151,24 +158,15 @@ class ResistanceBreakoutStrategy {
             if ((preH3 - preL3) / preL3 > this.maxPreRange3d) return null;
         }
 
-        // 7. 52-Week High Proximity (Blue Sky / Zero Trapped Overhead Supply)
-        const w52Start = Math.max(0, currentIndex - this.high52wLookback);
-        const bars52w = dailyBars.slice(w52Start, currentIndex);
-        const high52w = Math.max(...bars52w.map(b => b.high));
-        const dist52w = (close - high52w) / high52w;
-        if (dist52w < this.minDist52w) {
-            return null; // Reject if > 5.0% below 52-week high (kills HINDALCO, MARUTI)
-        }
-
         const baseDepth = (trueResistance - floor) / trueResistance;
         if (baseDepth < this.minBaseDepth || baseDepth > this.maxBaseDepth) return null;
 
-        // Touches >= 2
+        // Touches >= 2 (waived on fresh ATH breaks)
         let touches = 0;
         for (let j = 0; j < macroBars.length; j++) {
             if (macroBars[j].high >= trueResistance * 0.985) touches++;
         }
-        if (touches < 2) return null;
+        if (touches < 2 && dist52w < -0.02) return null;
 
         // Candle Microstructure
         const candleRange = Math.max(high - low, 1e-4);

@@ -22,7 +22,7 @@ OOS_SPLIT_DATE = '2025-04-01'
 # ==============================================================================
 # 3. UNIVERSE & LIQUIDITY GATES
 # ==============================================================================
-MIN_TURNOVER_CR = 50.0        # Minimum ₹50 Cr 20-day average daily turnover (Large Cap)
+MIN_TURNOVER_CR = 20.0        # Minimum ₹20 Cr 20-day average daily turnover (Large + Liquid Midcap)
 REQUIRE_NIFTY_BULL = True     # NIFTY 50 Close > 50 EMA on signal day
 
 # ==============================================================================
@@ -31,19 +31,19 @@ REQUIRE_NIFTY_BULL = True     # NIFTY 50 Close > 50 EMA on signal day
 BASE_LOOKBACK = 40            # Local base consolidation window (bars)
 MACRO_LOOKBACK = 60           # Macro overhead supply lookback (bars)
 MIN_BASE_DEPTH = 0.04         # 4% minimum base depth
-MAX_BASE_DEPTH = 0.20         # 20% maximum base depth (allows mature multi-month bases like RELIANCE)
-MIN_CEIL_AGE = 5              # Resistance ceiling must be >= 5 bars old (1 calendar week)
-MAX_PRIOR_20D_RUN = 0.10      # Anti-runaway: prior 20-day return <= 10%
+MAX_BASE_DEPTH = 0.22         # 22% maximum base depth (allows mature multi-month bases like RELIANCE)
+MIN_CEIL_AGE = 3              # Resistance ceiling must be >= 3 bars old (allows continuation re-breakouts)
+MAX_PRIOR_20D_RUN = 0.18      # Anti-runaway: prior 20-day return <= 18% (allows strong momentum leaders like BHARTIARTL)
 MIN_TOUCHES = 2               # At least 2 touches within 1.5% of ceiling
-PENETRATION_BUFFER_ATR = 0.10 # Close must exceed trueCeil + 0.10 * ATR
+PENETRATION_BUFFER_ATR = 0.05 # Close must exceed trueCeil + 0.05 * ATR
 
 # ==============================================================================
 # 5. ANTI-EXHAUSTION, VCP TIGHTNESS & MULTI-WEEK HIGH GATES
 # ==============================================================================
-# Kills explosive vertical sprints (e.g., ADANIPORTS +10.6% 5-day / +16.6% 3-day sprint)
-MAX_PRIOR_5D_RUN = 0.075      # Max 7.5% runup over 5 days preceding breakout
-MAX_PRIOR_3D_RUN = 0.055      # Max 5.5% runup over 3 days preceding breakout
-MAX_PRE_RANGE_3D = 0.065      # Pre-breakout 3-day consolidation range <= 6.5% (VCP tightness)
+# Kills explosive vertical sprints while allowing healthy breakout expansions
+MAX_PRIOR_5D_RUN = 0.100      # Max 10.0% runup over 5 days preceding breakout
+MAX_PRIOR_3D_RUN = 0.075      # Max 7.5% runup over 3 days preceding breakout
+MAX_PRE_RANGE_3D = 0.080      # Pre-breakout 3-day consolidation range <= 8.0% (VCP tightness)
 
 # Multi-Week Base / 52-Week High Dual-Gate Architecture:
 # Case 1 (Blue Sky): Within 5.0% of 52-week high (pure ATH blue sky).
@@ -60,7 +60,7 @@ INTERMEDIATE_BASE_MAX_DIST_EMA200 = 0.100 # Must be <= 10.0% above 200 EMA
 MIN_BODY_RATIO = 0.45         # Body / Range >= 45%
 MIN_CLOSE_LOC = 0.60          # (Close - Low) / Range >= 60%
 MAX_UPPER_WICK = 0.32         # Upper Wick / Range <= 32%
-MIN_RVOL = 1.5                # Relative Volume >= 1.5x (vs 20 SMA)
+MIN_RVOL = 1.4                # Relative Volume >= 1.4x (vs 20 SMA)
 MAX_RVOL = 5.5                # Anti-Climax cap: RVOL <= 5.5x
 
 # ==============================================================================
@@ -85,7 +85,7 @@ EARLY_INVALIDATION_PCT = 0.015# Experimental fixed cut (-1.5%)
 # ==============================================================================
 # 9. PORTFOLIO SIMULATION CONSTRAINTS
 # ==============================================================================
-MAX_CONCURRENT_POSITIONS = 5  # Max 5 concurrent open positions
-CAPITAL_PER_POSITION = 0.20   # 20% capital allocated per position
+MAX_CONCURRENT_POSITIONS = 10 # Max 10 concurrent open positions (scaled for broader universe)
+CAPITAL_PER_POSITION = 0.10   # 10% capital allocated per position
 STARTING_CAPITAL = 1000000.0  # ₹10,00,000 base capital
 MAX_HOLD_BARS = 45            # Maximum trade duration (bars)
