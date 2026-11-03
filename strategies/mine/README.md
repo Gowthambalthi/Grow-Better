@@ -23,7 +23,7 @@ Evaluated across the 1,006 NSE stock universe (`data/universe_filtered.json`) fr
 | **Portfolio Max Drawdown** | **6.62%** | 6.62% | **2.64%** |
 | **Total Net Return (%)** | **+11.63%** | +1.73% | **+9.73%** |
 
-*Note: If partial gains are banked at $+2.5\%$ on trades that reach $+2.5\%$ to $+2.9\%$ MFE (`HDFCLIFE`, `JSWSTEEL`), Out-of-Sample Win Rate rises to **76.47%** (13 Wins / 4 Losses).*
+*Note: Tranche 1 locks in 1/3 of the position at dynamic **+1.2R**, ratcheting stop on remaining 2/3 to Breakeven (+0.2%), while minimum risk floor is set to 0.8% (`MIN_RISK_PCT = 0.008`) to capture tight-base institutional leaders like `RELIANCE`.*
 
 ---
 

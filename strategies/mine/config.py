@@ -72,9 +72,9 @@ MAX_CHASE_PCT = 0.020         # Max chase cap: 2.0% above true ceiling
 # 8. RISK & R-MULTIPLE PROFIT TAKING (CANONICAL MODEL A)
 # ==============================================================================
 INITIAL_STOP_ATR = 1.0        # Stop = max(Day t Low, Fill Price - 1.0 * ATR)
-MIN_RISK_PCT = 0.012          # 1.2% minimum risk distance
+MIN_RISK_PCT = 0.008          # 0.8% minimum risk distance (allows tight bases like RELIANCE)
 MAX_RISK_PCT = 0.040          # 4.0% maximum risk distance
-TARGET_1_R = 1.5              # Model A Canonical Target 1 = Entry + 1.5 * Risk (R-Multiple)
+TARGET_1_R = 1.2              # Model A Canonical Target 1 = Entry + 1.2 * Risk (R-Multiple)
 BREAKEVEN_TRIGGER_R = 1.0     # When High >= Entry + 1.0R, ratchet to BE next bar
 BREAKEVEN_BUFFER_PCT = 0.002  # Ratchet stop to +0.2% above entry once Tranche 1 hits
 

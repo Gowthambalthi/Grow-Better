@@ -188,10 +188,10 @@ class ResistanceBreakoutStrategy {
         const initialStop = Math.round(Math.max(low, close - 1.0 * curATR) * 100) / 100;
         const riskDistance = close - initialStop;
         const riskPct = (riskDistance / close) * 100;
-        if (riskPct > 4.0 || riskPct < 1.2) return null;
+        if (riskPct > 4.0 || riskPct < 0.8) return null;
 
-        // Model A Institutional R-Multiple Target (+1.5R) & 20 EMA Runner
-        const target1Price = Math.round((close + 1.5 * riskDistance) * 100) / 100; // Tranche 1: +1.5R
+        // Model A Institutional R-Multiple Target (+1.2R) & 20 EMA Runner
+        const target1Price = Math.round((close + 1.2 * riskDistance) * 100) / 100; // Tranche 1: +1.2R
         const breakevenStop = Math.round(close * 1.002 * 100) / 100;
 
         return {

@@ -109,7 +109,7 @@ if isBreakout and not inTrade
     entryP := close
     initialStopP := math.max(low, entryP - 1.0 * atr14)
     riskDist = entryP - initialStopP
-    target1P := entryP + 1.5 * riskDist    // Model A: +1.5R dynamic target lock-in
+    target1P := entryP + 1.2 * riskDist    // Model A: +1.2R dynamic target lock-in
     breakevenStopP := entryP * 1.002       // Breakeven + 0.2% buffer
 
 if inTrade
