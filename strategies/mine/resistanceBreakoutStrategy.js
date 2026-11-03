@@ -157,6 +157,32 @@ class ResistanceBreakoutStrategy {
         return null;
     }
 
+    detectAscendingTriangle(sessions) {
+        const n = sessions.length;
+        if (n < 42) return null;
+        const winStart = n - 1 - 40;
+        let res = -Infinity;
+        for (let i = winStart; i < n - 1; i++) if (sessions[i].high > res) res = sessions[i].high;
+
+        let touches = 0;
+        for (let i = winStart; i < n - 1; i++) if (sessions[i].high >= res * 0.98) touches++;
+        if (touches < 2) return null;
+
+        const mid = winStart + 20;
+        let low1 = Infinity, low2 = Infinity;
+        for (let i = winStart; i < mid; i++) if (sessions[i].low < low1) low1 = sessions[i].low;
+        for (let i = mid; i < n - 1; i++) if (sessions[i].low < low2) low2 = sessions[i].low;
+
+        if (low2 > low1) {
+            const curC = sessions[n - 1].close;
+            const prevC = sessions[n - 2].close;
+            if (curC > res && prevC <= res * 1.005) {
+                return { pattern: 'ASCENDING_TRIANGLE', level: res, stopLevel: low2, touches };
+            }
+        }
+        return null;
+    }
+
     onBar(sessions, indexSessions = null) {
         const n = sessions.length;
         if (n < 75) return null;
@@ -185,6 +211,7 @@ class ResistanceBreakoutStrategy {
         let detected = this.detectCupAndHandle(sessions);
         if (!detected) detected = this.detectInverseHS(sessions);
         if (!detected) detected = this.detectRectangle(sessions);
+        if (!detected) detected = this.detectAscendingTriangle(sessions);
 
         if (!detected) return null;
 

@@ -49,6 +49,12 @@ neckH = math.min(ta.highest(high[45], 25), ta.highest(high[1], 20))
 bool ihsValid = (headLow < lsLow) and (headLow < rsLow) and (math.abs(rsLow / lsLow - 1.0) <= 0.06)
 bool ihsBreakout = ihsValid and (close > neckH) and (close[1] <= neckH * 1.005)
 
+// --- Pattern 4: Ascending Triangle (Flat resistance + rising lows) ---
+triH = ta.highest(high[1], 40)
+triL1 = ta.lowest(low[20], 20)
+triL2 = ta.lowest(low[1], 20)
+bool triBreakout = (triL2 > triL1) and (close > triH) and (close[1] <= triH * 1.005)
+
 // ==============================================================================
 // 4. SIGNAL SELECTION & STRUCTURAL RISK
 // ==============================================================================
@@ -68,6 +74,10 @@ else if rectBreakout and rsiValid
     isSignal := true
     detectedPattern := "Rectangle"
     stopLevel := rectL
+else if triBreakout and rsiValid
+    isSignal := true
+    detectedPattern := "Ascending Triangle"
+    stopLevel := triL2
 
 // Structural Stop Distance bounds
 float rawRisk = (close - stopLevel) / close

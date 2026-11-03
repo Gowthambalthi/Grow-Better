@@ -1,9 +1,10 @@
 """
 strategies/mine/config.py
-Authoritative Configuration for Trio Pattern Breakout Strategy:
+Authoritative Configuration for 4-Pattern Breakout Strategy:
 1. Inverse Head & Shoulders + RSI
 2. Cup & Handle + RSI
 3. Rectangle Consolidation + RSI
+4. Ascending Triangle + RSI
 """
 
 # ==============================================================================
@@ -24,9 +25,9 @@ MIN_TURNOVER_CR = 5.0         # Rs 5 Cr minimum 20-day average turnover
 REQUIRE_NIFTY_BULL = True     # NIFTY 50 Close > 50 EMA on signal day
 
 # ==============================================================================
-# 4. TRIO STRUCTURAL PATTERNS CONFIGURATION
+# 4. STRUCTURAL PATTERNS CONFIGURATION
 # ==============================================================================
-ACTIVE_PATTERNS = ['INVERSE_HS', 'CUP_HANDLE', 'RECTANGLE']
+ACTIVE_PATTERNS = ['INVERSE_HS', 'CUP_HANDLE', 'RECTANGLE', 'ASCENDING_TRIANGLE']
 
 # Cup & Handle
 CUP_MIN_LEN = 25
@@ -43,6 +44,11 @@ IHS_SHOULDER_TOL = 0.06       # Shoulders roughly level (+/- 6%)
 RECT_WINDOW = 30
 RECT_MAX_RANGE_PCT = 14.0     # Box height <= 14%
 
+# Ascending Triangle
+TRI_WINDOW = 40
+TRI_MIN_TOUCHES = 2           # At least 2 touches of flat ceiling within 2%
+TRI_FLAT_TOL = 0.02
+
 # ==============================================================================
 # 5. RSI & MOMENTUM CONFLUENCE GATES
 # ==============================================================================
@@ -57,12 +63,12 @@ MIN_RS_OUTPERFORMANCE = 15.0  # Stock must beat NIFTY by >= 15% over 60 days
 # ==============================================================================
 # 6. RISK, STOPS & TARGETS
 # ==============================================================================
-MIN_RISK_PCT = 0.020          # 2.0% minimum stop distance
-MAX_RISK_PCT = 0.050          # 5.0% maximum stop distance (caps loser to -5%)
+MIN_RISK_PCT = 0.025          # 2.5% minimum stop distance
+MAX_RISK_PCT = 0.075          # 7.5% maximum stop distance
 
-TARGET_1_PCT = 0.09           # Tranche 1 Target = +9.0% (Book 50%)
-BREAKEVEN_TRIGGER_R = 1.0     # When gain reaches +1.0R, ratchet stop to entry + 0.2%
-TRAIL_TRIGGER_R = 1.8         # When gain reaches +1.8R, trail stop at +1.0R
+TARGET_1_PCT = 0.08           # Tranche 1 Target = +8.0% (Book 50%)
+BREAKEVEN_TRIGGER_R = 1.2     # When gain reaches +1.2R, ratchet stop to entry + 0.2%
+TRAIL_TRIGGER_R = 2.0         # When gain reaches +2.0R, trail stop at +1.0R
 MAX_HOLD_BARS = 35            # Max holding duration: 35 trading sessions (~7 weeks)
 
 # Portfolio Sizing

@@ -138,6 +138,21 @@ def extract_trio_signals(stock_data, nifty_map):
                             detected_pattern = 'RECTANGLE'
                             stop_level = box_l
 
+            # D. Ascending Triangle (Flat resistance + rising lows)
+            if not detected_pattern and 'ASCENDING_TRIANGLE' in ACTIVE_PATTERNS:
+                if i >= 40:
+                    win_start = i - 40
+                    tri_res = np.max(h[win_start : i])
+                    # Count touches of resistance within 2%
+                    touches = np.sum(h[win_start : i] >= tri_res * 0.98)
+                    if touches >= 2:
+                        first_low = np.min(l[win_start : win_start + 20])
+                        second_low = np.min(l[win_start + 20 : i])
+                        if second_low > first_low:  # Lows must be rising
+                            if cur_c > tri_res and c[i - 1] <= tri_res * 1.005:
+                                detected_pattern = 'ASCENDING_TRIANGLE'
+                                stop_level = second_low
+
             if detected_pattern:
                 signals.append({
                     'symbol': sym,
