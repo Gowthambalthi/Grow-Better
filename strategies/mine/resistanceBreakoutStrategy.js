@@ -50,6 +50,12 @@ class ResistanceBreakoutStrategy {
         this.trailTriggerR = config.trailTriggerR ?? 2.0;
         this.maxHoldBars = config.maxHoldBars ?? 35;
         this.frictionBps = config.frictionBps ?? 28.0;
+
+        // Portfolio Slots (Strict 20-slot institutional capacity calibrated for 4-5 calls/week)
+        this.maxConcurrentPositions = config.maxConcurrentPositions ?? 20;
+        this.capitalPerPosition = config.capitalPerPosition ?? 50000;
+        this.maxExtension = config.maxExtension ?? 1.025; // Capped buy pocket (no chasing > 2.5%)
+        this.minVolumeSurge = config.minVolumeSurge ?? 1.25; // 1.25x 20-day SMA volume surge
     }
 
     calculateRSI(closes, period = 14) {

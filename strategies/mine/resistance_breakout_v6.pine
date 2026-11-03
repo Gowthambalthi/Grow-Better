@@ -1,8 +1,8 @@
 //@version=6
-indicator("Trio Pattern Breakout Engine (Cup&Handle, IHS, Rectangle + RSI) [OpenAlgo]", overlay=true)
+indicator("4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, Ascending Triangle + RSI) [OpenAlgo]", overlay=true)
 
 // ==============================================================================
-// 1. INPUTS & CONFIGURATION
+// 1. INPUTS & CONFIGURATION (Calibrated at 20 Concurrent Slots / 4-5 Calls/Week)
 // ==============================================================================
 rsiPeriod         = input.int(14, "RSI Period", minval=5)
 rsiMin            = input.float(48.0, "RSI Min (Healthy Momentum)", step=1.0)
