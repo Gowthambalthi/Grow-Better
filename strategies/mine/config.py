@@ -31,22 +31,28 @@ REQUIRE_NIFTY_BULL = True     # NIFTY 50 Close > 50 EMA on signal day
 BASE_LOOKBACK = 40            # Local base consolidation window (bars)
 MACRO_LOOKBACK = 60           # Macro overhead supply lookback (bars)
 MIN_BASE_DEPTH = 0.04         # 4% minimum base depth
-MAX_BASE_DEPTH = 0.18         # 18% maximum base depth
-MIN_CEIL_AGE = 8              # Resistance ceiling must be >= 8 bars old
+MAX_BASE_DEPTH = 0.20         # 20% maximum base depth (allows mature multi-month bases like RELIANCE)
+MIN_CEIL_AGE = 5              # Resistance ceiling must be >= 5 bars old (1 calendar week)
 MAX_PRIOR_20D_RUN = 0.10      # Anti-runaway: prior 20-day return <= 10%
 MIN_TOUCHES = 2               # At least 2 touches within 1.5% of ceiling
 PENETRATION_BUFFER_ATR = 0.10 # Close must exceed trueCeil + 0.10 * ATR
 
 # ==============================================================================
-# 5. ANTI-EXHAUSTION, VCP TIGHTNESS & 52-WEEK HIGH GATES (NEW V5 DIRECTIVES)
+# 5. ANTI-EXHAUSTION, VCP TIGHTNESS & MULTI-WEEK HIGH GATES
 # ==============================================================================
 # Kills explosive vertical sprints (e.g., ADANIPORTS +10.6% 5-day / +16.6% 3-day sprint)
 MAX_PRIOR_5D_RUN = 0.075      # Max 7.5% runup over 5 days preceding breakout
 MAX_PRIOR_3D_RUN = 0.055      # Max 5.5% runup over 3 days preceding breakout
 MAX_PRE_RANGE_3D = 0.065      # Pre-breakout 3-day consolidation range <= 6.5% (VCP tightness)
 
-# Kills trapped overhead bagholders and lower-high bounces (e.g., HINDALCO -9.9%, MARUTI -18.7%)
-MIN_DIST_52W = -0.050         # Must be within 5.0% of 52-week (250-bar) high (Blue Sky)
+# Multi-Week Base / 52-Week High Dual-Gate Architecture:
+# Case 1 (Blue Sky): Within 5.0% of 52-week high (pure ATH blue sky).
+# Case 2 (Stage 2 Base Launch): Within 16.0% of 52-week high, but MUST launch within 8.0% of rising 200 EMA
+# (Captures high-quality multi-month consolidations like RELIANCE while rejecting extended mid-range traps).
+MIN_DIST_52W = -0.050                     # Primary Blue Sky threshold (-5.0%)
+ALLOW_INTERMEDIATE_BASE = True            # Allow multi-week Stage 2 base launches
+INTERMEDIATE_BASE_MIN_DIST_52W = -0.160   # Within 16.0% of 52-week high
+INTERMEDIATE_BASE_MAX_DIST_EMA200 = 0.100 # Must be <= 10.0% above 200 EMA
 
 # ==============================================================================
 # 6. CANDLE MICROSTRUCTURE & VOLUME

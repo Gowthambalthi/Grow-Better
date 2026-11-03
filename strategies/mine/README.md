@@ -27,25 +27,25 @@ Evaluated across the 1,006 NSE stock universe (`data/universe_filtered.json`) fr
 
 ---
 
-## 2. Core V5 Architecture (The 4 Pillars)
+## 2. Core V5 Architecture (The 5 Pillars)
 
-1. **52-Week High Proximity (Blue Sky / Zero Overhead Supply)**:
-   * Price must be within **5.0% of its 52-week (250-bar) high** (`dist_52w >= -0.050`).
-   * Eliminates dead-cat bounces and lower-high traps in downtrends (e.g. `HINDALCO` -9.9% below peak, `MARUTI` -18.7% below peak).
-2. **Multi-Window Anti-Sprint Architecture (Anti-Climax)**:
+1. **Dual-Gate High Proximity (Blue Sky + Multi-Week Stage 2 Base Launch)**:
+   * **Case 1 (Blue Sky)**: Price within **5.0% of 52-week high** (`dist_52w >= -0.050`).
+   * **Case 2 (Multi-Week Base Launch)**: Price within **16.0% of 52-week high** (`dist_52w >= -0.160`), provided price is launching within **10.0% of its rising 200 EMA** (`dist_200 <= 0.100`).
+   * Captures high-quality multi-month base breakouts like `RELIANCE` (broke out of ₹1,325.50 base at -14.9% from ATH, gained +3.56% net) while eliminating trapped overhead supply in downtrends.
+2. **Pre-Breakout Test-Wick Protection**:
+   * Pre-breakout resistance tests in the last 1–3 days do not falsely reset the ceiling age if the resistance was established $\ge 5$ days ago.
+3. **Multi-Window Anti-Sprint Architecture (Anti-Climax)**:
    * Prior 5-day return must be $\le 7.5\%$ (`MAX_PRIOR_5D_RUN = 0.075`).
    * Prior 3-day return must be $\le 5.5\%$ (`MAX_PRIOR_3D_RUN = 0.055`).
    * Eliminates parabolic climax exhaustion sprints (e.g. `ADANIPORTS` +16.6% 3-day / +10.6% 5-day sprint).
-3. **Pre-Breakout Volatility Contraction Pattern (VCP Tightness)**:
+4. **Pre-Breakout Volatility Contraction Pattern (VCP Tightness)**:
    * The 3-day range immediately preceding the breakout must be $\le 6.5\%$ (`MAX_PRE_RANGE_3D = 0.065`).
    * Enforces that the stock rested in a tight base before expanding.
-4. **Zero-Lookahead Buy-Stop-Limit Order Placement**:
+5. **Zero-Lookahead Day t+1 Open Order Execution**:
    * Order placed strictly at **Day $t$ Close**:
-     * Stop Trigger Price = `true_ceil`
-     * Limit Price = `true_ceil * 1.020` (max 2.0% chase cap)
-   * If Day $t+1$ Open $> \text{Limit}$, order is **cancelled / unfilled** (no look-ahead chasing).
-   * If Day $t+1$ Open $\ge \text{Ceiling}$, filled at Open.
-   * If Day $t+1$ Open $< \text{Ceiling} \le \text{High}$, filled at Ceiling.
+     * Fills at **Day $t+1$ Open** if open is within max chase cap ($2.0\%$) of Day $t$ Close.
+     * If Day $t+1$ gaps up $> 2.0\%$, order is cancelled (no chasing).
 
 ---
 

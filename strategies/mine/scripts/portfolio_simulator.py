@@ -14,6 +14,7 @@ from strategies.mine.config import (
     FRICTION_DECIMAL, OOS_SPLIT_DATE, MIN_TURNOVER_CR, REQUIRE_NIFTY_BULL,
     BASE_LOOKBACK, MACRO_LOOKBACK, MIN_BASE_DEPTH, MAX_BASE_DEPTH, MIN_CEIL_AGE,
     MAX_PRIOR_20D_RUN, MAX_PRIOR_5D_RUN, MAX_PRIOR_3D_RUN, MIN_DIST_52W, MAX_PRE_RANGE_3D,
+    ALLOW_INTERMEDIATE_BASE, INTERMEDIATE_BASE_MIN_DIST_52W, INTERMEDIATE_BASE_MAX_DIST_EMA200,
     MIN_TOUCHES, PENETRATION_BUFFER_ATR, MIN_BODY_RATIO, MIN_CLOSE_LOC, MAX_UPPER_WICK,
     MIN_RVOL, MAX_RVOL, MAX_CHASE_PCT, INITIAL_STOP_ATR, MIN_RISK_PCT, MAX_RISK_PCT,
     TARGET_1_R, TRANCHE_1_TARGET_PCT, EARLY_INVALIDATION_PCT,
@@ -107,6 +108,11 @@ def extract_all_signals(stock_data, nifty_map):
             ceil_bar_idx = np.argmax(h[i-MACRO_LOOKBACK : i])
             ceil_age = MACRO_LOOKBACK - ceil_bar_idx
             if ceil_age < MIN_CEIL_AGE:
+                # Check if recent high is just a pre-breakout test wick of an earlier established resistance
+                earlier_touches = [k for k in range(MACRO_LOOKBACK - 3) if h[i-MACRO_LOOKBACK + k] >= true_ceil * 0.985]
+                if earlier_touches:
+                    ceil_age = MACRO_LOOKBACK - earlier_touches[0]
+            if ceil_age < MIN_CEIL_AGE:
                 continue
                 
             # Anti-Runaway: Prior 20-day return <= 10%
@@ -114,12 +120,20 @@ def extract_all_signals(stock_data, nifty_map):
             if prior_20d_ret > MAX_PRIOR_20D_RUN:
                 continue
                 
-            # --- V5 ANTI-EXHAUSTION & BLUE-SKY GATES ---
-            # Gate 1: 52-Week High Proximity (Blue Sky / Zero Trapped Overhead Supply)
+            # --- V5 ANTI-EXHAUSTION & DUAL-GATE 52W / BASE PROXIMITY ---
+            # Gate 1: 52-Week High Proximity or Multi-Week Base Launch
             w52 = max(0, i - 250)
             high_52w = np.max(h[w52 : i])
             dist_52w = (cur_c - high_52w) / high_52w
-            if dist_52w < MIN_DIST_52W:
+            dist_200 = (cur_c - ema200[i]) / ema200[i]
+            
+            passed_proximity = False
+            if dist_52w >= MIN_DIST_52W:
+                passed_proximity = True  # Case 1: Pure Blue Sky (within 5% of 52w high)
+            elif ALLOW_INTERMEDIATE_BASE and (dist_52w >= INTERMEDIATE_BASE_MIN_DIST_52W) and (dist_200 <= INTERMEDIATE_BASE_MAX_DIST_EMA200):
+                passed_proximity = True  # Case 2: Multi-Week Stage 2 base launch near 200 EMA (e.g. RELIANCE)
+                
+            if not passed_proximity:
                 continue
                 
             # Gate 2: Multi-Window Anti-Sprint (KILLS ADANIPORTS EXHAUSTION SPRINT)
@@ -376,23 +390,11 @@ def run_portfolio_simulation(signals, stock_data, model_type='E'):
                 day_high = mat[b_idx, 1]
                 day_low = mat[b_idx, 2]
                 
-                ceiling = s['true_ceil']
-                limit_p = ceiling * (1.0 + MAX_CHASE_PCT)
-                
-                filled = False
-                fill_price = 0.0
-                
-                if day_open > limit_p:
-                    filled = False
-                elif day_open >= ceiling:
-                    filled = True
-                    fill_price = day_open
-                elif day_open < ceiling and day_high >= ceiling:
-                    filled = True
-                    fill_price = ceiling
-                    
-                if not filled:
-                    continue
+                # Day t+1 Execution: Buy at Open capped at max chase pct (2%) above Day t Close
+                max_allowed_open = s['cur_c'] * (1.0 + MAX_CHASE_PCT)
+                if day_open > max_allowed_open:
+                    continue  # Gapped up excessively above breakout close
+                fill_price = day_open
                     
                 raw_stop = s['cur_l']
                 risk_distance = fill_price - raw_stop

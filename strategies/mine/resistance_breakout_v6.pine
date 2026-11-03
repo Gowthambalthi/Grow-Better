@@ -7,11 +7,11 @@ indicator("True Blue-Sky Resistance Breakout Engine (v5) [OpenAlgo]", overlay=tr
 baseLookback      = input.int(40, "Base Lookback (Bars)", minval=20)
 macroLookback     = input.int(60, "Overhead Supply Lookback (Bars)", minval=40)
 high52wLookback   = input.int(250, "52-Week High Lookback (Bars)", minval=100)
-minCeilAge        = input.int(8, "Min Resistance Age (Bars)", minval=5)
+minCeilAge        = input.int(5, "Min Resistance Age (Bars)", minval=3)
 maxPrior20dRun    = input.float(10.0, "Max Prior 20-Day Run %", step=1.0) / 100.0
 maxPrior5dRun     = input.float(7.5, "Max Prior 5-Day Sprint % (Anti-Exhaustion)", step=0.5) / 100.0
 maxPrior3dRun     = input.float(5.5, "Max Prior 3-Day Sprint %", step=0.5) / 100.0
-max52wDistPct     = input.float(-5.0, "Min Proximity to 52W High % (Blue Sky)", step=0.5) / 100.0
+max52wDistPct     = input.float(-16.0, "Min Proximity to 52W High % (Multi-Week Base)", step=0.5) / 100.0
 maxPreRange3dPct  = input.float(6.5, "Max Pre-Breakout 3-Day Range % (VCP Tightness)", step=0.5) / 100.0
 minTouches        = input.int(2, "Min Resistance Touches", minval=2)
 penBufferATR      = input.float(0.10, "Penetration Buffer (x ATR)", step=0.05)

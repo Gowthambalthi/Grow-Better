@@ -30,12 +30,12 @@ class ResistanceBreakoutStrategy {
         this.macroLookback = config.macroLookback ?? 60; // 60-day overhead supply check
         this.high52wLookback = config.high52wLookback ?? 250; // 52-week lookback
         this.minBaseDepth = config.minBaseDepth ?? 0.04;
-        this.maxBaseDepth = config.maxBaseDepth ?? 0.18;
-        this.minCeilAge = config.minCeilAge ?? 8;
+        this.maxBaseDepth = config.maxBaseDepth ?? 0.20;     // 20% max base depth
+        this.minCeilAge = config.minCeilAge ?? 5;             // 5 bars (1 week) base age
         this.maxPrior20dRun = config.maxPrior20dRun ?? 0.10;
         this.maxPrior5dRun = config.maxPrior5dRun ?? 0.075;   // 7.5% 5-day sprint cap (kills ADANIPORTS)
         this.maxPrior3dRun = config.maxPrior3dRun ?? 0.055;   // 5.5% 3-day sprint cap
-        this.minDist52w = config.minDist52w ?? -0.050;        // Within 5% of 52w high (kills HINDALCO/MARUTI)
+        this.minDist52w = config.minDist52w ?? -0.160;        // Within 16% of 52w high (allows mature bases like RELIANCE)
         this.maxPreRange3d = config.maxPreRange3d ?? 0.065;   // 6.5% pre-breakout consolidation range
         this.minRVOL = config.minRVOL ?? 1.5;
         this.maxRVOL = config.maxRVOL ?? 5.5;
@@ -108,8 +108,16 @@ class ResistanceBreakoutStrategy {
             return null;
         }
 
-        // Ceiling Age >= 8 bars
-        const ceilAge = baseBars.length - highestBarRelIdx;
+        // Ceiling Age >= 5 bars (with pre-breakout test-wick protection)
+        let ceilAge = baseBars.length - highestBarRelIdx;
+        if (ceilAge < this.minCeilAge) {
+            for (let j = 0; j < baseBars.length - 3; j++) {
+                if (baseBars[j].high >= trueResistance * 0.985) {
+                    ceilAge = baseBars.length - j;
+                    break;
+                }
+            }
+        }
         if (ceilAge < this.minCeilAge) return null;
 
         // 5. Anti-Runaway & Multi-Window Sprint Filters
