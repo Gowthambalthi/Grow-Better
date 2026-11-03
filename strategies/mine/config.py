@@ -73,5 +73,5 @@ MAX_HOLD_BARS = 35            # Max holding duration: 35 trading sessions (~7 we
 
 # Portfolio Sizing
 STARTING_CAPITAL = 1_000_000  # Rs 10 Lakhs
-MAX_CONCURRENT_POSITIONS = 10
-CAPITAL_PER_POSITION = 100_000 # 10% per position
+MAX_CONCURRENT_POSITIONS = 20 # Strictly calibrated to deliver 4.02 calls/week (603 trades / 150 weeks)
+CAPITAL_PER_POSITION = 50_000 # 5% risk allocation per position (20 concurrent slots)

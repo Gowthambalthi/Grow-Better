@@ -22,16 +22,17 @@
 
 ---
 
-## 2. Quantitative Performance Across 997 NSE Stocks (3 Years)
+## 2. Quantitative Performance Across Liquid NSE Universe (3-Year Zero-Lookahead Simulation)
 
-| Metric | Overall (3 Years) | In-Sample (< Apr 2025) | Out-of-Sample (>= Apr 2025) |
+| Metric | Overall Portfolio (3 Years) | In-Sample (< Apr 2025) | Out-of-Sample (>= Apr 2025) |
 | :--- | :--- | :--- | :--- |
-| **Total Trades** | 2,750+ (or ~600 at RS $\ge 25\%$) | ~900 | ~1,850 |
-| **Win Rate** | **40.0% – 45.0%** | 35.0% | **43.5%** |
-| **Profit Factor (Net)** | **0.96 – 1.05** | 0.75 | **1.10 – 1.16** |
-| **Average Winner** | **+10.15%** | +10.12% | **+10.18%** |
-| **Average Loser** | **-6.95%** | -7.20% | **-6.80%** |
-| **Median Duration** | **7.0 days to Target** | 7.0 days | 7.0 days |
+| **Total Portfolio Trades** | **603 trades (4.02 calls/week)** | 271 trades | **332 trades** |
+| **Win Rate** | **52.6%** | 50.9% | **53.9%** |
+| **Profit Factor (Net)** | **1.08** | 0.91 | **1.34** |
+| **Net Realized R** | **+25.3R** | +2.1R | **+23.2R** |
+| **Average Winner Return** | **+7.78%** | +7.62% | **+7.91%** |
+| **Average Loser Return** | **-7.92%** | -8.11% | **-7.76%** |
+| **Execution Sizing** | **20 Concurrent Slots (5% allocation each)** | 20 Slots | 20 Slots |
 
 ---
 
