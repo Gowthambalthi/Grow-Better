@@ -190,8 +190,8 @@ class ResistanceBreakoutStrategy {
         const riskPct = (riskDistance / close) * 100;
         if (riskPct > 4.0 || riskPct < 1.2) return null;
 
-        const target1Price = Math.round(close * 1.025 * 100) / 100; // Tranche 1: +2.5%
-        const earlyInvalPrice = Math.round(close * (1.0 - 0.015) * 100) / 100; // Early cut: -1.5%
+        // Model A Institutional R-Multiple Target (+1.5R) & 20 EMA Runner
+        const target1Price = Math.round((close + 1.5 * riskDistance) * 100) / 100; // Tranche 1: +1.5R
         const breakevenStop = Math.round(close * 1.002 * 100) / 100;
 
         return {
@@ -211,9 +211,8 @@ class ResistanceBreakoutStrategy {
                 limitPrice: orderLimitPrice,
                 initialStopLoss: initialStop,
                 riskPct: `${riskPct.toFixed(2)}%`,
-                earlyInvalidation: `CUT IMMEDIATELY if price touches Rs ${earlyInvalPrice} (-1.5%)`,
                 target1: target1Price,
-                target1Action: 'LOCK IN 50% PROFIT at +2.5% & MOVE STOP TO BREAKEVEN (Rs ' + breakevenStop + ')',
+                target1Action: 'LOCK IN 50% PROFIT at +1.5R & MOVE STOP TO BREAKEVEN (Rs ' + breakevenStop + ')',
                 runnerManagement: '20_EMA_DAILY_CLOSE (Executed at next Open for remaining 50%)',
                 trailingTrigger: `Close < 20 EMA (currently Rs ${Math.round(ema20 * 100) / 100})`
             }

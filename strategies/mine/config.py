@@ -69,16 +69,18 @@ MAX_RVOL = 5.5                # Anti-Climax cap: RVOL <= 5.5x
 MAX_CHASE_PCT = 0.020         # Max chase cap: 2.0% above true ceiling
 
 # ==============================================================================
-# 8. RISK, TWO-TRANCHE PROFIT TAKING & EARLY INVALIDATION
+# 8. RISK & R-MULTIPLE PROFIT TAKING (CANONICAL MODEL A)
 # ==============================================================================
 INITIAL_STOP_ATR = 1.0        # Stop = max(Day t Low, Fill Price - 1.0 * ATR)
 MIN_RISK_PCT = 0.012          # 1.2% minimum risk distance
 MAX_RISK_PCT = 0.040          # 4.0% maximum risk distance
-TARGET_1_R = 1.5              # Target 1 = Entry + 1.5 * Risk
+TARGET_1_R = 1.5              # Model A Canonical Target 1 = Entry + 1.5 * Risk (R-Multiple)
 BREAKEVEN_TRIGGER_R = 1.0     # When High >= Entry + 1.0R, ratchet to BE next bar
-TRANCHE_1_TARGET_PCT = 0.025  # Tranche 1: Lock in 50% position at +2.5% gain
-EARLY_INVALIDATION_PCT = 0.015# Invalidation: If price drops <= -1.5% below entry, cut immediately
 BREAKEVEN_BUFFER_PCT = 0.002  # Ratchet stop to +0.2% above entry once Tranche 1 hits
+
+# Experimental Fixed-Percentage Parameters (Deprecated Model E - proved inferior to Model A)
+TRANCHE_1_TARGET_PCT = 0.080  # Experimental fixed target (+8.0%)
+EARLY_INVALIDATION_PCT = 0.015# Experimental fixed cut (-1.5%)
 
 # ==============================================================================
 # 9. PORTFOLIO SIMULATION CONSTRAINTS

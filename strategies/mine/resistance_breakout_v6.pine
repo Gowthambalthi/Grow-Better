@@ -108,16 +108,14 @@ if isBreakout and not inTrade
     hitTarget1 := false
     entryP := close
     initialStopP := math.max(low, entryP - 1.0 * atr14)
-    earlyInvalP := entryP * (1.0 - 0.015) // Early invalidation at -1.5%
-    target1P := entryP * 1.025             // Tranche 1: +2.5% lock-in
+    riskDist = entryP - initialStopP
+    target1P := entryP + 1.5 * riskDist    // Model A: +1.5R dynamic target lock-in
     breakevenStopP := entryP * 1.002       // Breakeven + 0.2% buffer
 
 if inTrade
     if high >= target1P
         hitTarget1 := true
-    if not hitTarget1 and low <= earlyInvalP
-        inTrade := false // Cut immediately at -1.5%
-    else if not hitTarget1 and low <= initialStopP
+    if not hitTarget1 and low <= initialStopP
         inTrade := false
     else if hitTarget1 and low <= breakevenStopP
         inTrade := false
