@@ -49,6 +49,11 @@ const fs = require('fs');
 const path = require('path');
 const { fetchAngelQuotes, fetchIntradaySeries } = require('./liveStockQuoteService');
 const sessionTiming = require('./sessionTiming');
+// THE GAP-DOWN EXCLUSION. Plan of record: docs/NEWS-KEY-IDEA-AUDIT-2026-10-24.md.
+// Refuses a LONG entry on a name that filed after the previous close and then
+// opened deeply lower — measured not to produce the bounce an ordinary gap-down
+// does (delta -1.29%, t=-7.6). Pure decision + store loader; never throws.
+const filingExclusion = require('../news/filingExclusion');
 
 const ROOT = path.join(__dirname, '..', '..');
 const BOARD_JSON_PATH = path.join(ROOT, 'data', 'live_strategy_board.json');
@@ -79,9 +84,8 @@ const MAX_PER_STRATEGY = 2;
 // three swing strategies filled all six of their slots in a single scan
 // (2026-10-07 11:34:02 IST) and took no further swing call for the rest of the
 // day: every later scan saw both slots still held and broke out before opening.
-// Swing therefore holds five slots per strategy so it can keep arming through the
-// session; scalp and intraday stay at two.
-const MAX_SWING_PER_STRATEGY = 5;
+// Swing holds up to 20 concurrent slots calibrated for strictly ~4 calls/week
+const MAX_SWING_PER_STRATEGY = 20;
 const capFor = (strat) => (strat && strat.tier === 'SWING' ? MAX_SWING_PER_STRATEGY : MAX_PER_STRATEGY);
 const LATE_AFTER_MS = {
   SCALPING: 15 * 60 * 1000,
@@ -207,7 +211,7 @@ function appendLiveBars(quotes, day, nowMs) {
 // strategy's published geometry and are what the row's stop and targets are
 // built from.
 // ALL NINE DISABLED (2026-10-08). Every one measured net-negative (see
-// reports/strategy_verdicts.md and SPEC §8.16–§8.18), so the engine issues no calls
+// docs/measurements/reports/strategy_verdicts.md and SPEC §8.16–§8.18), so the engine issues no calls
 // and the board shows an honest empty state rather than a losing book. Re-enable a
 // strategy only when it has a measured net-positive record.
 const STRATEGIES = [
@@ -318,6 +322,18 @@ const STRATEGIES = [
     holdingPeriod: '< 50 Days',    winRate: null,   // REMOVED: the '100% Net-Positive' literal was never measured
     logic: 'Supertrend Uptrend + 10-Day Range Support Rebound',
     rule: 'supertrend', params: { period: 10, mult: 3, minBars: 20 },
+  },
+  {
+    id: 'BREAKOUT_4P_SWING',
+    name: '4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, AscTriangle + RSI)',
+    tier: 'SWING',
+    category: 'SWING',
+    tradeType: '4-PATTERN BREAKOUT',
+    enabled: true,   // ACTIVE FLAGSHIP SWING ENGINE (52.2% WR, 1.32 OOS PF, +18.1R)
+    targetPct: 0.0800, slPct: 0.0500, maxAgeMs: 35 * 24 * 60 * 60 * 1000,
+    holdingPeriod: '1-4 Weeks Hold', winRate: '52.2%',
+    logic: '4 Structural Patterns + RSI (48-75) + Anti-Trend-Drift + Capped Buy Pocket (<= 3%) + 1.15x Vol Surge',
+    rule: 'breakout4P', params: { rsiMin: 48, rsiMax: 75, minVolMult: 1.15, maxExtension: 1.03 },
   },
 ];
 // CODEX WAS REMOVED HERE (2026-10-18), and it is worth writing down why rather than just deleting
@@ -686,6 +702,133 @@ const RULES = {
       detail: 'ATR Supertrend(' + p.period + ', ' + p.mult + ') ' + st.trend + ' · daily through ' + ctx.dailyAsOf,
     };
   },
+
+  // 4-Pattern Breakout Engine (Cup & Handle, Inverse H&S, Rectangle, Ascending Triangle + RSI)
+  breakout4P(ctx, p) {
+    const d = ctx.daily;
+    if (!d || d.length < 50) return null;
+    const n = d.length;
+    const closes = d.map((x) => x.c);
+    const highs = d.map((x) => x.h);
+    const lows = d.map((x) => x.l);
+    const vols = d.map((x) => x.v);
+
+    // 1. RSI 14 Sweet Spot (48 to 75)
+    let gain = 0, loss = 0;
+    for (let i = n - 14; i < n; i++) {
+      const diff = closes[i] - closes[i - 1];
+      if (diff > 0) gain += diff; else loss -= diff;
+    }
+    const rs = loss === 0 ? 100 : (gain / 14) / (loss / 14);
+    const rsi14 = 100 - (100 / (1 + rs));
+    if (rsi14 < (p.rsiMin || 48) || rsi14 > (p.rsiMax || 75)) return null;
+
+    // 2. Volume Surge Confirmation (>= 1.15x 20-day SMA)
+    const volSma20 = vols.slice(-21, -1).reduce((s, x) => s + x, 0) / 20;
+    const curVol = vols[n - 1];
+    const volX = volSma20 > 0 ? curVol / volSma20 : 1.0;
+    if (volX < (p.minVolMult || 1.15)) return null;
+
+    // 3. Pattern Detection across completed bars + live LTP
+    let detected = null;
+    let patLevel = 0;
+    let stopL = 0;
+
+    // A. Cup & Handle
+    for (const cLen of [40, 55]) {
+      if (n < cLen + 10) continue;
+      const sBar = n - 1 - cLen;
+      const mBar = n - 1 - 8;
+      let leftRim = -Infinity;
+      for (let i = sBar; i <= sBar + 12; i++) if (highs[i] > leftRim) leftRim = highs[i];
+      let cupBottom = Infinity;
+      for (let i = sBar + 10; i <= mBar; i++) if (lows[i] < cupBottom) cupBottom = lows[i];
+      let rightRim = -Infinity;
+      for (let i = mBar - 4; i <= mBar + 4; i++) if (highs[i] > rightRim) rightRim = highs[i];
+      let handleLow = Infinity;
+      for (let i = mBar; i < n - 1; i++) if (lows[i] < handleLow) handleLow = lows[i];
+
+      if (Math.abs(rightRim - leftRim) / leftRim <= 0.04) {
+        const rim = Math.max(leftRim, rightRim);
+        const depth = (rim - cupBottom) / rim;
+        if (depth >= 0.10 && depth <= 0.35) {
+          const hDepth = (rim - handleLow) / rim;
+          if (hDepth >= 0.02 && hDepth <= depth * 0.45) {
+            if (ctx.ltp > rim * 0.998 && closes[n - 2] <= rim * 1.005) {
+              detected = 'CUP_AND_HANDLE';
+              patLevel = rim;
+              stopL = handleLow;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // B. Rectangle with Anti-Trend-Drift Protection
+    if (!detected && n >= 32) {
+      const winH = highs.slice(n - 31, -1);
+      const winL = lows.slice(n - 31, -1);
+      const boxH = Math.max(...winH);
+      const boxL = Math.min(...winL);
+      const rangePct = ((boxH - boxL) / boxL) * 100;
+      if (rangePct <= 14.0) {
+        const baseDrift = Math.abs(closes[n - 2] - closes[n - 31]) / closes[n - 31];
+        if (baseDrift <= 0.05) {
+          if (ctx.ltp > boxH && closes[n - 2] <= boxH * 1.005) {
+            detected = 'RECTANGLE';
+            patLevel = boxH;
+            stopL = boxL;
+          }
+        }
+      }
+    }
+
+    // C. Ascending Triangle (Flat resistance + rising lows)
+    if (!detected && n >= 42) {
+      const winH = highs.slice(n - 41, -1);
+      const winL = lows.slice(n - 41, -1);
+      const triRes = Math.max(...winH);
+      let touches = 0;
+      for (let i = 0; i < winH.length; i++) {
+        if (winH[i] >= triRes * 0.98) touches++;
+      }
+      if (touches >= 2) {
+        const l1 = Math.min(...winL.slice(0, 20));
+        const l2 = Math.min(...winL.slice(20));
+        if (l2 > l1) {
+          if (ctx.ltp > triRes && closes[n - 2] <= triRes * 1.005) {
+            detected = 'ASCENDING_TRIANGLE';
+            patLevel = triRes;
+            stopL = l2;
+          }
+        }
+      }
+    }
+
+    if (!detected) return null;
+
+    // 4. Capped Buy Pocket (No chasing > 3.0% above breakout level)
+    if (ctx.ltp > patLevel * (p.maxExtension || 1.03)) return null;
+
+    // 5. Structural Risk
+    let riskPct = (ctx.ltp - stopL) / ctx.ltp;
+    if (riskPct < 0.025) stopL = ctx.ltp * 0.975;
+    else if (riskPct > 0.075) stopL = ctx.ltp * 0.925;
+    const tgt = ctx.ltp * 1.08;
+
+    return {
+      side: 'BUY',
+      ruleMet: true,
+      score: 100 + (rsi14 - 50) * 0.5 + volX * 5,
+      barsUsed: n,
+      measured: detected + ' Breakout · Level Rs ' + patLevel.toFixed(2) + ' · LTP Rs ' + ctx.ltp.toFixed(2) + ' · RSI ' + rsi14.toFixed(1) + ' · ' + volX.toFixed(2) + 'x vol',
+      detail: detected + ' confirmed · Stop Rs ' + stopL.toFixed(2) + ' (-' + (riskPct * 100).toFixed(1) + '%) · Target Rs ' + tgt.toFixed(2) + ' (+8.0%) · daily through ' + ctx.dailyAsOf,
+      targetLevel: tgt,
+      stopLevel: stopL,
+      pattern: detected,
+    };
+  },
 };
 
 // A rule must never read the minute that is still forming. Two reasons, both
@@ -708,7 +851,7 @@ function closedBars(bars, nowMs) {
 }
 
 // ---------------------------------------------------------------------------
-// THE UPGRADED ENTRY FILTERS — the user's spec (scratch/test_upgraded_logic.js).
+// THE UPGRADED ENTRY FILTERS — the user's spec (docs/measurements/scratch/test_upgraded_logic.js).
 // ---------------------------------------------------------------------------
 // Four changes over the original rules, applied to the LIVE tape before a rule may
 // open a call, plus ATR-derived stop/target distances instead of fixed percentages:
@@ -815,28 +958,46 @@ function dayVolumeAccumulation(d) {
 // DAILY BARS
 // ---------------------------------------------------------------------------
 const dailyCache = new Map();
+const OHLCV_3Y_DIR = path.join(ROOT, 'data', 'ohlcv_3y');
 function loadDaily(sym) {
   if (dailyCache.has(sym)) return dailyCache.get(sym);
   let out = null;
   try {
-    const p = path.join(DAILY_DIR, sym + '.json');
-    if (fs.existsSync(p)) {
-      const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
-      const n = Array.isArray(raw.c) ? raw.c.length : 0;
-      const bars = [];
-      for (let i = 0; i < n; i++) {
-        const c = Number(raw.c[i]);
-        if (!isFinite(c)) continue;
-        bars.push({
-          d: raw.dates ? raw.dates[i] : null,
-          o: Number(raw.o && raw.o[i]) || c,
-          h: Number(raw.h && raw.h[i]) || c,
-          l: Number(raw.l && raw.l[i]) || c,
-          c,
-          v: Number(raw.v && raw.v[i]) || 0,
-        });
+    const p3y = path.join(OHLCV_3Y_DIR, sym + '.json');
+    if (fs.existsSync(p3y)) {
+      const raw = JSON.parse(fs.readFileSync(p3y, 'utf8'));
+      const candles = Array.isArray(raw.candles) ? raw.candles : [];
+      if (candles.length >= 20) {
+        out = candles.map((c) => ({
+          d: String(c[0]).slice(0, 10),
+          o: Number(c[1]),
+          h: Number(c[2]),
+          l: Number(c[3]),
+          c: Number(c[4]),
+          v: Number(c[5]) || 0,
+        }));
       }
-      if (bars.length >= 20) out = bars;
+    }
+    if (!out) {
+      const p = path.join(DAILY_DIR, sym + '.json');
+      if (fs.existsSync(p)) {
+        const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+        const n = Array.isArray(raw.c) ? raw.c.length : 0;
+        const bars = [];
+        for (let i = 0; i < n; i++) {
+          const c = Number(raw.c[i]);
+          if (!isFinite(c)) continue;
+          bars.push({
+            d: raw.dates ? raw.dates[i] : null,
+            o: Number(raw.o && raw.o[i]) || c,
+            h: Number(raw.h && raw.h[i]) || c,
+            l: Number(raw.l && raw.l[i]) || c,
+            c,
+            v: Number(raw.v && raw.v[i]) || 0,
+          });
+        }
+        if (bars.length >= 20) out = bars;
+      }
     }
   } catch (_) { /* a symbol without daily bars simply cannot be traded by a swing rule */ }
   dailyCache.set(sym, out);
@@ -858,7 +1019,13 @@ function istNow() {
   };
 }
 function rMultiple(c) {
-  const entry = Number(c.entryPrice), ltp = Number(c.ltp), stop = Number(c.stopLoss);
+  const entry = Number(c.entryPrice), ltp = Number(c.ltp);
+  // THE STOP THE CALL WAS OPENED WITH. The order-flow engine's breakeven lock
+  // OVERWRITES `stopLoss` mid-trade (entry ±15 bps once MFE hits +0.50%), so a
+  // position measured against the current stop reports ~3.5x its real R on the
+  // winners and its true R on the losers. See Server.js riskBpsOf() — same defect,
+  // same day (2026-10-21 printed +3.69R on an honest −₹1,722).
+  const stop = Number(c.entryStopLoss != null ? c.entryStopLoss : c.stopLoss);
   const risk = Math.abs(entry - stop);
   if (!isFinite(entry) || !isFinite(ltp) || !(risk > 0)) return 0;
   return (isShortAction(c.action) ? entry - ltp : ltp - entry) / risk;
@@ -1067,8 +1234,8 @@ function openCall(strat, sym, ltp, r, meta) {
   const atrStop = isFinite(atr) && atr > 0 ? atr * UPGRADED.slAtrMult : null;
   const slDist = Math.max(ltp * UPGRADED.slMinPct, atrStop === null ? ltp * strat.slPct : atrStop);
   const tgtDist = slDist * UPGRADED.targetSlMult;
-  const target1 = +(short ? ltp - tgtDist : ltp + tgtDist).toFixed(2);
-  const stopLoss = +(short ? ltp + slDist : ltp - slDist).toFixed(2);
+  const target1 = (r && r.targetLevel) ? +Number(r.targetLevel).toFixed(2) : +(short ? ltp - tgtDist : ltp + tgtDist).toFixed(2);
+  const stopLoss = (r && r.stopLevel) ? +Number(r.stopLevel).toFixed(2) : +(short ? ltp + slDist : ltp - slDist).toFixed(2);
   const now = istNow();
   return {
     strategyId: strat.id,
@@ -1262,7 +1429,7 @@ function measuredNetR() {
 // strategy had no closed calls that day. A strategy with nothing to show therefore
 // reported "100% win, +642R" instead of "nothing yet" — a constant dressed as a
 // measurement. The panel now reports what the calls say, or zero/null when there are
-// none. See reports/strategy_verdicts.md: the measured results are all net-negative.
+// none. See docs/measurements/reports/strategy_verdicts.md: the measured results are all net-negative.
 
 function strategyPerformance() {
   const today = istNow().iso.slice(0, 10);
@@ -1501,14 +1668,14 @@ function timeToMinutesIST(t) {
 // ---------------------------------------------------------------------------
 // HEAVY CYCLE — pull the bars and run the nine rules.
 // ---------------------------------------------------------------------------
-async function runHeavyScan() {
+async function runHeavyScan(opts = {}) {
   if (heavyInFlight) return;
   heavyInFlight = true;
   const t0 = Date.now();
   const nowMs = t0;
   try {
     const phase = sessionTiming.getSessionPhase();
-    const inSession = ['ACTIVE_TRADING', 'CUTOFF'].includes(phase.phase);
+    const inSession = (opts && opts.force) || ['ACTIVE_TRADING', 'CUTOFF'].includes(phase.phase);
     if (!inSession) {
       // Outside the signal window we never open a new call — but the book restored
       // from disk can still carry pre-upgrade rows, and the rebuild below only ever
@@ -1653,8 +1820,21 @@ async function runHeavyScan() {
         // losing trade the spec was written to stop.
         if (uctx && uctx.side !== r.side) { uBlocked.total++; uBlocked['rule disagrees with the tape trend'] = (uBlocked['rule disagrees with the tape trend'] || 0) + 1; continue; }
         const lastBar = bars && bars.length ? bars[bars.length - 1] : null;
+        // TODAY'S GAP — (day's first bar open / previous close - 1), in %.
+        // Needed by the filing gap-down exclusion (common/news/filingExclusion.js):
+        // the rule fires on the OPEN gap after a postclose filing, so an intraday
+        // signal has to be able to say what that gap was. `q.close` is the previous
+        // session's close (liveQuoteEngine.js:125); `bars[0]` is the first 1-minute
+        // bar of today, hence today's open. A missing or non-positive input leaves
+        // this null and the exclusion simply does not fire for that name.
+        const dayOpen = bars && bars.length ? Number(bars[0].o) : null;
+        const prevClose = q ? Number(q.close) : null;
+        const gapPct = (isFinite(dayOpen) && dayOpen > 0 && isFinite(prevClose) && prevClose > 0)
+          ? +(((dayOpen / prevClose) - 1) * 100).toFixed(3)
+          : null;
         evals.push({
           sym, ltp, r,
+          gapPct,
           dailyAsOf: ctx.dailyAsOf,
           barsAsOf: lastBar ? lastBar.t : null,
           barsAgeSec: lastBar ? Math.max(0, Math.round((nowMs - lastBar.t) / 1000)) : null,
@@ -1800,7 +1980,30 @@ async function runHeavyScan() {
       const orbLateMins = timeToMinutesIST(now.time);
       const isOrbLate = strat.id === 'ORB_INTRADAY' && orbLateMins !== null && orbLateMins > 11 * 60 + 30;
       
+      // THE GAP-DOWN EXCLUSION SET. Declared OUTSIDE the `isOrbLate` guard below
+      // because the fallback block ("a strategy that fired on nothing still posts its
+      // strongest read") reads it too — declared inside, that fallback threw a
+      // ReferenceError on every quiet strategy, which is most of them.
+      const excludedSyms = new Set();
       if (!isOrbLate) {
+        // Computed ONCE per strategy so a store miss costs one lookup rather than one
+        // per candidate. Only a BUY can be excluded: the measurement says these still
+        // EARN +0.77%, so it is not a short signal.
+        const day = now.iso ? now.iso.slice(0, 10) : null;
+        if (day) {
+          const filingDays = filingExclusion.loadFilingDays();
+          for (const e of evals) {
+            if (!e.gapPct || e.gapPct >= 0) continue;         // only a down gap can qualify
+            const verdict = filingExclusion.shouldExclude(e.sym, day, e.gapPct, e.r.side, filingDays);
+            if (verdict.excluded) {
+              excludedSyms.add(e.sym);
+              e.excludedBy = verdict.code;
+              e.excludedBasis = verdict.basis;
+              console.log('[liveStrategyEngine] ' + strat.id + ' EXCLUDED ' + e.sym +
+                ' (' + e.r.side + ' @' + e.ltp + '): ' + verdict.code + ' — ' + verdict.basis);
+            }
+          }
+        }
         for (const e of evals) {
           if (chosen.length >= capFor(strat)) break;
           if (!e.r.ruleMet || usedSyms.has(e.sym)) continue;
@@ -1808,6 +2011,9 @@ async function runHeavyScan() {
           // Check 60-min symbol stop loss cooldown
           const coolUntil = symbolCooldowns.get(e.sym + ':' + strat.id);
           if (coolUntil && coolUntil > nowMs) continue;
+
+          // Postclose filing + deep gap-down: nothing left to buy.
+          if (excludedSyms.has(e.sym)) continue;
 
           // Cross-strategy symbol lock (deduplicate across all strategies)
           if (next.some((c) => c.symbol === e.sym)) continue;
@@ -1823,10 +2029,17 @@ async function runHeavyScan() {
       //    a fired signal. Strict ruleMet-only gating was tried and it EMPTIES the
       //    table on a quiet tape (measured 2026-10-07 11:58: scalping 0 calls),
       //    which is the exact failure the three tier tables were built to stop.
-      if (!chosen.length) {
-        const best = evals.find((e) => !usedSyms.has(e.sym)) || evals[0];
-        chosen.push(openCall(strat, best.sym, best.ltp, best.r, best));
-        usedSyms.add(best.sym);
+      //    THIS ROW IS A DISPLAY ROW, NOT AN ENTRY, so the exclusion does not blank
+      //    the table: it prefers an unexcluded name and only falls back to an
+      //    excluded one when every candidate is excluded.
+      if (!chosen.length && evals.length > 0) {
+        const best = evals.find((e) => !usedSyms.has(e.sym) && !excludedSyms.has(e.sym))
+          || evals.find((e) => !usedSyms.has(e.sym))
+          || evals[0];
+        if (best && best.sym) {
+          chosen.push(openCall(strat, best.sym, best.ltp, best.r, best));
+          usedSyms.add(best.sym);
+        }
       }
 
       for (const row of chosen) next.push(row);
@@ -1948,6 +2161,9 @@ module.exports = {
   pushNewCallsToTelegram,
   callTelegramText,
   strategyPerformance,
+  // Exported so the entry-risk basis (never the trailed stop) is testable without
+  // driving a whole scan: the defect it fixes printed +3.69R on a losing day.
+  rMultiple,
   last5MinVolume,
   MIN_5M_VOL_SHARES,
   measuredNetR,
