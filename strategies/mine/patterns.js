@@ -148,8 +148,9 @@ function detectAscendingTriangle(sessions, window = 65) {
  */
 function detectCupAndHandle(sessions, config = {}) {
     const n = sessions.length;
-    const cupLens = config.cupLens || [55, 75];
-    const handleLens = config.handleLens || [12, 18];
+    const cupLens = config.cupLens || [45, 60, 75];
+    const minHandleLen = config.minHandleLen || 5;
+    const maxHandleLen = config.maxHandleLen || 18;
 
     const highs = sessions.map(s => s.high);
     const lows = sessions.map(s => s.low);
@@ -157,14 +158,14 @@ function detectCupAndHandle(sessions, config = {}) {
     const vols = sessions.map(s => s.volume || 1);
 
     for (const clen of cupLens) {
-        for (const hlen of handleLens) {
+        for (let hlen = minHandleLen; hlen <= maxHandleLen; hlen += 2) {
             const tot = clen + hlen;
             if (n < tot + 30) continue;
 
             const cs = n - 1 - tot;
             const ce = n - 1 - hlen;
 
-            // Prior Uptrend Validation: Price must have advanced >= +20% in prior 120 bars
+            // Prior Uptrend Validation: Price must have advanced >= +20% in prior 100 bars
             const priorStart = Math.max(0, cs - 100);
             let priorMin = Infinity;
             for (let i = priorStart; i <= cs; i++) {
@@ -180,10 +181,16 @@ function detectCupAndHandle(sessions, config = {}) {
                 if (highs[i] > lr) { lr = highs[i]; lIdx = i; }
             }
 
-            // Right Rim (in 12 bars before handle)
+            // Right Rim (in 8 bars before handle)
             let rr = -Infinity, rIdx = ce;
-            for (let i = Math.max(cs + 20, ce - 12); i <= ce; i++) {
+            for (let i = Math.max(cs + 20, ce - 8); i <= ce; i++) {
                 if (highs[i] > rr) { rr = highs[i]; rIdx = i; }
+            }
+
+            // Handle Length Gate: Handle from right rim to breakout bar must be >= minHandleLen
+            const actualHandleLen = (n - 1) - rIdx;
+            if (actualHandleLen < minHandleLen || actualHandleLen > maxHandleLen) {
+                continue;
             }
 
             if (rIdx - lIdx < 22) continue;
@@ -216,20 +223,27 @@ function detectCupAndHandle(sessions, config = {}) {
             // Handle
             let hBot = Infinity;
             let cupVolSum = 0, hVolSum = 0;
-            for (let i = cs; i < ce; i++) cupVolSum += vols[i];
-            const avgCupVol = cupVolSum / (ce - cs);
+            for (let i = cs; i < rIdx; i++) cupVolSum += vols[i];
+            const avgCupVol = cupVolSum / (rIdx - cs);
 
-            for (let i = ce; i < n - 1; i++) {
+            for (let i = rIdx; i < n - 1; i++) {
                 if (lows[i] < hBot) hBot = lows[i];
                 hVolSum += vols[i];
             }
-            const avgHVol = hVolSum / (n - 1 - ce);
+            const avgHVol = hVolSum / (n - 1 - rIdx);
 
             const handleDepth = (rim - hBot) / rim;
             // Handle must be shallow (upper 45% of cup depth)
-            if (handleDepth > depth * 0.48 || handleDepth < 0.015) continue;
+            if (handleDepth > depth * 0.45 || handleDepth < 0.015) continue;
 
-            // FIX BUG 4: Volume Dry Up (VDU) - Handle volume must contract
+            // Handle cannot make a new high before the breakout candle
+            let handlePreBreakoutHigh = -Infinity;
+            for (let i = rIdx + 1; i < n - 1; i++) {
+                if (highs[i] > handlePreBreakoutHigh) handlePreBreakoutHigh = highs[i];
+            }
+            if (handlePreBreakoutHigh > rim * 1.008) continue;
+
+            // Volume Dry Up (VDU) - Handle volume must contract
             if (avgHVol > avgCupVol * 0.95) continue;
 
             const curC = closes[n - 1];
@@ -245,7 +259,8 @@ function detectCupAndHandle(sessions, config = {}) {
                     rightRim: rr,
                     cupBottom: cupBot,
                     handleBottom: hBot,
-                    barsInBottom
+                    barsInBottom,
+                    handleLen: actualHandleLen
                 };
             }
         }
@@ -257,6 +272,9 @@ function detectCupAndHandle(sessions, config = {}) {
  * 3. MULTI-MONTH BASE (Stage 2 Consolidation)
  * - FIX BUG 2: Groups touches into confirmed local swing peaks separated by >= 6 bars
  * - Requires >= 2 distinct peaks separated by >= 12 bars
+ * - V-Spike Gate: Price must not have been in lower half of base within last 8 bars
+ * - Minimum Handle Length: Price must have entered resistance ceiling zone >= 5 bars ago
+ * - Handle Tightness: Lowest low during handle must remain in upper 15% of ceiling
  */
 function detectMultiMonthBase(sessions, config = {}) {
     const n = sessions.length;
@@ -291,6 +309,34 @@ function detectMultiMonthBase(sessions, config = {}) {
             const curC = closes[n - 1];
             const prevC = closes[n - 2];
             if (curC > bh && prevC <= bh * 1.008) {
+                // 1. V-Spike Rejection Gate: Price must not have been in lower half of base within last 8 bars
+                let recentMinLow = Infinity;
+                for (let i = Math.max(start, n - 9); i < n - 1; i++) {
+                    if (lows[i] < recentMinLow) recentMinLow = lows[i];
+                }
+                const midBase = bl + 0.50 * (bh - bl);
+                if (recentMinLow < midBase) {
+                    continue; // Rejects vertical sprint from base floor
+                }
+
+                // 2. Minimum Handle Length Gate: Must have reached resistance zone >= 5 bars ago
+                const touchesNearBh = [];
+                for (let i = Math.max(start, n - 20); i < n - 1; i++) {
+                    if (highs[i] >= bh * 0.970) touchesNearBh.push(i);
+                }
+                if (touchesNearBh.length === 0 || (n - 1 - touchesNearBh[0] < 5)) {
+                    continue; // Handle too short ("handle to less")
+                }
+
+                const handleLen = (n - 1) - touchesNearBh[0];
+                let handleMinLow = Infinity;
+                for (let i = touchesNearBh[0]; i < n - 1; i++) {
+                    if (lows[i] < handleMinLow) handleMinLow = lows[i];
+                }
+                if (handleMinLow < bh * 0.88) {
+                    continue; // Handle broke down too deeply
+                }
+
                 // Structural stop anchored to recent 20-day base floor
                 let swingLow = Infinity;
                 for (let i = Math.max(start, n - 22); i < n - 1; i++) {
@@ -303,7 +349,8 @@ function detectMultiMonthBase(sessions, config = {}) {
                     baseLength: blen,
                     depthPct: +(depth * 100).toFixed(1),
                     distinctPeaks: distinctPeaks.length,
-                    floorPrice: bl
+                    floorPrice: bl,
+                    handleLen
                 };
             }
         }

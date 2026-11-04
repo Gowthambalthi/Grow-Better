@@ -82,10 +82,10 @@ def detect_ascending_triangle(highs, lows, closes, window=65):
                         }
     return None
 
-def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[55, 75], handle_lens=[12, 18]):
+def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[45, 60, 75], min_handle_len=5, max_handle_len=18):
     n = len(closes)
     for clen in cup_lens:
-        for hlen in handle_lens:
+        for hlen in range(min_handle_len, max_handle_len + 1, 2):
             tot = clen + hlen
             if n < tot + 30: continue
             cs = n - 1 - tot
@@ -99,8 +99,13 @@ def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[55, 75], handle_l
 
             lr = np.max(highs[cs : cs + 15])
             l_idx = cs + int(np.argmax(highs[cs : cs + 15]))
-            rr = np.max(highs[max(cs + 20, ce - 12) : ce + 1])
-            r_idx = max(cs + 20, ce - 12) + int(np.argmax(highs[max(cs + 20, ce - 12) : ce + 1]))
+            rr = np.max(highs[max(cs + 20, ce - 8) : ce + 1])
+            r_idx = max(cs + 20, ce - 8) + int(np.argmax(highs[max(cs + 20, ce - 8) : ce + 1]))
+
+            # Handle Length Gate: Handle from right rim to breakout bar must be >= min_handle_len
+            actual_handle_len = (n - 1) - r_idx
+            if actual_handle_len < min_handle_len or actual_handle_len > max_handle_len:
+                continue
 
             if r_idx - l_idx < 22 or abs(rr - lr) / lr > 0.038: continue
             rim = max(lr, rr)
@@ -119,12 +124,15 @@ def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[55, 75], handle_l
             if bot_pos < 0.20 or bot_pos > 0.80: continue
 
             # Handle & VDU
-            h_bot = np.min(lows[ce : n - 1])
+            h_bot = np.min(lows[r_idx : n - 1])
             handle_depth = (rim - h_bot) / rim
-            if handle_depth > depth * 0.48 or handle_depth < 0.015: continue
+            if handle_depth > depth * 0.45 or handle_depth < 0.015: continue
 
-            avg_cup_vol = np.mean(vols[cs : ce])
-            avg_h_vol = np.mean(vols[ce : n - 1])
+            # Handle cannot make a new high before the breakout candle
+            if np.max(highs[r_idx + 1 : n - 1]) > rim * 1.008: continue
+
+            avg_cup_vol = np.mean(vols[cs : r_idx])
+            avg_h_vol = np.mean(vols[r_idx : n - 1])
             if avg_h_vol > avg_cup_vol * 0.95: continue # VDU contraction
 
             cur_c = closes[-1]
@@ -135,7 +143,8 @@ def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[55, 75], handle_l
                     'level': float(rim),
                     'stop_level': float(h_bot * 0.995),
                     'depth_pct': round(depth * 100, 1),
-                    'handle_depth_pct': round(handle_depth * 100, 1)
+                    'handle_depth_pct': round(handle_depth * 100, 1),
+                    'handle_len': actual_handle_len
                 }
     return None
 
@@ -160,6 +169,22 @@ def detect_multi_month_base(highs, lows, closes, base_lens=[100, 75, 55, 35]):
             cur_c = closes[-1]
             prev_c = closes[-2]
             if cur_c > bh and prev_c <= bh * 1.008:
+                # 1. V-Spike Rejection Gate: Price must not have been in lower half of base within last 8 bars
+                recent_min_low = np.min(lows[max(start, n - 9) : n - 1])
+                mid_base = bl + 0.50 * (bh - bl)
+                if recent_min_low < mid_base:
+                    continue
+
+                # 2. Minimum Handle Length Gate: Must have reached resistance zone >= 5 bars ago
+                touches_near_bh = [i for i in range(max(start, n - 20), n - 1) if highs[i] >= bh * 0.970]
+                if not touches_near_bh or (n - 1 - touches_near_bh[0] < 5):
+                    continue
+
+                handle_len = (n - 1) - touches_near_bh[0]
+                handle_min_low = np.min(lows[touches_near_bh[0] : n - 1])
+                if handle_min_low < bh * 0.88:
+                    continue
+
                 swing_low = np.min(lows[max(start, n - 22) : n - 1])
                 return {
                     'pattern': 'MULTI_MONTH_BASE',
@@ -167,7 +192,8 @@ def detect_multi_month_base(highs, lows, closes, base_lens=[100, 75, 55, 35]):
                     'stop_level': float(swing_low * 0.995),
                     'base_len': blen,
                     'depth_pct': round(depth * 100, 1),
-                    'distinct_peaks': len(distinct_peaks)
+                    'distinct_peaks': len(distinct_peaks),
+                    'handle_len': handle_len
                 }
     return None
 
