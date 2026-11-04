@@ -82,59 +82,100 @@ def detect_ascending_triangle(highs, lows, closes, window=65):
                         }
     return None
 
-def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[45, 60, 75], min_handle_len=5, max_handle_len=18):
+def detect_cup_and_handle(highs, lows, closes, vols):
     n = len(closes)
-    for clen in cup_lens:
-        for hlen in range(min_handle_len, max_handle_len + 1, 2):
+    # Strict Cup & Handle Geometry Validation:
+    # Rule A: Cup duration 35 to 120 bars, Rim distance >= 30 bars, Depth 12% to 35%
+    # Rule B: Basin centering 35% to 65%, >= 5 bars in bottom quartile, left & right decline/recovery >= 10 bars
+    # Rule C: Left-right rim difference <= 3.0%
+    # Rule D: Handle depth from right rim <= 35% of cup depth, handle low in upper half of cup
+    # Rule E: Handle duration 5 to 20 bars, VDU contraction
+    for clen in [35, 45, 55, 65, 75, 90, 110]:
+        for hlen in range(5, 21, 2):
             tot = clen + hlen
             if n < tot + 30: continue
             cs = n - 1 - tot
             ce = n - 1 - hlen
 
-            # Prior uptrend validation: gain >= +20% in prior 100 bars
+            # 1. Prior uptrend validation: gain >= +20% in prior 100 bars
             prior_start = max(0, cs - 100)
             prior_min = np.min(lows[prior_start : cs + 1])
             if prior_min <= 0 or (highs[cs] - prior_min) / prior_min < 0.20:
                 continue
 
-            lr = np.max(highs[cs : cs + 15])
-            l_idx = cs + int(np.argmax(highs[cs : cs + 15]))
-            rr = np.max(highs[max(cs + 20, ce - 8) : ce + 1])
-            r_idx = max(cs + 20, ce - 8) + int(np.argmax(highs[max(cs + 20, ce - 8) : ce + 1]))
+            # 2. Left rim in first 18 bars of cup
+            lr = np.max(highs[cs : cs + 18])
+            l_idx = cs + int(np.argmax(highs[cs : cs + 18]))
 
-            # Handle Length Gate: Handle from right rim to breakout bar must be >= min_handle_len
-            actual_handle_len = (n - 1) - r_idx
-            if actual_handle_len < min_handle_len or actual_handle_len > max_handle_len:
+            # 3. Right rim in window before handle
+            rr = np.max(highs[max(cs + 30, ce - 8) : ce + 1])
+            r_idx = max(cs + 30, ce - 8) + int(np.argmax(highs[max(cs + 30, ce - 8) : ce + 1]))
+
+            # Rule A: Rim distance >= 30 bars, <= 120 bars
+            rim_dist = r_idx - l_idx
+            if rim_dist < 30 or rim_dist > 120:
                 continue
 
-            if r_idx - l_idx < 22 or abs(rr - lr) / lr > 0.038: continue
+            # Rule C: Rim symmetry <= 3.0%
+            rim_diff_pct = abs(rr - lr) / lr * 100.0
+            if rim_diff_pct > 3.0:
+                continue
+
             rim = max(lr, rr)
             cup_bot = np.min(lows[l_idx : r_idx + 1])
             bot_idx = l_idx + int(np.argmin(lows[l_idx : r_idx + 1]))
-            depth = (rim - cup_bot) / rim
-            if depth < 0.10 or depth > 0.35: continue
+            cup_depth = (rim - cup_bot) / rim
+            cup_depth_pct = cup_depth * 100.0
 
-            # FIX BUG 4: U-Shaped Basin Curvature Check
+            # Rule A: Cup depth between 12% and 35%
+            if cup_depth_pct < 12.0 or cup_depth_pct > 35.0:
+                continue
+
+            # Rule B: Basin centering between 35% and 65% of rim distance
+            bot_pos = (bot_idx - l_idx) / rim_dist
+            if bot_pos < 0.35 or bot_pos > 0.65:
+                continue
+
+            # Rule B: Both left-side decline (>=10 bars) and right-side recovery (>=10 bars) must be visible
+            if (bot_idx - l_idx < 10) or (r_idx - bot_idx < 10):
+                continue
+
+            # Rule B: At least 5 candles trading near the bottom region (bottom quartile)
             bottom_quartile = cup_bot + 0.25 * (rim - cup_bot)
             bars_in_bottom = sum(1 for i in range(l_idx, r_idx + 1) if lows[i] <= bottom_quartile)
-            if bars_in_bottom < 4: continue
+            if bars_in_bottom < 5:
+                continue
 
-            # Centered bowl check
-            bot_pos = (bot_idx - l_idx) / (r_idx - l_idx)
-            if bot_pos < 0.20 or bot_pos > 0.80: continue
+            # Rule E: Handle duration must be 5 to 20 bars
+            actual_handle_len = (n - 1) - r_idx
+            if actual_handle_len < 5 or actual_handle_len > 20:
+                continue
 
-            # Handle & VDU
+            # Rule D: Handle depth from right rim rr and ratio <= 0.35
             h_bot = np.min(lows[r_idx : n - 1])
-            handle_depth = (rim - h_bot) / rim
-            if handle_depth > depth * 0.45 or handle_depth < 0.015: continue
+            handle_depth = (rr - h_bot) / rr
+            handle_ratio = handle_depth / cup_depth
+            if handle_ratio > 0.35:
+                continue
 
-            # Handle cannot make a new high before the breakout candle
-            if np.max(highs[r_idx + 1 : n - 1]) > rim * 1.008: continue
+            # Rule D: Handle must remain in upper half of cup
+            cup_midpoint = cup_bot + (rim - cup_bot) * 0.50
+            if h_bot < cup_midpoint:
+                continue
 
+            # No premature breakout inside handle
+            if np.max(highs[r_idx + 1 : n - 1]) > rim * 1.008:
+                continue
+
+            # VDU (Volume Dry-Up) during handle
             avg_cup_vol = np.mean(vols[cs : r_idx])
             avg_h_vol = np.mean(vols[r_idx : n - 1])
-            if avg_h_vol > avg_cup_vol * 0.95: continue # VDU contraction
+            if avg_h_vol > avg_cup_vol * 0.95:
+                continue
 
+            # ==========================================
+            # STAGE 2: BREAKOUT DETECTION ON CANDLE n-1
+            # ==========================================
             cur_c = closes[-1]
             prev_c = closes[-2]
             if cur_c > rim and prev_c <= rim * 1.008:
@@ -142,10 +183,14 @@ def detect_cup_and_handle(highs, lows, closes, vols, cup_lens=[45, 60, 75], min_
                     'pattern': 'CUP_AND_HANDLE',
                     'level': float(rim),
                     'stop_level': float(h_bot * 0.995),
-                    'depth_pct': round(depth * 100, 1),
-                    'handle_depth_pct': round(handle_depth * 100, 1),
-                    'handle_len': actual_handle_len
+                    'depth_pct': round(cup_depth_pct, 1),
+                    'handle_depth_pct': round(handle_depth * 100.0, 1),
+                    'handle_ratio': round(handle_ratio, 2),
+                    'handle_len': actual_handle_len,
+                    'bars_in_bottom': bars_in_bottom,
+                    'bot_pos': round(bot_pos, 2)
                 }
+
     return None
 
 def detect_multi_month_base(highs, lows, closes, base_lens=[100, 75, 55, 35]):

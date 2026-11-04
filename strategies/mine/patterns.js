@@ -148,9 +148,15 @@ function detectAscendingTriangle(sessions, window = 65) {
  */
 function detectCupAndHandle(sessions, config = {}) {
     const n = sessions.length;
-    const cupLens = config.cupLens || [45, 60, 75];
+    // Strict Cup & Handle Geometry Validation:
+    // Rule A: Cup duration 35 to 120 bars, Rim distance >= 30 bars, Depth 12% to 35%
+    // Rule B: Basin centering 35% to 65%, >= 5 bars in bottom quartile, left & right decline/recovery >= 10 bars
+    // Rule C: Left-right rim difference <= 3.0%
+    // Rule D: Handle depth from right rim <= 35% of cup depth, handle low in upper half of cup
+    // Rule E: Handle duration 5 to 20 bars, VDU contraction
+    const cupLens = config.cupLens || [35, 45, 55, 65, 75, 90, 110];
     const minHandleLen = config.minHandleLen || 5;
-    const maxHandleLen = config.maxHandleLen || 18;
+    const maxHandleLen = config.maxHandleLen || 20;
 
     const highs = sessions.map(s => s.high);
     const lows = sessions.map(s => s.low);
@@ -165,7 +171,7 @@ function detectCupAndHandle(sessions, config = {}) {
             const cs = n - 1 - tot;
             const ce = n - 1 - hlen;
 
-            // Prior Uptrend Validation: Price must have advanced >= +20% in prior 100 bars
+            // 1. Prior Uptrend Validation: Price must have advanced >= +20% in prior 100 bars
             const priorStart = Math.max(0, cs - 100);
             let priorMin = Infinity;
             for (let i = priorStart; i <= cs; i++) {
@@ -175,26 +181,25 @@ function detectCupAndHandle(sessions, config = {}) {
                 continue; // Reject cups in downtrends
             }
 
-            // Left Rim (in first 15 bars of cup)
+            // 2. Left Rim in first 18 bars of cup
             let lr = -Infinity, lIdx = cs;
-            for (let i = cs; i < cs + 15; i++) {
+            for (let i = cs; i < cs + 18; i++) {
                 if (highs[i] > lr) { lr = highs[i]; lIdx = i; }
             }
 
-            // Right Rim (in 8 bars before handle)
+            // 3. Right Rim in window before handle
             let rr = -Infinity, rIdx = ce;
-            for (let i = Math.max(cs + 20, ce - 8); i <= ce; i++) {
+            for (let i = Math.max(cs + 30, ce - 8); i <= ce; i++) {
                 if (highs[i] > rr) { rr = highs[i]; rIdx = i; }
             }
 
-            // Handle Length Gate: Handle from right rim to breakout bar must be >= minHandleLen
-            const actualHandleLen = (n - 1) - rIdx;
-            if (actualHandleLen < minHandleLen || actualHandleLen > maxHandleLen) {
-                continue;
-            }
+            // Rule A: Rim distance >= 30 bars, <= 120 bars
+            const rimDist = rIdx - lIdx;
+            if (rimDist < 30 || rimDist > 120) continue;
 
-            if (rIdx - lIdx < 22) continue;
-            if (Math.abs(rr - lr) / lr > 0.038) continue; // Rim alignment within 3.8%
+            // Rule C: Rim symmetry <= 3.0%
+            const rimDiffPct = Math.abs(rr - lr) / lr * 100.0;
+            if (rimDiffPct > 3.0) continue;
 
             const rim = Math.max(lr, rr);
 
@@ -204,23 +209,32 @@ function detectCupAndHandle(sessions, config = {}) {
                 if (lows[i] < cupBot) { cupBot = lows[i]; botIdx = i; }
             }
 
-            const depth = (rim - cupBot) / rim;
-            if (depth < 0.10 || depth > 0.35) continue; // 10% to 35% depth
+            const cupDepth = (rim - cupBot) / rim;
+            const cupDepthPct = cupDepth * 100.0;
+            if (cupDepthPct < 12.0 || cupDepthPct > 35.0) continue; // 12% to 35% depth
 
-            // FIX BUG 4: U-Shaped Basin Curvature Check (Rejects sharp V-bottoms)
+            // Rule B: Basin centering between 35% and 65% of rim distance
+            const botPos = (botIdx - lIdx) / rimDist;
+            if (botPos < 0.35 || botPos > 0.65) continue;
+
+            // Rule B: Both left-side decline (>=10 bars) and right-side recovery (>=10 bars) must be visible
+            if ((botIdx - lIdx < 10) || (rIdx - botIdx < 10)) continue;
+
+            // Rule B: At least 5 candles trading near the bottom region (bottom quartile)
             const bottomQuartile = cupBot + 0.25 * (rim - cupBot);
             let barsInBottom = 0;
             for (let i = lIdx; i <= rIdx; i++) {
                 if (lows[i] <= bottomQuartile) barsInBottom++;
             }
-            if (barsInBottom < 4) continue; // Rejects sharp V-bottoms!
+            if (barsInBottom < 5) continue; // Rejects sharp V-bottoms!
 
-            // Centered bowl symmetry (bottom should be within 20% to 80% of cup span)
-            const cupSpan = rIdx - lIdx;
-            const botPos = (botIdx - lIdx) / cupSpan;
-            if (botPos < 0.20 || botPos > 0.80) continue;
+            // Rule E: Handle duration must be 5 to 20 bars
+            const actualHandleLen = (n - 1) - rIdx;
+            if (actualHandleLen < minHandleLen || actualHandleLen > maxHandleLen) {
+                continue;
+            }
 
-            // Handle
+            // Rule D: Handle depth from right rim rr and ratio <= 0.35
             let hBot = Infinity;
             let cupVolSum = 0, hVolSum = 0;
             for (let i = cs; i < rIdx; i++) cupVolSum += vols[i];
@@ -232,9 +246,13 @@ function detectCupAndHandle(sessions, config = {}) {
             }
             const avgHVol = hVolSum / (n - 1 - rIdx);
 
-            const handleDepth = (rim - hBot) / rim;
-            // Handle must be shallow (upper 45% of cup depth)
-            if (handleDepth > depth * 0.45 || handleDepth < 0.015) continue;
+            const handleDepth = (rr - hBot) / rr;
+            const handleRatio = handleDepth / cupDepth;
+            if (handleRatio > 0.35) continue;
+
+            // Rule D: Handle must remain in upper half of cup
+            const cupMidpoint = cupBot + (rim - cupBot) * 0.50;
+            if (hBot < cupMidpoint) continue;
 
             // Handle cannot make a new high before the breakout candle
             let handlePreBreakoutHigh = -Infinity;
@@ -246,6 +264,7 @@ function detectCupAndHandle(sessions, config = {}) {
             // Volume Dry Up (VDU) - Handle volume must contract
             if (avgHVol > avgCupVol * 0.95) continue;
 
+            // STAGE 2: BREAKOUT DETECTION ON CANDLE n-1
             const curC = closes[n - 1];
             const prevC = closes[n - 2];
             if (curC > rim && prevC <= rim * 1.008) {
@@ -253,14 +272,16 @@ function detectCupAndHandle(sessions, config = {}) {
                     pattern: 'CUP_AND_HANDLE',
                     level: rim,
                     stopLevel: hBot * 0.995,
-                    depthPct: +(depth * 100).toFixed(1),
+                    depthPct: +cupDepthPct.toFixed(1),
                     handleDepthPct: +(handleDepth * 100).toFixed(1),
+                    handleRatio: +handleRatio.toFixed(2),
                     leftRim: lr,
                     rightRim: rr,
                     cupBottom: cupBot,
                     handleBottom: hBot,
                     barsInBottom,
-                    handleLen: actualHandleLen
+                    handleLen: actualHandleLen,
+                    botPos: +botPos.toFixed(2)
                 };
             }
         }
