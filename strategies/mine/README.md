@@ -1,56 +1,65 @@
-# Core 4-Pattern Breakout Strategy (Engine 1 - v7)
+# Core Institutional Pattern Breakout Strategy (Engine 1 - v7)
 
 > **Flagship Institutional Pattern Engine for NSE Equities**  
-> Covers **Cup & Handle + RSI**, **Inverse Head & Shoulders + RSI**, **Rectangle Breakout + RSI**, and **Ascending Triangle + RSI** across the full 1,006 liquid NSE universe with realistic Indian delivery friction (**0.28% round-trip**).
+> Covers **Classic Cup & Handle**, **Ascending Triangle**, **Multi-Month Base**, **Symmetrical Triangle**, and **Inverse Head & Shoulders** across the full 997 liquid NSE universe with realistic Indian delivery friction (**0.28% round-trip**).
 
 ---
 
-## 1. Executive Summary
+## 1. Modular Architecture in `strategies/mine/`
 
-- **Core Patterns**:
-  1. **Cup & Handle + RSI**: 25–90 bar rounded accumulation base, shallow handle ($\le 45\%$ of cup depth), breakout above rim.
-  2. **Inverse Head & Shoulders + RSI**: Capitulation head, symmetrical shoulders ($\pm 6\%$), breakout above neckline.
-  3. **Rectangle Consolidation + RSI**: 30-bar tight base (height $\le 14\%$) with breakout above ceiling.
-  4. **Ascending Triangle + RSI**: Flat upper resistance ($\ge 2$ tests within 2%) with rising higher swing lows, breakout above resistance.
-- **RSI Confluence**: RSI 14 strictly between **48 and 75** (healthy momentum initiation, rejecting exhaustion wicks $> 75$).
-- **Relative Strength**: Stock 60-day return must outperform NIFTY 50 by $\ge 15\%$.
-- **Structural Stops**: Stop placed at the **Handle Low** (Cup & Handle), **Right Shoulder Low** (Inverse H&S), **Box Floor** (Rectangle), or **Rising Swing Low** (Ascending Triangle), bounded between 2.5% and 7.5%.
-- **Exit Architecture**:
-  - **Tranche 1**: 50% profit booked at **+8.0%**.
-  - **Breakeven Ratchet**: Stop immediately moved to Entry + 0.2% upon hitting +1.2R.
-  - **Tranche 2 Runner**: Remaining 50% trailed via **20 EMA**.
+To keep pattern recognition visually verifiable and decoupled from execution logic, all shape detection algorithms are organized in dedicated pattern modules:
 
----
-
-## 2. Quantitative Performance Across Liquid NSE Universe (3-Year Zero-Lookahead Simulation)
-
-| Metric | Overall Portfolio (3 Years) | In-Sample (< Apr 2025) | Out-of-Sample (>= Apr 2025) |
-| :--- | :--- | :--- | :--- |
-| **Total Portfolio Trades** | **603 trades (4.02 calls/week)** | 271 trades | **332 trades** |
-| **Win Rate** | **52.6%** | 50.9% | **53.9%** |
-| **Profit Factor (Net)** | **1.08** | 0.91 | **1.34** |
-| **Net Realized R** | **+25.3R** | +2.1R | **+23.2R** |
-| **Average Winner Return** | **+7.78%** | +7.62% | **+7.91%** |
-| **Average Loser Return** | **-7.92%** | -8.11% | **-7.76%** |
-| **Execution Sizing** | **20 Concurrent Slots (5% allocation each)** | 20 Slots | 20 Slots |
-
----
-
-## 3. Pattern Characteristics
-
-| Pattern | Win Rate | Profit Factor | Key Characteristic |
-| :--- | :--- | :--- | :--- |
-| **Ascending Triangle** | **42.8%** | **1.01** | High continuation probability; rising demand floor |
-| **Rectangle Breakout** | **44.5%** | **1.03** | Highest base win rate; clean floor support |
-| **Inverse Head & Shoulders** | **39.8%** | **0.97** | Largest individual runner gains (+19% to +26%) |
-| **Cup & Handle** | **37.5%** | **0.88** | Quickest to target; 40.5% hit target in Week 1 |
-
----
-
-## 4. File Architecture
-
-- [`config.py`](config.py): Single authoritative configuration parameters.
-- [`resistanceBreakoutStrategy.js`](resistanceBreakoutStrategy.js): High-speed JavaScript engine implementation.
+- [`patterns.js`](patterns.js): High-speed JavaScript pattern detector with normalized geometric angles ($\theta_{\text{sup}}, \theta_{\text{res}}$), swing highs/lows, and structural stops.
+- [`patterns.py`](patterns.py): Python counterpart for multi-year backtesting scripts in `scripts/`.
+- [`resistanceBreakoutStrategy.js`](resistanceBreakoutStrategy.js): Main trading strategy orchestrator. Imports `patterns.js`, executes risk management (RSI sweet spot 48–85, anti-chasing limit orders, targets, and stops).
 - [`resistance_breakout_v6.pine`](resistance_breakout_v6.pine): TradingView Pine Script v6 indicator with visual stops and targets.
-- [`scripts/portfolio_simulator.py`](scripts/portfolio_simulator.py): Zero-lookahead dated daily portfolio simulator.
-- [`data/portfolio_simulation_results.json`](data/portfolio_simulation_results.json): Full dated trade logs.
+
+---
+
+## 2. Core Geometric & Structural Patterns
+
+1. **Ascending Triangle (`detectAscendingTriangle`)**:
+   - Flat resistance ceiling with $\ge 3$ distinct tests ($\pm 1.8\%$, angle $|\theta_{\text{res}}| \le 6.0^\circ$).
+   - At least 3 strictly ascending swing lows ($L_1 < L_2 < L_3$, angle $\theta_{\text{sup}} \ge +10.0^\circ$).
+   - Structural stop: Anchored below the last ascending swing low ($L_3 \times 0.995$).
+
+2. **Classic Cup & Handle (`detectCupAndHandle`)**:
+   - U-shaped accumulation basin (depth 10% to 35%).
+   - Rim alignment within 3.8% between left and right peaks.
+   - Downward/flat drifting handle (slope $\le +2.5^\circ$) in the upper 48% of the cup.
+   - Structural stop: Anchored below the handle low trough.
+
+3. **Multi-Month Base (`detectMultiMonthBase`)**:
+   - 35 to 100-day tight consolidation base (depth 7% to 30%).
+   - Distinct resistance tests separated by $\ge 12$ bars.
+   - Structural stop: Anchored below recent 20-day base floor.
+
+4. **Symmetrical Triangle / Coil (`detectSymmetricalTriangle`)**:
+   - Converging volatility contraction ($H_1 > H_2$, $L_1 < L_2$).
+   - Upper resistance angle $\le -5.0^\circ$, lower support angle $\ge +5.0^\circ$.
+   - Structural stop: Anchored below the contraction swing low ($L_2$).
+
+5. **Inverse Head & Shoulders (`detectInverseHeadAndShoulders`)**:
+   - Symmetrical left and right shoulders ($|RS/LS - 1.0| \le 5.5\%$).
+   - Capitulation head strictly lower than both shoulders by $\ge 3.0\%$.
+   - Structural stop: Anchored below the right shoulder low.
+
+---
+
+## 3. Usage Example
+
+```javascript
+// In Node.js:
+const { ResistanceBreakoutStrategy, patterns } = require("./strategies/mine/resistanceBreakoutStrategy");
+
+// Direct pattern detection:
+const pattern = patterns.detectPattern(sessions);
+console.log(pattern);
+
+// Full strategy signal generation:
+const strategy = new ResistanceBreakoutStrategy();
+const signal = strategy.onBar(sessions);
+if (signal) {
+    console.log(`BUY Signal on ${signal.pattern} at ₹${signal.patternLevel}, SL: ₹${signal.stopLoss}`);
+}
+```
