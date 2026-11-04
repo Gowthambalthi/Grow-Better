@@ -1,44 +1,54 @@
 //@version=6
-indicator("4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, Triangle) [OpenAlgo MTF 1H/15M]", overlay=true)
+indicator("4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, Triangle) [OpenAlgo MTF 1H/15M + Relative Strength]", overlay=true)
 
 // ==============================================================================
-// 1. INPUTS & CONFIGURATION (Calibrated MTF: 1-Hour Base + 15-Min Confirmation)
+// 1. INPUTS & CONFIGURATION (Institutional RS + MTF 1H Base + 15M Trigger)
 // ==============================================================================
 baseTf            = input.timeframe("60", "Base Pattern Timeframe (1H / 4H)")
 useDailyFilter    = input.bool(true, "Require Daily Trend Gate (Close > 50 EMA & 20 > 50 EMA)")
+useRsFilter       = input.bool(true, "Require Relative Strength vs NIFTY >= +15%")
+minRsOutperf      = input.float(15.0, "Min Relative Strength Outperformance %", step=1.0)
+maxDist200Ema     = input.float(50.0, "Anti-Climax Max Distance above 200 EMA %", step=5.0)
+
 rsiPeriod         = input.int(14, "RSI Period", minval=5)
 rsiMin            = input.float(50.0, "RSI Min (Healthy Momentum)", step=1.0)
 rsiMax            = input.float(74.0, "RSI Max (Anti-Exhaustion Cap)", step=1.0)
 
 minRiskPct        = input.float(2.5, "Min Stop Distance %", step=0.5) / 100.0
-maxRiskPct        = input.float(7.0, "Max Stop Distance %", step=0.5) / 100.0
-target1Pct        = input.float(8.0, "Target 1 % (Take 50% Profit)", step=0.5) / 100.0
+maxRiskPct        = input.float(6.5, "Max Stop Distance %", step=0.5) / 100.0
+target1Pct        = input.float(5.0, "Target 1 % (Take 50% Profit & Move SL to BE)", step=0.5) / 100.0
+target2Pct        = input.float(9.0, "Target 2 % (Runner Target)", step=0.5) / 100.0
 minVolMult        = input.float(1.25, "15m Breakout Volume Surge (x 20 SMA)", step=0.05)
 
 // ==============================================================================
-// 2. HIGHER TIMEFRAME (DAILY) TREND GATE
+// 2. HIGHER TIMEFRAME (DAILY) TREND GATE & RELATIVE STRENGTH (RS) VS NIFTY
 // ==============================================================================
-dClose = request.security(syminfo.tickerid, "D", close)
-dEma50 = request.security(syminfo.tickerid, "D", ta.ema(close, 50))
-dEma20 = request.security(syminfo.tickerid, "D", ta.ema(close, 20))
+dClose  = request.security(syminfo.tickerid, "D", close)
+dEma50  = request.security(syminfo.tickerid, "D", ta.ema(close, 50))
+dEma20  = request.security(syminfo.tickerid, "D", ta.ema(close, 20))
+dEma200 = request.security(syminfo.tickerid, "D", ta.ema(close, 200))
 bool dailyTrendOk = not useDailyFilter or (dClose > dEma50 and dEma20 > dEma50)
+bool notClimax = (dEma200 > 0 ? (dClose - dEma200) / dEma200 * 100.0 <= maxDist200Ema : true)
+
+// Relative Strength Calculation vs NIFTY 50 (45-day lookback)
+niftyClose = request.security("NSE:NIFTY", "D", close)
+stockRet45 = (dClose - dClose[45]) / (dClose[45] + 1e-9) * 100.0
+niftyRet45 = (niftyClose - niftyClose[45]) / (niftyClose[45] + 1e-9) * 100.0
+float rsOutperf = stockRet45 - niftyRet45
+bool rsOk = not useRsFilter or (rsOutperf >= minRsOutperf)
 
 // ==============================================================================
-// 3. BASE TIMEFRAME PATTERN RECOGNITION (REQUESTED FROM 1-HOUR / 4-HOUR)
+// 3. BASE TIMEFRAME PATTERN RECOGNITION (1-HOUR BARS)
 // ==============================================================================
 baseHigh   = request.security(syminfo.tickerid, baseTf, high)
 baseLow    = request.security(syminfo.tickerid, baseTf, low)
 baseClose  = request.security(syminfo.tickerid, baseTf, close)
-baseVol    = request.security(syminfo.tickerid, baseTf, volume)
 
-// 1H Technicals
+// 1H RSI
 baseRsi = ta.rsi(baseClose, rsiPeriod)
 bool rsiValid = (baseRsi >= rsiMin and baseRsi <= rsiMax)
 
 // Pattern 1: Classic Textbook Cup & Handle
-// - Left & Right rims aligned horizontally within <= 3%
-// - Absolute ceiling: no candle in base > rim * 1.015
-// - Shallow handle retrace (15% to 45% of cup depth)
 hCupH = ta.highest(baseHigh[8], 45)
 hCupL = ta.lowest(baseLow[8], 45)
 hHandleL = ta.lowest(baseLow[1], 8)
@@ -48,16 +58,16 @@ baseMaxH = ta.highest(baseHigh[1], 55)
 
 bool ceilingValid = (baseMaxH <= hCupH * 1.015)
 bool cupDepthValid = (hCupDepth >= 0.10 and hCupDepth <= 0.28)
-bool handleRatioValid = (hHandleDepth >= 0.015 and hHandleDepth <= hCupDepth * 0.45)
+bool handleRatioValid = (hHandleDepth >= 0.015 and hHandleDepth <= hCupDepth * 0.42)
 bool cup1HBreakout = ceilingValid and cupDepthValid and handleRatioValid and (baseClose > hCupH * 0.998)
 
-// Pattern 2: Rectangle Consolidation Base (30 bars, width <= 12%)
+// Pattern 2: Rectangle Base
 rectH = ta.highest(baseHigh[1], 30)
 rectL = ta.lowest(baseLow[1], 30)
 rectRangePct = ((rectH - rectL) / rectL) * 100.0
 bool rect1HBreakout = (rectRangePct <= 12.0) and (baseClose > rectH) and (baseClose[1] <= rectH * 1.005)
 
-// Pattern 3: Ascending Triangle (Flat ceiling + rising lows)
+// Pattern 3: Ascending Triangle
 triH = ta.highest(baseHigh[1], 35)
 triL1 = ta.lowest(baseLow[18], 18)
 triL2 = ta.lowest(baseLow[1], 18)
@@ -68,31 +78,30 @@ bool tri1HBreakout = (triL2 > triL1 * 1.015) and (baseClose > triH) and (baseClo
 // ==============================================================================
 volSma20 = ta.sma(volume, 20)
 bool m15VolSurge = (volume >= volSma20 * minVolMult)
-bool notMorningTrap = (hour != 9 or minute >= 45) // Skip 09:15-09:45 morning gap trap
+bool notMorningTrap = (hour != 9 or minute >= 45)
 
 bool isSignal = false
 string detectedPattern = ""
 float patternRim = 0.0
 float structStop = 0.0
 
-if dailyTrendOk and rsiValid and notMorningTrap
+if dailyTrendOk and notClimax and rsOk and rsiValid and notMorningTrap
     if cup1HBreakout and (close >= hCupH * 0.998) and m15VolSurge
         isSignal := true
-        detectedPattern := "1H Cup & Handle"
+        detectedPattern := "1H Cup & Handle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
         patternRim := hCupH
         structStop := hHandleL
     else if rect1HBreakout and (close >= rectH) and m15VolSurge
         isSignal := true
-        detectedPattern := "1H Rectangle"
+        detectedPattern := "1H Rectangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
         patternRim := rectH
         structStop := rectL
     else if tri1HBreakout and (close >= triH) and m15VolSurge
         isSignal := true
-        detectedPattern := "1H Ascending Triangle"
+        detectedPattern := "1H Ascending Triangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
         patternRim := triH
         structStop := triL2
 
-// Filter consecutive triggers
 bool trigger = isSignal and not isSignal[1]
 
 // Stop-Loss and Target Clamping
@@ -100,9 +109,10 @@ float rawRisk = (close - structStop) / close
 float clampedRisk = math.max(minRiskPct, math.min(maxRiskPct, rawRisk))
 float finalStop = close * (1.0 - clampedRisk)
 float target1 = close * (1.0 + target1Pct)
+float target2 = close * (1.0 + target2Pct)
 
 // ==============================================================================
-// 5. VISUAL PLOTS & CALL ANNOTATIONS
+// 5. PLOTS & ALERTS
 // ==============================================================================
 plotshape(trigger, title="Breakout Call", location=location.belowbar,
           color=color.rgb(0, 230, 118), style=shape.labelup, size=size.normal,
@@ -110,7 +120,8 @@ plotshape(trigger, title="Breakout Call", location=location.belowbar,
 
 plot(trigger ? patternRim : na, "Breakout Rim", color=color.yellow, style=plot.style_linebr, linewidth=2)
 plot(trigger ? finalStop : na, "Stop Loss", color=color.red, style=plot.style_linebr, linewidth=2)
-plot(trigger ? target1 : na, "Target 1 (+8%)", color=color.green, style=plot.style_linebr, linewidth=2)
+plot(trigger ? target1 : na, "Target 1 (+5%)", color=color.rgb(0, 230, 118), style=plot.style_linebr, linewidth=2)
+plot(trigger ? target2 : na, "Target 2 (+9%)", color=color.rgb(76, 175, 80), style=plot.style_linebr, linewidth=2)
 
 if trigger
-    alert("OpenAlgo Breakout Call: " + syminfo.ticker + " (" + detectedPattern + ") Entry: " + str.tostring(close) + " SL: " + str.tostring(finalStop, "#.##") + " T1: " + str.tostring(target1, "#.##"), alert.freq_once_per_bar_close)
+    alert("OpenAlgo RS Breakout Call: " + syminfo.ticker + " (" + detectedPattern + ") Entry: " + str.tostring(close) + " SL: " + str.tostring(finalStop, "#.##") + " T1: " + str.tostring(target1, "#.##") + " T2: " + str.tostring(target2, "#.##"), alert.freq_once_per_bar_close)

@@ -44,9 +44,10 @@ class ResistanceBreakoutStrategy {
 
         // Risk & Targets
         this.minRiskPct = config.minRiskPct ?? 0.025;
-        this.maxRiskPct = config.maxRiskPct ?? 0.075;
-        this.target1Pct = config.target1Pct ?? 0.08;
-        this.breakevenTriggerR = config.breakevenTriggerR ?? 1.2;
+        this.maxRiskPct = config.maxRiskPct ?? 0.065;
+        this.target1Pct = config.target1Pct ?? 0.050; // Tranche 1: +5.0% (Book 50% profit & move SL to BE)
+        this.target2Pct = config.target2Pct ?? 0.090; // Tranche 2: +9.0% Runner
+        this.breakevenTriggerR = config.breakevenTriggerR ?? 1.0;
         this.trailTriggerR = config.trailTriggerR ?? 2.0;
         this.maxHoldBars = config.maxHoldBars ?? 35;
         this.frictionBps = config.frictionBps ?? 28.0;
@@ -267,6 +268,16 @@ class ResistanceBreakoutStrategy {
             }
         }
 
+        // 2b. Anti-Climax Guard: Reject stocks extended > 50% above 200 EMA
+        if (n >= 150) {
+            let ema200 = closes[0];
+            const k200 = 2 / 201;
+            for (let i = 1; i < n; i++) ema200 = closes[i] * k200 + ema200 * (1 - k200);
+            if (curBar.close > ema200 * 1.50) {
+                return null;
+            }
+        }
+
         // 3. Pattern Recognition (in priority order)
         let detected = this.detectCupAndHandle(sessions);
         if (!detected) detected = this.detectInverseHS(sessions);
@@ -307,6 +318,7 @@ class ResistanceBreakoutStrategy {
 
         const cashRisk = curC - structSl;
         const target1 = curC * (1 + this.target1Pct);
+        const target2 = curC * (1 + this.target2Pct);
 
         return {
             signal: 'BUY',
@@ -314,6 +326,7 @@ class ResistanceBreakoutStrategy {
             patternLevel: detected.level,
             stopLoss: structSl,
             target1: target1,
+            target2: target2,
             rsi: rsi,
             riskPct: riskPct * 100,
             cashRisk: cashRisk
