@@ -88,6 +88,7 @@ def extract_trio_signals(stock_data, nifty_map):
             # 4. Pattern Detection
             detected_pattern = None
             stop_level = None
+            pat_level = None
 
             # A. Cup & Handle
             if 'CUP_HANDLE' in ACTIVE_PATTERNS:
@@ -111,6 +112,7 @@ def extract_trio_signals(stock_data, nifty_map):
                                 if cur_c > rim * 0.998 and c[i - 1] <= rim * 1.005:
                                     detected_pattern = 'CUP_AND_HANDLE'
                                     stop_level = handle_low
+                                    pat_level = rim
                                     break
 
             # B. Inverse Head & Shoulders
@@ -126,25 +128,32 @@ def extract_trio_signals(stock_data, nifty_map):
                         if cur_c > neck and c[i - 1] <= neck * 1.005:
                             detected_pattern = 'INVERSE_HS'
                             stop_level = rs
+                            pat_level = neck
 
             # C. Rectangle Consolidation
             if not detected_pattern and 'RECTANGLE' in ACTIVE_PATTERNS:
                 if i >= RECT_WINDOW:
-                    box_h = np.max(h[i - RECT_WINDOW : i])
-                    box_l = np.min(l[i - RECT_WINDOW : i])
+                    win_h = h[i - RECT_WINDOW : i]
+                    win_l = l[i - RECT_WINDOW : i]
+                    box_h = np.max(win_h)
+                    box_l = np.min(win_l)
                     range_pct = (box_h - box_l) / box_l * 100.0
                     if range_pct <= RECT_MAX_RANGE_PCT:
-                        if cur_c > box_h and c[i - 1] <= box_h * 1.005:
-                            detected_pattern = 'RECTANGLE'
-                            stop_level = box_l
+                        # Horizontal base drift check: Eliminates diagonal trend movers (like GNFC)
+                        base_drift = abs(c[i - 1] - c[i - RECT_WINDOW]) / c[i - RECT_WINDOW]
+                        if base_drift <= 0.05:
+                            if cur_c > box_h and c[i - 1] <= box_h * 1.005:
+                                detected_pattern = 'RECTANGLE'
+                                stop_level = box_l
+                                pat_level = box_h
 
-            # D. Ascending Triangle (Flat resistance + rising lows)
+            # D. Ascending Triangle
             if not detected_pattern and 'ASCENDING_TRIANGLE' in ACTIVE_PATTERNS:
                 if i >= 40:
                     win_start = i - 40
-                    tri_res = np.max(h[win_start : i])
-                    # Count touches of resistance within 2%
-                    touches = np.sum(h[win_start : i] >= tri_res * 0.98)
+                    win_h = h[win_start : i]
+                    tri_res = np.max(win_h)
+                    touches = np.sum(win_h >= tri_res * 0.98)
                     if touches >= 2:
                         first_low = np.min(l[win_start : win_start + 20])
                         second_low = np.min(l[win_start + 20 : i])
@@ -152,8 +161,17 @@ def extract_trio_signals(stock_data, nifty_map):
                             if cur_c > tri_res and c[i - 1] <= tri_res * 1.005:
                                 detected_pattern = 'ASCENDING_TRIANGLE'
                                 stop_level = second_low
+                                pat_level = tri_res
 
             if detected_pattern:
+                # 1. Capped Buy Pocket (No chasing > 3.0% above broken level)
+                if cur_c > pat_level * 1.03:
+                    continue
+                # 2. Volume Surge Confirmation (>= 1.15x 20-day SMA)
+                vol_sma20 = np.mean(v[i-20:i])
+                if v[i] < vol_sma20 * 1.15:
+                    continue
+
                 signals.append({
                     'symbol': sym,
                     'pattern': detected_pattern,

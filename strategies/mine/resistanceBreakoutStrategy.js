@@ -54,8 +54,8 @@ class ResistanceBreakoutStrategy {
         // Portfolio Slots (Strict 20-slot institutional capacity calibrated for 4-5 calls/week)
         this.maxConcurrentPositions = config.maxConcurrentPositions ?? 20;
         this.capitalPerPosition = config.capitalPerPosition ?? 50000;
-        this.maxExtension = config.maxExtension ?? 1.025; // Capped buy pocket (no chasing > 2.5%)
-        this.minVolumeSurge = config.minVolumeSurge ?? 1.25; // 1.25x 20-day SMA volume surge
+        this.maxExtension = config.maxExtension ?? 1.03; // Capped buy pocket (no chasing > 3.0%)
+        this.minVolumeSurge = config.minVolumeSurge ?? 1.15; // 1.15x 20-day SMA volume surge
     }
 
     calculateRSI(closes, period = 14) {
@@ -148,16 +148,21 @@ class ResistanceBreakoutStrategy {
         const n = sessions.length;
         if (n < this.rectWindow + 2) return null;
         let boxH = -Infinity, boxL = Infinity;
-        for (let i = n - 1 - this.rectWindow; i < n - 1; i++) {
+        const startIdx = n - 1 - this.rectWindow;
+        for (let i = startIdx; i < n - 1; i++) {
             if (sessions[i].high > boxH) boxH = sessions[i].high;
             if (sessions[i].low < boxL) boxL = sessions[i].low;
         }
         const rangePct = ((boxH - boxL) / boxL) * 100;
         if (rangePct <= this.rectMaxRangePct) {
-            const curC = sessions[n - 1].close;
-            const prevC = sessions[n - 2].close;
-            if (curC > boxH && prevC <= boxH * 1.005) {
-                return { pattern: 'RECTANGLE', level: boxH, stopLevel: boxL, rangePct };
+            // Horizontal base drift check: Eliminates diagonal trend movers (like GNFC)
+            const baseDrift = Math.abs(sessions[n - 2].close - sessions[startIdx].close) / sessions[startIdx].close;
+            if (baseDrift <= 0.05) {
+                const curC = sessions[n - 1].close;
+                const prevC = sessions[n - 2].close;
+                if (curC > boxH && prevC <= boxH * 1.005) {
+                    return { pattern: 'RECTANGLE', level: boxH, stopLevel: boxL, rangePct };
+                }
             }
         }
         return null;
@@ -222,6 +227,24 @@ class ResistanceBreakoutStrategy {
         if (!detected) return null;
 
         const curC = curBar.close;
+
+        // 4. Institutional Capped Buy Pocket (No chasing extended candles > 2.5%)
+        if (curC > detected.level * this.maxExtension) {
+            return null;
+        }
+
+        // 5. Volume Surge Confirmation (>= 1.25x 20-day SMA)
+        if (curBar.volume && n >= 22) {
+            let sumV = 0;
+            for (let i = n - 21; i < n - 1; i++) {
+                sumV += (sessions[i].volume || 0);
+            }
+            const avgV = sumV / 20;
+            if (avgV > 0 && curBar.volume < avgV * this.minVolumeSurge) {
+                return null;
+            }
+        }
+
         let structSl = detected.stopLevel;
         let riskPct = (curC - structSl) / curC;
 
