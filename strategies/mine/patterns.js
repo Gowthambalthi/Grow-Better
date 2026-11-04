@@ -234,34 +234,45 @@ function detectCupAndHandle(sessions, config = {}) {
                 continue;
             }
 
-            // Rule D: Handle depth from right rim rr and ratio <= 0.35
+            // CRUCIAL PRE-BREAKOUT HANDLE GATES:
+            // 1. No bar inside handle can exceed Right Rim before breakout candle
+            let handlePreBreakoutHigh = -Infinity;
+            for (let i = rIdx + 1; i < n - 1; i++) {
+                if (highs[i] > handlePreBreakoutHigh) handlePreBreakoutHigh = highs[i];
+            }
+            if (handlePreBreakoutHigh > rr * 1.008) continue;
+
+            // 2. Genuine handle pullback (at least 1.5% below Right Rim)
             let hBot = Infinity;
             let cupVolSum = 0, hVolSum = 0;
             for (let i = cs; i < rIdx; i++) cupVolSum += vols[i];
             const avgCupVol = cupVolSum / (rIdx - cs);
 
-            for (let i = rIdx; i < n - 1; i++) {
+            for (let i = rIdx + 1; i < n - 1; i++) {
                 if (lows[i] < hBot) hBot = lows[i];
                 hVolSum += vols[i];
             }
-            const avgHVol = hVolSum / (n - 1 - rIdx);
+            const avgHVol = hVolSum / (n - 1 - (rIdx + 1));
 
-            const handleDepth = (rr - hBot) / rr;
-            const handleRatio = handleDepth / cupDepth;
-            if (handleRatio > 0.35) continue;
+            const handlePullback = (rr - hBot) / rr;
+            if (handlePullback < 0.015) continue;
 
-            // Rule D: Handle must remain in upper half of cup
+            // 3. Handle ratio <= 0.38 of cup depth
+            const handleRatio = handlePullback / cupDepth;
+            if (handleRatio > 0.38) continue;
+
+            // 4. Handle must remain in upper half of cup
             const cupMidpoint = cupBot + (rim - cupBot) * 0.50;
             if (hBot < cupMidpoint) continue;
 
-            // Handle cannot make a new high before the breakout candle
-            let handlePreBreakoutHigh = -Infinity;
-            for (let i = rIdx + 1; i < n - 1; i++) {
-                if (highs[i] > handlePreBreakoutHigh) handlePreBreakoutHigh = highs[i];
+            // 5. Pre-breakout resting gate: in 3 bars prior to breakout, price must be resting in handle
+            let recentMinLow = Infinity;
+            for (let i = Math.max(rIdx + 1, n - 4); i < n - 1; i++) {
+                if (lows[i] < recentMinLow) recentMinLow = lows[i];
             }
-            if (handlePreBreakoutHigh > rim * 1.008) continue;
+            if (recentMinLow < rim * 0.93) continue;
 
-            // Volume Dry Up (VDU) - Handle volume must contract
+            // 6. Volume Dry Up (VDU) - Handle volume must contract
             if (avgHVol > avgCupVol * 0.95) continue;
 
             // STAGE 2: BREAKOUT DETECTION ON CANDLE n-1
@@ -273,7 +284,7 @@ function detectCupAndHandle(sessions, config = {}) {
                     level: rim,
                     stopLevel: hBot * 0.995,
                     depthPct: +cupDepthPct.toFixed(1),
-                    handleDepthPct: +(handleDepth * 100).toFixed(1),
+                    handleDepthPct: +(handlePullback * 100).toFixed(1),
                     handleRatio: +handleRatio.toFixed(2),
                     leftRim: lr,
                     rightRim: rr,

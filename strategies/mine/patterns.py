@@ -151,23 +151,34 @@ def detect_cup_and_handle(highs, lows, closes, vols):
             if actual_handle_len < 5 or actual_handle_len > 20:
                 continue
 
-            # Rule D: Handle depth from right rim rr and ratio <= 0.35
-            h_bot = np.min(lows[r_idx : n - 1])
-            handle_depth = (rr - h_bot) / rr
-            handle_ratio = handle_depth / cup_depth
-            if handle_ratio > 0.35:
+            # CRUCIAL PRE-BREAKOUT HANDLE GATES:
+            # 1. No bar inside handle can exceed Right Rim before breakout candle
+            # (Ensures stock does not make higher highs inside the handle)
+            if np.max(highs[r_idx + 1 : n - 1]) > rr * 1.008:
                 continue
 
-            # Rule D: Handle must remain in upper half of cup
+            # 2. Genuine handle pullback: must pull back at least 1.5% below Right Rim
+            # (Rejects zero-pullback vertical sprints into the rim)
+            h_bot = np.min(lows[r_idx + 1 : n - 1])
+            handle_pullback = (rr - h_bot) / rr
+            if handle_pullback < 0.015:
+                continue
+
+            # 3. Handle depth ratio <= 0.38 of cup depth, handle low in upper half
+            handle_ratio = handle_pullback / cup_depth
+            if handle_ratio > 0.38:
+                continue
+
             cup_midpoint = cup_bot + (rim - cup_bot) * 0.50
             if h_bot < cup_midpoint:
                 continue
 
-            # No premature breakout inside handle
-            if np.max(highs[r_idx + 1 : n - 1]) > rim * 1.008:
+            # 4. Pre-breakout resting gate: in 3 bars prior to breakout, price must be resting in handle
+            # (Rejects vertical sprints coming from deep inside the basin)
+            if np.min(lows[max(r_idx + 1, n - 4) : n - 1]) < rim * 0.93:
                 continue
 
-            # VDU (Volume Dry-Up) during handle
+            # 5. Volume Dry-Up (VDU) during handle
             avg_cup_vol = np.mean(vols[cs : r_idx])
             avg_h_vol = np.mean(vols[r_idx : n - 1])
             if avg_h_vol > avg_cup_vol * 0.95:
@@ -184,7 +195,7 @@ def detect_cup_and_handle(highs, lows, closes, vols):
                     'level': float(rim),
                     'stop_level': float(h_bot * 0.995),
                     'depth_pct': round(cup_depth_pct, 1),
-                    'handle_depth_pct': round(handle_depth * 100.0, 1),
+                    'handle_depth_pct': round(handle_pullback * 100.0, 1),
                     'handle_ratio': round(handle_ratio, 2),
                     'handle_len': actual_handle_len,
                     'bars_in_bottom': bars_in_bottom,
