@@ -77,34 +77,59 @@ def run_ablation(require_multi_half=False, require_base_drift=False, require_cap
 
             # A. Cup & Handle
             if 'CUP_HANDLE' in ACTIVE_PATTERNS:
-                for cup_len in [40, 55, 70]:
-                    if i < cup_len: continue
-                    start_bar = i - cup_len
-                    mid_bar = i - 10
-                    left_rim = np.max(h[start_bar : start_bar + 15])
-                    left_rim_idx = start_bar + np.argmax(h[start_bar : start_bar + 15])
-                    cup_bottom = np.min(l[left_rim_idx : mid_bar])
-                    bottom_idx = left_rim_idx + np.argmin(l[left_rim_idx : mid_bar])
-                    bottom_pos = (bottom_idx - start_bar) / (mid_bar - start_bar)
-                    if bottom_pos < 0.25 or bottom_pos > 0.75:
-                        continue
-                    right_rim = np.max(h[mid_bar - 5 : mid_bar + 5])
-                    handle_low = np.min(l[mid_bar : i])
+                for handle_len in [6, 10, 15]:
+                    for cup_len in [35, 50, 65, 80]:
+                        total_len = cup_len + handle_len
+                        if i < total_len + 30: continue
+                        start_cup = i - total_len
+                        mid_cup = i - handle_len
 
-                    if abs(right_rim - left_rim) / left_rim <= 0.04:
+                        left_rim = np.max(h[start_cup : start_cup + 12])
+                        left_rim_idx = start_cup + np.argmax(h[start_cup : start_cup + 12])
+
+                        right_rim = np.max(h[mid_cup - 8 : mid_cup + 2])
+                        if abs(right_rim - left_rim) / max(left_rim, right_rim) > 0.030:
+                            continue
                         rim = max(left_rim, right_rim)
-                        base_max = np.max(h[start_bar : i])
+
+                        base_max = np.max(h[start_cup : i])
                         if base_max > rim * 1.015:
                             continue
+
+                        cup_bottom = np.min(l[left_rim_idx : mid_cup])
+                        bottom_idx = left_rim_idx + np.argmin(l[left_rim_idx : mid_cup])
+                        cup_span = mid_cup - left_rim_idx
+                        if cup_span < 15: continue
+                        bottom_pos = (bottom_idx - left_rim_idx) / cup_span
+                        if bottom_pos < 0.28 or bottom_pos > 0.72:
+                            continue
+
                         depth = (rim - cup_bottom) / rim
-                        if (CUP_MIN_DEPTH_PCT / 100.0) <= depth <= (CUP_MAX_DEPTH_PCT / 100.0):
-                            h_depth = (rim - handle_low) / rim
-                            if 0.02 <= h_depth <= depth * CUP_MAX_HANDLE_RATIO:
-                                if cur_c > rim * 0.998 and c[i - 1] <= rim * 1.005:
-                                    detected_pattern = 'CUP_AND_HANDLE'
-                                    stop_level = handle_low
-                                    pat_level = rim
-                                    break
+                        if depth < 0.12 or depth > 0.38:
+                            continue
+
+                        bottom_quartile = cup_bottom + 0.25 * (rim - cup_bottom)
+                        if np.sum(l[left_rim_idx : mid_cup] <= bottom_quartile) < 3:
+                            continue
+
+                        handle_low = np.min(l[mid_cup : i])
+                        handle_depth = (rim - handle_low) / rim
+                        handle_ratio = handle_depth / depth
+                        if handle_depth < 0.02 or handle_ratio < 0.15 or handle_ratio > 0.45:
+                            continue
+
+                        if cur_c > rim * 0.998 and c[i - 1] <= rim * 1.010 and cur_c <= rim * 1.035:
+                            prior_start = max(0, start_cup - 40)
+                            prior_ret = (highs[left_rim_idx] - np.min(lows[prior_start : start_cup])) / np.min(lows[prior_start : start_cup])
+                            if prior_ret < 0.15:
+                                continue
+
+                            detected_pattern = 'CUP_AND_HANDLE'
+                            stop_level = handle_low
+                            pat_level = rim
+                            break
+                    if detected_pattern:
+                        break
 
             # B. Inverse Head & Shoulders
             if not detected_pattern and 'INVERSE_HS' in ACTIVE_PATTERNS:

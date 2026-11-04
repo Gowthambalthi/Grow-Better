@@ -74,64 +74,84 @@ class ResistanceBreakoutStrategy {
 
     detectCupAndHandle(sessions) {
         const n = sessions.length;
-        for (const cupLen of [40, 55, 70]) {
-            if (n < cupLen + 10) continue;
-            const startBar = n - 1 - cupLen;
-            const midBar = n - 1 - 10;
-            
-            let leftRim = -Infinity, leftRimIdx = startBar;
-            for (let i = startBar; i <= startBar + 15; i++) {
-                if (sessions[i].high > leftRim) { leftRim = sessions[i].high; leftRimIdx = i; }
-            }
+        for (const handleLen of [6, 10, 15]) {
+            for (const cupLen of [35, 50, 65, 80]) {
+                const totalLen = cupLen + handleLen;
+                if (n < totalLen + 30) continue;
+                const startCup = n - 1 - totalLen;
+                const midCup = n - 1 - handleLen;
 
-            let cupBottom = Infinity;
-            let bottomIdx = leftRimIdx;
-            for (let i = leftRimIdx; i <= midBar; i++) {
-                if (sessions[i].low < cupBottom) {
-                    cupBottom = sessions[i].low;
-                    bottomIdx = i;
+                // 1. Left Rim Peak (in the first 12 bars)
+                let leftRim = -Infinity, leftRimIdx = startCup;
+                for (let i = startCup; i <= startCup + 12; i++) {
+                    if (sessions[i].high > leftRim) { leftRim = sessions[i].high; leftRimIdx = i; }
                 }
-            }
 
-            // Symmetrical U-Shape Bowl Filter:
-            // Cup bottom MUST occur in the central half of the bowl (between 25% and 75% of the length).
-            // If bottom is near the outer quarters (< 25% or > 75%), it is a diagonal trend climber (e.g. CIPLA 2024-03-01).
-            const cupSpan = (midBar - startBar);
-            const bottomPos = (bottomIdx - startBar) / (cupSpan || 1);
-            if (bottomPos < 0.25 || bottomPos > 0.75) continue;
+                // 2. Right Rim Peak (in the 8 bars before handle)
+                let rightRim = -Infinity, rightRimIdx = midCup;
+                for (let i = midCup - 8; i <= midCup + 2; i++) {
+                    if (sessions[i].high > rightRim) { rightRim = sessions[i].high; rightRimIdx = i; }
+                }
 
-            let rightRim = -Infinity;
-            for (let i = midBar - 5; i <= midBar + 5; i++) {
-                if (sessions[i].high > rightRim) rightRim = sessions[i].high;
-            }
-
-            let handleLow = Infinity;
-            for (let i = midBar; i < n - 1; i++) {
-                if (sessions[i].low < handleLow) handleLow = sessions[i].low;
-            }
-
-            if (Math.abs(rightRim - leftRim) / leftRim <= 0.04) {
+                // 3. Horizontal Resistance Alignment (<= 3.0% tolerance)
+                const rimDiff = Math.abs(rightRim - leftRim) / Math.max(leftRim, rightRim);
+                if (rimDiff > 0.030) continue;
                 const rim = Math.max(leftRim, rightRim);
 
-                // Absolute Resistance Ceiling Rule:
+                // 4. Absolute Resistance Ceiling Rule:
                 // No candle inside the entire base lookback may exceed the breakout rim level (overhead cap <= 1.5%).
                 // Eliminates false breakouts trapped under hidden overhead peaks (e.g. OIL 2024-05-08 trapped under ₹446).
-                let baseMaxHigh = -Infinity;
-                for (let i = startBar; i < n - 1; i++) {
-                    if (sessions[i].high > baseMaxHigh) baseMaxHigh = sessions[i].high;
+                let baseMax = -Infinity;
+                for (let i = startCup; i < n - 1; i++) if (sessions[i].high > baseMax) baseMax = sessions[i].high;
+                if (baseMax > rim * 1.015) continue;
+
+                // 5. Cup Bottom & Depth
+                let cupBottom = Infinity, bottomIdx = leftRimIdx;
+                for (let i = leftRimIdx; i <= midCup; i++) {
+                    if (sessions[i].low < cupBottom) { cupBottom = sessions[i].low; bottomIdx = i; }
                 }
-                if (baseMaxHigh > rim * 1.015) continue;
 
                 const depth = (rim - cupBottom) / rim;
-                if (depth >= this.cupMinDepthPct / 100 && depth <= this.cupMaxDepthPct / 100) {
-                    const hDepth = (rim - handleLow) / rim;
-                    if (hDepth >= 0.02 && hDepth <= depth * this.cupMaxHandleRatio) {
-                        const curC = sessions[n - 1].close;
-                        const prevC = sessions[n - 2].close;
-                        if (curC > rim * 0.998 && prevC <= rim * 1.005) {
-                            return { pattern: 'CUP_AND_HANDLE', level: rim, stopLevel: handleLow, depthPct: depth * 100 };
-                        }
-                    }
+                if (depth < (this.cupMinDepthPct / 100) || depth > (this.cupMaxDepthPct / 100)) continue;
+
+                // 6. Symmetrical Centered Bowl (Bottom in 28% - 72% of cup)
+                const cupSpan = midCup - leftRimIdx;
+                if (cupSpan < 15) continue;
+                const bottomPos = (bottomIdx - leftRimIdx) / cupSpan;
+                if (bottomPos < 0.28 || bottomPos > 0.72) continue;
+
+                // 7. U-Shape Rounding Check: At least 3 bars in bottom quartile of depth
+                const bottomQuartile = cupBottom + 0.25 * (rim - cupBottom);
+                let barsAtBottom = 0;
+                for (let i = leftRimIdx; i <= midCup; i++) if (sessions[i].low <= bottomQuartile) barsAtBottom++;
+                if (barsAtBottom < 3) continue;
+
+                // 8. Handle Pullback & Support (retrace between 15% and 45% of cup depth)
+                let handleLow = Infinity;
+                for (let i = midCup; i < n - 1; i++) if (sessions[i].low < handleLow) handleLow = sessions[i].low;
+
+                const handleDepth = (rim - handleLow) / rim;
+                const handleRatio = handleDepth / depth;
+                if (handleDepth < 0.02 || handleRatio < 0.15 || handleRatio > 0.45) continue;
+
+                // 9. Breakout Execution on Bar
+                const curC = sessions[n - 1].close;
+                const prevC = sessions[n - 2].close;
+                if (curC > rim * 0.998 && prevC <= rim * 1.010 && curC <= rim * 1.035) {
+                    // 10. Prior Uptrend (+15% prior advance leading into cup)
+                    const priorStart = Math.max(0, startCup - 40);
+                    let priorLow = Infinity;
+                    for (let i = priorStart; i < startCup; i++) if (sessions[i].low < priorLow) priorLow = sessions[i].low;
+                    const priorRet = (sessions[leftRimIdx].high - priorLow) / priorLow;
+                    if (priorRet < 0.15) continue;
+
+                    return {
+                        pattern: 'CUP_AND_HANDLE',
+                        level: rim,
+                        stopLevel: handleLow,
+                        depthPct: +(depth * 100).toFixed(1),
+                        handleDepthPct: +(handleDepth * 100).toFixed(1)
+                    };
                 }
             }
         }

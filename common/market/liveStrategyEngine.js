@@ -734,58 +734,71 @@ const RULES = {
     let patLevel = 0;
     let stopL = 0;
 
-    // A. Cup & Handle
-    for (const cLen of [40, 55]) {
-      if (n < cLen + 10) continue;
-      const sBar = n - 1 - cLen;
-      const mBar = n - 1 - 8;
-      let leftRim = -Infinity;
-      for (let i = sBar; i <= sBar + 12; i++) if (highs[i] > leftRim) leftRim = highs[i];
-      let cupBottom = Infinity;
-      let bottomIdx = sBar;
-      for (let i = sBar; i <= mBar; i++) {
-        if (lows[i] < cupBottom) {
-          cupBottom = lows[i];
-          bottomIdx = i;
+    // A. Classic Textbook Cup & Handle
+    for (const handleLen of [6, 10, 15]) {
+      for (const cupLen of [35, 50, 65, 80]) {
+        const totalLen = cupLen + handleLen;
+        if (n < totalLen + 30) continue;
+        const startCup = n - 1 - totalLen;
+        const midCup = n - 1 - handleLen;
+
+        let leftRim = -Infinity, leftRimIdx = startCup;
+        for (let i = startCup; i <= startCup + 12; i++) {
+          if (highs[i] > leftRim) { leftRim = highs[i]; leftRimIdx = i; }
         }
-      }
 
-      // Symmetrical U-Shape Bowl Filter:
-      // Cup bottom MUST occur in the central half of the bowl (between 25% and 75% of the length).
-      // If bottom is near the outer quarters (< 25% or > 75%), it is a diagonal trend climber (e.g. CIPLA 2024-03-01).
-      const cupSpan = mBar - sBar;
-      const bottomPos = (bottomIdx - sBar) / (cupSpan || 1);
-      if (bottomPos < 0.25 || bottomPos > 0.75) continue;
-      let rightRim = -Infinity;
-      for (let i = mBar - 4; i <= mBar + 4; i++) if (highs[i] > rightRim) rightRim = highs[i];
-      let handleLow = Infinity;
-      for (let i = mBar; i < n - 1; i++) if (lows[i] < handleLow) handleLow = lows[i];
+        let rightRim = -Infinity;
+        for (let i = midCup - 8; i <= midCup + 2; i++) {
+          if (highs[i] > rightRim) rightRim = highs[i];
+        }
 
-      if (Math.abs(rightRim - leftRim) / leftRim <= 0.04) {
+        const rimDiff = Math.abs(rightRim - leftRim) / Math.max(leftRim, rightRim);
+        if (rimDiff > 0.030) continue;
         const rim = Math.max(leftRim, rightRim);
 
-        // Absolute Resistance Ceiling Rule:
-        // No candle inside the entire base lookback may exceed the breakout rim level (overhead cap <= 1.5%).
-        // Eliminates false breakouts trapped under hidden overhead peaks (e.g. OIL 2024-05-08 trapped under ₹446).
-        let baseMaxHigh = -Infinity;
-        for (let i = sBar; i < n - 1; i++) {
-          if (highs[i] > baseMaxHigh) baseMaxHigh = highs[i];
+        let baseMax = -Infinity;
+        for (let i = startCup; i < n - 1; i++) if (highs[i] > baseMax) baseMax = highs[i];
+        if (baseMax > rim * 1.015) continue;
+
+        let cupBottom = Infinity, bottomIdx = leftRimIdx;
+        for (let i = leftRimIdx; i <= midCup; i++) {
+          if (lows[i] < cupBottom) { cupBottom = lows[i]; bottomIdx = i; }
         }
-        if (baseMaxHigh > rim * 1.015) continue;
 
         const depth = (rim - cupBottom) / rim;
-        if (depth >= 0.10 && depth <= 0.35) {
-          const hDepth = (rim - handleLow) / rim;
-          if (hDepth >= 0.02 && hDepth <= depth * 0.45) {
-            if (ctx.ltp > rim * 0.998 && closes[n - 2] <= rim * 1.005) {
-              detected = 'CUP_AND_HANDLE';
-              patLevel = rim;
-              stopL = handleLow;
-              break;
-            }
-          }
+        if (depth < 0.12 || depth > 0.38) continue;
+
+        const cupSpan = midCup - leftRimIdx;
+        if (cupSpan < 15) continue;
+        const bottomPos = (bottomIdx - leftRimIdx) / cupSpan;
+        if (bottomPos < 0.28 || bottomPos > 0.72) continue;
+
+        const bottomQuartile = cupBottom + 0.25 * (rim - cupBottom);
+        let barsAtBottom = 0;
+        for (let i = leftRimIdx; i <= midCup; i++) if (lows[i] <= bottomQuartile) barsAtBottom++;
+        if (barsAtBottom < 3) continue;
+
+        let handleLow = Infinity;
+        for (let i = midCup; i < n - 1; i++) if (lows[i] < handleLow) handleLow = lows[i];
+
+        const handleDepth = (rim - handleLow) / rim;
+        const handleRatio = handleDepth / depth;
+        if (handleDepth < 0.02 || handleRatio < 0.15 || handleRatio > 0.45) continue;
+
+        if (ctx.ltp > rim * 0.998 && closes[n - 2] <= rim * 1.010 && ctx.ltp <= rim * 1.035) {
+          const priorStart = Math.max(0, startCup - 40);
+          let priorLow = Infinity;
+          for (let i = priorStart; i < startCup; i++) if (lows[i] < priorLow) priorLow = lows[i];
+          const priorRet = (highs[leftRimIdx] - priorLow) / priorLow;
+          if (priorRet < 0.15) continue;
+
+          detected = 'CUP_AND_HANDLE';
+          patLevel = rim;
+          stopL = handleLow;
+          break;
         }
       }
+      if (detected) break;
     }
 
     // B. Rectangle with Anti-Trend-Drift Protection
