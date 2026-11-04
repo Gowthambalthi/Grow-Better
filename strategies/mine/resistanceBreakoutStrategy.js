@@ -18,14 +18,14 @@
 
 class ResistanceBreakoutStrategy {
     constructor(config = {}) {
-        // RSI
+        // RSI (Sweet spot extended to 85 to capture institutional volume ignition days like CNL, SAREGAMA, ICIL)
         this.rsiPeriod = config.rsiPeriod ?? 14;
         this.rsiMin = config.rsiMin ?? 48.0;
-        this.rsiMax = config.rsiMax ?? 75.0;
+        this.rsiMax = config.rsiMax ?? 85.0;
 
-        // Relative Strength
+        // Relative Strength (Requires outperformance or parity >= 0% vs index, not strangling flat bases)
         this.rsLookback = config.rsLookback ?? 60;
-        this.minRsOutperformance = config.minRsOutperformance ?? 15.0;
+        this.minRsOutperformance = config.minRsOutperformance ?? 0.0;
 
         // Cup & Handle
         this.cupMinLen = config.cupMinLen ?? 25;
@@ -55,8 +55,8 @@ class ResistanceBreakoutStrategy {
         // Portfolio Slots (Strict 20-slot institutional capacity calibrated for 4-5 calls/week)
         this.maxConcurrentPositions = config.maxConcurrentPositions ?? 20;
         this.capitalPerPosition = config.capitalPerPosition ?? 50000;
-        this.maxExtension = config.maxExtension ?? 1.03; // Capped buy pocket (no chasing > 3.0%)
-        this.minVolumeSurge = config.minVolumeSurge ?? 1.15; // 1.15x 20-day SMA volume surge
+        this.maxExtension = config.maxExtension ?? 1.05; // Capped buy pocket (allows up to 5% expansion on Day-1)
+        this.minVolumeSurge = config.minVolumeSurge ?? 1.25; // 1.25x 20-day SMA volume surge
     }
 
     calculateRSI(closes, period = 14) {
@@ -321,6 +321,51 @@ class ResistanceBreakoutStrategy {
         return null;
     }
 
+    detectResistanceBreakout(sessions) {
+        const n = sessions.length;
+        if (n < 50) return null;
+
+        for (const baseLen of [60, 45, 30]) {
+            if (n < baseLen + 15) continue;
+            const startIdx = n - 1 - baseLen;
+            let baseH = -Infinity;
+            let baseL = Infinity;
+            for (let i = startIdx; i < n - 1; i++) {
+                if (sessions[i].high > baseH) baseH = sessions[i].high;
+                if (sessions[i].low < baseL) baseL = sessions[i].low;
+            }
+
+            const baseDepth = (baseH - baseL) / baseH;
+            if (baseDepth < 0.05 || baseDepth > 0.35) continue;
+
+            // Resistance touches: at least 2 distinct tests of resistance within 2.2% separated by >= 8 bars
+            const touches = [];
+            for (let i = startIdx; i < n - 1; i++) {
+                if (sessions[i].high >= baseH * 0.978) touches.push(i);
+            }
+            if (touches.length < 2 || (touches[touches.length - 1] - touches[0] < 8)) continue;
+
+            const curC = sessions[n - 1].close;
+            const prevC = sessions[n - 2].close;
+
+            if (curC > baseH && prevC <= baseH * 1.008) {
+                // Find recent swing low in the last 20 bars as structural stop
+                let swingLow = Infinity;
+                for (let i = Math.max(startIdx, n - 21); i < n - 1; i++) {
+                    if (sessions[i].low < swingLow) swingLow = sessions[i].low;
+                }
+                return {
+                    pattern: 'MULTI_MONTH_BASE',
+                    level: baseH,
+                    stopLevel: swingLow,
+                    baseLen: baseLen,
+                    touches: touches.length
+                };
+            }
+        }
+        return null;
+    }
+
     onBar(sessions, indexSessions = null) {
         const n = sessions.length;
         if (n < 75) return null;
@@ -328,7 +373,7 @@ class ResistanceBreakoutStrategy {
         const curBar = sessions[n - 1];
         const closes = sessions.map(s => s.close);
 
-        // 1. RSI Gate
+        // 1. RSI Gate (Sweet spot up to 85 for high-volume ignition days)
         const rsi = this.calculateRSI(closes, this.rsiPeriod);
         if (rsi == null || rsi < this.rsiMin || rsi > this.rsiMax) {
             return null;
@@ -355,11 +400,12 @@ class ResistanceBreakoutStrategy {
             }
         }
 
-        // 3. Pattern Recognition (in priority order)
+        // 3. Pattern Recognition (in priority order: Geometric + Structural Multi-Month Base)
         let detected = this.detectCupAndHandle(sessions);
-        if (!detected) detected = this.detectInverseHS(sessions);
-        if (!detected) detected = this.detectRectangle(sessions);
         if (!detected) detected = this.detectAscendingTriangle(sessions);
+        if (!detected) detected = this.detectResistanceBreakout(sessions);
+        if (!detected) detected = this.detectRectangle(sessions);
+        if (!detected) detected = this.detectInverseHS(sessions);
         if (!detected) detected = this.detectSymmetricalTriangle(sessions);
 
         if (!detected) return null;

@@ -6,13 +6,13 @@ indicator("4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, Triangle) [Ope
 // ==============================================================================
 baseTf            = input.timeframe("60", "Base Pattern Timeframe (1H / 4H)")
 useDailyFilter    = input.bool(true, "Require Daily Trend Gate (Close > 50 EMA & 20 > 50 EMA)")
-useRsFilter       = input.bool(true, "Require Relative Strength vs NIFTY >= +15%")
-minRsOutperf      = input.float(15.0, "Min Relative Strength Outperformance %", step=1.0)
+useRsFilter       = input.bool(false, "Require Strict Relative Strength vs NIFTY >= +15%")
+minRsOutperf      = input.float(0.0, "Min Relative Strength Outperformance %", step=1.0)
 maxDist200Ema     = input.float(50.0, "Anti-Climax Max Distance above 200 EMA %", step=5.0)
 
 rsiPeriod         = input.int(14, "RSI Period", minval=5)
-rsiMin            = input.float(50.0, "RSI Min (Healthy Momentum)", step=1.0)
-rsiMax            = input.float(74.0, "RSI Max (Anti-Exhaustion Cap)", step=1.0)
+rsiMin            = input.float(48.0, "RSI Min (Healthy Momentum)", step=1.0)
+rsiMax            = input.float(85.0, "RSI Max (Allows High-Volume Breakout Ignition)", step=1.0)
 
 minRiskPct        = input.float(2.5, "Min Stop Distance %", step=0.5) / 100.0
 maxRiskPct        = input.float(6.5, "Max Stop Distance %", step=0.5) / 100.0
@@ -87,6 +87,13 @@ bool symCoilValid = (symL2 >= symL1 * 1.02) and (symH2 <= symH1 * 1.002) and ((s
 float symRes = math.max(symH1, symH2)
 bool sym1HBreakout = symCoilValid and (baseClose > symRes) and (baseClose[1] <= symRes * 1.008)
 
+// Pattern 5: Multi-Month Base / Resistance Breakout (30 to 60-bar base high breakout)
+baseH45 = ta.highest(baseHigh[1], 45)
+baseL45 = ta.lowest(baseLow[1], 45)
+baseDepth45 = (baseH45 - baseL45) / (baseH45 + 1e-9)
+bool baseDepthValid = (baseDepth45 >= 0.05 and baseDepth45 <= 0.35)
+bool baseBreakout = baseDepthValid and (baseClose > baseH45) and (baseClose[1] <= baseH45 * 1.008)
+
 // ==============================================================================
 // 4. 15-MINUTE BREAKOUT & VOLUME CONFIRMATION
 // ==============================================================================
@@ -105,16 +112,21 @@ if dailyTrendOk and notClimax and rsOk and rsiValid and notMorningTrap
         detectedPattern := "1H Cup & Handle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
         patternRim := hCupRim
         structStop := hHandleL
-    else if rect1HBreakout and (close >= rectH) and m15VolSurge
-        isSignal := true
-        detectedPattern := "1H Rectangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
-        patternRim := rectH
-        structStop := rectL
     else if tri1HBreakout and (close >= triH) and m15VolSurge
         isSignal := true
         detectedPattern := "1H Ascending Triangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
         patternRim := triH
         structStop := triL2
+    else if baseBreakout and (close >= baseH45) and m15VolSurge
+        isSignal := true
+        detectedPattern := "1H Base Breakout (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
+        patternRim := baseH45
+        structStop := ta.lowest(baseLow[1], 20)
+    else if rect1HBreakout and (close >= rectH) and m15VolSurge
+        isSignal := true
+        detectedPattern := "1H Rectangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
+        patternRim := rectH
+        structStop := rectL
     else if sym1HBreakout and (close >= symRes) and m15VolSurge
         isSignal := true
         detectedPattern := "1H Symmetrical Triangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"

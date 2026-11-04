@@ -62,7 +62,7 @@ def scan_symbol_calibrated(f_path):
         last_trade_idx = -999
 
         for i in range(85, n - 26):
-            if i - last_trade_idx < 18:
+            if i - last_trade_idx < 15:
                 continue
 
             dt = dates[i]
@@ -72,7 +72,7 @@ def scan_symbol_calibrated(f_path):
             c_now = closes[i]
             v_now = volumes[i]
             avg_v = vol_sma20[i - 1]
-            if np.isnan(avg_v) or avg_v <= 0 or v_now < avg_v * 1.45:
+            if np.isnan(avg_v) or avg_v <= 0 or v_now < avg_v * 2.50:
                 continue
 
             # Stage 2 Trend Gate & Anti-Climax Gate
@@ -85,13 +85,14 @@ def scan_symbol_calibrated(f_path):
             if i >= 60 and dt in n_map and dates[i-60] in n_map:
                 s_ret = (c_now - closes[i-60]) / closes[i-60]
                 n_ret = (n_map[dt]['close'] - n_map[dates[i-60]]['close']) / n_map[dates[i-60]]['close']
-                if (s_ret - n_ret) * 100 < 12.0:
+                rs_val = (s_ret - n_ret) * 100.0
+                if rs_val < 12.0:
                     continue
             else:
                 continue
 
             rsi_now = rsi14[i]
-            if np.isnan(rsi_now) or rsi_now < 52 or rsi_now > 74:
+            if np.isnan(rsi_now) or rsi_now < 48 or rsi_now > 85:
                 continue
 
             detected = None
@@ -237,19 +238,41 @@ def scan_symbol_calibrated(f_path):
                         sl_price = l2 * 0.995
                         target_price = c_now * 1.10
 
+            # -------------------------------------------------------------
+            # 6. MULTI-MONTH RESISTANCE BREAKOUT (30/45/60 Days Base High)
+            # -------------------------------------------------------------
+            if not detected and i >= 50:
+                for base_len in [55, 40, 30]:
+                    if i < base_len: continue
+                    w_highs = highs[i - base_len : i]
+                    w_lows = lows[i - base_len : i]
+                    base_h = np.max(w_highs)
+                    base_l = np.min(w_lows)
+                    base_depth = (base_h - base_l) / base_h
+                    if base_depth < 0.05 or base_depth > 0.35: continue
+
+                    # Touches: at least 2 distinct ceiling tests separated by >= 8 days
+                    touches = [p for p in range(len(w_highs)) if w_highs[p] >= base_h * 0.978]
+                    if len(touches) >= 2 and (touches[-1] - touches[0] >= 8):
+                        if c_now > base_h and closes[i-1] <= base_h * 1.008:
+                            detected = 'MULTI_MONTH_BASE'
+                            sl_price = np.min(lows[max(0, i - 18) : i]) * 0.995
+                            target_price = c_now * 1.11
+                            break
+
             if detected and sl_price is not None:
-                # Structural stop risk clamping: between 3.0% and 5.5%
+                # Structural stop risk clamping: between 2.5% and 4.5%
                 risk_pct = (next_o - sl_price) / next_o * 100.0
-                if risk_pct < 3.0:
-                    sl_price = next_o * 0.970
-                elif risk_pct > 5.5:
-                    sl_price = next_o * 0.945
+                if risk_pct < 2.5:
+                    sl_price = next_o * 0.975
+                elif risk_pct > 4.5:
+                    sl_price = next_o * 0.955
 
                 # Real-World Execution: Enter at Open of next bar (day i+1)
                 effective_entry = next_o * (1.0 + FRICTION_DECIMAL / 2.0)
                 cur_stop = sl_price
-                t1 = effective_entry * 1.055  # Tranche 1: +5.5%
-                t2 = max(target_price, effective_entry * 1.105) # Tranche 2: +10.5%
+                t1 = effective_entry * 1.050  # Tranche 1: +5.0%
+                t2 = max(target_price, effective_entry * 1.100) # Tranche 2: +10.0% runner
                 t1_hit = False
                 trade_pnl = None
                 bars_held = 0
@@ -261,7 +284,7 @@ def scan_symbol_calibrated(f_path):
                     c = closes[k]
 
                     if l <= cur_stop:
-                        exit_p = min(cur_stop, c) * (1.0 - FRICTION_DECIMAL / 2.0)
+                        exit_p = cur_stop * (1.0 - FRICTION_DECIMAL / 2.0)
                         if t1_hit:
                             trade_pnl = 0.5 * ((t1 - effective_entry) / effective_entry) + 0.5 * ((exit_p - effective_entry) / effective_entry)
                         else:
@@ -271,7 +294,7 @@ def scan_symbol_calibrated(f_path):
 
                     if not t1_hit and h >= t1:
                         t1_hit = True
-                        cur_stop = effective_entry * 1.002 # Lock breakeven
+                        cur_stop = effective_entry * 1.005 # Move stop to Breakeven + 0.5%
 
                     if t1_hit and h >= t2:
                         exit_p = t2 * (1.0 - FRICTION_DECIMAL / 2.0)
