@@ -48,30 +48,44 @@ baseClose  = request.security(syminfo.tickerid, baseTf, close)
 baseRsi = ta.rsi(baseClose, rsiPeriod)
 bool rsiValid = (baseRsi >= rsiMin and baseRsi <= rsiMax)
 
-// Pattern 1: Classic Textbook Cup & Handle
-hCupH = ta.highest(baseHigh[8], 45)
+// Pattern 1: Classic Textbook Cup & Handle (Dual Rims + Rounded Basin + VDU Handle)
+hCupLeftRim = ta.highest(baseHigh[25], 30)
+hCupRightRim = ta.highest(baseHigh[8], 15)
+hCupRim = math.max(hCupLeftRim, hCupRightRim)
+bool rimSymmetric = math.abs(hCupRightRim - hCupLeftRim) / (hCupRim + 1e-9) <= 0.025
 hCupL = ta.lowest(baseLow[8], 45)
 hHandleL = ta.lowest(baseLow[1], 8)
-hCupDepth = (hCupH - hCupL) / (hCupH + 1e-9)
-hHandleDepth = (hCupH - hHandleL) / (hCupH + 1e-9)
-baseMaxH = ta.highest(baseHigh[1], 55)
+hCupDepth = (hCupRim - hCupL) / (hCupRim + 1e-9)
+hHandleDepth = (hCupRim - hHandleL) / (hCupRim + 1e-9)
+baseMaxH = ta.highest(baseHigh[1], 60)
 
-bool ceilingValid = (baseMaxH <= hCupH * 1.015)
-bool cupDepthValid = (hCupDepth >= 0.10 and hCupDepth <= 0.28)
-bool handleRatioValid = (hHandleDepth >= 0.015 and hHandleDepth <= hCupDepth * 0.42)
-bool cup1HBreakout = ceilingValid and cupDepthValid and handleRatioValid and (baseClose > hCupH * 0.998)
+bool ceilingValid = (baseMaxH <= hCupRim * 1.015)
+bool cupDepthValid = (hCupDepth >= 0.10 and hCupDepth <= 0.32)
+bool handleRatioValid = (hHandleDepth >= 0.02 and hHandleDepth <= hCupDepth * 0.45 and hHandleDepth <= 0.12)
+bool cup1HBreakout = rimSymmetric and ceilingValid and cupDepthValid and handleRatioValid and (baseClose > hCupRim) and (baseClose[1] <= hCupRim * 1.008)
 
-// Pattern 2: Rectangle Base
-rectH = ta.highest(baseHigh[1], 30)
-rectL = ta.lowest(baseLow[1], 30)
-rectRangePct = ((rectH - rectL) / rectL) * 100.0
-bool rect1HBreakout = (rectRangePct <= 12.0) and (baseClose > rectH) and (baseClose[1] <= rectH * 1.005)
+// Pattern 2: Rectangle Base (Ceiling and Floor tested with distinct separation)
+rectH = ta.highest(baseHigh[1], 35)
+rectL = ta.lowest(baseLow[1], 35)
+rectRangePct = ((rectH - rectL) / (rectL + 1e-9)) * 100.0
+bool rect1HBreakout = (rectRangePct >= 4.0 and rectRangePct <= 12.0) and (baseClose > rectH) and (baseClose[1] <= rectH * 1.008)
 
-// Pattern 3: Ascending Triangle
-triH = ta.highest(baseHigh[1], 35)
-triL1 = ta.lowest(baseLow[18], 18)
-triL2 = ta.lowest(baseLow[1], 18)
-bool tri1HBreakout = (triL2 > triL1 * 1.015) and (baseClose > triH) and (baseClose[1] <= triH * 1.005)
+// Pattern 3: Ascending Triangle (Horizontal ceiling + rising swing lows separated by >= 15 bars)
+triH = ta.highest(baseHigh[1], 45)
+triTrough = ta.lowest(baseLow[1], 35)
+bool triPullbackValid = (triH - triTrough) / (triH + 1e-9) >= 0.035
+triL1 = ta.lowest(baseLow[20], 25)
+triL2 = ta.lowest(baseLow[1], 20)
+bool tri1HBreakout = triPullbackValid and (triL2 >= triL1 * 1.015) and (baseClose > triH) and (baseClose[1] <= triH * 1.008)
+
+// Pattern 4: Symmetrical Triangle (Contracting higher lows and lower/flat highs)
+symH1 = ta.highest(baseHigh[20], 20)
+symH2 = ta.highest(baseHigh[1], 20)
+symL1 = ta.lowest(baseLow[20], 20)
+symL2 = ta.lowest(baseLow[1], 20)
+bool symCoilValid = (symL2 >= symL1 * 1.02) and (symH2 <= symH1 * 1.002) and ((symH1 - symL1) > (symH2 - symL2) * 1.15)
+float symRes = math.max(symH1, symH2)
+bool sym1HBreakout = symCoilValid and (baseClose > symRes) and (baseClose[1] <= symRes * 1.008)
 
 // ==============================================================================
 // 4. 15-MINUTE BREAKOUT & VOLUME CONFIRMATION
@@ -86,10 +100,10 @@ float patternRim = 0.0
 float structStop = 0.0
 
 if dailyTrendOk and notClimax and rsOk and rsiValid and notMorningTrap
-    if cup1HBreakout and (close >= hCupH * 0.998) and m15VolSurge
+    if cup1HBreakout and (close >= hCupRim * 0.998) and m15VolSurge
         isSignal := true
         detectedPattern := "1H Cup & Handle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
-        patternRim := hCupH
+        patternRim := hCupRim
         structStop := hHandleL
     else if rect1HBreakout and (close >= rectH) and m15VolSurge
         isSignal := true
@@ -101,6 +115,11 @@ if dailyTrendOk and notClimax and rsOk and rsiValid and notMorningTrap
         detectedPattern := "1H Ascending Triangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
         patternRim := triH
         structStop := triL2
+    else if sym1HBreakout and (close >= symRes) and m15VolSurge
+        isSignal := true
+        detectedPattern := "1H Symmetrical Triangle (RS: +" + str.tostring(rsOutperf, "#.#") + "%)"
+        patternRim := symRes
+        structStop := symL2
 
 bool trigger = isSignal and not isSignal[1]
 
