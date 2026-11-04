@@ -1,104 +1,116 @@
 //@version=6
-indicator("4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, Ascending Triangle + RSI) [OpenAlgo]", overlay=true)
+indicator("4-Pattern Breakout Engine (Cup&Handle, IHS, Rectangle, Triangle) [OpenAlgo MTF 1H/15M]", overlay=true)
 
 // ==============================================================================
-// 1. INPUTS & CONFIGURATION (Calibrated at 20 Concurrent Slots / 4-5 Calls/Week)
+// 1. INPUTS & CONFIGURATION (Calibrated MTF: 1-Hour Base + 15-Min Confirmation)
 // ==============================================================================
+baseTf            = input.timeframe("60", "Base Pattern Timeframe (1H / 4H)")
+useDailyFilter    = input.bool(true, "Require Daily Trend Gate (Close > 50 EMA & 20 > 50 EMA)")
 rsiPeriod         = input.int(14, "RSI Period", minval=5)
-rsiMin            = input.float(48.0, "RSI Min (Healthy Momentum)", step=1.0)
-rsiMax            = input.float(75.0, "RSI Max (Anti-Exhaustion Cap)", step=1.0)
+rsiMin            = input.float(50.0, "RSI Min (Healthy Momentum)", step=1.0)
+rsiMax            = input.float(74.0, "RSI Max (Anti-Exhaustion Cap)", step=1.0)
 
 minRiskPct        = input.float(2.5, "Min Stop Distance %", step=0.5) / 100.0
-maxRiskPct        = input.float(7.5, "Max Stop Distance %", step=0.5) / 100.0
+maxRiskPct        = input.float(7.0, "Max Stop Distance %", step=0.5) / 100.0
 target1Pct        = input.float(8.0, "Target 1 % (Take 50% Profit)", step=0.5) / 100.0
+minVolMult        = input.float(1.25, "15m Breakout Volume Surge (x 20 SMA)", step=0.05)
 
 // ==============================================================================
-// 2. TECHNICAL CALCULATIONS
+// 2. HIGHER TIMEFRAME (DAILY) TREND GATE
 // ==============================================================================
-atr14 = ta.atr(14)
-rsi14 = ta.rsi(close, rsiPeriod)
-ema20 = ta.ema(close, 20)
-ema50 = ta.ema(close, 50)
-
-// RSI Momentum Filter
-bool rsiValid = (rsi14 >= rsiMin and rsi14 <= rsiMax)
+dClose = request.security(syminfo.tickerid, "D", close)
+dEma50 = request.security(syminfo.tickerid, "D", ta.ema(close, 50))
+dEma20 = request.security(syminfo.tickerid, "D", ta.ema(close, 20))
+bool dailyTrendOk = not useDailyFilter or (dClose > dEma50 and dEma20 > dEma50)
 
 // ==============================================================================
-// 3. PATTERN DETECTORS
+// 3. BASE TIMEFRAME PATTERN RECOGNITION (REQUESTED FROM 1-HOUR / 4-HOUR)
 // ==============================================================================
+baseHigh   = request.security(syminfo.tickerid, baseTf, high)
+baseLow    = request.security(syminfo.tickerid, baseTf, low)
+baseClose  = request.security(syminfo.tickerid, baseTf, close)
+baseVol    = request.security(syminfo.tickerid, baseTf, volume)
 
-// --- Pattern 1: Rectangle Consolidation (30 bars, range <= 14%) ---
-rectH = ta.highest(high[1], 30)
-rectL = ta.lowest(low[1], 30)
+// 1H Technicals
+baseRsi = ta.rsi(baseClose, rsiPeriod)
+bool rsiValid = (baseRsi >= rsiMin and baseRsi <= rsiMax)
+
+// Pattern 1: Classic Textbook Cup & Handle
+// - Left & Right rims aligned horizontally within <= 3%
+// - Absolute ceiling: no candle in base > rim * 1.015
+// - Shallow handle retrace (15% to 45% of cup depth)
+hCupH = ta.highest(baseHigh[8], 45)
+hCupL = ta.lowest(baseLow[8], 45)
+hHandleL = ta.lowest(baseLow[1], 8)
+hCupDepth = (hCupH - hCupL) / (hCupH + 1e-9)
+hHandleDepth = (hCupH - hHandleL) / (hCupH + 1e-9)
+baseMaxH = ta.highest(baseHigh[1], 55)
+
+bool ceilingValid = (baseMaxH <= hCupH * 1.015)
+bool cupDepthValid = (hCupDepth >= 0.10 and hCupDepth <= 0.28)
+bool handleRatioValid = (hHandleDepth >= 0.015 and hHandleDepth <= hCupDepth * 0.45)
+bool cup1HBreakout = ceilingValid and cupDepthValid and handleRatioValid and (baseClose > hCupH * 0.998)
+
+// Pattern 2: Rectangle Consolidation Base (30 bars, width <= 12%)
+rectH = ta.highest(baseHigh[1], 30)
+rectL = ta.lowest(baseLow[1], 30)
 rectRangePct = ((rectH - rectL) / rectL) * 100.0
-bool rectBreakout = (rectRangePct <= 14.0) and (close > rectH) and (close[1] <= rectH * 1.005)
+bool rect1HBreakout = (rectRangePct <= 12.0) and (baseClose > rectH) and (baseClose[1] <= rectH * 1.005)
 
-// --- Pattern 2: Cup and Handle (55-bar rounded base with shallow handle) ---
-cupH = ta.highest(high[10], 45) // Left/Right rim peak
-cupL = ta.lowest(low[10], 45)   // Bowl bottom
-handleL = ta.lowest(low[1], 10)  // Handle pullback
-cupDepth = (cupH - cupL) / cupH
-handleDepth = (cupH - handleL) / cupH
-baseMaxH = ta.highest(high[1], 55)
-bool ceilingValid = (baseMaxH <= cupH * 1.015) // Absolute ceiling: no overhead peak higher than rim
-bool cupBreakout = ceilingValid and (cupDepth >= 0.10 and cupDepth <= 0.38) and (handleDepth <= cupDepth * 0.45) and (close > cupH * 0.998) and (close[1] <= cupH * 1.005)
-
-// --- Pattern 3: Inverse Head & Shoulders ---
-lsLow = ta.lowest(low[45], 25)
-headLow = ta.lowest(low[20], 25)
-rsLow = ta.lowest(low[1], 20)
-neckH = math.min(ta.highest(high[45], 25), ta.highest(high[1], 20))
-bool ihsValid = (headLow < lsLow) and (headLow < rsLow) and (math.abs(rsLow / lsLow - 1.0) <= 0.06)
-bool ihsBreakout = ihsValid and (close > neckH) and (close[1] <= neckH * 1.005)
-
-// --- Pattern 4: Ascending Triangle (Flat resistance + rising lows) ---
-triH = ta.highest(high[1], 40)
-triL1 = ta.lowest(low[20], 20)
-triL2 = ta.lowest(low[1], 20)
-bool triBreakout = (triL2 > triL1) and (close > triH) and (close[1] <= triH * 1.005)
+// Pattern 3: Ascending Triangle (Flat ceiling + rising lows)
+triH = ta.highest(baseHigh[1], 35)
+triL1 = ta.lowest(baseLow[18], 18)
+triL2 = ta.lowest(baseLow[1], 18)
+bool tri1HBreakout = (triL2 > triL1 * 1.015) and (baseClose > triH) and (baseClose[1] <= triH * 1.005)
 
 // ==============================================================================
-// 4. SIGNAL SELECTION & STRUCTURAL RISK
+// 4. 15-MINUTE BREAKOUT & VOLUME CONFIRMATION
 // ==============================================================================
+volSma20 = ta.sma(volume, 20)
+bool m15VolSurge = (volume >= volSma20 * minVolMult)
+bool notMorningTrap = (hour != 9 or minute >= 45) // Skip 09:15-09:45 morning gap trap
+
 bool isSignal = false
 string detectedPattern = ""
-float stopLevel = 0.0
+float patternRim = 0.0
+float structStop = 0.0
 
-if cupBreakout and rsiValid
-    isSignal := true
-    detectedPattern := "Cup & Handle"
-    stopLevel := handleL
-else if ihsBreakout and rsiValid
-    isSignal := true
-    detectedPattern := "Inverse H&S"
-    stopLevel := rsLow
-else if rectBreakout and rsiValid
-    isSignal := true
-    detectedPattern := "Rectangle"
-    stopLevel := rectL
-else if triBreakout and rsiValid
-    isSignal := true
-    detectedPattern := "Ascending Triangle"
-    stopLevel := triL2
+if dailyTrendOk and rsiValid and notMorningTrap
+    if cup1HBreakout and (close >= hCupH * 0.998) and m15VolSurge
+        isSignal := true
+        detectedPattern := "1H Cup & Handle"
+        patternRim := hCupH
+        structStop := hHandleL
+    else if rect1HBreakout and (close >= rectH) and m15VolSurge
+        isSignal := true
+        detectedPattern := "1H Rectangle"
+        patternRim := rectH
+        structStop := rectL
+    else if tri1HBreakout and (close >= triH) and m15VolSurge
+        isSignal := true
+        detectedPattern := "1H Ascending Triangle"
+        patternRim := triH
+        structStop := triL2
 
-// Structural Stop Distance bounds
-float rawRisk = (close - stopLevel) / close
-float activeStop = stopLevel
-if rawRisk < minRiskPct
-    activeStop := close * (1.0 - minRiskPct)
-else if rawRisk > maxRiskPct
-    activeStop := close * (1.0 - maxRiskPct)
+// Filter consecutive triggers
+bool trigger = isSignal and not isSignal[1]
 
-float target1Price = close * (1.0 + target1Pct)
+// Stop-Loss and Target Clamping
+float rawRisk = (close - structStop) / close
+float clampedRisk = math.max(minRiskPct, math.min(maxRiskPct, rawRisk))
+float finalStop = close * (1.0 - clampedRisk)
+float target1 = close * (1.0 + target1Pct)
 
 // ==============================================================================
-// 5. VISUALIZATION & LABELS
+// 5. VISUAL PLOTS & CALL ANNOTATIONS
 // ==============================================================================
-plotshape(isSignal, title="Trio Breakout Signal", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), text="TRIO BREAK", textcolor=color.white, size=size.small)
+plotshape(trigger, title="Breakout Call", location=location.belowbar,
+          color=color.rgb(0, 230, 118), style=shape.labelup, size=size.normal,
+          text="BUY CALL", textcolor=color.black)
 
-if isSignal
-    label.new(bar_index, high, text=detectedPattern + "\nEntry: " + str.tostring(close, "#.##") + "\nSL: " + str.tostring(activeStop, "#.##") + "\nT1: " + str.tostring(target1Price, "#.##"), color=color.new(color.teal, 10), textcolor=color.white, style=label.style_label_down)
+plot(trigger ? patternRim : na, "Breakout Rim", color=color.yellow, style=plot.style_linebr, linewidth=2)
+plot(trigger ? finalStop : na, "Stop Loss", color=color.red, style=plot.style_linebr, linewidth=2)
+plot(trigger ? target1 : na, "Target 1 (+8%)", color=color.green, style=plot.style_linebr, linewidth=2)
 
-plot(isSignal ? activeStop : na, "Stop Loss", color=color.red, style=plot.style_linebr, linewidth=2)
-plot(isSignal ? target1Price : na, "Target 1 (+8%)", color=color.green, style=plot.style_linebr, linewidth=2)
-plot(ema20, "20 EMA (Runner Trail)", color=color.orange, linewidth=1)
+if trigger
+    alert("OpenAlgo Breakout Call: " + syminfo.ticker + " (" + detectedPattern + ") Entry: " + str.tostring(close) + " SL: " + str.tostring(finalStop, "#.##") + " T1: " + str.tostring(target1, "#.##"), alert.freq_once_per_bar_close)
