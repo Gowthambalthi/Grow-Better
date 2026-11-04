@@ -34,6 +34,20 @@ class AllShapeDetector {
         return 100 - (100 / (1 + rs));
     }
 
+    calculateAngle(xPts, yPts, totalBars, minP, maxP) {
+        if (xPts.length < 2 || maxP <= minP || totalBars <= 0) return 0.0;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        const n = xPts.length;
+        for (let i = 0; i < n; i++) {
+            const normX = xPts[i] / totalBars;
+            const normY = (yPts[i] - minP) / (maxP - minP);
+            sumX += normX; sumY += normY;
+            sumXY += normX * normY; sumXX += normX * normX;
+        }
+        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+        return Math.atan(slope) * (180 / Math.PI);
+    }
+
     /**
      * 1. ASCENDING TRIANGLE
      * Requires:
@@ -89,17 +103,14 @@ class AllShapeDetector {
         // Lows must strictly ascend by >= 1.2% per valley
         if (!(l1 * 1.012 <= l2 && l2 * 1.012 <= l3)) return null;
 
-        // Rule 3: Linear Regression Slope of Lows must be positive
-        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-        const countL = swingLows.length;
-        for (let k = 0; k < countL; k++) {
-            sumX += swingLows[k].i;
-            sumY += swingLows[k].low;
-            sumXY += swingLows[k].i * swingLows[k].low;
-            sumXX += swingLows[k].i * swingLows[k].i;
-        }
-        const slopeLows = (countL * sumXY - sumX * sumY) / (countL * sumXX - sumX * sumX);
-        if (slopeLows <= 0) return null; // Reject flat or downward sloping sideways boxes!
+        // Rule 3: Linear Regression Angle of Lows must be >= +10.0 degrees (Strict Convergence)
+        let minW = Infinity;
+        for (let i = 0; i < wLen; i++) if (sub[i].low < minW) minW = sub[i].low;
+        const xPts = swingLows.map(pt => pt.i);
+        const yPts = swingLows.map(pt => pt.low);
+        const angleSupport = this.calculateAngle(xPts, yPts, wLen, minW, ceiling);
+
+        if (angleSupport < 10.0) return null; // Reject flat or downward sloping sideways boxes!
 
         const curC = sessions[n - 1].close;
         const prevC = sessions[n - 2].close;
@@ -111,7 +122,7 @@ class AllShapeDetector {
                 stopLevel: l3 * 0.995, // Structural stop placed below 3rd ascending low
                 ceilTouches: ceilTouches.length,
                 swingLows: [l1, l2, l3],
-                slope: slopeLows
+                angleSupport: Math.round(angleSupport * 10) / 10
             };
         }
         return null;
