@@ -41,7 +41,7 @@ const CONFIG = {
 
     // Structural Risk & Stop Loss (NO CLAMPING: Reject trades outside bounds)
     MIN_STRUCTURAL_RISK_PCT: 2.5, // In %
-    MAX_STRUCTURAL_RISK_PCT: 16.0, // Structural base floor up to 16% risk (sized dynamically)
+    MAX_STRUCTURAL_RISK_PCT: 9.5, // Caps risk at 9.5% (rejects unhealthy >10% stops)
 
     // Anti-Chasing Buy Pocket
     MAX_GAP_BUY_POCKET_PCT: 3.0,  // If next open is > 3.0% above pivot, do not market buy.
