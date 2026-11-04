@@ -1,102 +1,59 @@
 "use strict";
 
 /**
- * OpenAlgo - Trio Pattern Breakout Strategy (Engine 1 - v7 FIXED)
- * Location: strategies/mine/resistanceBreakoutStrategy.js
+ * strategies/mine/resistanceBreakoutStrategy.js
+ * Authoritative Strategy Orchestrator (JavaScript)
  * 
- * CORE STRUCTURAL PATTERNS (Imported from strategies/mine/patterns.js):
- * 1. Classic Cup & Handle (U-shaped basin + VDU handle)
- * 2. Ascending Triangle (Flat ceiling >= 3 touches, ascending swing lows theta >= 10 deg)
- * 3. Multi-Month Base (30-100 day consolidation base)
- * 4. Symmetrical Triangle (Coiling contraction)
- * 5. Inverse Head & Shoulders (Shoulders + Head + Neckline)
- * 
- * QUANTITATIVE GATES:
- * - RSI 14 in sweet spot: 48 to 85 (captures volume ignition leaders like CNL, SAREGAMA, ICIL)
- * - Structural Stop Loss anchored to support geometry (below pivot floor / handle trough)
- * - Institutional Anti-Chasing Buy Pocket: capped at +5.0% above pivot
- * - Realistic Zerodha round-trip friction (0.28%)
+ * Synchronized with config.js / config.py:
+ * - Uses Wilder-smoothed RSI [50.0, 78.0]
+ * - Relative Strength Gate: >= +5.0% outperformance vs NIFTY over 60 bars
+ * - Market Gate: NIFTY 50 > 50 EMA
+ * - Structural Stop Integrity: Rejects trades if risk distance is outside [2.5%, 7.5%] (NO CLAMPING)
+ * - Anti-Chasing Buy Pocket: Capped at +3.0% above pivot
+ * - Delegates pattern recognition to patterns.js (all 4 bugs fixed)
  */
 
+const { CONFIG } = require("./config");
 const patterns = require("./patterns");
 
 class ResistanceBreakoutStrategy {
-    constructor(config = {}) {
-        // RSI
-        this.rsiPeriod = config.rsiPeriod ?? 14;
-        this.rsiMin = config.rsiMin ?? 48.0;
-        this.rsiMax = config.rsiMax ?? 85.0;
-
-        // Relative Strength
-        this.rsLookback = config.rsLookback ?? 60;
-        this.minRsOutperformance = config.minRsOutperformance ?? 0.0;
-
-        // Risk & Targets
-        this.minRiskPct = config.minRiskPct ?? 0.025;
-        this.maxRiskPct = config.maxRiskPct ?? 0.065;
-        this.target1Pct = config.target1Pct ?? 0.050; // Tranche 1: +5.0% (Book 50% profit & move SL to BE)
-        this.target2Pct = config.target2Pct ?? 0.090; // Tranche 2: +9.0% Runner
-        this.breakevenTriggerR = config.breakevenTriggerR ?? 1.0;
-        this.trailTriggerR = config.trailTriggerR ?? 2.0;
-        this.maxHoldBars = config.maxHoldBars ?? 35;
-        this.frictionBps = config.frictionBps ?? 28.0;
-
-        // Portfolio Capacity & Buy Pocket
-        this.maxConcurrentPositions = config.maxConcurrentPositions ?? 20;
-        this.capitalPerPosition = config.capitalPerPosition ?? 50000;
-        this.maxExtension = config.maxExtension ?? 1.05; // Capped buy pocket (allows up to 5% expansion)
-        this.minVolumeSurge = config.minVolumeSurge ?? 1.25; // 1.25x 20-day SMA volume surge
-
-        // Expose patterns module
+    constructor(userConfig = {}) {
+        this.cfg = { ...CONFIG, ...userConfig };
         this.patterns = patterns;
     }
 
     calculateRSI(closes, period = 14) {
         const n = closes.length;
-        if (n < period + 1) return null;
-        let gain = 0, loss = 0;
-        for (let i = n - period; i < n; i++) {
+        if (n < period + 2) return null;
+        let avgGain = 0, avgLoss = 0;
+
+        for (let i = 1; i <= period; i++) {
             const diff = closes[i] - closes[i - 1];
-            if (diff > 0) gain += diff;
-            else loss -= diff;
+            if (diff > 0) avgGain += diff;
+            else avgLoss += Math.abs(diff);
         }
-        if (loss === 0) return 100;
-        const rs = (gain / period) / (loss / period);
+        avgGain /= period;
+        avgLoss /= period;
+
+        for (let i = period + 1; i < n; i++) {
+            const diff = closes[i] - closes[i - 1];
+            const gain = diff > 0 ? diff : 0;
+            const loss = diff < 0 ? Math.abs(diff) : 0;
+            avgGain = (avgGain * (period - 1) + gain) / period;
+            avgLoss = (avgLoss * (period - 1) + loss) / period;
+        }
+
+        if (avgLoss === 0) return 100;
+        const rs = avgGain / avgLoss;
         return 100 - (100 / (1 + rs));
     }
 
-    // Pattern Delegation to strategies/mine/patterns.js
-    detectCupAndHandle(sessions) {
-        return patterns.detectCupAndHandle(sessions);
-    }
-
-    detectAscendingTriangle(sessions) {
-        return patterns.detectAscendingTriangle(sessions);
-    }
-
-    detectMultiMonthBase(sessions) {
-        return patterns.detectMultiMonthBase(sessions);
-    }
-
-    detectResistanceBreakout(sessions) {
-        return patterns.detectMultiMonthBase(sessions);
-    }
-
-    detectRectangle(sessions) {
-        return patterns.detectMultiMonthBase(sessions);
-    }
-
-    detectSymmetricalTriangle(sessions) {
-        return patterns.detectSymmetricalTriangle(sessions);
-    }
-
-    detectInverseHS(sessions) {
-        return patterns.detectInverseHeadAndShoulders(sessions);
-    }
-
-    detectPattern(sessions) {
-        return patterns.detectPattern(sessions);
-    }
+    // Pattern Delegations
+    detectCupAndHandle(sessions) { return patterns.detectCupAndHandle(sessions); }
+    detectAscendingTriangle(sessions) { return patterns.detectAscendingTriangle(sessions); }
+    detectMultiMonthBase(sessions) { return patterns.detectMultiMonthBase(sessions); }
+    detectSymmetricalTriangle(sessions) { return patterns.detectSymmetricalTriangle(sessions); }
+    detectPattern(sessions) { return patterns.detectPattern(sessions); }
 
     onBar(sessions, indexSessions = null) {
         const n = sessions.length;
@@ -105,70 +62,79 @@ class ResistanceBreakoutStrategy {
         const curBar = sessions[n - 1];
         const closes = sessions.map(s => s.close);
 
-        // 1. RSI Gate (Sweet spot up to 85 for high-volume ignition days)
-        const rsi = this.calculateRSI(closes, this.rsiPeriod);
-        if (rsi == null || rsi < this.rsiMin || rsi > this.rsiMax) {
+        // 1. Wilder-smoothed RSI Gate [50, 78]
+        const rsi = this.calculateRSI(closes, this.cfg.RSI_PERIOD);
+        if (rsi == null || rsi < this.cfg.RSI_MIN || rsi > this.cfg.RSI_MAX) {
             return null;
         }
 
-        // 2. Relative Strength vs Index (if provided)
-        if (indexSessions && indexSessions.length >= this.rsLookback) {
+        // 2. Market Gate & Relative Strength vs NIFTY
+        if (indexSessions && indexSessions.length >= this.cfg.RS_LOOKBACK_BARS) {
             const idxN = indexSessions.length;
-            const stockRet = (curBar.close - sessions[n - 1 - this.rsLookback].close) / sessions[n - 1 - this.rsLookback].close;
-            const idxRet = (indexSessions[idxN - 1].close - indexSessions[idxN - 1 - this.rsLookback].close) / indexSessions[idxN - 1 - this.rsLookback].close;
-            const rs = (stockRet - idxRet) * 100;
-            if (rs < this.minRsOutperformance) {
+            const idxClose = indexSessions[idxN - 1].close;
+
+            // NIFTY 50 > 50 EMA Market Gate
+            if (this.cfg.REQUIRE_NIFTY_BULL && idxN >= 50) {
+                let ema50 = indexSessions[0].close;
+                const k50 = 2 / 51;
+                for (let i = 1; i < idxN; i++) ema50 = indexSessions[i].close * k50 + ema50 * (1 - k50);
+                if (idxClose < ema50) {
+                    return null; // Market not bullish
+                }
+            }
+
+            // 60-Day Relative Strength Outperformance
+            const lb = this.cfg.RS_LOOKBACK_BARS;
+            const stockRet = (curBar.close - sessions[n - 1 - lb].close) / sessions[n - 1 - lb].close;
+            const idxRet = (idxClose - indexSessions[idxN - 1 - lb].close) / indexSessions[idxN - 1 - lb].close;
+            const rsOutperformance = (stockRet - idxRet) * 100.0;
+            if (rsOutperformance < this.cfg.MIN_RS_OUTPERFORMANCE) {
                 return null;
             }
         }
 
-        // 2b. Anti-Climax Guard: Reject stocks extended > 50% above 200 EMA
-        if (n >= 150) {
+        // 3. Anti-Climax Guard: Reject stocks extended > 40% above rising 200 EMA
+        if (n >= 200) {
             let ema200 = closes[0];
             const k200 = 2 / 201;
             for (let i = 1; i < n; i++) ema200 = closes[i] * k200 + ema200 * (1 - k200);
-            if (curBar.close > ema200 * 1.50) {
+            if (curBar.close > ema200 * (1.0 + this.cfg.MAX_200_EMA_EXTENSION)) {
                 return null;
             }
         }
 
-        // 3. Pattern Recognition using strategies/mine/patterns.js
+        // 4. Pattern Recognition (Patterns.js)
         const detected = patterns.detectPattern(sessions);
         if (!detected) return null;
 
         const curC = curBar.close;
 
-        // 4. Institutional Capped Buy Pocket (No chasing extended candles > 5%)
-        if (curC > detected.level * this.maxExtension) {
-            return null;
-        }
-
-        // 5. Volume Surge Confirmation (>= 1.25x 20-day SMA)
-        if (curBar.volume && n >= 22) {
+        // 5. Volume Surge Confirmation (>= 1.50x 20-day SMA)
+        if (n >= 22) {
             let sumV = 0;
-            for (let i = n - 21; i < n - 1; i++) {
-                sumV += (sessions[i].volume || 0);
-            }
+            for (let i = n - 21; i < n - 1; i++) sumV += (sessions[i].volume || 1);
             const avgV = sumV / 20;
-            if (avgV > 0 && curBar.volume < avgV * this.minVolumeSurge) {
+            if (avgV > 0 && (curBar.volume || 1) < avgV * this.cfg.MIN_BREAKOUT_VOL_SURGE) {
                 return null;
             }
         }
 
-        let structSl = detected.stopLevel;
-        let riskPct = (curC - structSl) / curC;
-
-        if (riskPct < this.minRiskPct) {
-            structSl = curC * (1 - this.minRiskPct);
-            riskPct = this.minRiskPct;
-        } else if (riskPct > this.maxRiskPct) {
-            structSl = curC * (1 - this.maxRiskPct);
-            riskPct = this.maxRiskPct;
+        // 6. Candle Quality: Upper wick <= 35% of total bar range
+        const rng = curBar.high - curBar.low;
+        if (rng > 0 && (curBar.high - curC) / rng > this.cfg.MAX_UPPER_WICK_RATIO) {
+            return null; // Reject shooting stars
         }
 
-        const cashRisk = curC - structSl;
-        const target1 = curC * (1 + this.target1Pct);
-        const target2 = curC * (1 + this.target2Pct);
+        // 7. Structural Stop Integrity (NO CLAMPING)
+        const structSl = detected.stopLevel;
+        const riskPct = ((curC - structSl) / curC) * 100.0;
+
+        if (riskPct < this.cfg.MIN_STRUCTURAL_RISK_PCT || riskPct > this.cfg.MAX_STRUCTURAL_RISK_PCT) {
+            return null; // REJECT TRADE: Unacceptable risk distance!
+        }
+
+        const target1 = curC * (1.0 + this.cfg.TARGET_1_PCT / 100.0);
+        const target2 = curC * (1.0 + this.cfg.TARGET_2_PCT / 100.0);
 
         return {
             signal: 'BUY',
@@ -177,9 +143,9 @@ class ResistanceBreakoutStrategy {
             stopLoss: structSl,
             target1: target1,
             target2: target2,
-            rsi: rsi,
-            riskPct: riskPct * 100,
-            cashRisk: cashRisk,
+            rsi: +rsi.toFixed(1),
+            riskPct: +riskPct.toFixed(2),
+            cashRisk: +(curC - structSl).toFixed(2),
             details: detected
         };
     }
@@ -187,5 +153,6 @@ class ResistanceBreakoutStrategy {
 
 module.exports = {
     ResistanceBreakoutStrategy,
-    patterns
+    patterns,
+    CONFIG
 };

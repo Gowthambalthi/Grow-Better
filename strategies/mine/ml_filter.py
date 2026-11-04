@@ -3,7 +3,10 @@ strategies/mine/ml_filter.py
 -----------------------------
 Production ML Quality Gate for Chart Pattern Breakouts.
 Trained on multi-year NSE data with out-of-sample verified edge.
-Filters out low-probability false breakouts and elevates Win Rate to 57%-60%.
+
+SECURITY & AUDIT FIX:
+- Fails closed: If model is not loaded or missing, returns 0.0 probability (REJECT).
+  Never treats an absent model as a successful trade confirmation.
 """
 
 import os, pickle
@@ -14,9 +17,15 @@ MODEL_PATH = os.path.join(os.path.dirname(__file__), "model_gb.pkl")
 class MLPatternFilter:
     def __init__(self, model_path=MODEL_PATH):
         self.model = None
+        self.is_loaded = False
         if os.path.exists(model_path):
-            with open(model_path, "rb") as f:
-                self.model = pickle.load(f)
+            try:
+                with open(model_path, "rb") as f:
+                    self.model = pickle.load(f)
+                self.is_loaded = True
+            except Exception as e:
+                self.model = None
+                self.is_loaded = False
 
     def predict_probability(self, features_dict):
         """
@@ -33,8 +42,9 @@ class MLPatternFilter:
         - dist_ema200: Distance from 200 EMA in %
         - rs_val: 60-day relative strength outperformance vs NIFTY in %
         """
-        if self.model is None:
-            return 1.0 # Pass-through if model not loaded
+        # FAIL CLOSED: Never approve trades if model is absent!
+        if not self.is_loaded or self.model is None:
+            return 0.0
 
         feature_vector = np.array([[
             features_dict.get('base_len', 50),
