@@ -93,6 +93,9 @@ def run_ablation(require_multi_half=False, require_base_drift=False, require_cap
 
                     if abs(right_rim - left_rim) / left_rim <= 0.04:
                         rim = max(left_rim, right_rim)
+                        base_max = np.max(h[start_bar : i])
+                        if base_max > rim * 1.015:
+                            continue
                         depth = (rim - cup_bottom) / rim
                         if (CUP_MIN_DEPTH_PCT / 100.0) <= depth <= (CUP_MAX_DEPTH_PCT / 100.0):
                             h_depth = (rim - handle_low) / rim

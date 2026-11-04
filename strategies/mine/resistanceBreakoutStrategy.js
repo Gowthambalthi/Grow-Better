@@ -112,6 +112,16 @@ class ResistanceBreakoutStrategy {
 
             if (Math.abs(rightRim - leftRim) / leftRim <= 0.04) {
                 const rim = Math.max(leftRim, rightRim);
+
+                // Absolute Resistance Ceiling Rule:
+                // No candle inside the entire base lookback may exceed the breakout rim level (overhead cap <= 1.5%).
+                // Eliminates false breakouts trapped under hidden overhead peaks (e.g. OIL 2024-05-08 trapped under ₹446).
+                let baseMaxHigh = -Infinity;
+                for (let i = startBar; i < n - 1; i++) {
+                    if (sessions[i].high > baseMaxHigh) baseMaxHigh = sessions[i].high;
+                }
+                if (baseMaxHigh > rim * 1.015) continue;
+
                 const depth = (rim - cupBottom) / rim;
                 if (depth >= this.cupMinDepthPct / 100 && depth <= this.cupMaxDepthPct / 100) {
                     const hDepth = (rim - handleLow) / rim;
@@ -144,7 +154,15 @@ class ResistanceBreakoutStrategy {
             let neck1 = -Infinity, neck2 = -Infinity;
             for (let i = a; i < a + w; i++) if (sessions[i].high > neck1) neck1 = sessions[i].high;
             for (let i = a + 2 * w; i < b; i++) if (sessions[i].high > neck2) neck2 = sessions[i].high;
-            const neck = Math.min(neck1, neck2);
+            const neck = Math.max(neck1, neck2);
+
+            // Neckline symmetry check (within 5%)
+            if (Math.abs(neck1 - neck2) / neck > 0.05) return null;
+
+            // Absolute Ceiling Rule for IHS:
+            let baseMaxHigh = -Infinity;
+            for (let i = a; i < b; i++) if (sessions[i].high > baseMaxHigh) baseMaxHigh = sessions[i].high;
+            if (baseMaxHigh > neck * 1.015) return null;
 
             const curC = sessions[b].close;
             const prevC = sessions[b - 1].close;

@@ -39,7 +39,9 @@ cupL = ta.lowest(low[10], 45)   // Bowl bottom
 handleL = ta.lowest(low[1], 10)  // Handle pullback
 cupDepth = (cupH - cupL) / cupH
 handleDepth = (cupH - handleL) / cupH
-bool cupBreakout = (cupDepth >= 0.10 and cupDepth <= 0.38) and (handleDepth <= cupDepth * 0.45) and (close > cupH * 0.998) and (close[1] <= cupH * 1.005)
+baseMaxH = ta.highest(high[1], 55)
+bool ceilingValid = (baseMaxH <= cupH * 1.015) // Absolute ceiling: no overhead peak higher than rim
+bool cupBreakout = ceilingValid and (cupDepth >= 0.10 and cupDepth <= 0.38) and (handleDepth <= cupDepth * 0.45) and (close > cupH * 0.998) and (close[1] <= cupH * 1.005)
 
 // --- Pattern 3: Inverse Head & Shoulders ---
 lsLow = ta.lowest(low[45], 25)

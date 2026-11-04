@@ -763,6 +763,16 @@ const RULES = {
 
       if (Math.abs(rightRim - leftRim) / leftRim <= 0.04) {
         const rim = Math.max(leftRim, rightRim);
+
+        // Absolute Resistance Ceiling Rule:
+        // No candle inside the entire base lookback may exceed the breakout rim level (overhead cap <= 1.5%).
+        // Eliminates false breakouts trapped under hidden overhead peaks (e.g. OIL 2024-05-08 trapped under ₹446).
+        let baseMaxHigh = -Infinity;
+        for (let i = sBar; i < n - 1; i++) {
+          if (highs[i] > baseMaxHigh) baseMaxHigh = highs[i];
+        }
+        if (baseMaxHigh > rim * 1.015) continue;
+
         const depth = (rim - cupBottom) / rim;
         if (depth >= 0.10 && depth <= 0.35) {
           const hDepth = (rim - handleLow) / rim;
