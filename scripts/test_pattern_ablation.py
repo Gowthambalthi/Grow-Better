@@ -84,6 +84,10 @@ def run_ablation(require_multi_half=False, require_base_drift=False, require_cap
                     left_rim = np.max(h[start_bar : start_bar + 15])
                     left_rim_idx = start_bar + np.argmax(h[start_bar : start_bar + 15])
                     cup_bottom = np.min(l[left_rim_idx : mid_bar])
+                    bottom_idx = left_rim_idx + np.argmin(l[left_rim_idx : mid_bar])
+                    bottom_pos = (bottom_idx - start_bar) / (mid_bar - start_bar)
+                    if bottom_pos < 0.25 or bottom_pos > 0.75:
+                        continue
                     right_rim = np.max(h[mid_bar - 5 : mid_bar + 5])
                     handle_low = np.min(l[mid_bar : i])
 

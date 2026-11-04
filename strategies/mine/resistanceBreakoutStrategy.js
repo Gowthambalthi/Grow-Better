@@ -85,9 +85,20 @@ class ResistanceBreakoutStrategy {
             }
 
             let cupBottom = Infinity;
+            let bottomIdx = leftRimIdx;
             for (let i = leftRimIdx; i <= midBar; i++) {
-                if (sessions[i].low < cupBottom) cupBottom = sessions[i].low;
+                if (sessions[i].low < cupBottom) {
+                    cupBottom = sessions[i].low;
+                    bottomIdx = i;
+                }
             }
+
+            // Symmetrical U-Shape Bowl Filter:
+            // Cup bottom MUST occur in the central half of the bowl (between 25% and 75% of the length).
+            // If bottom is near the outer quarters (< 25% or > 75%), it is a diagonal trend climber (e.g. CIPLA 2024-03-01).
+            const cupSpan = (midBar - startBar);
+            const bottomPos = (bottomIdx - startBar) / (cupSpan || 1);
+            if (bottomPos < 0.25 || bottomPos > 0.75) continue;
 
             let rightRim = -Infinity;
             for (let i = midBar - 5; i <= midBar + 5; i++) {

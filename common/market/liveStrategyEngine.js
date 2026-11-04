@@ -742,7 +742,20 @@ const RULES = {
       let leftRim = -Infinity;
       for (let i = sBar; i <= sBar + 12; i++) if (highs[i] > leftRim) leftRim = highs[i];
       let cupBottom = Infinity;
-      for (let i = sBar + 10; i <= mBar; i++) if (lows[i] < cupBottom) cupBottom = lows[i];
+      let bottomIdx = sBar;
+      for (let i = sBar; i <= mBar; i++) {
+        if (lows[i] < cupBottom) {
+          cupBottom = lows[i];
+          bottomIdx = i;
+        }
+      }
+
+      // Symmetrical U-Shape Bowl Filter:
+      // Cup bottom MUST occur in the central half of the bowl (between 25% and 75% of the length).
+      // If bottom is near the outer quarters (< 25% or > 75%), it is a diagonal trend climber (e.g. CIPLA 2024-03-01).
+      const cupSpan = mBar - sBar;
+      const bottomPos = (bottomIdx - sBar) / (cupSpan || 1);
+      if (bottomPos < 0.25 || bottomPos > 0.75) continue;
       let rightRim = -Infinity;
       for (let i = mBar - 4; i <= mBar + 4; i++) if (highs[i] > rightRim) rightRim = highs[i];
       let handleLow = Infinity;
