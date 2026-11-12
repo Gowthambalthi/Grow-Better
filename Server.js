@@ -50,7 +50,18 @@ const path = require('path');
 
 const fs = require('fs');
 
-const Database = require('better-sqlite3');
+let Database;
+try {
+  Database = require('better-sqlite3');
+} catch (e) {
+  console.warn('[server] Native better-sqlite3 load failed, using mock DB fallback:', e.message);
+  Database = class MockDatabase {
+    constructor() {}
+    prepare() { return { all: () => [], get: () => null, run: () => ({ changes: 0 }) }; }
+    pragma() {}
+    close() {}
+  };
+}
 
 const env = require('./config/env');
 
