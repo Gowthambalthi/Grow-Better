@@ -143,6 +143,44 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
     }
   }
 
+  // 1b. Fallback for Major Indices if Angel One is unauthenticated / keys missing on cloud
+  const needsIndexFallback = !result['NIFTY']?.ltp || !result['BANKNIFTY']?.ltp || !result['SENSEX']?.ltp;
+  if (needsIndexFallback) {
+    try {
+      const YAHOO_INDICES = {
+        NIFTY: '%5ENSEI',
+        BANKNIFTY: '%5ENSEBANK',
+        SENSEX: '%5EBSESN',
+        INDIAVIX: '%5EINDIAVIX'
+      };
+      await Promise.all(Object.entries(YAHOO_INDICES).map(async ([key, ySym]) => {
+        if (result[key] && !result[key].ltp) {
+          try {
+            const yRes = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${ySym}?interval=1d&range=1d`, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+              timeout: 5000
+            });
+            const meta = yRes.data?.chart?.result?.[0]?.meta;
+            if (meta && meta.regularMarketPrice > 0) {
+              const price = Number(meta.regularMarketPrice);
+              const close = Number(meta.chartPreviousClose || meta.previousClose || price);
+              const chg = Number((price - close).toFixed(2));
+              const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
+              result[key].ltp = price;
+              result[key].price = price;
+              result[key].close = close;
+              result[key].change = chg;
+              result[key].changePct = chgPct;
+              result[key].quote = { price, close, change: chg, changePct: chgPct };
+              result[key].source = 'Live Index Feed (Yahoo)';
+              result[key].lastUpdated = new Date().toISOString();
+            }
+          } catch (_) {}
+        }
+      }));
+    } catch (_) {}
+  }
+
   // 2. Fetch Live GIFT NIFTY directly from Groww Live Feed Endpoint
   try {
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' };
