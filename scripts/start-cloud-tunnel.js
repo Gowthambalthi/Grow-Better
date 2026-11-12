@@ -77,6 +77,8 @@ function notifyTelegram(url) {
   } catch (_) {}
 }
 
+let retryDelay = 15000;
+
 function startTunnel() {
   if (shuttingDown) return;
 
@@ -99,6 +101,7 @@ function startTunnel() {
     const match = text.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
     if (match && !urlFound) {
       urlFound = true;
+      retryDelay = 15000;
       currentUrl = match[0];
       try {
         fs.writeFileSync(LOG_FILE, currentUrl, 'utf8');
@@ -119,13 +122,12 @@ function startTunnel() {
     }
   });
 
-  let retryDelay = 5000;
   tunnelProc.on('close', (code) => {
     if (shuttingDown) return;
     if (!urlFound) {
-      retryDelay = Math.min(Math.round(retryDelay * 1.5), 60000);
+      retryDelay = Math.min(Math.round(retryDelay * 1.6), 120000);
     } else {
-      retryDelay = 5000;
+      retryDelay = 15000;
     }
     console.log(`⚠️ Cloudflare tunnel disconnected (exit code ${code}). Reconnecting in ${Math.round(retryDelay / 1000)}s...`);
     setTimeout(startTunnel, retryDelay);

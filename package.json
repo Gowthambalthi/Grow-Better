@@ -6,8 +6,9 @@
   "scripts": {
     "demo": "node demo.js",
     "start": "node Server.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
     "board": "node scripts/buildBoard.js",
+    "scan:live": "node scripts/run_live_trading_system.js",
     "backtest": "node backtest/runAll.js"
   },
   "engines": {
@@ -22,6 +23,8 @@
     "node-cron": "^4.6.0",
     "otplib": "^12.0.1",
     "pdf-parse": "^2.4.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "rss-parser": "^3.13.0",
     "ws": "^8.18.0",
     "xlsx": "^0.18.5",

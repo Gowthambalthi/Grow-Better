@@ -1,0 +1,42 @@
+{
+  "source": "NSE 2026 capital-market trading-holiday circulars CMTR71775 + CMTR72260 (equity segment, incl. 2026-01-15 election closure); NYSE/Nasdaq 2026 calendar (nyse.com/markets/hours-calendars, nasdaqtrader.com/trader.aspx?id=calendar). Weekend dates kept for completeness; Diwali Muhurat 2026-11-08 falls on a Sunday.",
+  "updated": "2026-10-20",
+  "note": "Coverage: India 2026 + New Year 2027; USA 2026 + New Year 2027 (+2025 tail). Years not listed are treated as all-trading-days — extend this file before that year's first cutoff matters.",
+  "india": {
+    "2026-01-15": "Municipal Corporation Election (Maharashtra)",
+    "2026-01-26": "Republic Day",
+    "2026-02-15": "Maha Shivaratri (Sunday)",
+    "2026-03-03": "Holi",
+    "2026-03-21": "Eid-Ul-Fitr (Saturday)",
+    "2026-03-26": "Shri Ram Navami",
+    "2026-03-31": "Shri Mahavir Jayanti",
+    "2026-04-03": "Good Friday",
+    "2026-04-14": "Dr. Baba Saheb Ambedkar Jayanti",
+    "2026-05-01": "Maharashtra Day",
+    "2026-05-28": "Bakri Id",
+    "2026-06-26": "Muharram",
+    "2026-08-15": "Independence Day (Saturday)",
+    "2026-09-14": "Ganesh Chaturthi",
+    "2026-10-02": "Mahatma Gandhi Jayanti",
+    "2026-10-20": "Dussehra",
+    "2026-11-10": "Diwali-Balipratipada",
+    "2026-11-24": "Prakash Gurpurb Sri Guru Nanak Dev",
+    "2026-12-25": "Christmas",
+    "2027-01-01": "New Year"
+  },
+  "usa": {
+    "2025-11-27": "Thanksgiving",
+    "2025-12-25": "Christmas",
+    "2026-01-01": "New Year's Day",
+    "2026-01-19": "Martin Luther King Jr. Day",
+    "2026-02-16": "Presidents' Day",
+    "2026-04-03": "Good Friday",
+    "2026-05-25": "Memorial Day",
+    "2026-06-19": "Juneteenth",
+    "2026-07-03": "Independence Day observed (Jul 4 = Saturday)",
+    "2026-09-07": "Labor Day",
+    "2026-11-26": "Thanksgiving",
+    "2026-12-25": "Christmas",
+    "2027-01-01": "New Year's Day"
+  }
+}

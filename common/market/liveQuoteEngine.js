@@ -6,6 +6,8 @@
  */
 
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const angelAuth = require('../../angelone/auth');
 const env = require('../../config/env');
 
@@ -107,7 +109,7 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
           NFO: ['58072'],
           MCX: ['483079', '471725']
         }
-      }, { headers: aHeaders, timeout: 3500 });
+      }, { headers: aHeaders, timeout: 8000 });
 
       const fetched = batchRes.data?.data?.fetched || [];
       for (const item of fetched) {
@@ -134,14 +136,17 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
       console.error('[liveQuoteEngine] Token expired, resetting session for next call...');
       cachedSession = null;
     } else {
-      console.error('[liveQuoteEngine] Angel One batch quote note:', err.message);
+      if (!global._lastAngelErrTime || Date.now() - global._lastAngelErrTime > 300000) {
+        global._lastAngelErrTime = Date.now();
+        console.error('[liveQuoteEngine] Angel One batch quote note (throttled):', err.message);
+      }
     }
   }
 
   // 2. Fetch Live GIFT NIFTY directly from Groww Live Feed Endpoint
   try {
     const uHeaders = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' };
-    const gRes = await axios.get('https://groww.in/indices/global-indices/sgx-nifty', { headers: uHeaders, timeout: 3500 });
+    const gRes = await axios.get('https://groww.in/indices/global-indices/sgx-nifty', { headers: uHeaders, timeout: 8000 });
     const html = gRes.data;
 
     const ltpMatch = html.match(/"value":\s*([0-9.]+)/) || html.match(/"lastPrice":\s*([0-9.]+)/);
@@ -165,10 +170,42 @@ async function fetchWatchlistQuotes(symbolKeys = ['NIFTY', 'BANKNIFTY', 'SENSEX'
       result['GIFTNIFTY'].lastUpdated = new Date().toISOString();
     }
   } catch (gErr) {
-    console.error('[liveQuoteEngine] Groww GIFT NIFTY live fetch note:', gErr.message);
+    if (!global._lastGrowwErrTime || Date.now() - global._lastGrowwErrTime > 300000) {
+      global._lastGrowwErrTime = Date.now();
+      console.error('[liveQuoteEngine] Groww GIFT NIFTY live fetch note (throttled):', gErr.message);
+    }
   }
 
   return symbolKeys.map(k => result[k]).filter(Boolean);
+}
+
+/**
+ * SYMBOL -> NSE TOKEN, from the local price corpus.
+ *
+ * WHY THIS FALLBACK EXISTS. fetchStockQuotes resolved every token through
+ * angelInstruments, which is refreshed once at server start and can fail to load
+ * (observed: "stream has been aborted"). When it did, EVERY quote came back {} —
+ * no error, no log — and the news panel showed "-" beside a lean instead of
+ * "already moved +3.2%, SKIP". The corpus already stores each symbol token, so a
+ * missing master degrades to a corpus lookup rather than to silence.
+ */
+let _corpusTokens = null;
+function corpusToken(sym) {
+  if (!_corpusTokens) _corpusTokens = new Map();
+  if (_corpusTokens.has(sym)) return _corpusTokens.get(sym);
+  let tok = null;
+  for (const dir of [
+    path.join(__dirname, '..', '..', 'data', 'ohlcv_1m_full'),
+    path.join(__dirname, '..', '..', 'data', 'ohlcv_1m'),
+    path.join(__dirname, '..', '..', 'data', 'ohlcv'),
+  ]) {
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(dir, sym + '.json'), 'utf8'));
+      if (j && j.token) { tok = String(j.token); break; }
+    } catch (e) { /* next source */ }
+  }
+  _corpusTokens.set(sym, tok);
+  return tok;
 }
 
 /**
@@ -198,6 +235,16 @@ async function fetchStockQuotes(symbolList = []) {
         if (rec) {
           (tokensByExch[rec.exch_seg] ||= []).push(rec.token);
           tokenToSymbol[`${rec.exch_seg}:${rec.token}`] = cleanSym;
+        } else {
+          // The instrument master is not always loaded (it is refreshed once at
+          // start and its fetch can fail). Without this, one missing master meant
+          // every quote silently empty and the "already moved?" check had nothing
+          // to compare — the trader then saw an UP lean on a stock already up 3%.
+          const tok = corpusToken(cleanSym);
+          if (tok) {
+            (tokensByExch.NSE ||= []).push(tok);
+            tokenToSymbol[`NSE:${tok}`] = cleanSym;
+          }
         }
       }
 
@@ -216,25 +263,92 @@ async function fetchStockQuotes(symbolList = []) {
           'X-PrivateKey': apiKey
         };
 
-        const batchRes = await axios.post(batchUrl, { mode: 'FULL', exchangeTokens: tokensByExch }, { headers: aHeaders, timeout: 3000 });
-        const fetched = batchRes.data?.data?.fetched || [];
-
-        for (const item of fetched) {
-          const token = item.symbolToken || item.symboltoken;
-          const exch = item.exchange || item.exch_seg || 'NSE';
-          const sym = tokenToSymbol[`${exch}:${token}`];
-          if (sym && item.ltp != null) {
-            const ltp = Number(item.ltp);
-            const close = item.close != null ? Number(item.close) : ltp;
-            const chg = item.netChange != null ? Number(item.netChange) : Number((ltp - close).toFixed(2));
-            const chgPct = item.percentChange != null ? Number(item.percentChange) : (close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0);
-            quotesMap[sym] = { ltp, close, change: chg, changePct: chgPct, source: 'Angel One SmartAPI' };
+        // Angel One SmartAPI batch quote allows max 50 tokens per call.
+        // Chunk tokens into batches of up to 40 per request so large universes never fail.
+        const tokenChunks = [];
+        let curChunk = {};
+        let curCount = 0;
+        for (const [exch, toks] of Object.entries(tokensByExch)) {
+          for (const tok of toks) {
+            (curChunk[exch] ||= []).push(tok);
+            curCount++;
+            if (curCount >= 40) {
+              tokenChunks.push(curChunk);
+              curChunk = {};
+              curCount = 0;
+            }
           }
+        }
+        if (curCount > 0) tokenChunks.push(curChunk);
+
+        for (const chunk of tokenChunks) {
+          try {
+            const batchRes = await axios.post(batchUrl, { mode: 'FULL', exchangeTokens: chunk }, { headers: aHeaders, timeout: 8000 });
+            const fetched = batchRes.data?.data?.fetched || [];
+
+            for (const item of fetched) {
+              const token = item.symbolToken || item.symboltoken;
+              const exch = item.exchange || item.exch_seg || 'NSE';
+              const sym = tokenToSymbol[`${exch}:${token}`];
+              if (sym && item.ltp != null) {
+                const ltp = Number(item.ltp);
+                const close = item.close != null ? Number(item.close) : ltp;
+                const chg = item.netChange != null ? Number(item.netChange) : Number((ltp - close).toFixed(2));
+                const chgPct = item.percentChange != null ? Number(item.percentChange) : (close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0);
+                const dayOpen = item.open != null && isFinite(item.open) ? Number(item.open) : null;
+                const dayHigh = item.high != null && isFinite(item.high) ? Number(item.high) : null;
+                const dayLow = item.low != null && isFinite(item.low) ? Number(item.low) : null;
+                const dayVolume = item.tradeVolume != null && isFinite(item.tradeVolume) ? Number(item.tradeVolume) : (item.volume != null && isFinite(item.volume) ? Number(item.volume) : null);
+                const dayTurnover = item.totTradedVal != null && isFinite(item.totTradedVal) ? Number(item.totTradedVal) : null;
+                quotesMap[sym] = {
+                  ltp, close, open: dayOpen, high: dayHigh, low: dayLow,
+                  volume: dayVolume, turnover: dayTurnover,
+                  change: chg, changePct: chgPct, source: 'Angel One SmartAPI',
+                };
+              }
+            }
+          } catch (_) {}
         }
       }
     }
   } catch (err) {
     console.error('[liveQuoteEngine] Angel One stock quote fetch note:', err.message);
+  }
+
+  // 2. Backup to Yahoo Finance for any symbols missing from Angel One
+  const missing = cleanSymbols.filter(s => !quotesMap[s] || quotesMap[s].ltp <= 0);
+  if (missing.length > 0) {
+    try {
+      const batchSize = 25;
+      for (let i = 0; i < missing.length; i += batchSize) {
+        const batch = missing.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (sym) => {
+          try {
+            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}.NS?interval=1m&range=1d`;
+            const yRes = await axios.get(url, { headers: uHeaders, timeout: 3500 });
+            const meta = yRes.data?.chart?.result?.[0]?.meta;
+            if (meta && meta.regularMarketPrice > 0) {
+              const ltp = Number(meta.regularMarketPrice);
+              const close = Number(meta.chartPreviousClose || meta.previousClose || ltp);
+              const chg = Number((ltp - close).toFixed(2));
+              const chgPct = close > 0 ? Number(((chg / close) * 100).toFixed(2)) : 0;
+              quotesMap[sym] = {
+                ltp,
+                close,
+                open: Number(meta.regularMarketOpen || close),
+                high: Number(meta.regularMarketDayHigh || ltp),
+                low: Number(meta.regularMarketDayLow || ltp),
+                volume: Number(meta.regularMarketVolume || 0),
+                turnover: null,
+                change: chg,
+                changePct: chgPct,
+                source: 'Yahoo Finance Live'
+              };
+            }
+          } catch (_) {}
+        }));
+      }
+    } catch (_) {}
   }
 
   return quotesMap;

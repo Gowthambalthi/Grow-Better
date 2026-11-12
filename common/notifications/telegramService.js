@@ -294,7 +294,7 @@ async function sendPhoneNotificationNow(message, options = {}) {
 function sendPhoneNotification(message, options = {}) {
   // THE INNER SENDER IS REACHED THROUGH THE EXPORT, NOT THE CLOSURE. Assigning
   // `require('…/telegramService').sendPhoneNotificationNow = stub` is how this tree already
-  // swaps the transport (scratch/measure_struct_stop.js does exactly that, before requiring the
+  // swaps the transport (docs/measurements/scratch/measure_struct_stop.js does exactly that, before requiring the
   // engine, so the engine's captured reference is the stub). Closing over the local name made
   // that assignment a no-op for THIS entry point, which in a test means the message leaves for
   // the real channel instead of the stub — the one way a "unit" test can post to the owner's

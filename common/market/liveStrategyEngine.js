@@ -820,23 +820,90 @@ const RULES = {
       }
     }
 
-    // C. Ascending Triangle (Flat resistance + rising lows)
-    if (!detected && n >= 42) {
-      const winH = highs.slice(n - 41, -1);
-      const winL = lows.slice(n - 41, -1);
-      const triRes = Math.max(...winH);
-      let touches = 0;
-      for (let i = 0; i < winH.length; i++) {
-        if (winH[i] >= triRes * 0.98) touches++;
-      }
-      if (touches >= 2) {
-        const l1 = Math.min(...winL.slice(0, 20));
-        const l2 = Math.min(...winL.slice(20));
-        if (l2 > l1) {
-          if (ctx.ltp > triRes && closes[n - 2] <= triRes * 1.005) {
-            detected = 'ASCENDING_TRIANGLE';
-            patLevel = triRes;
-            stopL = l2;
+    // C. Institutional Multi-Month Ascending Triangle (Sweet Spot: PF 2.02)
+    // 45-90 Bar Base + Gentle Slope (2°-16°) + 52W Leader (<12%) + Apex VDU
+    if (!detected && n >= 60 && volX >= 1.50) {
+      const curIdx = n - 1;
+      const rng = highs[curIdx] - lows[curIdx];
+      const upperShadow = rng > 0 ? (highs[curIdx] - ctx.ltp) / rng : 0;
+
+      if (upperShadow <= 0.25) {
+        let high52w = -Infinity;
+        const start52w = Math.max(0, curIdx - 250);
+        for (let b = start52w; b <= curIdx; b++) if (highs[b] > high52w) high52w = highs[b];
+        const dist52w = (high52w - ctx.ltp) / high52w;
+
+        if (dist52w <= 0.12) {
+          for (const winLen of [45, 60, 75, 90]) {
+            if (n < winLen + 10) continue;
+            const startIdx = curIdx - winLen;
+
+            // 1. Identify distinct swing highs (local peaks)
+            const peaks = [];
+            for (let p = startIdx + 2; p < curIdx - 2; p++) {
+              if (highs[p] >= highs[p - 1] && highs[p] >= highs[p - 2] &&
+                  highs[p] >= highs[p + 1] && highs[p] >= highs[p + 2]) {
+                peaks.push({ bar: p, high: highs[p] });
+              }
+            }
+            if (peaks.length < 2) continue;
+
+            let resCeiling = -Infinity;
+            for (const pk of peaks) if (pk.high > resCeiling) resCeiling = pk.high;
+
+            const touchingPeaks = peaks.filter(pk => pk.high >= resCeiling * 0.988);
+            if (touchingPeaks.length < 2) continue;
+            if (touchingPeaks[touchingPeaks.length - 1].bar - touchingPeaks[0].bar < 8) continue;
+
+            // 2. Identify distinct swing lows (local troughs)
+            const troughs = [];
+            for (let t = startIdx + 2; t < curIdx - 1; t++) {
+              if (lows[t] <= lows[t - 1] && lows[t] <= lows[t - 2] &&
+                  lows[t] <= lows[t + 1] && lows[t] <= lows[Math.min(t + 2, curIdx - 1)]) {
+                troughs.push({ bar: t, low: lows[t] });
+              }
+            }
+            if (troughs.length < 2) continue;
+
+            const l1 = troughs[0];
+            let validL2 = null;
+            for (let t = 1; t < troughs.length; t++) {
+              if (troughs[t].bar - l1.bar >= 6 && troughs[t].low > l1.low * 1.010) {
+                validL2 = troughs[t];
+                break;
+              }
+            }
+            if (!validL2) continue;
+
+            // Gentle Accumulation Angle (2° to 16° ATR-normalized)
+            const deltaBars = validL2.bar - l1.bar;
+            const curAtr = atr14 || (ctx.ltp * 0.02);
+            const atrRise = (validL2.low - l1.low) / curAtr;
+            const angleDeg = (Math.atan2(atrRise, deltaBars) * 180) / Math.PI;
+            if (angleDeg < 2.0 || angleDeg > 16.0) continue;
+
+            // 3. Volatility Compression
+            const depth1 = (resCeiling - l1.low) / resCeiling;
+            const depth2 = (resCeiling - validL2.low) / resCeiling;
+            if (depth2 > depth1 * 0.70) continue;
+            if (depth1 < 0.06 || depth1 > 0.32) continue;
+
+            // Apex Volume Dry-Up
+            const midIdx = Math.floor((startIdx + curIdx) / 2);
+            let baseVolSum = 0, apexVolSum = 0;
+            for (let b = startIdx; b < midIdx; b++) baseVolSum += vols[b];
+            for (let b = midIdx; b < curIdx; b++) apexVolSum += vols[b];
+            const baseVol = baseVolSum / (midIdx - startIdx);
+            const apexVol = apexVolSum / (curIdx - midIdx);
+            if (baseVol > 0 && apexVol > baseVol * 1.05) continue;
+
+            // 4. Breakout
+            if (ctx.ltp > resCeiling && closes[curIdx - 1] <= resCeiling * 1.010) {
+              detected = 'ASCENDING_TRIANGLE';
+              patLevel = resCeiling;
+              stopL = validL2.low * 0.995;
+              break;
+            }
           }
         }
       }

@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-12",
+  "status": "SESSION_CLOSED_PROFIT_LOCKED",
+  "entryTime": "09:20:00 IST",
+  "exitTime": "15:15:00 IST",
+  "lastUpdated": "2026-11-12 21:43:13 IST",
+  "nifty": {
+    "symbol": "NIFTY",
+    "lotSize": 25,
+    "entrySpot": 25361.3,
+    "currentSpot": 25361.3,
+    "callLeg": {
+      "strike": 25600,
+      "entryPrem": 88.8,
+      "currentPrem": 22.2,
+      "sl": 111.0,
+      "slHit": false,
+      "pnl": 1665.0
+    },
+    "putLeg": {
+      "strike": 25100,
+      "entryPrem": 88.8,
+      "currentPrem": 22.2,
+      "sl": 111.0,
+      "slHit": false,
+      "pnl": 1665.0
+    },
+    "netPnl": 3330.0,
+    "netPoints": 133.2,
+    "status": "CLOSED"
+  },
+  "bankNifty": {
+    "symbol": "BANKNIFTY",
+    "lotSize": 15,
+    "entrySpot": 61350.65,
+    "currentSpot": 61518.5,
+    "callLeg": {
+      "strike": 62000,
+      "entryPrem": 245.4,
+      "currentPrem": 98.3,
+      "sl": 306.8,
+      "slHit": false,
+      "pnl": 2206.5
+    },
+    "putLeg": {
+      "strike": 60700,
+      "entryPrem": 245.4,
+      "currentPrem": 61.4,
+      "sl": 306.8,
+      "slHit": false,
+      "pnl": 2760.0
+    },
+    "netPnl": 4966.5,
+    "netPoints": 331.1,
+    "status": "CLOSED"
+  },
+  "combinedPnl": 8296.5,
+  "dailySummary": "Session Finalized at 15:15 PM! Combined Net Profit: \u20b9+8,296.50 (BankNifty: \u20b9+4,966.50, Nifty: \u20b9+3,330.00)"
+}

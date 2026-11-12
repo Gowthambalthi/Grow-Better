@@ -178,6 +178,12 @@ const ENGINE_NAMES = {
   GB04: 'GB04 — PDH/PDL Support & Resistance',
   CODEX: 'CodeX Opening Range (ORB01)',
   SWING: 'Swing VWAP Pullback (SW01)',
+  KEYIDEA: 'KEYIDEA — MTF Liquidity-Sweep Reversal',
+  KI01: 'KEYIDEA — KI01 MTF Sweep Reversal',
+  GROW_SCALPING: 'GROW SCALPING',
+  GS15: 'GROW Scalping 15Min',
+  GS01: 'GROW Scalping Micro',
+  GS05: 'GROW Scalping 5Min Velocity',
 };
 const SWEEP_ONLY_STATUSES = new Set([
   'EXPIRED', 'FILLED', 'INVALIDATED', 'CANCELLED_EXHAUSTION',
@@ -594,7 +600,37 @@ function liveRollingRecord(opts) {
 // while the board's rows were stamped with one hardcoded strategy name and this reader
 // attributed the same call to whichever engine actually wrote it, the per-strategy table and
 // the day's history disagreed about the same trade.
+
+/**
+ * THE RISK THE CALL WAS ENTERED WITH, in bps — the denominator every R on the board uses.
+ *
+ * ONE IMPLEMENTATION, because two of them disagreed in a way that printed a losing day as a
+ * winning one. The order-flow engine's breakeven lock OVERWRITES `stopLoss` with entry ±15 bps
+ * once a call reaches +0.50% MFE, so a reader that divides netBps by the stop the row CARRIES
+ * AT READ TIME measured a 15-bps scratch as a +4.77R winner while every loser kept its full
+ * ~55 bps structural stop. On 2026-10-21 that painted NET +3.70R on a day whose honest record
+ * was −0.53R / −₹535 (and −₹1,722 under the friction model that day was booked with — see
+ * strategies/orderflow/liveMinuteEngine.js growwCostInr).
+ *
+ * Order of trust, most immutable first:
+ *   1. `riskBps` — stamped by the engine at creation from its own stop geometry; never mutated.
+ *   2. `entryStopLoss` — the stop the call was opened with, recorded before the lock moves it.
+ *   3. `stopLoss` — only for a record that carries neither, i.e. one whose stop was never moved.
+ *
+ * Returns null when no risk can be derived, so a caller shows '—' rather than inventing a unit.
+ */
+function entryRiskBps(call) {
+  if (!call) return null;
+  const stamped = Number(call.riskBps);
+  if (isFinite(stamped) && stamped > 0) return stamped;
+  const entry = Number(call.entryPrice != null ? call.entryPrice : call.limitEntry);
+  const stop = Number(call.entryStopLoss != null ? call.entryStopLoss : call.stopLoss);
+  if (!(entry > 0) || !isFinite(stop)) return null;
+  const bps = (Math.abs(entry - stop) / entry) * 10000;
+  return bps > 0 ? bps : null;
+}
+
 module.exports = {
   callBookHistory, classify, tallyOutcomes, OUTCOME, istDate, engineOf, strategyOf, ENGINE_NAMES,
-  liveRollingRecord,
+  liveRollingRecord, entryRiskBps,
 };

@@ -184,10 +184,17 @@ function startPolling({ token, chatId, onDecision, onText = null, log = console.
         }
       } catch (e) {
         if (stopped) break;
-        // A network blip is expected on a laptop: wait, then keep listening. Silence here would
-        // mean the ✅ button stops working with nothing on screen saying why.
-        log('[telegramApprovals] poll error: ' + ((e && e.message) || e));
-        await new Promise((r) => setTimeout(r, 4000));
+        const is409 = (e && e.response && e.response.status === 409) || String(e && e.message).includes('409');
+        if (is409) {
+          log('[telegramApprovals] ⚠️ 409 Conflict: Another process is polling Telegram getUpdates for this bot token. Only one bot listener can run at a time. Backing off 12s...');
+          await new Promise((r) => setTimeout(r, 12000));
+        } else {
+          const msg = (e && e.message) || String(e);
+          if (!msg.toLowerCase().includes('timeout')) {
+            log('[telegramApprovals] poll error: ' + msg);
+          }
+          await new Promise((r) => setTimeout(r, 4000));
+        }
       }
     }
   }
