@@ -5,41 +5,17 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: node Server.js
+    healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 4000
+      - key: NODE_VERSION
+        value: 20.18.0
       - key: NODE_ENV
         value: production
       - key: GB03_SIDES
         value: short
       - key: GB_TICK_CAPTURE
         value: "1"
-      # Live broker data (holdings, LTP, quotes, order feeds).
-      # Set the SECRET VALUES in Render Dashboard -> Environment — never commit
-      # them to git. Names must match config/env.js exactly.
       - key: ANGEL_ENABLED
-        value: "true"
-      - key: ANGEL_API_KEY
-        sync: false
-      - key: ANGEL_CLIENT_CODE
-        sync: false
-      - key: ANGEL_PASSWORD
-        sync: false
-      - key: ANGEL_TOTP_SECRET
-        sync: false
-      - key: ANGEL_BASE_URL
-        value: https://apiconnect.angelone.in
+        value: "false"
       - key: GROWW_ENABLED
-        value: "true"
-      - key: GROWW_TOTP_TOKEN
-        sync: false
-      - key: GROWW_TOTP_SECRET
-        sync: false
-      - key: GROWW_BASE_URL
-        value: https://api.groww.in
-      # Sieve scrape API (server-side only). SIEVE_API_KEY is a secret and is
-      # set in the Render dashboard; the feature is inert while it is unset.
-      - key: SIEVE_API_KEY
-        sync: false
-      - key: SIEVE_BASE_URL
-        value: https://scrape.usesieve.com
+        value: "false"
