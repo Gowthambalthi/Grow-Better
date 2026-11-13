@@ -4842,6 +4842,16 @@ function StrangleSection({ strangleData, trackerData, onCopy, copiedSymbol }) {
             (c.legs || []).map((leg, legIdx) => {
               const isSell = leg.type.startsWith('SELL');
               const isCall = leg.type.includes('CALL');
+              const typeChar = isCall ? 'C' : 'P';
+              const parts = String(c.expiry || '').split('-');
+              const dd = parts[0] ? parts[0].padStart(2, '0') : '17';
+              const monthMap = { 'JAN':'01','FEB':'02','MAR':'03','APR':'04','MAY':'05','JUN':'06','JUL':'07','AUG':'08','SEP':'09','OCT':'10','NOV':'11','DEC':'12' };
+              const mm = parts[1] ? (monthMap[parts[1].toUpperCase()] || '11') : '11';
+              const yy = parts[2] ? parts[2].slice(-2) : '26';
+              const symClean = String(c.symbol).toUpperCase().replace(/[^A-Z]/g, '');
+              const tvSym = `NSE:${symClean}${yy}${mm}${dd}${typeChar}${leg.strike}`;
+              const chartUrl = `https://in.tradingview.com/chart/?symbol=${encodeURIComponent(tvSym)}`;
+
               const legNum = leg.legNumber || (isSell ? (isCall ? 'Leg 1' : 'Leg 2') : (isCall ? 'Leg 3 (Hedge)' : 'Leg 4 (Hedge)'));
               const liveLeg = isSell && trkIdx ? (isCall ? trkIdx.callLeg : trkIdx.putLeg) : null;
               const entryPrem = liveLeg && liveLeg.entryPrem ? liveLeg.entryPrem : Number(leg.estPremium || 0);
@@ -4940,31 +4950,36 @@ function StrangleSection({ strangleData, trackerData, onCopy, copiedSymbol }) {
                     /*#__PURE__*/React.createElement("div", { style: { fontWeight: 800, fontSize: '13px' } }, `Est ₹${leg.estPremium}`),
                     isSell ? /*#__PURE__*/React.createElement("div", { style: { fontSize: '10.5px', color: '#ef4444', fontWeight: 700 } }, `SL: ₹${leg.stopLoss} (+25%)`) : /*#__PURE__*/React.createElement("div", { style: { fontSize: '10px', color: '#10b981', fontWeight: 600 } }, "No SL (Hedge)")
                   ),
-                  /* Dynamic Copy Button with Current Price */
-                  /*#__PURE__*/React.createElement("button", {
+                  /* Direct Link to Option Chart */
+                  /*#__PURE__*/React.createElement("a", {
+                    href: chartUrl,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
                     style: {
-                      background: isEntryWindow ? '#10b981' : 'var(--bg, #f1f5f9)',
-                      border: isEntryWindow ? '1.5px solid #059669' : '1px solid var(--card-border, #cbd5e1)',
-                      color: isEntryWindow ? '#ffffff' : 'var(--text, #0f172a)',
+                      background: isSell ? '#3b82f6' : '#10b981',
+                      border: isSell ? '1px solid #2563eb' : '1px solid #059669',
+                      color: '#ffffff',
                       fontSize: '11px',
                       fontWeight: 800,
-                      padding: '5px 10px',
+                      padding: '5px 11px',
                       borderRadius: '5px',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '5px',
+                      textDecoration: 'none',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                       transition: 'all 0.15s ease'
                     },
                     onClick: (e) => {
                       e.stopPropagation();
-                      onCopy && onCopy(copyStr);
+                      onCopy && onCopy(leg.brokerSymbol || copyStr);
                     },
-                    title: `Click to copy: ${copyStr}`
-                  }, isEntryWindow
-                      ? `⚡ COPY ORDER (₹${currentPrice.toFixed(1)})`
-                      : (isSell ? `📋 Copy (LTP: ₹${currentPrice.toFixed(1)})` : "📋 Copy Hedge")
+                    title: `Open ${leg.brokerSymbol || `${c.symbol} ${leg.name}`} chart in new tab (also copies symbol to clipboard)`
+                  },
+                    /*#__PURE__*/React.createElement("span", { style: { fontSize: '11px' } }, "📈"),
+                    /*#__PURE__*/React.createElement("span", null, "Open Chart ↗")
                   )
                 )
               );
