@@ -1,59 +1,59 @@
 {
-  "date": "2026-11-12",
-  "status": "SESSION_CLOSED_PROFIT_LOCKED",
+  "date": "2026-11-13",
+  "status": "LIVE_TRACKING_IN_PROGRESS",
   "entryTime": "09:20:00 IST",
   "exitTime": "15:15:00 IST",
-  "lastUpdated": "2026-11-12 21:43:13 IST",
+  "lastUpdated": "2026-11-13 09:47:43 IST",
   "nifty": {
     "symbol": "NIFTY",
     "lotSize": 25,
-    "entrySpot": 25361.3,
-    "currentSpot": 25361.3,
+    "entrySpot": 25123.5,
+    "currentSpot": 25210.2,
     "callLeg": {
-      "strike": 25600,
-      "entryPrem": 88.8,
-      "currentPrem": 22.2,
-      "sl": 111.0,
-      "slHit": false,
-      "pnl": 1665.0
+      "strike": 25400,
+      "entryPrem": 64.4,
+      "currentPrem": 80.5,
+      "sl": 80.5,
+      "slHit": true,
+      "pnl": -402.5
     },
     "putLeg": {
-      "strike": 25100,
-      "entryPrem": 88.8,
-      "currentPrem": 22.2,
-      "sl": 111.0,
+      "strike": 24850,
+      "entryPrem": 66.2,
+      "currentPrem": 44.65,
+      "sl": 82.7,
       "slHit": false,
-      "pnl": 1665.0
+      "pnl": 538.75
     },
-    "netPnl": 3330.0,
-    "netPoints": 133.2,
-    "status": "CLOSED"
+    "netPnl": 136.25,
+    "netPoints": 5.5,
+    "status": "ACTIVE"
   },
   "bankNifty": {
     "symbol": "BANKNIFTY",
     "lotSize": 15,
-    "entrySpot": 61350.65,
-    "currentSpot": 61518.5,
+    "entrySpot": 60973.75,
+    "currentSpot": 61076.25,
     "callLeg": {
-      "strike": 62000,
-      "entryPrem": 245.4,
-      "currentPrem": 98.3,
-      "sl": 306.8,
+      "strike": 61700,
+      "entryPrem": 353.6,
+      "currentPrem": 389.75,
+      "sl": 442,
       "slHit": false,
-      "pnl": 2206.5
+      "pnl": -542.25
     },
     "putLeg": {
-      "strike": 60700,
-      "entryPrem": 245.4,
-      "currentPrem": 61.4,
-      "sl": 306.8,
+      "strike": 60200,
+      "entryPrem": 412.3,
+      "currentPrem": 380.25,
+      "sl": 515.3,
       "slHit": false,
-      "pnl": 2760.0
+      "pnl": 480.75
     },
-    "netPnl": 4966.5,
-    "netPoints": 331.1,
-    "status": "CLOSED"
+    "netPnl": -61.5,
+    "netPoints": -4.1,
+    "status": "ACTIVE"
   },
-  "combinedPnl": 8296.5,
-  "dailySummary": "Session Finalized at 15:15 PM! Combined Net Profit: \u20b9+8,296.50 (BankNifty: \u20b9+4,966.50, Nifty: \u20b9+3,330.00)"
+  "combinedPnl": 74.75,
+  "dailySummary": "Live Session Tracking: Combined Running MTM = \u20b9+74.75 (BankNifty: \u20b9-61.50, Nifty: \u20b9+136.25)"
 }
