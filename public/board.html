@@ -13,7 +13,7 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="icon" href="/logo.png">
-  <link rel="stylesheet" href="/css/style.css?v=20261114_cash_center_v5">
+  <link rel="stylesheet" href="/css/style.css?v=20261114_index_color_v8">
   <style>
     :root, [data-theme="light"] {
       --bg: #F8FAFC;
@@ -878,33 +878,33 @@
 
         <!-- Unified Indices Display: NIFTY | BANKNIFTY [ ⌵ ] -->
         <div class="popover-wrapper" id="indexPopoverWrapper" style="position:relative;">
-          <div class="topbar-indices-display" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices" style="display:flex; align-items:center; gap:12px; cursor:pointer; user-select:none;">
+          <div class="topbar-indices-display" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices">
             <!-- NIFTY -->
-            <div class="topbar-index-col" id="mainHeaderTickerItem" style="display:flex; flex-direction:column; gap:1px; line-height:1.15;">
-              <span class="index-name" id="mainHeaderIndexName" style="font-size:12px; font-weight:800; color:var(--text-color, #f8fafc); letter-spacing:0.04em; text-transform:uppercase;">NIFTY</span>
-              <div class="index-val-row negative" id="mainHeaderValRow" style="display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;">
+            <div class="topbar-index-col" id="mainHeaderTickerItem">
+              <span class="topbar-index-title" id="mainHeaderIndexName">NIFTY</span>
+              <div class="topbar-index-data negative" id="mainHeaderValRow">
                 <span class="index-price" id="niftyCardValue">25,144.30</span>
-                <span class="index-arrow-triangle" style="font-size:8.5px;">▼</span>
+                <span class="topbar-index-triangle" id="mainHeaderTriangle">▼</span>
                 <span class="index-change" id="niftyCardSub">-155.05 (-0.61%)</span>
               </div>
             </div>
 
             <!-- Divider | -->
-            <div style="width:1px; height:24px; background:var(--border-color, rgba(255, 255, 255, 0.15)); margin:0 2px;"></div>
+            <div class="topbar-index-divider"></div>
 
             <!-- BANKNIFTY -->
-            <div class="topbar-index-col" id="bankHeaderTickerItem" style="display:flex; flex-direction:column; gap:1px; line-height:1.15;">
-              <span class="index-name" id="bankHeaderIndexName" style="font-size:12px; font-weight:800; color:var(--text-color, #f8fafc); letter-spacing:0.04em; text-transform:uppercase;">BANKNIFTY</span>
-              <div class="index-val-row negative" id="bankHeaderValRow" style="display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;">
+            <div class="topbar-index-col" id="bankHeaderTickerItem">
+              <span class="topbar-index-title" id="bankHeaderIndexName">BANKNIFTY</span>
+              <div class="topbar-index-data negative" id="bankHeaderValRow">
                 <span class="index-price" id="bankCardValue">61,034.10</span>
-                <span class="index-arrow-triangle" style="font-size:8.5px;">▼</span>
+                <span class="topbar-index-triangle" id="bankHeaderTriangle">▼</span>
                 <span class="index-change" id="bankCardSub">-484.40 (-0.79%)</span>
               </div>
             </div>
 
             <!-- Down Arrow Button [ ⌵ ] -->
-            <div class="topbar-indices-arrow-btn" style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:4px; border:1px solid var(--border-color, rgba(255, 255, 255, 0.18)); background:transparent; color:var(--text-muted, #94a3b8); margin-left:2px;">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <div class="topbar-indices-arrow-btn" title="Market Indices">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
@@ -5929,7 +5929,7 @@
 <!-- Topbar & Feature Modules: loaded safely with error boundaries -->
 <script type="module">
   import { initTheme, setTheme } from '/js/core/theme.js';
-  import { startTicker, initPopovers } from '/js/components/ticker.js';
+  import { startTicker, initPopovers } from '/js/components/ticker.js?v=20261114_index_color_v8';
   import { initPortfolio, loadPortfolio } from '/js/modules/portfolio.js';
   import { renderOrdersUI } from '/js/modules/orders.js';
   import { initPositionsSubtabs, loadMtfPositions, loadPosOrdersHistory } from '/js/modules/positions.js';

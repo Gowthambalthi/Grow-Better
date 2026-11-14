@@ -181,6 +181,7 @@ function renderTickerUI() {
     const valEl = document.getElementById('niftyCardValue');
     const subEl = document.getElementById('niftyCardSub');
     const arrowEl = document.getElementById('mainHeaderArrow');
+    const triEl = document.getElementById('mainHeaderTriangle');
     const valRow = document.getElementById('mainHeaderValRow');
 
     if (valEl) valEl.textContent = rawMoney(topData.price);
@@ -192,13 +193,16 @@ function renderTickerUI() {
     if (arrowEl) {
       arrowEl.style.display = 'none';
     }
+    if (triEl) {
+      triEl.textContent = isPos ? '▲' : '▼';
+    }
     if (subEl) {
       const chgStr = Math.abs(chgVal).toFixed(2);
       const pctStr = Math.abs(changePct).toFixed(2);
-      subEl.textContent = isPos ? `+${chgStr} (+${pctStr}%)` : `${chgStr} (-${pctStr}%)`;
+      subEl.textContent = isPos ? `+${chgStr} (+${pctStr}%)` : `-${chgStr} (-${pctStr}%)`;
     }
     if (valRow) {
-      valRow.className = `index-val-row ${isPos ? 'positive' : 'negative'}`;
+      valRow.className = `topbar-index-data ${isPos ? 'positive' : 'negative'}`;
     }
   }
 
@@ -207,19 +211,23 @@ function renderTickerUI() {
   if (bankData && bankData.price != null) {
     const bValEl = document.getElementById('bankCardValue');
     const bSubEl = document.getElementById('bankCardSub');
+    const bTriEl = document.getElementById('bankHeaderTriangle');
     const bValRow = document.getElementById('bankHeaderValRow');
     if (bValEl) bValEl.textContent = rawMoney(bankData.price);
     const bChange = bankData.change != null ? bankData.change : (bankData.prevPrice != null ? bankData.price - bankData.prevPrice : 0);
     const bChangePct = bankData.changePct != null ? bankData.changePct : (bankData.prevPrice != null ? (bChange / bankData.prevPrice) * 100 : 0);
     const bChgVal = Number(bChange || 0);
     const bIsPos = bChgVal >= 0;
+    if (bTriEl) {
+      bTriEl.textContent = bIsPos ? '▲' : '▼';
+    }
     if (bSubEl) {
       const chgStr = Math.abs(bChgVal).toFixed(2);
       const pctStr = Math.abs(bChangePct).toFixed(2);
-      bSubEl.textContent = bIsPos ? `+${chgStr} (+${pctStr}%)` : `${chgStr} (-${pctStr}%)`;
+      bSubEl.textContent = bIsPos ? `+${chgStr} (+${pctStr}%)` : `-${chgStr} (-${pctStr}%)`;
     }
     if (bValRow) {
-      bValRow.className = `index-val-row ${bIsPos ? 'positive' : 'negative'}`;
+      bValRow.className = `topbar-index-data ${bIsPos ? 'positive' : 'negative'}`;
     }
   }
 

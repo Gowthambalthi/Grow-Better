@@ -598,8 +598,9 @@ a.nav-item:visited,
 
 /* ============================================================
    Unified Institutional Indices Display (NIFTY | BANKNIFTY [ ⌵ ])
-   Exact match to Image 2: High contrast labels, unified red/green
-   tabular metrics, crisp vertical divider, and boxed chevron button.
+   Exact match to Image 2: High contrast labels (#0F172A),
+   100% unified red (#EF4444) or green (#10B981) data line,
+   crisp vertical divider (#CBD5E1), and boxed chevron button.
    ============================================================ */
 .topbar-indices-display {
   display: flex !important;
@@ -615,42 +616,78 @@ a.nav-item:visited,
   line-height: 1.15 !important;
 }
 
-.topbar-index-title {
+.topbar-index-title,
+.topbar-index-col .index-name,
+#mainHeaderIndexName,
+#bankHeaderIndexName {
   font-size: 13px !important;
   font-weight: 800 !important;
   color: #0F172A !important;
   letter-spacing: 0.03em !important;
   text-transform: uppercase !important;
   line-height: 1.1 !important;
-  font-family: var(--font-sans) !important;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif) !important;
 }
 
-[data-theme="dark"] .topbar-index-title {
+[data-theme="dark"] .topbar-index-title,
+[data-theme="dark"] .topbar-index-col .index-name,
+[data-theme="dark"] #mainHeaderIndexName,
+[data-theme="dark"] #bankHeaderIndexName {
   color: #FFFFFF !important;
 }
 
-.topbar-index-data {
+.topbar-index-data,
+.index-val-row {
   display: flex !important;
   align-items: center !important;
-  gap: 5px !important;
+  gap: 6px !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   font-variant-numeric: tabular-nums !important;
   white-space: nowrap !important;
   line-height: 1.2 !important;
-  font-family: var(--font-sans) !important;
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif) !important;
 }
 
-.topbar-index-data.negative {
+/* 100% UNIFIED RED: Price, Triangle, Change, and Percentage MUST ALL BE THE SAME #EF4444 */
+.topbar-index-data.negative,
+.topbar-index-data.negative *,
+.topbar-index-data.negative span,
+.index-val-row.negative,
+.index-val-row.negative *,
+.index-val-row.negative span,
+.index-val-row.negative .index-price,
+.index-val-row.negative .index-change,
+.index-val-row.negative .index-arrow,
+.index-val-row.negative .index-arrow-triangle,
+.index-val-row.negative #niftyCardValue,
+.index-val-row.negative #niftyCardSub,
+.index-val-row.negative #bankCardValue,
+.index-val-row.negative #bankCardSub {
   color: #EF4444 !important;
 }
 
-.topbar-index-data.positive {
+/* 100% UNIFIED GREEN: Price, Triangle, Change, and Percentage MUST ALL BE THE SAME #10B981 */
+.topbar-index-data.positive,
+.topbar-index-data.positive *,
+.topbar-index-data.positive span,
+.index-val-row.positive,
+.index-val-row.positive *,
+.index-val-row.positive span,
+.index-val-row.positive .index-price,
+.index-val-row.positive .index-change,
+.index-val-row.positive .index-arrow,
+.index-val-row.positive .index-arrow-triangle,
+.index-val-row.positive #niftyCardValue,
+.index-val-row.positive #niftyCardSub,
+.index-val-row.positive #bankCardValue,
+.index-val-row.positive #bankCardSub {
   color: #10B981 !important;
 }
 
-.topbar-index-triangle {
-  font-size: 9.5px !important;
+.topbar-index-triangle,
+.index-arrow-triangle {
+  font-size: 10px !important;
   line-height: 1 !important;
   display: inline-block !important;
 }
@@ -677,32 +714,41 @@ a.nav-item:visited,
   min-height: 28px !important;
   border-radius: 6px !important;
   border: 1px solid #CBD5E1 !important;
-  background: #F8FAFC !important;
+  background: #FFFFFF !important;
   color: #0F172A !important;
   cursor: pointer !important;
   margin-left: 14px !important;
   padding: 0 !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
 }
 
 [data-theme="dark"] .topbar-indices-arrow-btn {
   border: 1px solid #334155 !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
   color: #FFFFFF !important;
   box-shadow: none !important;
 }
 
 .topbar-indices-arrow-btn:hover {
-  background: #EDF2F7 !important;
+  background: #F1F5F9 !important;
   border-color: #94A3B8 !important;
-  color: #00B386 !important;
 }
 
 [data-theme="dark"] .topbar-indices-arrow-btn:hover {
   background: rgba(255, 255, 255, 0.1) !important;
   border-color: #64748B !important;
-  color: #38BDF8 !important;
+}
+
+.topbar-indices-arrow-btn svg {
+  color: #0F172A !important;
+  stroke: #0F172A !important;
+}
+
+[data-theme="dark"] .topbar-indices-arrow-btn svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
 }
 
 .index-arrow {
