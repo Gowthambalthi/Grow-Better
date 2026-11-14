@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "asOf": "2026-11-14T12:53:19.400542+05:30",
+  "asOf": "2026-11-14T13:23:58.481939+05:30",
   "totalEvaluated": 1038,
   "catalysts": [
     {
@@ -82,12 +82,12 @@
       "ts": 1794636646000,
       "title": "Munjal Auto Industries Ltd \u2014 News Paper publication of unaudited standalone and consolidated financial result for the quarter and half year ended September 30,2026",
       "rawTitle": "Munjal Auto Industries Ltd \u2014 News Paper publication of unaudited standalone and consolidated financial result for the quarter and half year ended September 30,2026",
-      "price": 107.44,
-      "ltp": 107.44,
-      "dayMovePct": 1.69,
-      "postNewsMovePct": 1.69,
+      "price": 107.9,
+      "ltp": 107.9,
+      "dayMovePct": 2.13,
+      "postNewsMovePct": 2.13,
       "volume": 487982,
-      "turnoverCr": 5.24,
+      "turnoverCr": 5.27,
       "category": "QUARTERLY_RESULTS",
       "bias": "BULLISH",
       "confidence": 90,
@@ -95,7 +95,7 @@
       "takeTrade": true,
       "badge": "Buy 90%",
       "pillClass": "buy",
-      "rationale": "Q2 FY27 Financial Results Beat: Stock surged +1.7% on institutional volume thrust.",
+      "rationale": "Q2 FY27 Financial Results Beat: Stock surged +2.1% on institutional volume thrust.",
       "url": "https://www.bseindia.com/xml-data/corpfiling/AttachLive/d1e00548-42d0-48ff-8df7-9b9bcb150d83.pdf",
       "source": "BSE"
     },

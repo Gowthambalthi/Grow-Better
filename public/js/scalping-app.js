@@ -3837,6 +3837,20 @@ function TopNewsSquareBox({
 
       if (isLiveMarket && ts > 0 && ts < todayMidnightMs) return false;
 
+      // User Directive: Purge routine administrative compliance filings with zero market reaction / no trade
+      const text = ((c.title || '') + ' ' + (c.description || '') + ' ' + (c.kind || '') + ' ' + (c.category || '')).toLowerCase();
+      const isGenericSubmission = /has submitted to the exchange.*?financial results|submission of (?:unaudited|audited|financial) results|financial results for (?:the )?(?:quarter|period|half)|in terms of regulation 30 read with|pursuant to regulations? (?:30|51)|newspaper publication|erratum|rectification of inadvertent|press release dated .*?press release on unau/i.test(text);
+      const isCompliancePaperwork = /regulation\s*29|regulation\s*47|prior\s+intimation\s+of\s+board|meeting\s+of\s+the\s+board\s+of\s+directors\s+to\s+consider|audio\s+recording|transcript\s+of|concall\s+transcript|loss\s+of\s+share\s+certificates?|duplicate\s+share\s+certificate|allotment\s+of\s+(?:non-convertible\s+)?debentures|commercial\s+paper/i.test(text);
+      const hasNoCatalystAction = (!c.takeTrade || c.takeTrade === false) && (!c.badge || c.badge === 'Results (Tape Watch)' || c.badge.includes('Watch') || c.badge === 'Routine');
+      const hasRealNewsContent = /profit\s+(?:rises|jumps|up|surges|grows|doubles)|net\s+profit|loss\s+widens|pat\s+(?:climbs|slumps)|order\s+win|bagged|contract|acquisition|merger|dividend|buyback|usfda|fda|crore|\d+%\s+jump|\d+x\s+profit/i.test(text);
+
+      if ((isGenericSubmission || isCompliancePaperwork || c.badge === 'Results (Tape Watch)') && hasNoCatalystAction && !hasRealNewsContent) {
+        return false;
+      }
+      if (c.badge === 'Results (Tape Watch)' && !hasRealNewsContent) {
+        return false;
+      }
+
       return true;
 
     }).sort((a, b) => {

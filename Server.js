@@ -4314,7 +4314,17 @@ app.get('/api/scalping/board', (req, res) => {
       }
       const unifiedPath = path.join(__dirname, 'data', 'news', 'unified_clean_wire.json');
       if (fs.existsSync(unifiedPath)) {
-        board.allFilings = JSON.parse(fs.readFileSync(unifiedPath, 'utf8'));
+        const rawWire = JSON.parse(fs.readFileSync(unifiedPath, 'utf8'));
+        board.allFilings = Array.isArray(rawWire) ? rawWire.filter(item => {
+          const text = ((item.title || '') + ' ' + (item.description || '') + ' ' + (item.kind || '') + ' ' + (item.category || '')).toLowerCase();
+          const isGeneric = /has submitted to the exchange.*?financial results|submission of (?:unaudited|audited|financial) results|financial results for (?:the )?(?:quarter|period|half)|in terms of regulation 30 read with|pursuant to regulations? (?:30|51)|newspaper publication|erratum|rectification of inadvertent|press release dated .*?press release on unau/i.test(text);
+          const isPaperwork = /regulation\s*29|regulation\s*47|prior\s+intimation\s+of\s+board|meeting\s+of\s+the\s+board\s+of\s+directors\s+to\s+consider|audio\s+recording|transcript\s+of|concall\s+transcript|loss\s+of\s+share\s+certificates?|duplicate\s+share\s+certificate|allotment\s+of\s+(?:non-convertible\s+)?debentures|commercial\s+paper/i.test(text);
+          const hasNoAction = (!item.takeTrade) && (!item.badge || item.badge === 'Results (Tape Watch)' || item.badge.includes('Watch') || item.badge === 'Routine');
+          const hasRealNews = /profit\s+(?:rises|jumps|up|surges|grows|doubles)|net\s+profit|loss\s+widens|pat\s+(?:climbs|slumps)|order\s+win|bagged|contract|acquisition|merger|dividend|buyback|usfda|fda|crore|\d+%\s+jump|\d+x\s+profit/i.test(text);
+          if ((isGeneric || isPaperwork || item.badge === 'Results (Tape Watch)') && hasNoAction && !hasRealNews) return false;
+          if (item.badge === 'Results (Tape Watch)' && !hasRealNews) return false;
+          return true;
+        }) : [];
       }
     } catch (_) {}
 
@@ -5849,7 +5859,17 @@ app.get('/api/scalping/catalysts', (req, res) => {
       if (fs.existsSync(unifiedPath)) {
         const uList = JSON.parse(fs.readFileSync(unifiedPath, 'utf8'));
         if (Array.isArray(uList) && uList.length > 0) {
-          cleanWireList = uList.map(item => {
+          const filteredWire = uList.filter(item => {
+            const text = ((item.title || '') + ' ' + (item.description || '') + ' ' + (item.kind || '') + ' ' + (item.category || '')).toLowerCase();
+            const isGeneric = /has submitted to the exchange.*?financial results|submission of (?:unaudited|audited|financial) results|financial results for (?:the )?(?:quarter|period|half)|in terms of regulation 30 read with|pursuant to regulations? (?:30|51)|newspaper publication|erratum|rectification of inadvertent|press release dated .*?press release on unau/i.test(text);
+            const isPaperwork = /regulation\s*29|regulation\s*47|prior\s+intimation\s+of\s+board|meeting\s+of\s+the\s+board\s+of\s+directors\s+to\s+consider|audio\s+recording|transcript\s+of|concall\s+transcript|loss\s+of\s+share\s+certificates?|duplicate\s+share\s+certificate|allotment\s+of\s+(?:non-convertible\s+)?debentures|commercial\s+paper/i.test(text);
+            const hasNoAction = (!item.takeTrade) && (!item.badge || item.badge === 'Results (Tape Watch)' || item.badge.includes('Watch') || item.badge === 'Routine');
+            const hasRealNews = /profit\s+(?:rises|jumps|up|surges|grows|doubles)|net\s+profit|loss\s+widens|pat\s+(?:climbs|slumps)|order\s+win|bagged|contract|acquisition|merger|dividend|buyback|usfda|fda|crore|\d+%\s+jump|\d+x\s+profit/i.test(text);
+            if ((isGeneric || isPaperwork || item.badge === 'Results (Tape Watch)') && hasNoAction && !hasRealNews) return false;
+            if (item.badge === 'Results (Tape Watch)' && !hasRealNews) return false;
+            return true;
+          });
+          cleanWireList = filteredWire.map(item => {
             const sym = item.symbol;
             const existing = cleanCatalysts.find(x => x.symbol === sym) || {};
             const cq = (_catalystStockQuotes && _catalystStockQuotes[sym]) || {};
