@@ -3655,18 +3655,18 @@ const NIFTY_SMALLCAP_250_SYMBOLS = new Set([
 function getCompanyTier(symbol) {
   const sym = String(symbol || '').toUpperCase().trim();
   if (NIFTY_50_SYMBOLS.has(sym)) {
-    return { name: 'NIFTY 50', score: 1000, color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)', border: 'rgba(217, 119, 6, 0.3)' };
+    return { name: 'NIFTY 50', score: 1000, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
   }
   if (NIFTY_NEXT_50_SYMBOLS.has(sym)) {
-    return { name: 'NEXT 50', score: 800, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
+    return { name: 'NEXT 50', score: 800, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
   }
   if (NIFTY_MIDCAP_150_SYMBOLS.has(sym)) {
-    return { name: 'MIDCAP', score: 600, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
+    return { name: 'MIDCAP', score: 600, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
   }
   if (NIFTY_SMALLCAP_250_SYMBOLS.has(sym)) {
-    return { name: 'SMALLCAP', score: 400, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
+    return { name: 'SMALLCAP', score: 400, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
   }
-  return { name: 'MICROCAP', score: 200, color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)', border: 'rgba(100, 116, 139, 0.28)' };
+  return { name: 'MICROCAP', score: 200, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
 }
 
 function getNewsScopeScore(c) {
@@ -4322,35 +4322,22 @@ function TopNewsSquareBox({
       style: { alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }
     }, /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-left",
-      style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', flex: 1 }
-    }, /*#__PURE__*/React.createElement("span", {
+      style: { display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }
+    },
+    /* Row 1: Symbol + Company Tier (Normal neutral background) */
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', alignItems: 'center', gap: '6px' }
+    },
+    /*#__PURE__*/React.createElement("span", {
       className: "top-news-sym"
     }, c.symbol),
-    ltp > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "top-news-price",
-      style: { fontWeight: 800, fontSize: '12px' }
-    }, `₹${ltp.toFixed(2)}`),
-    /* Day Percentage */
-    /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: '10.5px',
-        fontWeight: 800,
-        color: movePct > 0 ? '#16a34a' : movePct < 0 ? '#dc2626' : '#64748b',
-        background: movePct > 0 ? 'rgba(22, 163, 74, 0.12)' : movePct < 0 ? 'rgba(220, 38, 38, 0.12)' : 'rgba(100, 116, 139, 0.12)',
-        padding: '1px 5px',
-        borderRadius: '4px',
-        fontVariantNumeric: 'tabular-nums',
-        whiteSpace: 'nowrap'
-      },
-      title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
-    }, `${signPct}${movePct.toFixed(1)}% Day`),
     (() => {
       const tier = getCompanyTier(c.symbol);
       if (!tier) return null;
       return /*#__PURE__*/React.createElement("span", {
         style: {
           fontSize: '9px',
-          fontWeight: 800,
+          fontWeight: 700,
           background: tier.bg,
           color: tier.color,
           border: `1px solid ${tier.border}`,
@@ -4360,22 +4347,30 @@ function TopNewsSquareBox({
         },
         title: `${tier.name} Company`
       }, tier.name);
-    })(),
-    isNonMarketHour ? /*#__PURE__*/React.createElement("span", {
+    })()),
+    /* Row 2: LTP Price and Day Move % (In Next Line) */
+    ltp > 0 && /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', alignItems: 'center', gap: '5px' }
+    },
+    /*#__PURE__*/React.createElement("span", {
+      className: "top-news-price",
+      style: { fontWeight: 800, fontSize: '12px' }
+    }, `₹${ltp.toFixed(2)}`),
+    /* Day Percentage */
+    /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '10px',
         fontWeight: 700,
-        background: 'rgba(217, 119, 6, 0.12)',
-        color: '#d97706',
-        border: '1px solid rgba(217, 119, 6, 0.3)',
-        padding: '1.5px 6px',
+        color: movePct > 0 ? '#16a34a' : movePct < 0 ? '#dc2626' : '#64748b',
+        background: movePct > 0 ? 'rgba(22, 163, 74, 0.12)' : movePct < 0 ? 'rgba(220, 38, 38, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+        padding: '1px 5px',
         borderRadius: '4px',
-        whiteSpace: 'nowrap',
-        lineHeight: 1.2
+        fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap'
       },
-      title: c.filingTime ? `Pre-market filing (${c.filingTime})` : "News arrived outside market hours (Pre-market / Overnight)"
-    }, "Pre-Market News") : null),
-    /* Right side: After News move, AI timing badge, Watch pill, and TIME DIRECTLY BELOW WATCH */
+      title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
+    }, `${signPct}${movePct.toFixed(1)}% Day`))),
+    /* Right side: Row 1 = Badges & Buttons, Row 2 = Pre-Market or Filing Time (NO background) */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-right",
       style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }
@@ -4421,17 +4416,17 @@ function TopNewsSquareBox({
         }, bgStyle)
       }, safeBtnLabel);
     })()),
-    /* Row 2: Filing time directly below Watch button */
+    /* Row 2: Bottom of right side - Pre-Market (if outside market hours) or filing time (if live market), with NO background colors */
     /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: '9.5px',
+        fontSize: '10px',
         fontWeight: 600,
-        color: 'var(--text-muted, #94a3b8)',
+        color: 'var(--text-muted, #64748b)',
         lineHeight: 1.1,
         whiteSpace: 'nowrap'
       },
-      title: c.filingTime ? `Filing timestamp: ${c.filingTime}` : ''
-    }, c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent'))
+      title: isNonMarketHour ? (c.filingTime ? `Pre-Market filing (${c.filingTime})` : 'Pre-Market News') : (c.filingTime ? `Filing timestamp: ${c.filingTime}` : '')
+    }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent')))
     )),
     /* Headline */
     /*#__PURE__*/React.createElement("div", {
