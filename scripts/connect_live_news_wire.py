@@ -249,8 +249,13 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist, is_
 
                 if re.search(r"profit\s+(?:jumps|surges|rises|up|grows)|results\s+beat|q2\s+pat\s+up|\d+x\s+profit|\d+%\s+(?:jump|rise|surge|growth)|revenue\s+rises", comb_low):
                     category = "QUARTERLY_RESULTS"
-                    if day_chg >= 1.5:
-                        conf = 95 if day_chg >= 5.0 else 90
+                    if day_chg >= 5.5:
+                        badge = f"Already Moved (+{day_chg:.1f}%)"
+                        pill_class = "watch"
+                        take_trade = False
+                        confidence = 0
+                    elif day_chg >= 1.5:
+                        conf = 90
                         badge = f"Buy {conf}%"
                         pill_class = "buy"
                         take_trade = True
@@ -265,9 +270,16 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist, is_
                         badge = "Results (Tape Watch)"
                 elif re.search(r"profit\s+(?:falls|drops|down|slumps)|loss\s+widens|misses\s+estimates", comb_low):
                     category = "QUARTERLY_RESULTS"
-                    if day_chg <= -1.5:
+                    if day_chg <= -5.5:
+                        badge = f"Already Dumped ({day_chg:.1f}%)"
+                        pill_class = "watch"
+                        take_trade = False
+                        confidence = 0
+                    elif day_chg <= -1.5:
                         badge = "Sell 88%"
                         pill_class = "sell"
+                        take_trade = True
+                        confidence = 88
                         take_trade = True
                         confidence = 88
                     else:
@@ -563,6 +575,11 @@ def run_wire_pipeline():
             continue
         if not item.get("takeTrade"):
             continue
+        badge = item.get("badge") or ""
+        if any(n in badge for n in ("Already Moved", "Already Dumped", "Routine", "Noise", "Untradeable")):
+            continue
+        if abs(float(item.get("dayMovePct") or 0.0)) >= 5.5 or abs(float(item.get("postNewsMovePct") or 0.0)) >= 5.5:
+            continue
 
         seen_symbols.add(sym)
         top_candidates.append(item)
@@ -584,7 +601,9 @@ def run_wire_pipeline():
             if ltp < 30.0 or vol < 25000 or turnover < 2.5:
                 continue
             badge = item.get("badge") or ""
-            if any(n in badge for n in ("Routine", "Noise", "Untradeable")):
+            if any(n in badge for n in ("Routine", "Noise", "Untradeable", "Already Moved", "Already Dumped")):
+                continue
+            if abs(float(item.get("dayMovePct") or 0.0)) >= 5.5 or abs(float(item.get("postNewsMovePct") or 0.0)) >= 5.5:
                 continue
 
             seen_symbols.add(sym)

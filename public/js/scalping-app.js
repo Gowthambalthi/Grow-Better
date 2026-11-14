@@ -5987,10 +5987,33 @@ function ScalpingApp() {
     const list = [];
     const seen = new Set();
 
+    const isTop5Eligible = (item) => {
+      if (!item || !item.symbol || seen.has(item.symbol)) return false;
+      if (item.isUntradeable || item.isPennyStock) return false;
+      const ltp = Number(item.ltp || item.price || 0);
+      const vol = Number(item.volume || 0);
+      if (ltp > 0 && ltp < 30.0) return false;
+      if (vol > 0 && vol < 25000) return false;
+
+      // STRICT EXCLUSION: Never give Already Moved or Exhausted moves in Top 5!
+      if (item.tradeStatus === 'ALREADY_MOVED' || item.tradeStatus === 'STALE_YESTERDAY') return false;
+      if (item.actionBtnLabel && item.actionBtnLabel.includes('Already Moved')) return false;
+      if (item.badge && item.badge.includes('Already Moved')) return false;
+
+      const effMove = Math.abs(Number(item.postNewsMove || item.postNewsMovePct || item.dayMovePct || item.movePct || 0));
+      if (effMove >= 5.5 && !item.isBlowoutBeat) return false;
+
+      // Must be actionable trade
+      if (item.takeTrade === false && !item.isBlowoutBeat) return false;
+      if (item.badge && (/routine|watch|stale/i.test(item.badge) && !item.badge.includes('Buy') && !item.badge.includes('Sell'))) return false;
+
+      return true;
+    };
+
     // 1. Primary: Verified Top 5 Catalysts from backend
     if (Array.isArray(boardData.top5Catalysts)) {
       for (const item of boardData.top5Catalysts) {
-        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        if (!isTop5Eligible(item)) continue;
         seen.add(item.symbol);
         list.push(item);
         if (list.length >= 5) return list;
@@ -6000,7 +6023,7 @@ function ScalpingApp() {
     // 2. Secondary: Live catalysts from boardData.catalysts
     if (list.length < 5 && Array.isArray(boardData.catalysts)) {
       for (const item of boardData.catalysts) {
-        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        if (!isTop5Eligible(item)) continue;
         seen.add(item.symbol);
         list.push(item);
         if (list.length >= 5) return list;
@@ -6010,7 +6033,7 @@ function ScalpingApp() {
     // 3. Tertiary: Local catalysts list
     if (list.length < 5 && Array.isArray(catalysts)) {
       for (const item of catalysts) {
-        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        if (!isTop5Eligible(item)) continue;
         seen.add(item.symbol);
         list.push(item);
         if (list.length >= 5) return list;
@@ -6020,7 +6043,7 @@ function ScalpingApp() {
     // 4. Quaternary: Filtered catalysts list
     if (list.length < 5 && Array.isArray(filteredCatalysts)) {
       for (const item of filteredCatalysts) {
-        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        if (!isTop5Eligible(item)) continue;
         seen.add(item.symbol);
         list.push(item);
         if (list.length >= 5) return list;

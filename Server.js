@@ -4326,7 +4326,16 @@ app.get('/api/scalping/board', (req, res) => {
       const top5Path = path.join(__dirname, 'data', 'news', 'top5_catalysts_verified.json');
       if (fs.existsSync(top5Path)) {
         const top5Data = JSON.parse(fs.readFileSync(top5Path, 'utf8'));
-        board.top5Catalysts = top5Data.catalysts || [];
+        const verified = (top5Data.catalysts || []).filter(c => {
+          if (!c || !c.symbol) return false;
+          if (c.tradeStatus === 'ALREADY_MOVED' || c.tradeStatus === 'STALE_YESTERDAY') return false;
+          if (c.actionBtnLabel && c.actionBtnLabel.includes('Already Moved')) return false;
+          if (c.badge && c.badge.includes('Already Moved')) return false;
+          const move = Math.abs(Number(c.dayMovePct || c.postNewsMovePct || 0));
+          if (move >= 5.5 && !c.isBlowoutBeat) return false;
+          return c.takeTrade !== false;
+        });
+        board.top5Catalysts = verified;
       }
       if (!Array.isArray(board.top5Catalysts) || board.top5Catalysts.length < 5) {
         const seenSymbols = new Set((board.top5Catalysts || []).map(c => c && c.symbol).filter(Boolean));
@@ -4337,6 +4346,12 @@ app.get('/api/scalping/board', (req, res) => {
           if (board.top5Catalysts.length >= 5) break;
           if (!item || !item.symbol || seenSymbols.has(item.symbol)) continue;
           if (item.isUntradeable || item.isPennyStock) continue;
+          if (item.tradeStatus === 'ALREADY_MOVED' || item.tradeStatus === 'STALE_YESTERDAY') continue;
+          if (item.actionBtnLabel && item.actionBtnLabel.includes('Already Moved')) continue;
+          if (item.badge && item.badge.includes('Already Moved')) continue;
+          const move = Math.abs(Number(item.dayMovePct || item.postNewsMovePct || item.movePct || 0));
+          if (move >= 5.5 && !item.isBlowoutBeat) continue;
+          if (item.takeTrade === false && !item.isBlowoutBeat) continue;
           seenSymbols.add(item.symbol);
           board.top5Catalysts.push(item);
         }
@@ -5878,6 +5893,12 @@ app.get('/api/scalping/catalysts', (req, res) => {
             for (const prev of top5Catalysts) {
               if (verifiedTop5.length >= 5) break;
               if (!prev || !prev.symbol || seen.has(prev.symbol)) continue;
+              if (prev.tradeStatus === 'ALREADY_MOVED' || prev.tradeStatus === 'STALE_YESTERDAY') continue;
+              if (prev.actionBtnLabel && prev.actionBtnLabel.includes('Already Moved')) continue;
+              if (prev.badge && prev.badge.includes('Already Moved')) continue;
+              const move = Math.abs(Number(prev.dayMovePct || prev.postNewsMovePct || prev.movePct || 0));
+              if (move >= 5.5 && !prev.isBlowoutBeat) continue;
+              if (prev.takeTrade === false && !prev.isBlowoutBeat) continue;
               seen.add(prev.symbol);
               verifiedTop5.push(prev);
             }

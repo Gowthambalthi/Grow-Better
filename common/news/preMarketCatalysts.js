@@ -4404,9 +4404,15 @@ function getOvernightCatalystBatch(now = new Date(), quotes = {}) {
 
     if (p > 0 && p < 30.0) return false;
 
-    if (['ROUTINE_DISCLOSURE', 'ROUTINE_LAND_ACQUISITION', 'REGULATORY_ORDER', 'RESULTS_UNCERTAIN', 'NEUTRAL_WATCH'].includes(s.tradeStatus)) return false;
+    if (['ROUTINE_DISCLOSURE', 'ROUTINE_LAND_ACQUISITION', 'REGULATORY_ORDER', 'RESULTS_UNCERTAIN', 'NEUTRAL_WATCH', 'ALREADY_MOVED', 'STALE_YESTERDAY'].includes(s.tradeStatus)) return false;
 
-    if (s.prediction && (s.prediction.includes('ROUTINE') || s.prediction.includes('UNTRADEABLE'))) return false;
+    if (s.prediction && (s.prediction.includes('ROUTINE') || s.prediction.includes('UNTRADEABLE') || s.prediction.includes('ALREADY MOVED') || s.prediction.includes('DO NOT CHASE'))) return false;
+
+    // Strict exclusion of overextended / exhausted moves (> 5.5% move already happened into the filing)
+    const effMove = Math.abs(Number(s.effNewsMove || s.postNewsMove || s.dayMovePct || s.movePct || 0));
+    if (effMove >= 5.5 && !s.isBlowoutBeat) return false;
+
+    if (s.takeTrade === false && !s.isBlowoutBeat) return false;
 
     return true;
 
@@ -4438,9 +4444,9 @@ function getOvernightCatalystBatch(now = new Date(), quotes = {}) {
 
   const actionableMovers = qualifiedMovers.filter(s => s.takeTrade === true);
 
-  const top5Movers = (actionableMovers.length >= 5 ? actionableMovers : actionableMovers.concat(qualifiedMovers.filter(s => !s.takeTrade))).slice(0, 5);
+  const top5Movers = (actionableMovers.length >= 5 ? actionableMovers : qualifiedMovers).filter(s => s.tradeStatus !== 'ALREADY_MOVED' && !(s.prediction && s.prediction.includes('ALREADY MOVED'))).slice(0, 5);
 
-  const topPick = actionableMovers.length > 0 ? actionableMovers[0] : (top5Movers.length > 0 ? top5Movers[0] : null);
+  const topPick = top5Movers.length > 0 ? top5Movers[0] : null;
 
 
 
