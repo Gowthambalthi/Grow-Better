@@ -4506,7 +4506,7 @@ function TopNewsSquareBox({
         textAlign: 'right'
       },
       title: isNonMarketHour ? (c.filingTime ? `Pre-Market filing (${c.filingTime})` : 'Pre-Market News') : (c.filingTime ? `Filing timestamp: ${c.filingTime}` : '')
-    }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent'))))
+    }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent')))))
   })));
 }
 
@@ -6375,150 +6375,21 @@ function ScalpingApp() {
     onCopy: triggerCopy
 
   })), /*#__PURE__*/React.createElement("div", {
-
-    className: "cat-section-header"
-
-  }, /*#__PURE__*/React.createElement("div", {
-
+    className: "cat-section-header",
     style: {
-
-      display: 'flex',
-
-      justifyContent: 'space-between',
-
-      alignItems: 'center',
-
-      flexWrap: 'wrap',
-
-      gap: '12px'
-
+      marginTop: '24px',
+      marginBottom: '14px'
     }
-
-  }, /*#__PURE__*/React.createElement("div", {
-
-    style: {
-
-      display: 'flex',
-
-      alignItems: 'center',
-
-      gap: '10px',
-
-      flexWrap: 'wrap'
-
-    }
-
   }, /*#__PURE__*/React.createElement("h2", {
-
     style: {
-
       margin: 0,
-
-      fontSize: '13.5px',
-
-      fontWeight: 500,
-
+      fontSize: '15px',
+      fontWeight: 600,
       color: 'var(--text, #0f172a)',
-
-      display: 'flex',
-
-      alignItems: 'center',
-
-      gap: '8px'
-
+      letterSpacing: '-0.01em',
+      lineHeight: 1.3
     }
-
-  }, /*#__PURE__*/React.createElement("span", null, "⚡ Probability Catalysts")), /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      fontSize: '11px',
-
-      background: 'rgba(37,99,235,0.12)',
-
-      color: '#2563eb',
-
-      padding: '2px 8px',
-
-      borderRadius: '12px',
-
-      fontWeight: 500
-
-    }
-
-  }, "Top 5 Movers \xB7 Set in 1 Row"), isMarketOpen ? /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      fontSize: '11px',
-
-      background: 'rgba(16,185,129,0.12)',
-
-      color: '#059669',
-
-      padding: '2px 8px',
-
-      borderRadius: '12px',
-
-      fontWeight: 500,
-
-      border: '1px solid rgba(16,185,129,0.25)'
-
-    }
-
-  }, "🟢 Live Market Session Active (09:15 - 15:30 IST)") : (tNum >= 900 && tNum < 915) ? /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      fontSize: '11px',
-
-      background: 'rgba(245,158,11,0.12)',
-
-      color: '#d97706',
-
-      padding: '2px 8px',
-
-      borderRadius: '12px',
-
-      fontWeight: 500,
-
-      border: '1px solid rgba(245,158,11,0.25)'
-
-    }
-
-  }, "🌅 09:08 AM Pre-Market Auction Evaluated") : /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      fontSize: '11px',
-
-      background: 'rgba(99,102,241,0.12)',
-
-      color: '#6366f1',
-
-      padding: '2px 8px',
-
-      borderRadius: '12px',
-
-      fontWeight: 500,
-
-      border: '1px solid rgba(99,102,241,0.25)'
-
-    }
-
-  }, "🌙 Overnight Top 5 Catalysts (For Tomorrow's 09:08 AM Open)"))), /*#__PURE__*/React.createElement("div", {
-
-    style: {
-
-      fontSize: '12px',
-
-      color: 'var(--text-muted, #64748b)',
-
-      marginTop: '4px'
-
-    }
-
-  }, isPostClose ? "Top 5 corporate filings filtered by ML win probability · Evaluated with 09:08 AM pre-market auction discovery (checks over-extension > +3.8% fade vs sweet-spot +0.8% to +3.8% continuation)" : isMarketOpen ? "Top 5 session catalysts with confirmed momentum thrust · Evaluated in real time" : "Top 5 overnight catalysts for tomorrow's open · Evaluated with 09:08 AM pre-market auction discovery")), /*#__PURE__*/React.createElement("div", {
+  }, "Probability Catalysts")), /*#__PURE__*/React.createElement("div", {
 
     className: "top5-catalyst-row",
 
