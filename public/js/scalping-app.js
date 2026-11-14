@@ -1087,19 +1087,30 @@ function Topbar({
           className: "topbar-index-col",
           title: "NIFTY 50 Live Index Quote"
         },
-          /* Top row: NIFTY */
+          /* Top row: NIFTY (Not bold - Angel One clean medium weight) */
           /*#__PURE__*/React.createElement("span", {
-            className: "topbar-index-title"
+            className: "topbar-index-title",
+            style: { fontWeight: 500, fontSize: '12px', color: '#1E293B', textTransform: 'uppercase' }
           }, "NIFTY"),
           /* Bottom row: 25,144.30 ▼ -155.05 (-0.61%) */
           /*#__PURE__*/React.createElement("div", {
             className: `topbar-index-data ${isNiftyPos ? 'positive' : 'negative'}`
           },
-            /*#__PURE__*/React.createElement("span", null, niftyPrice),
+            /* Main price: soft lighter red or green */
             /*#__PURE__*/React.createElement("span", {
-              className: "topbar-index-triangle"
+              className: "index-price",
+              style: { color: isNiftyPos ? '#10B981' : '#D64D4D', fontWeight: 600, fontSize: '12.5px' }
+            }, niftyPrice),
+            /* Triangle */
+            /*#__PURE__*/React.createElement("span", {
+              className: "topbar-index-triangle",
+              style: { color: isNiftyPos ? '#10B981' : '#D64D4D', fontSize: '8px' }
             }, isNiftyPos ? '▲' : '▼'),
-            /*#__PURE__*/React.createElement("span", null, niftySub)
+            /* Change & Percentage: Angel One light black / charcoal grey */
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-change",
+              style: { color: '#475569', fontWeight: 500, fontSize: '11.5px', marginLeft: '3px' }
+            }, niftySub)
           )
         ),
 
@@ -1113,19 +1124,30 @@ function Topbar({
           className: "topbar-index-col",
           title: "BANKNIFTY Live Index Quote"
         },
-          /* Top row: BANKNIFTY */
+          /* Top row: BANKNIFTY (Not bold - Angel One clean medium weight) */
           /*#__PURE__*/React.createElement("span", {
-            className: "topbar-index-title"
+            className: "topbar-index-title",
+            style: { fontWeight: 500, fontSize: '12px', color: '#1E293B', textTransform: 'uppercase' }
           }, "BANKNIFTY"),
           /* Bottom row: 61,034.10 ▼ -484.40 (-0.79%) */
           /*#__PURE__*/React.createElement("div", {
             className: `topbar-index-data ${isBankPos ? 'positive' : 'negative'}`
           },
-            /*#__PURE__*/React.createElement("span", null, bankPrice),
+            /* Main price: soft lighter red or green */
             /*#__PURE__*/React.createElement("span", {
-              className: "topbar-index-triangle"
+              className: "index-price",
+              style: { color: isBankPos ? '#10B981' : '#D64D4D', fontWeight: 600, fontSize: '12.5px' }
+            }, bankPrice),
+            /* Triangle */
+            /*#__PURE__*/React.createElement("span", {
+              className: "topbar-index-triangle",
+              style: { color: isBankPos ? '#10B981' : '#D64D4D', fontSize: '8px' }
             }, isBankPos ? '▲' : '▼'),
-            /*#__PURE__*/React.createElement("span", null, bankSub)
+            /* Change & Percentage: Angel One light black / charcoal grey */
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-change",
+              style: { color: '#475569', fontWeight: 500, fontSize: '11.5px', marginLeft: '3px' }
+            }, bankSub)
           )
         ),
 
@@ -1756,7 +1778,7 @@ const CatalystCard = React.memo(function CatalystCard({
       /*#__PURE__*/React.createElement("span", {
         className: `cat-pct-badge ${pctClass}`,
         title: `Full Day session move: ${signPct}${movePct.toFixed(2)}%`
-      }, `${signPct}${movePct.toFixed(1)}% Day`),
+      }, `${signPct}${movePct.toFixed(1)}%`),
       /*#__PURE__*/React.createElement("span", {
         className: `cat-pct-badge ${postClass}`,
         style: {
@@ -4351,7 +4373,10 @@ function TopNewsSquareBox({
           fontSize: '10.5px',
           fontWeight: 600,
           color: 'var(--text-muted, #64748b)',
-          whiteSpace: 'nowrap'
+          whiteSpace: 'nowrap',
+          background: 'none',
+          border: 'none',
+          padding: 0
         },
         title: `${tier.name} Company`
       }, tier.name);
@@ -4364,25 +4389,24 @@ function TopNewsSquareBox({
       className: "top-news-price",
       style: { fontWeight: 800, fontSize: '12px' }
     }, `₹${ltp.toFixed(2)}`),
-    /* Day Percentage */
+    /* Day Percentage: pure text, NO "Day" label, NO background box */
     /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '11px',
         fontWeight: 600,
         color: movePct > 0 ? '#16a34a' : movePct < 0 ? '#dc2626' : '#64748b',
         fontVariantNumeric: 'tabular-nums',
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        background: 'none',
+        border: 'none',
+        padding: 0
       },
       title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
-    }, `${signPct}${movePct.toFixed(1)}% Day`))),
-    /* Right side: Row 1 = Badges & Buttons, Row 2 = Pre-Market or Filing Time (NO background) */
+    }, `${signPct}${movePct.toFixed(1)}%`))),
+    /* Right side: Single horizontal row with badges and Pre-Market at the END */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-right",
-      style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }
-    },
-    /* Row 1: Badges & Buttons */
-    /*#__PURE__*/React.createElement("div", {
-      style: { display: 'flex', alignItems: 'center', gap: '6px' }
+      style: { display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }
     },
     /* BOX 1: Exactly ONE percentage move pill */
     /*#__PURE__*/React.createElement("span", {
@@ -4420,15 +4444,18 @@ function TopNewsSquareBox({
           whiteSpace: 'nowrap'
         }, bgStyle)
       }, safeBtnLabel);
-    })()),
-    /* Row 2: Bottom of right side - Pre-Market (if outside market hours) or filing time (if live market), with NO background colors */
+    })(),
+
+    /* AT THE END: Pre-Market (if outside market hours) or filing time (if live market), with NO background colors */
     /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: '10px',
+        fontSize: '10.5px',
         fontWeight: 600,
         color: 'var(--text-muted, #64748b)',
-        lineHeight: 1.1,
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        background: 'none',
+        border: 'none',
+        padding: 0
       },
       title: isNonMarketHour ? (c.filingTime ? `Pre-Market filing (${c.filingTime})` : 'Pre-Market News') : (c.filingTime ? `Filing timestamp: ${c.filingTime}` : '')
     }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent')))

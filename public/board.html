@@ -13,7 +13,7 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="icon" href="/logo.png">
-  <link rel="stylesheet" href="/css/style.css?v=20261114_titles_not_bold_v16">
+  <link rel="stylesheet" href="/css/style.css?v=20261114_card_final_v18">
   <style>
     :root, [data-theme="light"] {
       --bg: #F8FAFC;
@@ -881,11 +881,11 @@
           <div class="topbar-indices-display" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices">
             <!-- NIFTY -->
             <div class="topbar-index-col" id="mainHeaderTickerItem">
-              <span class="topbar-index-title" id="mainHeaderIndexName">NIFTY</span>
+              <span class="topbar-index-title" id="mainHeaderIndexName" style="font-weight: 500; font-size: 12px; color: #1E293B; text-transform: uppercase;">NIFTY</span>
               <div class="topbar-index-data negative" id="mainHeaderValRow">
-                <span class="index-price" id="niftyCardValue">25,144.30</span>
-                <span class="topbar-index-triangle" id="mainHeaderTriangle">▼</span>
-                <span class="index-change" id="niftyCardSub">-155.05 (-0.61%)</span>
+                <span class="index-price" id="niftyCardValue" style="color: #D64D4D; font-weight: 600; font-size: 12.5px;">25,144.30</span>
+                <span class="topbar-index-triangle" id="mainHeaderTriangle" style="color: #D64D4D; font-size: 8px;">▼</span>
+                <span class="index-change" id="niftyCardSub" style="color: #475569; font-weight: 500; font-size: 11.5px; margin-left: 3px;">-155.05 (-0.61%)</span>
               </div>
             </div>
 
@@ -894,11 +894,11 @@
 
             <!-- BANKNIFTY -->
             <div class="topbar-index-col" id="bankHeaderTickerItem">
-              <span class="topbar-index-title" id="bankHeaderIndexName">BANKNIFTY</span>
+              <span class="topbar-index-title" id="bankHeaderIndexName" style="font-weight: 500; font-size: 12px; color: #1E293B; text-transform: uppercase;">BANKNIFTY</span>
               <div class="topbar-index-data negative" id="bankHeaderValRow">
-                <span class="index-price" id="bankCardValue">61,034.10</span>
-                <span class="topbar-index-triangle" id="bankHeaderTriangle">▼</span>
-                <span class="index-change" id="bankCardSub">-484.40 (-0.79%)</span>
+                <span class="index-price" id="bankCardValue" style="color: #D64D4D; font-weight: 600; font-size: 12.5px;">61,034.10</span>
+                <span class="topbar-index-triangle" id="bankHeaderTriangle" style="color: #D64D4D; font-size: 8px;">▼</span>
+                <span class="index-change" id="bankCardSub" style="color: #475569; font-weight: 500; font-size: 11.5px; margin-left: 3px;">-484.40 (-0.79%)</span>
               </div>
             </div>
 
@@ -5929,7 +5929,7 @@
 <!-- Topbar & Feature Modules: loaded safely with error boundaries -->
 <script type="module">
   import { initTheme, setTheme } from '/js/core/theme.js';
-  import { startTicker, initPopovers } from '/js/components/ticker.js?v=20261114_titles_not_bold_v16';
+  import { startTicker, initPopovers } from '/js/components/ticker.js?v=20261114_card_final_v18';
   import { initPortfolio, loadPortfolio } from '/js/modules/portfolio.js';
   import { renderOrdersUI } from '/js/modules/orders.js';
   import { initPositionsSubtabs, loadMtfPositions, loadPosOrdersHistory } from '/js/modules/positions.js';

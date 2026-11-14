@@ -184,7 +184,10 @@ function renderTickerUI() {
     const triEl = document.getElementById('mainHeaderTriangle');
     const valRow = document.getElementById('mainHeaderValRow');
 
-    if (valEl) valEl.textContent = rawMoney(topData.price);
+    if (valEl) {
+      valEl.textContent = rawMoney(topData.price);
+      valEl.style.color = isPos ? '#10B981' : '#D64D4D';
+    }
     const change = topData.change != null ? topData.change : (topData.prevPrice != null ? topData.price - topData.prevPrice : 0);
     const changePct = topData.changePct != null ? topData.changePct : (topData.prevPrice != null ? (change / topData.prevPrice) * 100 : 0);
 
@@ -195,11 +198,13 @@ function renderTickerUI() {
     }
     if (triEl) {
       triEl.textContent = isPos ? '▲' : '▼';
+      triEl.style.color = isPos ? '#10B981' : '#D64D4D';
     }
     if (subEl) {
       const chgStr = Math.abs(chgVal).toFixed(2);
       const pctStr = Math.abs(changePct).toFixed(2);
       subEl.textContent = isPos ? `+${chgStr} (+${pctStr}%)` : `-${chgStr} (-${pctStr}%)`;
+      subEl.style.color = '#475569';
     }
     if (valRow) {
       valRow.className = `topbar-index-data ${isPos ? 'positive' : 'negative'}`;
@@ -213,18 +218,23 @@ function renderTickerUI() {
     const bSubEl = document.getElementById('bankCardSub');
     const bTriEl = document.getElementById('bankHeaderTriangle');
     const bValRow = document.getElementById('bankHeaderValRow');
-    if (bValEl) bValEl.textContent = rawMoney(bankData.price);
+    if (bValEl) {
+      bValEl.textContent = rawMoney(bankData.price);
+      bValEl.style.color = bIsPos ? '#10B981' : '#D64D4D';
+    }
     const bChange = bankData.change != null ? bankData.change : (bankData.prevPrice != null ? bankData.price - bankData.prevPrice : 0);
     const bChangePct = bankData.changePct != null ? bankData.changePct : (bankData.prevPrice != null ? (bChange / bankData.prevPrice) * 100 : 0);
     const bChgVal = Number(bChange || 0);
     const bIsPos = bChgVal >= 0;
     if (bTriEl) {
       bTriEl.textContent = bIsPos ? '▲' : '▼';
+      bTriEl.style.color = bIsPos ? '#10B981' : '#D64D4D';
     }
     if (bSubEl) {
       const chgStr = Math.abs(bChgVal).toFixed(2);
       const pctStr = Math.abs(bChangePct).toFixed(2);
       bSubEl.textContent = bIsPos ? `+${chgStr} (+${pctStr}%)` : `-${chgStr} (-${pctStr}%)`;
+      bSubEl.style.color = '#475569';
     }
     if (bValRow) {
       bValRow.className = `topbar-index-data ${bIsPos ? 'positive' : 'negative'}`;
