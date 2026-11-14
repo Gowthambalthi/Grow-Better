@@ -596,10 +596,113 @@ a.nav-item:visited,
   color: #10B981 !important; /* Soft green */
 }
 
+/* ============================================================
+   Unified Institutional Indices Display (NIFTY | BANKNIFTY [ ⌵ ])
+   Exact match to Image 2: High contrast labels, unified red/green
+   tabular metrics, crisp vertical divider, and boxed chevron button.
+   ============================================================ */
+.topbar-indices-display {
+  display: flex !important;
+  align-items: center !important;
+  user-select: none !important;
+  padding: 2px 0 !important;
+}
+
+.topbar-index-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  line-height: 1.15 !important;
+}
+
+.topbar-index-title {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #0F172A !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+  line-height: 1.1 !important;
+  font-family: var(--font-sans) !important;
+}
+
+[data-theme="dark"] .topbar-index-title {
+  color: #FFFFFF !important;
+}
+
+.topbar-index-data {
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+  font-family: var(--font-sans) !important;
+}
+
+.topbar-index-data.negative {
+  color: #EF4444 !important;
+}
+
+.topbar-index-data.positive {
+  color: #10B981 !important;
+}
+
+.topbar-index-triangle {
+  font-size: 9.5px !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+}
+
+.topbar-index-divider {
+  width: 1px !important;
+  height: 28px !important;
+  background: #CBD5E1 !important;
+  margin: 0 16px !important;
+  flex-shrink: 0 !important;
+}
+
+[data-theme="dark"] .topbar-index-divider {
+  background: #334155 !important;
+}
+
+.topbar-indices-arrow-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-radius: 6px !important;
+  border: 1px solid #CBD5E1 !important;
+  background: #F8FAFC !important;
+  color: #0F172A !important;
+  cursor: pointer !important;
+  margin-left: 14px !important;
+  padding: 0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.15s ease !important;
+}
+
+[data-theme="dark"] .topbar-indices-arrow-btn {
+  border: 1px solid #334155 !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
 .topbar-indices-arrow-btn:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+  background: #EDF2F7 !important;
+  border-color: #94A3B8 !important;
+  color: #00B386 !important;
+}
+
+[data-theme="dark"] .topbar-indices-arrow-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: #64748B !important;
   color: #38BDF8 !important;
-  border-color: rgba(255, 255, 255, 0.35) !important;
 }
 
 .index-arrow {

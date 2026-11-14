@@ -1080,51 +1080,24 @@ function Topbar({
     },
       /* Unified NIFTY + BANKNIFTY Indices Display matching institutional terminal */
       /*#__PURE__*/React.createElement("div", {
-        className: "topbar-indices-display",
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          userSelect: 'none'
-        }
+        className: "topbar-indices-display"
       },
         /* NIFTY Item */
         /*#__PURE__*/React.createElement("div", {
           className: "topbar-index-col",
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1px',
-            lineHeight: 1.15
-          },
           title: "NIFTY 50 Live Index Quote"
         },
           /* Top row: NIFTY */
           /*#__PURE__*/React.createElement("span", {
-            style: {
-              fontSize: '12px',
-              fontWeight: 800,
-              color: 'var(--text-color, #f8fafc)',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase'
-            }
+            className: "topbar-index-title"
           }, "NIFTY"),
           /* Bottom row: 25,144.30 ▼ -155.05 (-0.61%) */
           /*#__PURE__*/React.createElement("div", {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: isNiftyPos ? '#16a34a' : '#ef4444',
-              fontVariantNumeric: 'tabular-nums',
-              whiteSpace: 'nowrap'
-            }
+            className: `topbar-index-data ${isNiftyPos ? 'positive' : 'negative'}`
           },
             /*#__PURE__*/React.createElement("span", null, niftyPrice),
             /*#__PURE__*/React.createElement("span", {
-              style: { fontSize: '8.5px' }
+              className: "topbar-index-triangle"
             }, isNiftyPos ? '▲' : '▼'),
             /*#__PURE__*/React.createElement("span", null, niftySub)
           )
@@ -1132,51 +1105,25 @@ function Topbar({
 
         /* Vertical Divider | */
         /*#__PURE__*/React.createElement("div", {
-          style: {
-            width: '1px',
-            height: '24px',
-            background: 'var(--border-color, rgba(255, 255, 255, 0.15))',
-            margin: '0 2px'
-          }
+          className: "topbar-index-divider"
         }),
 
         /* BANKNIFTY Item */
         /*#__PURE__*/React.createElement("div", {
           className: "topbar-index-col",
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1px',
-            lineHeight: 1.15
-          },
           title: "BANKNIFTY Live Index Quote"
         },
           /* Top row: BANKNIFTY */
           /*#__PURE__*/React.createElement("span", {
-            style: {
-              fontSize: '12px',
-              fontWeight: 800,
-              color: 'var(--text-color, #f8fafc)',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase'
-            }
+            className: "topbar-index-title"
           }, "BANKNIFTY"),
           /* Bottom row: 61,034.10 ▼ -484.40 (-0.79%) */
           /*#__PURE__*/React.createElement("div", {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: 700,
-              color: isBankPos ? '#16a34a' : '#ef4444',
-              fontVariantNumeric: 'tabular-nums',
-              whiteSpace: 'nowrap'
-            }
+            className: `topbar-index-data ${isBankPos ? 'positive' : 'negative'}`
           },
             /*#__PURE__*/React.createElement("span", null, bankPrice),
             /*#__PURE__*/React.createElement("span", {
-              style: { fontSize: '8.5px' }
+              className: "topbar-index-triangle"
             }, isBankPos ? '▲' : '▼'),
             /*#__PURE__*/React.createElement("span", null, bankSub)
           )
@@ -1186,30 +1133,15 @@ function Topbar({
         /*#__PURE__*/React.createElement("button", {
           type: "button",
           className: "topbar-indices-arrow-btn",
-          style: {
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '24px',
-            height: '24px',
-            borderRadius: '4px',
-            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.18))',
-            background: 'transparent',
-            color: 'var(--text-muted, #94a3b8)',
-            cursor: 'pointer',
-            marginLeft: '2px',
-            padding: 0,
-            transition: 'all 0.15s ease'
-          },
           title: "Market Indices"
         },
           /*#__PURE__*/React.createElement("svg", {
             viewBox: "0 0 24 24",
-            width: "13",
-            height: "13",
+            width: "14",
+            height: "14",
             fill: "none",
             stroke: "currentColor",
-            strokeWidth: "2.5",
+            strokeWidth: "2.4",
             strokeLinecap: "round",
             strokeLinejoin: "round"
           },
