@@ -4097,6 +4097,10 @@ app.get('/api/scalping/board', (req, res) => {
     'Pragma': 'no-cache',
     'Expires': '0'
   });
+  const now = Date.now();
+  if (global._boardResponseCache && (now - (global._boardResponseCacheTime || 0)) < 2500) {
+    return res.json(global._boardResponseCache);
+  }
   try {
     const board = (liveMinuteEngine && typeof liveMinuteEngine.getScalpingBoard === 'function')
       ? liveMinuteEngine.getScalpingBoard()
@@ -4321,42 +4325,75 @@ app.get('/api/scalping/board', (req, res) => {
       }
     };
 
-    // Attach Verified Institutional Top 5 Catalysts
+    // Attach Verified Institutional Top 5 Catalysts (strictly 5 actionable, unpriced catalysts; no Already Moved)
     try {
-      const top5Path = path.join(__dirname, 'data', 'news', 'top5_catalysts_verified.json');
-      if (fs.existsSync(top5Path)) {
-        const top5Data = JSON.parse(fs.readFileSync(top5Path, 'utf8'));
-        const verified = (top5Data.catalysts || []).filter(c => {
+      const now = Date.now();
+      if (global._cachedOvernightTop5 && Array.isArray(global._cachedOvernightTop5) && global._cachedOvernightTop5.length >= 5 && (now - (global._cachedOvernightTop5Time || 0)) < 30000) {
+        board.top5Catalysts = global._cachedOvernightTop5;
+      } else {
+        const pmc = require('./common/news/preMarketCatalysts');
+        const pmcBatch = pmc.getOvernightCatalystBatch(undefined, _catalystStockQuotes);
+        const isEligible = (c) => {
           if (!c || !c.symbol) return false;
+          if (c.isUntradeable || c.isPennyStock) return false;
           if (c.tradeStatus === 'ALREADY_MOVED' || c.tradeStatus === 'STALE_YESTERDAY') return false;
           if (c.actionBtnLabel && c.actionBtnLabel.includes('Already Moved')) return false;
           if (c.badge && c.badge.includes('Already Moved')) return false;
-          const move = Math.abs(Number(c.dayMovePct || c.postNewsMovePct || 0));
-          if (move >= 5.5 && !c.isBlowoutBeat) return false;
+          const pMove = Number(c.postNewsMovePct != null ? c.postNewsMovePct : (c.changePct || 0));
+          if (pMove <= -3.5) return false; // Downside exhaustion (already dumped)
+          if (!c.isBlowoutBeat && pMove >= 3.8) return false; // Upside exhaustion (already ran)
+          const move = Math.abs(Number(c.dayMovePct || c.postNewsMovePct || c.movePct || 0));
+          if (move >= (c.isBlowoutBeat ? 6.5 : 3.8)) return false;
           return c.takeTrade !== false;
-        });
-        board.top5Catalysts = verified;
-      }
-      if (!Array.isArray(board.top5Catalysts) || board.top5Catalysts.length < 5) {
-        const seenSymbols = new Set((board.top5Catalysts || []).map(c => c && c.symbol).filter(Boolean));
-        board.top5Catalysts = Array.isArray(board.top5Catalysts) ? [...board.top5Catalysts] : [];
-        const pmcBatch = pmc && typeof pmc.getOvernightCatalystBatch === 'function' ? pmc.getOvernightCatalystBatch() : null;
-        const candidates = (pmcBatch && pmcBatch.allCatalysts) || (Array.isArray(cleanCatalysts) ? cleanCatalysts : []);
-        for (const item of candidates) {
-          if (board.top5Catalysts.length >= 5) break;
-          if (!item || !item.symbol || seenSymbols.has(item.symbol)) continue;
-          if (item.isUntradeable || item.isPennyStock) continue;
-          if (item.tradeStatus === 'ALREADY_MOVED' || item.tradeStatus === 'STALE_YESTERDAY') continue;
-          if (item.actionBtnLabel && item.actionBtnLabel.includes('Already Moved')) continue;
-          if (item.badge && item.badge.includes('Already Moved')) continue;
-          const move = Math.abs(Number(item.dayMovePct || item.postNewsMovePct || item.movePct || 0));
-          if (move >= 5.5 && !item.isBlowoutBeat) continue;
-          if (item.takeTrade === false && !item.isBlowoutBeat) continue;
-          seenSymbols.add(item.symbol);
-          board.top5Catalysts.push(item);
+        };
+
+        const top5List = [];
+        const seenSymbols = new Set();
+
+        // 1. Primary: overnightBatch.top5Movers (verified fresh)
+        if (pmcBatch && Array.isArray(pmcBatch.top5Movers)) {
+          for (const c of pmcBatch.top5Movers) {
+            if (!isEligible(c) || seenSymbols.has(c.symbol)) continue;
+            seenSymbols.add(c.symbol);
+            top5List.push(c);
+            if (top5List.length >= 5) break;
+          }
+        }
+
+        // 2. Secondary: static verified file if needed
+        if (top5List.length < 5) {
+          const top5Path = path.join(__dirname, 'data', 'news', 'top5_catalysts_verified.json');
+          if (fs.existsSync(top5Path)) {
+            const top5Data = JSON.parse(fs.readFileSync(top5Path, 'utf8'));
+            for (const c of (top5Data.catalysts || [])) {
+              if (!isEligible(c) || seenSymbols.has(c.symbol)) continue;
+              seenSymbols.add(c.symbol);
+              top5List.push(c);
+              if (top5List.length >= 5) break;
+            }
+          }
+        }
+
+        // 3. Tertiary: Backfill from all overnight catalysts to GUARANTEE strictly 5 cards
+        if (top5List.length < 5 && pmcBatch && Array.isArray(pmcBatch.allCatalysts)) {
+          for (const c of pmcBatch.allCatalysts) {
+            if (!isEligible(c) || seenSymbols.has(c.symbol)) continue;
+            seenSymbols.add(c.symbol);
+            top5List.push(c);
+            if (top5List.length >= 5) break;
+          }
+        }
+
+        board.top5Catalysts = top5List;
+        if (top5List.length >= 5) {
+          global._cachedOvernightTop5 = top5List;
+          global._cachedOvernightTop5Time = now;
         }
       }
-    } catch (_) {}
+    } catch (top5Err) {
+      console.warn('[Server.js] top5Catalysts load error:', top5Err.message);
+      board.top5Catalysts = [];
+    }
 
     // Attach Live 09:20 AM Strangle Calls (Theta Harvester)
     try {
@@ -4384,6 +4421,8 @@ app.get('/api/scalping/board', (req, res) => {
       }
     } catch (_) {}
 
+    global._boardResponseCache = board;
+    global._boardResponseCacheTime = now;
     return res.json(board);
   } catch (err) {
     console.error('[Server.js] Error in /api/scalping/board:', err);
@@ -4749,7 +4788,10 @@ function enrichMoversWithCatalysts(existing) {
   return result.slice(0, 50);
 }
 
+let _refreshingQuotes = false;
 async function refreshCatalystStockQuotes() {
+  if (_refreshingQuotes) return;
+  _refreshingQuotes = true;
   try {
     const pmc = require('./common/news/preMarketCatalysts');
     const catMap = pmc.loadPreMarketCatalysts();
@@ -4757,10 +4799,10 @@ async function refreshCatalystStockQuotes() {
     const allItems = Array.from(catMap.values()).filter(c => c && c.symbol);
     if (!allItems.length) return;
 
-    // Prioritize newest filings first by timestamp descending, but quote ALL active symbols!
+    // Prioritize newest 35 filings and top 20 high-priority symbols (50 symbols max per single batch)
     const sortedDesc = [...allItems].sort((a, b) => Number(b.ts || 0) - Number(a.ts || 0));
-    const recentSyms = sortedDesc.map(c => c.symbol);
-    const highPriSyms = allItems.filter(c => c.isHighPriority).map(c => c.symbol);
+    const recentSyms = sortedDesc.slice(0, 35).map(c => c.symbol);
+    const highPriSyms = allItems.filter(c => c.isHighPriority).slice(0, 20).map(c => c.symbol);
     const syms = Array.from(new Set([...recentSyms, ...highPriSyms]));
 
     const quotes = await liveQuoteEngine.fetchStockQuotes(syms);
@@ -4782,14 +4824,23 @@ async function refreshCatalystStockQuotes() {
     }
   } catch (err) {
     console.warn('[refreshCatalystStockQuotes] error:', err.message);
+  } finally {
+    _refreshingQuotes = false;
   }
 }
 
-setInterval(refreshCatalystStockQuotes, 10000);
-setTimeout(refreshCatalystStockQuotes, 1500);
+setInterval(refreshCatalystStockQuotes, 15000);
+setTimeout(refreshCatalystStockQuotes, 2000);
 
 const { exec: execPy } = require('child_process');
+let _lastOffMarketPy = 0;
 function runPythonCatalystEngine() {
+  const sessionStatus = catalystAlerter.getMarketSessionStatus ? catalystAlerter.getMarketSessionStatus() : null;
+  const isMarketHours = sessionStatus ? sessionStatus.isMarketHours : false;
+  if (!isMarketHours) {
+    if (Date.now() - _lastOffMarketPy < 300000) return; // 5m throttle outside market hours
+    _lastOffMarketPy = Date.now();
+  }
   execPy('python scripts/institutional_catalyst_engine.py', (err) => {
     if (err && !err.killed) console.warn('[institutional_catalyst_engine] note:', err.message);
   });
@@ -4817,7 +4868,10 @@ app.get('/api/scalping/catalysts', (req, res) => {
 
   const cacheKey = `${req.query.day || ''}_${req.query.includeUntradeable || ''}_${req.query.includeBeforeClose || ''}`;
   const now = Date.now();
-  if (_catalystsResponseCache.data && _catalystsResponseCache.key === cacheKey && (now - _catalystsResponseCache.time) < 200) {
+  const sessionStatus = catalystAlerter.getMarketSessionStatus ? catalystAlerter.getMarketSessionStatus() : null;
+  const isMarketHours = sessionStatus ? sessionStatus.isMarketHours : false;
+  const cacheTtl = isMarketHours ? 8000 : 120000;
+  if (_catalystsResponseCache.data && _catalystsResponseCache.key === cacheKey && (now - _catalystsResponseCache.time) < cacheTtl) {
     return res.json(_catalystsResponseCache.data);
   }
 
@@ -4994,23 +5048,28 @@ app.get('/api/scalping/catalysts', (req, res) => {
 
 
 
-      // 4. Fallback to historical closing price
+      // 4. Fallback to historical closing price from in-memory cache
       if (ltp == null || ltp <= 0) {
         try {
-          if (!_prevCloses) _prevCloses = JSON.parse(fs.readFileSync('data/prev_closes_20261026.json', 'utf8'));
-          if (_prevCloses[sym]) ltp = _prevCloses[sym];
-        } catch (_) {}
-      }
-      if (ltp == null || ltp <= 0) {
-        try {
-          const ohlcvP = path.join(__dirname, 'data', 'ohlcv_angel', sym + '.json');
-          if (fs.existsSync(ohlcvP)) {
-            const raw = JSON.parse(fs.readFileSync(ohlcvP, 'utf8'));
-            if (raw.candles && raw.candles.length > 0) {
-              const lastC = raw.candles[raw.candles.length - 1];
-              ltp = Number(lastC[4]); // close price
-            }
+          if (!_prevCloses) {
+            _prevCloses = {};
+            try {
+              if (fs.existsSync('data/prev_closes_20261026.json')) {
+                Object.assign(_prevCloses, JSON.parse(fs.readFileSync('data/prev_closes_20261026.json', 'utf8')));
+              }
+            } catch (_) {}
+            try {
+              if (fs.existsSync('data/universe_filtered.json')) {
+                const u = JSON.parse(fs.readFileSync('data/universe_filtered.json', 'utf8'));
+                if (Array.isArray(u.stocks)) {
+                  for (const s of u.stocks) {
+                    if (s.symbol && s.close && !_prevCloses[s.symbol]) _prevCloses[s.symbol] = Number(s.close);
+                  }
+                }
+              }
+            } catch (_) {}
           }
+          if (_prevCloses[sym]) ltp = _prevCloses[sym];
         } catch (_) {}
       }
 
@@ -5054,18 +5113,22 @@ app.get('/api/scalping/catalysts', (req, res) => {
         postNewsMovePct
       });
 
-      // Auto-Learned Catalyst Observation & Post-Mortem Feedback Loop ("learn why it not moved so next time not repeat")
-      try {
-        const autoLearner = require('./common/news/autoCatalystLearner');
-        autoLearner.recordLiveCatalystObservation(
-          Object.assign({}, c, pred),
-          effectivePrice,
-          movePct,
-          postNewsMovePct,
-          (cq && cq.rvol) || 1.0,
-          ((effectiveVolume * (effectivePrice || 1)) / 1e7)
-        );
-      } catch (_) {}
+      // Auto-Learned Catalyst Observation & Post-Mortem Feedback Loop (strictly for actionable calls, non-blocking)
+      if (pred && (pred.takeTrade === true || pred.tradeStatus === 'TAKE_TRADE_BUY')) {
+        setImmediate(() => {
+          try {
+            const autoLearner = require('./common/news/autoCatalystLearner');
+            autoLearner.recordLiveCatalystObservation(
+              Object.assign({}, c, pred),
+              effectivePrice,
+              movePct,
+              postNewsMovePct,
+              (cq && cq.rvol) || 1.0,
+              ((effectiveVolume * (effectivePrice || 1)) / 1e7)
+            );
+          } catch (_) {}
+        });
+      }
 
 
 
@@ -5965,31 +6028,52 @@ app.get('/api/scalping/catalysts', (req, res) => {
       }
     } catch (_) {}
 
+    // Lean wire list: Top 75 most recent items with compact keys (sufficient for TopNewsSquareBox 50 items)
+    const leanWire = cleanWireList.slice(0, 75).map(item => ({
+      symbol: item.symbol,
+      title: item.title,
+      ltp: item.ltp || 0,
+      dayMovePct: item.dayMovePct != null ? item.dayMovePct : 0,
+      postNewsMovePct: item.postNewsMovePct != null ? item.postNewsMovePct : 0,
+      badge: item.badge,
+      actionBtnLabel: item.actionBtnLabel,
+      pillClass: item.pillClass || 'watch',
+      takeTrade: !!item.takeTrade,
+      confidence: item.confidence || 0,
+      filingTime: item.filingTime,
+      source: item.source || 'Wire',
+      ts: item.ts,
+      isUntradeable: false,
+      isPennyStock: false
+    }));
+
+    // Lean overnight batch: Top picks and stats without multi-megabyte text payloads
+    const leanOvernight = overnightBatch ? {
+      targetDate: overnightBatch.targetDate,
+      targetDateStr: overnightBatch.targetDateStr,
+      closeDateStr: overnightBatch.closeDateStr,
+      holidayName: overnightBatch.holidayName,
+      isHoliday: overnightBatch.isHoliday,
+      holidayNote: overnightBatch.holidayNote,
+      skippedHolidays: overnightBatch.skippedHolidays,
+      totalFilings: (overnightBatch.allCatalysts ? overnightBatch.allCatalysts.length : overnightBatch.totalFilings) || enriched.length,
+      top5Movers: (overnightBatch.top5Movers || []).slice(0, 5),
+      topPick: overnightBatch.topPick,
+      actionableMovers: (overnightBatch.actionableMovers || []).slice(0, 15),
+      topBannerPick: overnightBatch.topBannerPick
+    } : null;
+
     const payload = {
-
       ok: true,
-
       day,
-
       count: top5Catalysts.length,
-
       totalTracked: enriched.length,
-
       catalysts: top5Catalysts,
-
       top5Catalysts,
-
-      allFilings: cleanWireList,
-
-      overnightBatch,
-
+      allFilings: leanWire,
+      overnightBatch: leanOvernight,
       topBannerPick,
-
       preMarketCalls,
-
-      fastMovers,
-
-      highPriority: cleanCatalysts.filter(c => c.isHighPriority),
       brokerStatus: {
         angelOne: {
           connected: !!(brokerStatus.angelone && brokerStatus.angelone.connected),
@@ -8196,9 +8280,17 @@ try {
 
   newsIngestion.fetchRssFeeds().then(() => {
 
+    let _lastOffMarketPoll = 0;
     setInterval(async () => {
 
       try {
+
+        const sessionStatus = catalystAlerter.getMarketSessionStatus ? catalystAlerter.getMarketSessionStatus() : null;
+        const isMarketHours = sessionStatus ? sessionStatus.isMarketHours : false;
+        if (!isMarketHours) {
+          if (Date.now() - _lastOffMarketPoll < 60000) return; // 60s throttle outside market hours
+          _lastOffMarketPoll = Date.now();
+        }
 
         await newsIngestion.fetchRssFeeds();
 
@@ -12431,6 +12523,15 @@ async function start() {
     // the lock must not call getUpdates first: getUpdates confirms updates for the whole bot, so a
     // short-lived duplicate would eat the owner's commands and answer none of them.
     startTelegramInbox();
+
+    // Pre-warm catalysts & board cache for instantaneous client dashboard response
+    setTimeout(() => {
+      const httpWarm = require('http');
+      httpWarm.get(`http://127.0.0.1:${port}/api/scalping/catalysts`, () => {
+        console.log('[server] Pre-warmed /api/scalping/catalysts cache for instantaneous client loads.');
+      }).on('error', () => {});
+      httpWarm.get(`http://127.0.0.1:${port}/api/scalping/board`, () => {}).on('error', () => {});
+    }, 1000);
   });
 
   server.on('error', (err) => {

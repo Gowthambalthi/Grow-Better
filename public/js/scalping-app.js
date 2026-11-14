@@ -3939,22 +3939,22 @@ function TopNewsSquareBox({
     className: "live-pulse-dot"
 
   }), /*#__PURE__*/React.createElement("span", null, "LIVE NEWS")),
-  /* Sort Controls: "Priority by :" in middle on top, then "News" and "Index" both below */
+  /* Sort Controls: "Priority by" in middle on top, then "News" and "Company" both below */
   /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }
   },
   /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: '10px',
-      fontWeight: 700,
+      fontSize: '11px',
+      fontWeight: 600,
       color: 'var(--text-muted, #64748b)',
       letterSpacing: '0.02em',
       textAlign: 'center',
       lineHeight: 1
     }
-  }, "Priority by :"),
+  }, "Priority by"),
   /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', alignItems: 'center', gap: '5px' }
+    style: { display: 'flex', alignItems: 'center', gap: '6px' }
   },
   /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -3962,15 +3962,15 @@ function TopNewsSquareBox({
     style: {
       fontSize: '11px',
       fontWeight: 700,
-      width: '58px',
+      minWidth: '66px',
       height: '24px',
-      padding: 0,
+      padding: '3px 12px',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
       textAlign: 'center',
       lineHeight: 1,
-      borderRadius: '5px',
+      borderRadius: '6px',
       cursor: 'pointer',
       boxSizing: 'border-box',
       border: sortMode === 'news' ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
@@ -3982,19 +3982,19 @@ function TopNewsSquareBox({
   }, "News"),
   /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => handleSortChange('index'),
+    onClick: () => handleSortChange('company'),
     style: {
       fontSize: '11px',
       fontWeight: 700,
-      width: '58px',
+      minWidth: '66px',
       height: '24px',
-      padding: 0,
+      padding: '3px 12px',
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
       textAlign: 'center',
       lineHeight: 1,
-      borderRadius: '5px',
+      borderRadius: '6px',
       cursor: 'pointer',
       boxSizing: 'border-box',
       border: (sortMode === 'company' || sortMode === 'index') ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
@@ -4002,8 +4002,8 @@ function TopNewsSquareBox({
       color: (sortMode === 'company' || sortMode === 'index') ? '#16a34a' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
-    title: (sortMode === 'company' || sortMode === 'index') ? "Active. Click again to return to Normal Live News" : "Priority by Index: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
-  }, "Index")))), /*#__PURE__*/React.createElement("div", {
+    title: (sortMode === 'company' || sortMode === 'index') ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
+  }, "Company")))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
@@ -4424,26 +4424,15 @@ function TopNewsSquareBox({
       },
       title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
     }, `${signPct}${movePct.toFixed(1)}%`))),
-    /* Right side: Two percentages at UP, and time at DOWN / END of right table (NO background boxes) */
+    /* Right side: Two percentages at UP (NO background boxes) */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-right",
-      style: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-end',
-        justifyContent: 'flex-start',
-        gap: '2px',
-        flexShrink: 0,
-        textAlign: 'right'
-      }
-    },
-    /* Row 1 (UP): Two percentages / actions side by side, NO boxes as background */
-    /*#__PURE__*/React.createElement("div", {
       style: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
         gap: '6px',
+        flexShrink: 0,
         textAlign: 'right'
       }
     },
@@ -4489,39 +4478,35 @@ function TopNewsSquareBox({
         }
       }, safeBtnLabel);
     })()
-    ),
-
-    /* Row 2 (DOWN / AT THE END OF RIGHT TABLE): Pre-Market or filing time */
+    )),
+    /* Headline in middle */
     /*#__PURE__*/React.createElement("div", {
+      className: "top-news-headline",
+      title: `${c.title || c.description || 'Corporate Announcement'}${timingAI && timingAI.detail ? `\n\nAI Timing: ${timingAI.detail}` : ''}`
+    }, c.title || c.description || 'Corporate Announcement'),
+    /* At end of that box at bottom of right: Pre-Market or filing time */
+    /*#__PURE__*/React.createElement("div", {
+      className: "top-news-item-bottom",
       style: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
         width: '100%',
+        marginTop: '3px',
         textAlign: 'right'
       }
     },
     /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '10px',
-        fontWeight: 600,
+        fontWeight: 500,
         color: 'var(--text-muted, #64748b)',
         lineHeight: 1.1,
         whiteSpace: 'nowrap',
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        margin: 0,
         textAlign: 'right'
       },
       title: isNonMarketHour ? (c.filingTime ? `Pre-Market filing (${c.filingTime})` : 'Pre-Market News') : (c.filingTime ? `Filing timestamp: ${c.filingTime}` : '')
     }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent'))))
-    )),
-    /* Headline in middle */
-    /*#__PURE__*/React.createElement("div", {
-      className: "top-news-headline",
-      title: `${c.title || c.description || 'Corporate Announcement'}${timingAI && timingAI.detail ? `\n\nAI Timing: ${timingAI.detail}` : ''}`
-    }, c.title || c.description || 'Corporate Announcement'))
   })));
 }
 
@@ -5518,24 +5503,51 @@ function ScalpingApp() {
 
 
 
-  // 3. Data States
+  // 3. Data States with Instantaneous Session Cache Hydration (0ms initial render)
+  const [catalysts, setCatalysts] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('openalgo_cached_catalysts');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
 
-  const [catalysts, setCatalysts] = useState([]);
+  const [allFilings, setAllFilings] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('openalgo_cached_filings');
+      return cached ? JSON.parse(cached) : [];
+    } catch (_) {
+      return [];
+    }
+  });
 
-  const [allFilings, setAllFilings] = useState([]);
+  const [overnightBatch, setOvernightBatch] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('openalgo_cached_overnight');
+      return cached ? JSON.parse(cached) : null;
+    } catch (_) {
+      return null;
+    }
+  });
 
-  const [overnightBatch, setOvernightBatch] = useState(null);
-
-  const [boardData, setBoardData] = useState({
-
-    scorecard: {},
-
-    activeCalls: [],
-
-    closedCalls: [],
-
-    growwMovers: []
-
+  const [boardData, setBoardData] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('openalgo_cached_board');
+      return cached ? JSON.parse(cached) : {
+        scorecard: {},
+        activeCalls: [],
+        closedCalls: [],
+        growwMovers: []
+      };
+    } catch (_) {
+      return {
+        scorecard: {},
+        activeCalls: [],
+        closedCalls: [],
+        growwMovers: []
+      };
+    }
   });
 
   const [catFilter, setCatFilter] = useState('ALL');
@@ -5687,19 +5699,17 @@ function ScalpingApp() {
         if (!isCancelled) {
 
           const list = data.catalysts || data.highPriority || [];
-
           setCatalysts(list);
+          try { sessionStorage.setItem('openalgo_cached_catalysts', JSON.stringify(list)); } catch (_) {}
 
           if (Array.isArray(data.allFilings)) {
-
             setAllFilings(data.allFilings);
-
+            try { sessionStorage.setItem('openalgo_cached_filings', JSON.stringify(data.allFilings)); } catch (_) {}
           }
 
           if (data.overnightBatch) {
-
             setOvernightBatch(data.overnightBatch);
-
+            try { sessionStorage.setItem('openalgo_cached_overnight', JSON.stringify(data.overnightBatch)); } catch (_) {}
           }
 
         }
@@ -5714,7 +5724,7 @@ function ScalpingApp() {
 
     fetchCatalysts();
 
-    const interval = setInterval(fetchCatalysts, 250);
+    const interval = setInterval(fetchCatalysts, 2500);
 
     return () => {
 
@@ -5745,9 +5755,8 @@ function ScalpingApp() {
         const data = await res.json();
 
         if (!isCancelled) {
-
           setBoardData(data);
-
+          try { sessionStorage.setItem('openalgo_cached_board', JSON.stringify(data)); } catch (_) {}
         }
 
       } catch (err) {
@@ -6026,13 +6035,20 @@ function ScalpingApp() {
       if (ltp > 0 && ltp < 30.0) return false;
       if (vol > 0 && vol < 25000) return false;
 
-      // STRICT EXCLUSION: Never give Already Moved or Exhausted moves in Top 5!
+      // STRICT EXCLUSION: Evaluate getBiasInfo to catch all Already Moved & Exhaustion states
+      const bInfo = getBiasInfo(item);
+      if (bInfo.hasAlreadyMoved || bInfo.hasDownsideExhaustion || bInfo.hasUpsideExhaustion) return false;
       if (item.tradeStatus === 'ALREADY_MOVED' || item.tradeStatus === 'STALE_YESTERDAY') return false;
       if (item.actionBtnLabel && item.actionBtnLabel.includes('Already Moved')) return false;
       if (item.badge && item.badge.includes('Already Moved')) return false;
+      if (item.prediction && (item.prediction.includes('ALREADY MOVED') || item.prediction.includes('DO NOT CHASE'))) return false;
+
+      const pMove = Number(item.postNewsMovePct != null ? item.postNewsMovePct : (item.changePct || 0));
+      if (pMove <= -3.5) return false; // Already dumped
+      if (!item.isBlowoutBeat && pMove >= 3.8) return false; // Already ran
 
       const effMove = Math.abs(Number(item.postNewsMove || item.postNewsMovePct || item.dayMovePct || item.movePct || 0));
-      if (effMove >= 5.5 && !item.isBlowoutBeat) return false;
+      if (effMove >= (item.isBlowoutBeat ? 6.5 : 3.8)) return false;
 
       // Must be actionable trade
       if (item.takeTrade === false && !item.isBlowoutBeat) return false;
@@ -6051,7 +6067,27 @@ function ScalpingApp() {
       }
     }
 
-    // 2. Secondary: Live catalysts from boardData.catalysts
+    // 2. Secondary: overnightBatch.top5Movers
+    if (list.length < 5 && overnightBatch && Array.isArray(overnightBatch.top5Movers)) {
+      for (const item of overnightBatch.top5Movers) {
+        if (!isTop5Eligible(item)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
+    }
+
+    // 3. Tertiary: overnightBatch.actionableMovers
+    if (list.length < 5 && overnightBatch && Array.isArray(overnightBatch.actionableMovers)) {
+      for (const item of overnightBatch.actionableMovers) {
+        if (!isTop5Eligible(item)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
+    }
+
+    // 4. Quaternary: Live catalysts from boardData.catalysts
     if (list.length < 5 && Array.isArray(boardData.catalysts)) {
       for (const item of boardData.catalysts) {
         if (!isTop5Eligible(item)) continue;
@@ -6061,7 +6097,7 @@ function ScalpingApp() {
       }
     }
 
-    // 3. Tertiary: Local catalysts list
+    // 5. Quinary: Local catalysts list
     if (list.length < 5 && Array.isArray(catalysts)) {
       for (const item of catalysts) {
         if (!isTop5Eligible(item)) continue;
@@ -6071,7 +6107,17 @@ function ScalpingApp() {
       }
     }
 
-    // 4. Quaternary: Filtered catalysts list
+    // 6. Senary: overnightBatch.allCatalysts
+    if (list.length < 5 && overnightBatch && Array.isArray(overnightBatch.allCatalysts)) {
+      for (const item of overnightBatch.allCatalysts) {
+        if (!isTop5Eligible(item)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
+    }
+
+    // 7. Septenary: Filtered catalysts list
     if (list.length < 5 && Array.isArray(filteredCatalysts)) {
       for (const item of filteredCatalysts) {
         if (!isTop5Eligible(item)) continue;
@@ -6081,8 +6127,18 @@ function ScalpingApp() {
       }
     }
 
+    // 8. Octonary: allFilings list as safety net
+    if (list.length < 5 && Array.isArray(allFilings)) {
+      for (const item of allFilings) {
+        if (!isTop5Eligible(item)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
+    }
+
     return list.slice(0, 5);
-  }, [boardData.top5Catalysts, boardData.catalysts, catalysts, filteredCatalysts]);
+  }, [boardData.top5Catalysts, boardData.catalysts, overnightBatch, catalysts, filteredCatalysts, allFilings]);
 
 
 

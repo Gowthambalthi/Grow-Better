@@ -365,7 +365,9 @@ function recordLiveCatalystObservation(filing, currentLtp, dayMovePct, postNewsM
 
       _dirty = true;
       scheduleSaveMemory();
-      console.log(`[autoCatalystLearner] 🚨 DIAGNOSED NON-MOVER: [${sym}] ${diag.headline} -> ${diag.rootCause}`);
+      if (mem.totalDiagnosedFailures <= 15) {
+        console.log(`[autoCatalystLearner] 🚨 DIAGNOSED NON-MOVER: [${sym}] ${diag.headline} -> ${diag.rootCause}`);
+      }
       return failureRecord;
     }
   }
