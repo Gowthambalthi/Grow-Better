@@ -3758,11 +3758,7 @@ function TopNewsSquareBox({
 
     className: "live-pulse-dot"
 
-  }), /*#__PURE__*/React.createElement("span", null, "\u26A1 LIVE EXCHANGE FILINGS (TODAY & OVERNIGHT)")), /*#__PURE__*/React.createElement("span", {
-
-    className: "top-news-box-count"
-
-  }, latestList.length, " Latest")), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u26A1 LIVE NEWS"))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
@@ -4094,6 +4090,29 @@ function TopNewsSquareBox({
 
     const isFilingIntraday = (c.filingTime && c.filingTime >= '09:15') || (c.ts && Number(c.ts) >= (todayMidnightMs + 9 * 3600000 + 15 * 60000)) || Boolean(auc && auc.isLiveSessionFiling);
 
+    const isNonMarketHour = (() => {
+      const tsVal = Number(c.ts || c.firstSeenAt || c.publishedAt || 0);
+      if (tsVal > 0) {
+        if (tsVal < todayMidnightMs) return true; // Prior day overnight / weekend filing
+        const d = new Date(tsVal + 330 * 60000); // UTC to IST
+        const day = d.getUTCDay(); // 0 is Sunday, 6 is Saturday
+        if (day === 0 || day === 6) return true;
+        const hours = d.getUTCHours();
+        const mins = d.getUTCMinutes();
+        const tNum = hours * 100 + mins;
+        return tNum < 915 || tNum >= 1530;
+      }
+      const timeStr = String(c.filingTime || c.timeAgo || '');
+      if (/[A-Za-z]{3}\s+\d{1,2}:\d{2}|\d{1,2}\s+[A-Za-z]{3}/.test(timeStr)) return true;
+      const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        const tNum = parseInt(match[1], 10) * 100 + parseInt(match[2], 10);
+        return tNum < 915 || tNum >= 1530;
+      }
+      if (c.isOvernight || c.isPreMarket || c.isPreOpenFiling) return true;
+      return false;
+    })();
+
     const rawBadge = auc && auc.badge ? auc.badge : null;
 
     const displayAucBadge = rawBadge ? ((isLiveMarket || isFilingIntraday) ? rawBadge.replace(/09:08\s*/g, 'LIVE ') : rawBadge) : null;
@@ -4115,12 +4134,26 @@ function TopNewsSquareBox({
       className: "top-news-item-left",
       style: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '150px' }
     }, /*#__PURE__*/React.createElement("div", {
-      style: { display: 'flex', alignItems: 'center', gap: '6px' }
+      style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }
     }, /*#__PURE__*/React.createElement("span", {
       className: "top-news-sym"
     }, c.symbol), /*#__PURE__*/React.createElement("span", {
       className: `top-news-timeago ${isFresh ? 'fresh' : ''}`
-    }, c.filingTime || c.timeAgo || 'Just in')),
+    }, c.filingTime || c.timeAgo || 'Just in'),
+    isNonMarketHour && /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '9.5px',
+        fontWeight: 700,
+        background: 'rgba(217, 119, 6, 0.12)',
+        color: '#d97706',
+        border: '1px solid rgba(217, 119, 6, 0.3)',
+        padding: '1px 5px',
+        borderRadius: '3px',
+        whiteSpace: 'nowrap',
+        lineHeight: 1.2
+      },
+      title: "News arrived outside market hours (Pre-market / Overnight)"
+    }, "Pre-Market News")),
     /* Company below: LTP and Today Percentage */
     /*#__PURE__*/React.createElement("div", {
       style: { display: 'flex', alignItems: 'center', gap: '6px' }
