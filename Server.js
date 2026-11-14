@@ -417,38 +417,34 @@ let _boardQuotes = { at: 0, value: {} };
 
 // Background index quotes refresher — NEVER blocks HTTP requests
 
+let _refreshingBoardQuotes = false;
 async function refreshBoardIndexQuotes() {
+  if (_refreshingBoardQuotes) return;
+  const sessionStatus = catalystAlerter.getMarketSessionStatus ? catalystAlerter.getMarketSessionStatus() : null;
+  const isMarketHours = sessionStatus ? sessionStatus.isMarketHours : false;
+  if (!isMarketHours && Date.now() - (_boardQuotes?.at || 0) < 60000) return;
 
+  _refreshingBoardQuotes = true;
   try {
-
     const raw = await liveQuoteEngine.fetchWatchlistQuotes(BOARD_INDEX_SYMBOLS);
-
     const bySymbol = Array.isArray(raw)
-
       ? raw.reduce((acc, r) => { if (r && r.symbol) acc[String(r.symbol).toUpperCase()] = r; return acc; }, {})
-
       : (raw || {});
 
     const out = {};
-
     for (const k of BOARD_INDEX_SYMBOLS) {
-
       const r = bySymbol[k] || bySymbol[k.toUpperCase()];
-
       if (!r || r.price === null || r.price === undefined) continue;
-
       out[k] = { price: r.price, change: r.change, pChange: r.changePct, source: r.source, lastUpdated: r.lastUpdated };
-
     }
 
     if (Object.keys(out).length > 0) {
-
       _boardQuotes = { at: Date.now(), value: out };
-
     }
-
   } catch (_) {}
-
+  finally {
+    _refreshingBoardQuotes = false;
+  }
 }
 
 
@@ -12527,11 +12523,16 @@ async function start() {
     // Pre-warm catalysts & board cache for instantaneous client dashboard response
     setTimeout(() => {
       const httpWarm = require('http');
-      httpWarm.get(`http://127.0.0.1:${port}/api/scalping/catalysts`, () => {
+      const req1 = httpWarm.get(`http://127.0.0.1:${port}/api/scalping/catalysts`, (res) => {
+        res.resume();
         console.log('[server] Pre-warmed /api/scalping/catalysts cache for instantaneous client loads.');
-      }).on('error', () => {});
-      httpWarm.get(`http://127.0.0.1:${port}/api/scalping/board`, () => {}).on('error', () => {});
-    }, 1000);
+      });
+      req1.on('error', () => {});
+      const req2 = httpWarm.get(`http://127.0.0.1:${port}/api/scalping/board`, (res) => {
+        res.resume();
+      });
+      req2.on('error', () => {});
+    }, 2000);
   });
 
   server.on('error', (err) => {
