@@ -1155,13 +1155,22 @@ function Topbar({
       /* Cash Available Pill */
       /*#__PURE__*/React.createElement("div", {
         className: "topbar-stacked-pill",
-        title: "Available Trading Margin / Cash"
+        title: "Available Trading Margin / Cash",
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          justifyContent: 'center'
+        }
       },
         /*#__PURE__*/React.createElement("div", {
-          className: "pill-title"
+          className: "pill-title",
+          style: { textAlign: 'center' }
         }, "Cash Available"),
         /*#__PURE__*/React.createElement("div", {
-          className: "pill-main-val"
+          className: "pill-main-val",
+          style: { textAlign: 'center' }
         }, "₹0.00")
       ),
 

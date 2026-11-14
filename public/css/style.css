@@ -995,12 +995,13 @@ a.nav-item:visited,
 [data-theme="dark"] .moon-icon { display: block; }
 [data-theme="light"] .sun-icon { display: block; }
 
-/* Stacked Pills for CASH BALANCE (BORDERLESS - NOT IN BOX!) */
+/* Stacked Pills for CASH BALANCE (BORDERLESS - CENTER ALIGNED IN MIDDLE) */
 .topbar-stacked-pill {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -1016,12 +1017,24 @@ a.nav-item:visited,
   color: #64748B !important; /* slate on the white bar */
   letter-spacing: 0;
   text-transform: none !important;
+  text-align: center !important;
 }
+
+[data-theme="dark"] .pill-title {
+  color: #94A3B8 !important;
+}
+
 .pill-main-val, #topbarCashValue {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 14.5px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   color: #0F2447 !important;
+  text-align: center !important;
+}
+
+[data-theme="dark"] .pill-main-val,
+[data-theme="dark"] #topbarCashValue {
+  color: #FFFFFF !important;
 }
 .pill-sub-val {
   font-family: var(--font-mono);
