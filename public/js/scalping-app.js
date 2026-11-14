@@ -724,42 +724,6 @@ function Sidebar({
 
   }, /*#__PURE__*/React.createElement("a", {
 
-    className: "nav-item",
-
-    href: "/final.html#strategies"
-
-  }, /*#__PURE__*/React.createElement("svg", {
-
-    className: "nav-icon",
-
-    viewBox: "0 0 24 24"
-
-  }, /*#__PURE__*/React.createElement("path", {
-
-    d: "M8 21h8M12 17v4M6 4h12v5a6 6 0 0 1-12 0V4Z",
-
-    fill: "none",
-
-    stroke: "currentColor",
-
-    strokeWidth: "1.8",
-
-    strokeLinejoin: "round"
-
-  }), /*#__PURE__*/React.createElement("path", {
-
-    d: "M6 5H3v3a3 3 0 0 0 3 3M18 5h3v3a3 3 0 0 1-3 3",
-
-    fill: "none",
-
-    stroke: "currentColor",
-
-    strokeWidth: "1.8",
-
-    strokeLinecap: "round"
-
-  })), /*#__PURE__*/React.createElement("span", null, "3 Core Strategies")), /*#__PURE__*/React.createElement("a", {
-
     className: "nav-item active",
 
     href: "/scalping.html",
