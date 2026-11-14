@@ -3655,13 +3655,13 @@ const NIFTY_SMALLCAP_250_SYMBOLS = new Set([
 function getCompanyTier(symbol) {
   const sym = String(symbol || '').toUpperCase().trim();
   if (NIFTY_50_SYMBOLS.has(sym)) {
-    return { name: 'NIFTY 50', score: 1000, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.12)', border: 'rgba(37, 99, 235, 0.28)' };
+    return { name: 'NIFTY 50', score: 1000, color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)', border: 'rgba(217, 119, 6, 0.3)' };
   }
   if (NIFTY_NEXT_50_SYMBOLS.has(sym)) {
-    return { name: 'NEXT 50', score: 800, color: '#9333ea', bg: 'rgba(147, 51, 234, 0.12)', border: 'rgba(147, 51, 234, 0.28)' };
+    return { name: 'NEXT 50', score: 800, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
   }
   if (NIFTY_MIDCAP_150_SYMBOLS.has(sym)) {
-    return { name: 'MIDCAP', score: 600, color: '#0891b2', bg: 'rgba(8, 145, 178, 0.12)', border: 'rgba(8, 145, 178, 0.28)' };
+    return { name: 'MIDCAP', score: 600, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
   }
   if (NIFTY_SMALLCAP_250_SYMBOLS.has(sym)) {
     return { name: 'SMALLCAP', score: 400, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
@@ -4319,15 +4319,31 @@ function TopNewsSquareBox({
       title: `Click to copy ${c.symbol} and view details`
     }, /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-top",
-      style: { alignItems: 'flex-start' }
+      style: { alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }
     }, /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-left",
-      style: { display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '150px' }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }
+      style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', flex: 1 }
     }, /*#__PURE__*/React.createElement("span", {
       className: "top-news-sym"
     }, c.symbol),
+    ltp > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "top-news-price",
+      style: { fontWeight: 800, fontSize: '12px' }
+    }, `₹${ltp.toFixed(2)}`),
+    /* Day Percentage */
+    /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '10.5px',
+        fontWeight: 800,
+        color: movePct > 0 ? '#16a34a' : movePct < 0 ? '#dc2626' : '#64748b',
+        background: movePct > 0 ? 'rgba(22, 163, 74, 0.12)' : movePct < 0 ? 'rgba(220, 38, 38, 0.12)' : 'rgba(100, 116, 139, 0.12)',
+        padding: '1px 5px',
+        borderRadius: '4px',
+        fontVariantNumeric: 'tabular-nums',
+        whiteSpace: 'nowrap'
+      },
+      title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
+    }, `${signPct}${movePct.toFixed(1)}% Day`),
     (() => {
       const tier = getCompanyTier(c.symbol);
       if (!tier) return null;
@@ -4358,32 +4374,15 @@ function TopNewsSquareBox({
         lineHeight: 1.2
       },
       title: c.filingTime ? `Pre-market filing (${c.filingTime})` : "News arrived outside market hours (Pre-market / Overnight)"
-    }, "Pre-Market News") : /*#__PURE__*/React.createElement("span", {
-      className: `top-news-timeago ${isFresh ? 'fresh' : ''}`
-    }, c.filingTime || c.timeAgo || 'Just in')),
-    /* Company below: LTP and Today Percentage */
-    /*#__PURE__*/React.createElement("div", {
-      style: { display: 'flex', alignItems: 'center', gap: '6px' }
-    }, ltp > 0 && /*#__PURE__*/React.createElement("span", {
-      className: "top-news-price",
-      style: { fontWeight: 800, fontSize: '12px' }
-    }, `₹${ltp.toFixed(2)}`), /*#__PURE__*/React.createElement("span", {
-      style: {
-        fontSize: '11px',
-        fontWeight: 800,
-        color: movePct > 0 ? '#16a34a' : movePct < 0 ? '#dc2626' : '#64748b',
-        background: movePct > 0 ? 'rgba(22, 163, 74, 0.12)' : movePct < 0 ? 'rgba(220, 38, 38, 0.12)' : 'rgba(100, 116, 139, 0.12)',
-        padding: '1px 5px',
-        borderRadius: '4px',
-        fontVariantNumeric: 'tabular-nums',
-        whiteSpace: 'nowrap'
-      },
-      title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
-    }, `${signPct}${movePct.toFixed(1)}% Day`))),
-    /* Right side: After News move, AI timing badge, speed badge, auc pill, action button */
+    }, "Pre-Market News") : null),
+    /* Right side: After News move, AI timing badge, Watch pill, and TIME DIRECTLY BELOW WATCH */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-right",
-      style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap', justifyContent: 'flex-end' }
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }
+    },
+    /* Row 1: Badges & Buttons */
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', alignItems: 'center', gap: '6px' }
     },
     /* BOX 1: Exactly ONE percentage move pill */
     /*#__PURE__*/React.createElement("span", {
@@ -4401,7 +4400,7 @@ function TopNewsSquareBox({
       title: timingAI.detail || ''
     }, timingAI.badgeLabel),
 
-    /* BOX 2: Exactly ONE trade action / probability pill (RED for SELL, GREEN for BUY, GRAY for ROUTINE) */
+    /* BOX 2: Exactly ONE trade action / probability pill */
     (() => {
       const isRoutineBtn = /routine|watch|stale|already|untradeable/i.test(btnLabel);
       const isSellAction = !isRoutineBtn && (isBear || c.tradeStatus === 'TAKE_TRADE_SHORT' || (/sell|short/i.test(btnLabel) && !isBull)) && !isBull;
@@ -4421,7 +4420,19 @@ function TopNewsSquareBox({
           whiteSpace: 'nowrap'
         }, bgStyle)
       }, safeBtnLabel);
-    })())),
+    })()),
+    /* Row 2: Filing time directly below Watch button */
+    /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: '9.5px',
+        fontWeight: 600,
+        color: 'var(--text-muted, #94a3b8)',
+        lineHeight: 1.1,
+        whiteSpace: 'nowrap'
+      },
+      title: c.filingTime ? `Filing timestamp: ${c.filingTime}` : ''
+    }, c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent'))
+    )),
     /* Headline */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-headline",
