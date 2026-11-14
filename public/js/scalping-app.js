@@ -3715,16 +3715,18 @@ function TopNewsSquareBox({
 
   const [sortMode, setSortMode] = React.useState(() => {
     try {
-      return localStorage.getItem('growbetter_news_sort_mode') || 'news';
+      return localStorage.getItem('growbetter_news_sort_mode') || 'normal';
     } catch (e) {
-      return 'news';
+      return 'normal';
     }
   });
 
   const handleSortChange = (mode) => {
-    setSortMode(mode);
+    // Touching an active button a second time toggles it off back to normal live news
+    const nextMode = (sortMode === mode) ? 'normal' : mode;
+    setSortMode(nextMode);
     try {
-      localStorage.setItem('growbetter_news_sort_mode', mode);
+      localStorage.setItem('growbetter_news_sort_mode', nextMode);
     } catch (e) {}
   };
 
@@ -3846,13 +3848,16 @@ function TopNewsSquareBox({
         return tsB - tsA;
       }
 
-      // Default 'news': Priority by News Scope
-      const scopeA = getNewsScopeScore(a);
-      const scopeB = getNewsScopeScore(b);
-      if (Math.abs(scopeB - scopeA) >= 10) {
-        return scopeB - scopeA;
+      if (sortMode === 'news') {
+        const scopeA = getNewsScopeScore(a);
+        const scopeB = getNewsScopeScore(b);
+        if (Math.abs(scopeB - scopeA) >= 10) {
+          return scopeB - scopeA;
+        }
+        return tsB - tsA;
       }
 
+      // Default 'normal': Normal live news (strict descending chronological timestamp)
       return tsB - tsA;
 
     }).slice(0, 30);
@@ -3876,13 +3881,11 @@ function TopNewsSquareBox({
 
     className: "live-pulse-dot"
 
-  }), /*#__PURE__*/React.createElement("span", null, "\u26A1 LIVE NEWS")),
+  }), /*#__PURE__*/React.createElement("span", null, "LIVE NEWS")),
   /* Sort Buttons */
   /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', alignItems: 'center', gap: '5px' }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: { fontSize: '11px', color: 'var(--text-muted, #94a3b8)', fontWeight: 600, marginRight: '2px' }
-  }, "Sort:"),
+    style: { display: 'flex', alignItems: 'center', gap: '6px' }
+  },
   /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => handleSortChange('news'),
@@ -3897,8 +3900,8 @@ function TopNewsSquareBox({
       color: sortMode === 'news' ? '#16a34a' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
-    title: "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
-  }, "\uD83D\uDD25 Priority by News"),
+    title: sortMode === 'news' ? "Active. Click again to return to Normal Live News" : "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
+  }, "Priority by News"),
   /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => handleSortChange('company'),
@@ -3913,8 +3916,8 @@ function TopNewsSquareBox({
       color: sortMode === 'company' ? '#2563eb' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
-    title: "Priority by Company: NIFTY 50 blue chips first, then Next 50 and Midcaps"
-  }, "\uD83C\uDFE2 Priority by Company"))), /*#__PURE__*/React.createElement("div", {
+    title: sortMode === 'company' ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
+  }, "Priority by Company"))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
