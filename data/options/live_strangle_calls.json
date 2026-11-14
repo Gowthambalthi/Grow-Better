@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-13 09:47:42 IST",
+  "generatedAt": "2026-11-14 10:09:52 IST",
   "engine": "09:20 AM SYSTEMATIC DELTA-HEDGED STRANGLE (THETA HARVESTER)",
   "expiryInfo": {
     "currentExpiry": "23-NOV-2026",
@@ -22,12 +22,12 @@
     {
       "symbol": "NIFTY",
       "instrument": "NIFTY 50 Weekly Options",
-      "spotPrice": 25209.85,
+      "spotPrice": 25144.3,
       "lotSize": 25,
       "expiry": "17-NOV-2026",
       "expiryCode": "17NOV",
       "action": "EXECUTE AT 09:20 AM",
-      "basketOrderText": "=== NIFTY 09:20 AM STRANGLE BASKET (17-NOV-2026) ===\n1. BUY  NIFTY 17NOV 25650 CE | Qty: 25 | Price: \u20b936.2 (Hedge Wing)\n2. BUY  NIFTY 17NOV 24600 PE  | Qty: 25 | Price: \u20b915.6 (Hedge Wing)\n3. SELL NIFTY 17NOV 25400 CE  | Qty: 25 | Limit \u20b992.1 | SL-M: \u20b9115.1\n4. SELL NIFTY 17NOV 24850 PE   | Qty: 25 | Limit \u20b944.6 | SL-M: \u20b955.8\nExecution Rule: BUY Hedges (1 & 2) first to reduce margin to \u20b948,500, then SELL (3 & 4).\nSquare-off: 15:15 PM IST sharp.",
+      "basketOrderText": "=== NIFTY 09:20 AM STRANGLE BASKET (17-NOV-2026) ===\n1. BUY  NIFTY 17NOV 25650 CE | Qty: 25 | Price: \u20b916.8 (Hedge Wing)\n2. BUY  NIFTY 17NOV 24600 PE  | Qty: 25 | Price: \u20b910.5 (Hedge Wing)\n3. SELL NIFTY 17NOV 25400 CE  | Qty: 25 | Limit \u20b950.0 | SL-M: \u20b962.5\n4. SELL NIFTY 17NOV 24850 PE   | Qty: 25 | Limit \u20b937 | SL-M: \u20b946.2\nExecution Rule: BUY Hedges (1 & 2) first to reduce margin to \u20b948,500, then SELL (3 & 4).\nSquare-off: 15:15 PM IST sharp.",
       "legs": [
         {
           "legNumber": "Leg 1",
@@ -35,11 +35,11 @@
           "strike": 25400,
           "name": "25400 CE",
           "brokerSymbol": "NIFTY 17NOV 25400 CE",
-          "estPremium": 92.1,
-          "stopLoss": 115.1,
+          "estPremium": 50.0,
+          "stopLoss": 62.5,
           "role": "MAIN_THETA_COLLECTION",
           "explanation": "Sell Call above market (+1% OTM). Profits as long as NIFTY stays below strike.",
-          "copyText": "SELL NIFTY 17NOV 25400 CE | Qty: 25 | Price: \u20b992.1 | SL: \u20b9115.1 (+25%)"
+          "copyText": "SELL NIFTY 17NOV 25400 CE | Qty: 25 | Price: \u20b950.0 | SL: \u20b962.5 (+25%)"
         },
         {
           "legNumber": "Leg 2",
@@ -47,11 +47,11 @@
           "strike": 24850,
           "name": "24850 PE",
           "brokerSymbol": "NIFTY 17NOV 24850 PE",
-          "estPremium": 44.6,
-          "stopLoss": 55.8,
+          "estPremium": 37,
+          "stopLoss": 46.2,
           "role": "MAIN_THETA_COLLECTION",
           "explanation": "Sell Put below market (-1% OTM). Profits as long as NIFTY stays above strike.",
-          "copyText": "SELL NIFTY 17NOV 24850 PE | Qty: 25 | Price: \u20b944.6 | SL: \u20b955.8 (+25%)"
+          "copyText": "SELL NIFTY 17NOV 24850 PE | Qty: 25 | Price: \u20b937 | SL: \u20b946.2 (+25%)"
         },
         {
           "legNumber": "Leg 3 (Hedge)",
@@ -59,11 +59,11 @@
           "strike": 25650,
           "name": "25650 CE",
           "brokerSymbol": "NIFTY 17NOV 25650 CE",
-          "estPremium": 36.2,
+          "estPremium": 16.8,
           "stopLoss": null,
           "role": "MARGIN_BENEFIT_WING",
-          "explanation": "Call Wing (+2% OTM, LTP \u20b936.2). Cuts margin from \u20b91.15L down to \u20b948.5k.",
-          "copyText": "BUY NIFTY 17NOV 25650 CE | Qty: 25 | Price: \u20b936.2 (Margin Hedge)"
+          "explanation": "Call Wing (+2% OTM, LTP \u20b916.8). Cuts margin from \u20b91.15L down to \u20b948.5k.",
+          "copyText": "BUY NIFTY 17NOV 25650 CE | Qty: 25 | Price: \u20b916.8 (Margin Hedge)"
         },
         {
           "legNumber": "Leg 4 (Hedge)",
@@ -71,29 +71,29 @@
           "strike": 24600,
           "name": "24600 PE",
           "brokerSymbol": "NIFTY 17NOV 24600 PE",
-          "estPremium": 15.6,
+          "estPremium": 10.5,
           "stopLoss": null,
           "role": "MARGIN_BENEFIT_WING",
-          "explanation": "Put Wing (-2% OTM, LTP \u20b915.6). Cuts margin from \u20b91.15L down to \u20b948.5k.",
-          "copyText": "BUY NIFTY 17NOV 24600 PE | Qty: 25 | Price: \u20b915.6 (Margin Hedge)"
+          "explanation": "Put Wing (-2% OTM, LTP \u20b910.5). Cuts margin from \u20b91.15L down to \u20b948.5k.",
+          "copyText": "BUY NIFTY 17NOV 24600 PE | Qty: 25 | Price: \u20b910.5 (Margin Hedge)"
         }
       ],
-      "totalPremiumCollected": 3417.5,
+      "totalPremiumCollected": 2175.0,
       "marginRequiredNaked": "\u20b91,15,000",
       "marginRequiredHedged": "\u20b948,500",
       "expectedDailyGain": "\u20b92,100 - \u20b92,800",
-      "maxRiskPerTrade": "\u20b9854.4 (Capped by 25% SL)",
+      "maxRiskPerTrade": "\u20b9543.8 (Capped by 25% SL)",
       "status": "ARMED_FOR_NEXT_SESSION"
     },
     {
       "symbol": "BANKNIFTY",
       "instrument": "BANKNIFTY Monthly Options (NSE Official)",
-      "spotPrice": 61076.5,
+      "spotPrice": 61034.1,
       "lotSize": 15,
       "expiry": "23-NOV-2026",
       "expiryCode": "23NOV",
       "action": "EXECUTE AT 09:20 AM",
-      "basketOrderText": "=== BANKNIFTY 09:20 AM STRANGLE BASKET (23-NOV-2026) ===\n1. BUY  BANKNIFTY 23NOV 62500 CE | Qty: 15 | Price: \u20b9199.7 (Hedge Wing)\n2. BUY  BANKNIFTY 23NOV 59600 PE  | Qty: 15 | Price: \u20b9231.6 (Hedge Wing)\n3. SELL BANKNIFTY 23NOV 61700 CE  | Qty: 15 | Limit \u20b9389.8 | SL-M: \u20b9487.2\n4. SELL BANKNIFTY 23NOV 60200 PE   | Qty: 15 | Limit \u20b9380.2 | SL-M: \u20b9475.2\nExecution Rule: BUY Hedges (1 & 2) first to reduce margin to \u20b955,000, then SELL (3 & 4).\nSquare-off: 15:15 PM IST sharp.",
+      "basketOrderText": "=== BANKNIFTY 09:20 AM STRANGLE BASKET (23-NOV-2026) ===\n1. BUY  BANKNIFTY 23NOV 62500 CE | Qty: 15 | Price: \u20b9141.7 (Hedge Wing)\n2. BUY  BANKNIFTY 23NOV 59600 PE  | Qty: 15 | Price: \u20b9182.6 (Hedge Wing)\n3. SELL BANKNIFTY 23NOV 61700 CE  | Qty: 15 | Limit \u20b9306 | SL-M: \u20b9382.5\n4. SELL BANKNIFTY 23NOV 60200 PE   | Qty: 15 | Limit \u20b9318.2 | SL-M: \u20b9397.8\nExecution Rule: BUY Hedges (1 & 2) first to reduce margin to \u20b955,000, then SELL (3 & 4).\nSquare-off: 15:15 PM IST sharp.",
       "legs": [
         {
           "legNumber": "Leg 1",
@@ -101,11 +101,11 @@
           "strike": 61700,
           "name": "61700 CE",
           "brokerSymbol": "BANKNIFTY 23NOV 61700 CE",
-          "estPremium": 389.8,
-          "stopLoss": 487.2,
+          "estPremium": 306,
+          "stopLoss": 382.5,
           "role": "MAIN_THETA_COLLECTION",
           "explanation": "Sell Call above market (+1.2% OTM). Profits as long as BANKNIFTY stays below strike.",
-          "copyText": "SELL BANKNIFTY 23NOV 61700 CE | Qty: 15 | Price: \u20b9389.8 | SL: \u20b9487.2 (+25%)"
+          "copyText": "SELL BANKNIFTY 23NOV 61700 CE | Qty: 15 | Price: \u20b9306 | SL: \u20b9382.5 (+25%)"
         },
         {
           "legNumber": "Leg 2",
@@ -113,11 +113,11 @@
           "strike": 60200,
           "name": "60200 PE",
           "brokerSymbol": "BANKNIFTY 23NOV 60200 PE",
-          "estPremium": 380.2,
-          "stopLoss": 475.2,
+          "estPremium": 318.2,
+          "stopLoss": 397.8,
           "role": "MAIN_THETA_COLLECTION",
           "explanation": "Sell Put below market (-1.2% OTM). Profits as long as BANKNIFTY stays above strike.",
-          "copyText": "SELL BANKNIFTY 23NOV 60200 PE | Qty: 15 | Price: \u20b9380.2 | SL: \u20b9475.2 (+25%)"
+          "copyText": "SELL BANKNIFTY 23NOV 60200 PE | Qty: 15 | Price: \u20b9318.2 | SL: \u20b9397.8 (+25%)"
         },
         {
           "legNumber": "Leg 3 (Hedge)",
@@ -125,11 +125,11 @@
           "strike": 62500,
           "name": "62500 CE",
           "brokerSymbol": "BANKNIFTY 23NOV 62500 CE",
-          "estPremium": 199.7,
+          "estPremium": 141.7,
           "stopLoss": null,
           "role": "MARGIN_BENEFIT_WING",
-          "explanation": "Call Wing (+2.2% OTM, LTP \u20b9199.7). Cuts margin from \u20b91.25L down to \u20b955k.",
-          "copyText": "BUY BANKNIFTY 23NOV 62500 CE | Qty: 15 | Price: \u20b9199.7 (Margin Hedge)"
+          "explanation": "Call Wing (+2.2% OTM, LTP \u20b9141.7). Cuts margin from \u20b91.25L down to \u20b955k.",
+          "copyText": "BUY BANKNIFTY 23NOV 62500 CE | Qty: 15 | Price: \u20b9141.7 (Margin Hedge)"
         },
         {
           "legNumber": "Leg 4 (Hedge)",
@@ -137,18 +137,18 @@
           "strike": 59600,
           "name": "59600 PE",
           "brokerSymbol": "BANKNIFTY 23NOV 59600 PE",
-          "estPremium": 231.6,
+          "estPremium": 182.6,
           "stopLoss": null,
           "role": "MARGIN_BENEFIT_WING",
-          "explanation": "Put Wing (-2.2% OTM, LTP \u20b9231.6). Cuts margin from \u20b91.25L down to \u20b955k.",
-          "copyText": "BUY BANKNIFTY 23NOV 59600 PE | Qty: 15 | Price: \u20b9231.6 (Margin Hedge)"
+          "explanation": "Put Wing (-2.2% OTM, LTP \u20b9182.6). Cuts margin from \u20b91.25L down to \u20b955k.",
+          "copyText": "BUY BANKNIFTY 23NOV 59600 PE | Qty: 15 | Price: \u20b9182.6 (Margin Hedge)"
         }
       ],
-      "totalPremiumCollected": 11550.0,
+      "totalPremiumCollected": 9363.0,
       "marginRequiredNaked": "\u20b91,25,000",
       "marginRequiredHedged": "\u20b955,000",
       "expectedDailyGain": "\u20b92,400 - \u20b93,500",
-      "maxRiskPerTrade": "\u20b92887.5 (Capped by 25% SL)",
+      "maxRiskPerTrade": "\u20b92340.8 (Capped by 25% SL)",
       "status": "ARMED_FOR_NEXT_SESSION"
     }
   ],

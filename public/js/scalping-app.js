@@ -4807,28 +4807,62 @@ function StrangleSection({ strangleData, trackerData, onCopy, copiedSymbol }) {
           },
             /*#__PURE__*/React.createElement("div", null,
               /*#__PURE__*/React.createElement("strong", { style: { color: '#1d4ed8' } }, "📅 Expiry Date: "),
-              /*#__PURE__*/React.createElement("span", { style: { fontWeight: 800, color: 'var(--text, #0f172a)' } }, c.expiry || "12-NOV-2026"),
-              /*#__PURE__*/React.createElement("span", { style: { color: 'var(--text-muted)', marginLeft: '6px', fontSize: '10.5px' } }, "(Weekly Expiry)")
+              /*#__PURE__*/React.createElement("span", { style: { fontWeight: 800, color: 'var(--text, #0f172a)' } }, c.expiry || "17-NOV-2026"),
+              /*#__PURE__*/React.createElement("span", { style: { color: 'var(--text-muted)', marginLeft: '6px', fontSize: '10.5px' } }, c.symbol === 'BANKNIFTY' ? '(Monthly Expiry)' : '(Weekly Expiry)')
             ),
-            /*#__PURE__*/React.createElement("button", {
-              style: {
-                background: isEntryWindow ? '#10b981' : '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '6px 12px',
-                fontSize: '11px',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
+            /*#__PURE__*/React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+              /*#__PURE__*/React.createElement("a", {
+                href: "https://trade.angelone.in",
+                target: "_blank",
+                rel: "noopener noreferrer",
+                style: {
+                  background: '#ff5722',
+                  border: '1px solid #e64a19',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  padding: '6px 11px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  textDecoration: 'none',
+                  boxShadow: '0 1px 3px rgba(255, 87, 34, 0.25)',
+                  transition: 'all 0.15s ease'
+                },
+                onClick: (e) => {
+                  e.stopPropagation();
+                  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(liveBasketText);
+                  }
+                  onCopy && onCopy(liveBasketText);
+                },
+                title: "Open Angel One trade terminal and copy basket"
               },
-              onClick: () => {
-                onCopy && onCopy(liveBasketText);
-              },
-              title: "Click to copy full 4-leg order basket with CURRENT LIVE PRICES"
-            }, isEntryWindow ? "⚡ Copy Entry Basket (At 09:20)" : "📋 Copy Basket (Current Live Prices)")
+                /*#__PURE__*/React.createElement("span", null, "👼"),
+                /*#__PURE__*/React.createElement("span", null, "Angel One ↗")
+              ),
+              /*#__PURE__*/React.createElement("button", {
+                style: {
+                  background: isEntryWindow ? '#10b981' : '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 12px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                },
+                onClick: () => {
+                  onCopy && onCopy(liveBasketText);
+                },
+                title: "Click to copy full 4-leg order basket with CURRENT LIVE PRICES"
+              }, isEntryWindow ? "⚡ Copy Basket" : "📋 Copy Basket")
+            )
           ),
 
           /* Legs Table */
@@ -4950,36 +4984,76 @@ function StrangleSection({ strangleData, trackerData, onCopy, copiedSymbol }) {
                     /*#__PURE__*/React.createElement("div", { style: { fontWeight: 800, fontSize: '13px' } }, `Est ₹${leg.estPremium}`),
                     isSell ? /*#__PURE__*/React.createElement("div", { style: { fontSize: '10.5px', color: '#ef4444', fontWeight: 700 } }, `SL: ₹${leg.stopLoss} (+25%)`) : /*#__PURE__*/React.createElement("div", { style: { fontSize: '10px', color: '#10b981', fontWeight: 600 } }, "No SL (Hedge)")
                   ),
-                  /* Direct Link to Option Chart */
-                  /*#__PURE__*/React.createElement("a", {
-                    href: chartUrl,
-                    target: "_blank",
-                    rel: "noopener noreferrer",
-                    style: {
-                      background: isSell ? '#3b82f6' : '#10b981',
-                      border: isSell ? '1px solid #2563eb' : '1px solid #059669',
-                      color: '#ffffff',
-                      fontSize: '11px',
-                      fontWeight: 800,
-                      padding: '5px 11px',
-                      borderRadius: '5px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      textDecoration: 'none',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                      transition: 'all 0.15s ease'
-                    },
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      onCopy && onCopy(leg.brokerSymbol || copyStr);
-                    },
-                    title: `Open ${leg.brokerSymbol || `${c.symbol} ${leg.name}`} chart in new tab (also copies symbol to clipboard)`
+                  /* Action Links: Angel One Trade + Live Chart */
+                  /*#__PURE__*/React.createElement("div", {
+                    style: { display: 'flex', alignItems: 'center', gap: '6px' }
                   },
-                    /*#__PURE__*/React.createElement("span", { style: { fontSize: '11px' } }, "📈"),
-                    /*#__PURE__*/React.createElement("span", null, "Open Chart ↗")
+                    /* Primary Angel One Link */
+                    /*#__PURE__*/React.createElement("a", {
+                      href: "https://trade.angelone.in",
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      style: {
+                        background: '#ff5722',
+                        border: '1px solid #e64a19',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        padding: '5px 10px',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        textDecoration: 'none',
+                        boxShadow: '0 1px 3px rgba(255, 87, 34, 0.25)',
+                        transition: 'all 0.15s ease'
+                      },
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        const copyTarget = leg.brokerSymbol || `${c.symbol} ${leg.name}`;
+                        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+                          navigator.clipboard.writeText(copyTarget);
+                        }
+                        onCopy && onCopy(copyTarget);
+                      },
+                      title: `Open Angel One trade terminal (Copies "${leg.brokerSymbol || `${c.symbol} ${leg.name}`}" to clipboard)`
+                    },
+                      /*#__PURE__*/React.createElement("span", { style: { fontSize: '11px' } }, "👼"),
+                      /*#__PURE__*/React.createElement("span", null, "Angel One ↗")
+                    ),
+
+                    /* Secondary Live Chart Link */
+                    /*#__PURE__*/React.createElement("a", {
+                      href: chartUrl,
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      style: {
+                        background: isSell ? 'rgba(59, 130, 246, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                        border: isSell ? '1px solid #3b82f6' : '1px solid #10b981',
+                        color: isSell ? '#2563eb' : '#059669',
+                        fontSize: '10.5px',
+                        fontWeight: 700,
+                        padding: '5px 8px',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        textDecoration: 'none',
+                        transition: 'all 0.15s ease'
+                      },
+                      onClick: (e) => {
+                        e.stopPropagation();
+                        onCopy && onCopy(leg.brokerSymbol || copyStr);
+                      },
+                      title: `Open live candlestick chart for ${leg.brokerSymbol || `${c.symbol} ${leg.name}`}`
+                    },
+                      /*#__PURE__*/React.createElement("span", null, "📈"),
+                      /*#__PURE__*/React.createElement("span", null, "Chart")
+                    )
                   )
                 )
               );

@@ -1,59 +1,61 @@
 {
-  "date": "2026-11-13",
+  "date": "2026-11-14",
   "status": "LIVE_TRACKING_IN_PROGRESS",
   "entryTime": "09:20:00 IST",
   "exitTime": "15:15:00 IST",
-  "lastUpdated": "2026-11-13 09:47:43 IST",
+  "lastUpdated": "2026-11-14 10:09:54 IST",
   "nifty": {
     "symbol": "NIFTY",
+    "expiry": "17-NOV-2026",
     "lotSize": 25,
-    "entrySpot": 25123.5,
-    "currentSpot": 25210.2,
+    "entrySpot": 25190.0,
+    "currentSpot": 25190.0,
     "callLeg": {
       "strike": 25400,
-      "entryPrem": 64.4,
-      "currentPrem": 80.5,
-      "sl": 80.5,
-      "slHit": true,
-      "pnl": -402.5
+      "entryPrem": 85.9,
+      "currentPrem": 85.9,
+      "sl": 107.4,
+      "slHit": false,
+      "pnl": 0.0
     },
     "putLeg": {
       "strike": 24850,
-      "entryPrem": 66.2,
-      "currentPrem": 44.65,
-      "sl": 82.7,
+      "entryPrem": 46.6,
+      "currentPrem": 46.6,
+      "sl": 58.3,
       "slHit": false,
-      "pnl": 538.75
+      "pnl": 0.0
     },
-    "netPnl": 136.25,
-    "netPoints": 5.5,
+    "netPnl": 0.0,
+    "netPoints": 0.0,
     "status": "ACTIVE"
   },
   "bankNifty": {
     "symbol": "BANKNIFTY",
+    "expiry": "23-NOV-2026",
     "lotSize": 15,
-    "entrySpot": 60973.75,
-    "currentSpot": 61076.25,
+    "entrySpot": 61040.0,
+    "currentSpot": 61040.0,
     "callLeg": {
       "strike": 61700,
-      "entryPrem": 353.6,
-      "currentPrem": 389.75,
-      "sl": 442,
+      "entryPrem": 387.5,
+      "currentPrem": 387.5,
+      "sl": 484.4,
       "slHit": false,
-      "pnl": -542.25
+      "pnl": 0.0
     },
     "putLeg": {
       "strike": 60200,
-      "entryPrem": 412.3,
-      "currentPrem": 380.25,
-      "sl": 515.3,
+      "entryPrem": 387.0,
+      "currentPrem": 387.0,
+      "sl": 483.8,
       "slHit": false,
-      "pnl": 480.75
+      "pnl": 0.0
     },
-    "netPnl": -61.5,
-    "netPoints": -4.1,
+    "netPnl": 0.0,
+    "netPoints": 0.0,
     "status": "ACTIVE"
   },
-  "combinedPnl": 74.75,
-  "dailySummary": "Live Session Tracking: Combined Running MTM = \u20b9+74.75 (BankNifty: \u20b9-61.50, Nifty: \u20b9+136.25)"
+  "combinedPnl": 0.0,
+  "dailySummary": "Live Session Tracking: Combined Running MTM = \u20b9+0.00 (BankNifty: \u20b9+0.00, Nifty: \u20b9+0.00)"
 }
