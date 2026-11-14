@@ -2782,9 +2782,21 @@ function requireApiKey(req, res, next) {
 
   // because they expose holdings and the bot's own configuration.
 
-  const PUBLIC_READS = new Set(['/api/news', '/api/news/summary', '/api/news/reaction', '/api/news/moves', '/api/news/signals', '/api/news/flash', '/api/news/stream', '/api/news/wire/status', '/api/news/refresh/status', '/api/client-config', '/api/scalping/sweeps']);
+  const PUBLIC_READS = new Set([
+    '/api/news', '/api/news/summary', '/api/news/reaction', '/api/news/moves',
+    '/api/news/signals', '/api/news/flash', '/api/news/stream', '/api/news/wire/status',
+    '/api/news/refresh/status', '/api/client-config', '/api/scalping/sweeps',
+    '/api/scalping/board', '/api/scalping/catalysts', '/api/scalping/smc-gems',
+    '/api/scalping/iep-calls', '/api/scalping/active-calls', '/api/scalping/pre-market',
+    '/api/scalping/strangle', '/api/scalping/breakouts', '/api/scalping/support-bounces',
+    '/api/scalping/trend-follow'
+  ]);
 
-  if (req.method === 'GET' && PUBLIC_READS.has(req.path)) return next();
+  if (req.method === 'GET' && (
+    PUBLIC_READS.has(req.path) ||
+    req.path.startsWith('/api/scalping/') ||
+    /\.(html|js|css|png|ico|json|svg|woff2?|ttf|map)$/i.test(req.path)
+  )) return next();
 
 
 
