@@ -4424,14 +4424,10 @@ function TopNewsSquareBox({
       },
       title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
     }, `${signPct}${movePct.toFixed(1)}%`))),
-    /* Right side: Two percentages at UP, and time at DOWN / END (NO background boxes) */
+    /* Right side: Two percentages / actions side by side on top right (NO background boxes) */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-right",
-      style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }
-    },
-    /* Row 1 (UP): Two percentages / actions side by side, NO boxes as background */
-    /*#__PURE__*/React.createElement("div", {
-      style: { display: 'flex', alignItems: 'center', gap: '6px' }
+      style: { display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }
     },
     /* Value 1: Percentage move pill (Clean text, NO box) */
     /*#__PURE__*/React.createElement("span", {
@@ -4470,9 +4466,18 @@ function TopNewsSquareBox({
           whiteSpace: 'nowrap'
         }
       }, safeBtnLabel);
-    })()),
+    })()
+    )),
+    /* Headline in middle */
+    /*#__PURE__*/React.createElement("div", {
+      className: "top-news-headline",
+      title: `${c.title || c.description || 'Corporate Announcement'}${timingAI && timingAI.detail ? `\n\nAI Timing: ${timingAI.detail}` : ''}`
+    }, c.title || c.description || 'Corporate Announcement'),
 
-    /* Row 2 (DOWN / BOTTOM AT THE END): Pre-Market or filing time */
+    /* At end of that box at bottom of right: Pre-Market or filing time */
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '2px' }
+    },
     /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '10px',
@@ -4485,13 +4490,7 @@ function TopNewsSquareBox({
         padding: 0
       },
       title: isNonMarketHour ? (c.filingTime ? `Pre-Market filing (${c.filingTime})` : 'Pre-Market News') : (c.filingTime ? `Filing timestamp: ${c.filingTime}` : '')
-    }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent')))
-    )),
-    /* Headline */
-    /*#__PURE__*/React.createElement("div", {
-      className: "top-news-headline",
-      title: `${c.title || c.description || 'Corporate Announcement'}${timingAI && timingAI.detail ? `\n\nAI Timing: ${timingAI.detail}` : ''}`
-    }, c.title || c.description || 'Corporate Announcement'))
+    }, isNonMarketHour ? 'Pre-Market' : (c.filingTime ? (c.filingTime.toUpperCase().includes('IST') ? c.filingTime : `${c.filingTime} IST`) : (c.timeAgo || 'Recent')))))
   })));
 }
 
