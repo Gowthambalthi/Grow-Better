@@ -4307,100 +4307,8 @@ function TopNewsSquareBox({
   })));
 }
 
-function TopMoversSquareBox({ movers = [], onCopy }) {
-  const isMarketOpen = () => {
-    const d = new Date(Date.now() + 330 * 60000);
-    const day = d.getUTCDay();
-    if (day === 0 || day === 6) return false;
-    const tNum = d.getUTCHours() * 100 + d.getUTCMinutes();
-    return tNum >= 915 && tNum < 1530;
-  };
-  const open = isMarketOpen();
-
-  // ⚡ 10-SECOND VELOCITY ROCKETS (TABLE 1: purely non-zero 10s ROC, ZERO 0.00%, NO Day %!)
-  const movers10s = React.useMemo(() => {
-    if (!movers || movers.length === 0) return [];
-    return [...movers].filter(m => {
-      const p = Number(m.price || m.ltp || 0);
-      const toCr = Number(m.turnoverCr || 0);
-      const v1m = Number(m.volume1m || m.volume || 0);
-      const r10 = Number(m.roc10 != null ? m.roc10 : (m.move10sPct != null ? m.move10sPct : 0));
-      if (p < 30) return false;
-      if (toCr > 0 && toCr < 0.20) return false;
-      if (v1m > 0 && v1m < 100) return false;
-      if (m.ticks != null && m.ticks < 3) return false;
-      // STRICT FILTER: NEVER ALLOW 0.00%
-      if (Math.abs(r10) < 0.01) return false;
-      return true;
-    }).map(m => {
-      const r10 = Number(m.roc10 != null ? m.roc10 : (m.move10sPct != null ? m.move10sPct : 0));
-      return Object.assign({}, m, {
-        move10sPct: r10,
-        sortScore10s: Math.abs(r10)
-      });
-    }).sort((a, b) => b.sortScore10s - a.sortScore10s);
-  }, [movers]);
-
-  return /*#__PURE__*/React.createElement("div", {
-    className: "top-news-square-box"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "top-news-box-head"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "top-news-box-title"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "live-pulse-dot",
-    style: { background: open ? 'var(--accent, #f59e0b)' : '#94a3b8' }
-  }), /*#__PURE__*/React.createElement("span", null, "🚀 10-SEC VELOCITY ROCKETS")), /*#__PURE__*/React.createElement("span", {
-    className: "top-news-box-count",
-    style: {
-      color: open ? 'var(--accent, #f59e0b)' : 'var(--text-muted, #94a3b8)',
-      background: open ? 'rgba(245,158,11,0.1)' : 'rgba(148,163,184,0.1)'
-    }
-  }, open ? `${movers10s.length} Fast` : `${movers10s.length} Tracked (10s)`)), /*#__PURE__*/React.createElement("div", {
-    className: "top-news-list"
-  }, movers10s.length === 0 ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      padding: '36px 16px',
-      textAlign: 'center',
-      color: 'var(--text-muted, #94a3b8)',
-      fontSize: '12px',
-      lineHeight: '1.6'
-    }
-  }, open ? "Scanning tick stream for 10-second velocity bursts..." : "No 10-second velocity bursts recorded.") : movers10s.slice(0, 15).map(m => {
-    const roc10Val = Number(m.move10sPct || m.roc10 || 0);
-    const isPos = m.direction === 'BULLISH' || m.direction === 'UP' || roc10Val > 0;
-    const sign = roc10Val > 0 ? '+' : '';
-    const priceVal = Number(m.price || m.ltp || 0);
-    return /*#__PURE__*/React.createElement("div", {
-      key: m.symbol,
-      className: "top-news-item",
-      onClick: () => onCopy(m.symbol),
-      title: `Click to copy ${m.symbol} · 10s Velocity: ${sign}${roc10Val.toFixed(2)}%`
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "top-news-item-top"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "top-news-item-left"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "top-news-sym"
-    }, m.symbol), /*#__PURE__*/React.createElement("span", {
-      style: { fontSize: '11px', color: 'var(--text-muted)' }
-    }, m.timeFormatted || '10s tape')), /*#__PURE__*/React.createElement("div", {
-      className: "top-news-item-right"
-    }, /*#__PURE__*/React.createElement("span", {
-      className: "top-news-price"
-    }, `₹${priceVal.toFixed(2)}`), /*#__PURE__*/React.createElement("span", {
-      className: `top-news-trade-pill ${isPos ? 'buy' : 'sell'}`
-    }, `⚡ 10s ROC: ${sign}${roc10Val.toFixed(2)}%`))), /*#__PURE__*/React.createElement("div", {
-      className: "top-news-headline",
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: { color: 'var(--text-muted)', fontSize: '11px', fontFamily: "'JetBrains Mono', monospace" }
-    }, "10s ROC: ", /*#__PURE__*/React.createElement("strong", {
-      style: { color: isPos ? 'var(--gain, #16a34a)' : 'var(--loss, #dc2626)' }
-    }, `${sign}${roc10Val.toFixed(2)}%`)), /*#__PURE__*/React.createElement("span", {
-      style: { fontSize: '10.5px', color: isPos ? 'var(--gain, #16a34a)' : 'var(--loss, #dc2626)', fontWeight: 700 }
-    }, m.direction || (isPos ? 'BULLISH' : 'BEARISH'))));
-  })));
+function TopMoversSquareBox() {
+  return null;
 }
 
 function StrangleSection({ strangleData, trackerData, onCopy, copiedSymbol }) {
@@ -5898,12 +5806,6 @@ function ScalpingApp() {
       }
 
     }
-
-  }), /*#__PURE__*/React.createElement(TopMoversSquareBox, {
-
-    movers: Array.isArray(boardData.movers10s) && boardData.movers10s.length > 0 ? boardData.movers10s : [],
-
-    onCopy: triggerCopy
 
   })), /*#__PURE__*/React.createElement("div", {
 
