@@ -4190,8 +4190,233 @@ function TopNewsSquareBox({
   })));
 }
 
-function TopMoversSquareBox() {
-  return null;
+function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
+  const eventsList = React.useMemo(() => {
+    if (!catalysts || catalysts.length === 0) return [];
+
+    const classified = [];
+    const seen = new Set();
+
+    for (const c of catalysts) {
+      const sym = c.symbol;
+      if (!sym) continue;
+
+      const fullText = ((c.kind || '') + ' ' + (c.title || '') + ' ' + (c.description || '')).toLowerCase();
+
+      let evType = null;
+      let badge = null;
+      let badgeColor = '#2563eb';
+      let badgeBg = 'rgba(37, 99, 235, 0.12)';
+      let badgeBorder = 'rgba(37, 99, 235, 0.3)';
+      let priority = 10;
+
+      // Extract scheduled date if present in text
+      const dateMatch = (c.title || c.description || '').match(/\b(?:(?:on\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)|(?:(?:on\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}))/i);
+      const eventDateStr = dateMatch ? (dateMatch[1] || dateMatch[2] || dateMatch[0]) : (c.timeFormatted || 'Upcoming');
+
+      // 1. Dividend & Record Date
+      if (/dividend|record\s*date|ex-date|interim\s*dividend|final\s*dividend|payout/i.test(fullText)) {
+        const amt = (c.title || c.description || '').match(/(?:₹|rs\.?)\s*(\d+(?:\.\d+)?)/i);
+        badge = amt ? `💰 ₹${amt[1]} Div` : '💰 Dividend';
+        badgeColor = '#059669';
+        badgeBg = 'rgba(16, 185, 129, 0.12)';
+        badgeBorder = 'rgba(16, 185, 129, 0.3)';
+        evType = 'DIVIDEND';
+        priority = 1;
+      }
+      // 2. Financial Results
+      else if (/financial\s*result|quarterly\s*result|q[1-4]\s*result|earnings|unaudited\s*result|audited\s*result|pat\s*(?:rises|climbs|jumps|drops|falls)/i.test(fullText)) {
+        const q = fullText.match(/\b(q[1-4])\b/i);
+        badge = q ? `📊 ${q[1].toUpperCase()} Results` : '📊 Results';
+        badgeColor = '#2563eb';
+        badgeBg = 'rgba(37, 99, 235, 0.12)';
+        badgeBorder = 'rgba(37, 99, 235, 0.3)';
+        evType = 'RESULTS';
+        priority = 2;
+      }
+      // 3. Board Meetings
+      else if (/board\s*meeting|meeting\s*of\s*(?:the\s*)?board|scheduled.*meeting/i.test(fullText)) {
+        badge = '🏛️ Board Meet';
+        badgeColor = '#d97706';
+        badgeBg = 'rgba(217, 119, 6, 0.12)';
+        badgeBorder = 'rgba(217, 119, 6, 0.3)';
+        evType = 'BOARD_MEET';
+        priority = 3;
+      }
+      // 4. Bonus, Split, Buyback, Corporate Action
+      else if (/bonus|split|sub-division|buyback|amalgamation|merger|demerger|rights\s*issue/i.test(fullText)) {
+        badge = '📜 Corp Action';
+        badgeColor = '#0891b2';
+        badgeBg = 'rgba(8, 145, 178, 0.12)';
+        badgeBorder = 'rgba(8, 145, 178, 0.3)';
+        evType = 'CORP_ACTION';
+        priority = 4;
+      }
+      // 5. Concall & Investor Meet
+      else if (/concall|earnings\s*call|analyst\s*meet|investor\s*meet|interaction\s*with/i.test(fullText)) {
+        badge = '👥 Concall / Meet';
+        badgeColor = '#7c3aed';
+        badgeBg = 'rgba(124, 58, 237, 0.12)';
+        badgeBorder = 'rgba(124, 58, 237, 0.3)';
+        evType = 'CONCALL';
+        priority = 5;
+      }
+      // 6. AGM / EGM
+      else if (/\bagm\b|\begm\b|annual\s*general\s*meeting/i.test(fullText)) {
+        badge = '🗳️ AGM / EGM';
+        badgeColor = '#4f46e5';
+        badgeBg = 'rgba(79, 70, 229, 0.12)';
+        badgeBorder = 'rgba(79, 70, 229, 0.3)';
+        evType = 'AGM';
+        priority = 6;
+      }
+      // 7. Significant Order Win / Acquisition
+      else if (/order\s*win|awarded|contract|expansion|acquisition|partnership/i.test(fullText)) {
+        badge = '🚀 Key Catalyst';
+        badgeColor = '#ea580c';
+        badgeBg = 'rgba(234, 88, 12, 0.12)';
+        badgeBorder = 'rgba(234, 88, 12, 0.3)';
+        evType = 'CATALYST';
+        priority = 7;
+      }
+
+      if (badge) {
+        const key = `${sym}-${evType}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          classified.push({
+            c,
+            sym,
+            evType,
+            badge,
+            badgeColor,
+            badgeBg,
+            badgeBorder,
+            priority,
+            eventDateStr,
+            ts: Number(c.ts || c.timeMs || 0)
+          });
+        }
+      }
+    }
+
+    return classified.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return b.ts - a.ts;
+    });
+  }, [catalysts]);
+
+  return /*#__PURE__*/React.createElement("div", {
+    className: "top-news-square-box"
+  },
+    /* Head */
+    /*#__PURE__*/React.createElement("div", {
+      className: "top-news-box-head"
+    },
+      /*#__PURE__*/React.createElement("div", {
+        className: "top-news-box-title"
+      },
+        /*#__PURE__*/React.createElement("span", {
+          className: "live-pulse-dot",
+          style: { background: '#2563eb' }
+        }),
+        /*#__PURE__*/React.createElement("span", null, "📅 UPCOMING EVENTS & CORPORATE CALENDAR")
+      ),
+      /*#__PURE__*/React.createElement("span", {
+        className: "top-news-box-count",
+        style: { color: '#2563eb', background: 'rgba(37, 99, 235, 0.1)' }
+      }, `${eventsList.length} Scheduled`)
+    ),
+
+    /* List of Events */
+    /*#__PURE__*/React.createElement("div", {
+      className: "top-news-list"
+    },
+      eventsList.length === 0
+        ? /*#__PURE__*/React.createElement("div", {
+            style: {
+              padding: '36px 16px',
+              textAlign: 'center',
+              color: 'var(--text-muted, #94a3b8)',
+              fontSize: '12px'
+            }
+          }, "Scanning exchange disclosures for upcoming corporate events & calendar...")
+        : eventsList.slice(0, 30).map(item => {
+            const c = item.c;
+            const ltp = Number(c.ltp || c.price || 0);
+            const movePct = Number(c.movePct || 0);
+            const isPos = movePct >= 0;
+            const sign = isPos ? '+' : '';
+
+            return /*#__PURE__*/React.createElement("div", {
+              key: `${item.sym}-${item.evType}-${item.ts}`,
+              className: "top-news-item",
+              onClick: () => onCopy && onCopy(item.sym),
+              title: `Click to copy ${item.sym} · Event: ${item.badge}`
+            },
+              /* Top Row */
+              /*#__PURE__*/React.createElement("div", {
+                className: "top-news-item-top"
+              },
+                /* Left Symbol & Timing */
+                /*#__PURE__*/React.createElement("div", {
+                  className: "top-news-item-left"
+                },
+                  /*#__PURE__*/React.createElement("span", {
+                    className: "top-news-sym"
+                  }, item.sym),
+                  /*#__PURE__*/React.createElement("span", {
+                    style: { fontSize: '11px', color: 'var(--text-muted)' }
+                  }, item.eventDateStr)
+                ),
+
+                /* Right Price & Event Badge */
+                /*#__PURE__*/React.createElement("div", {
+                  className: "top-news-item-right",
+                  style: { display: 'flex', alignItems: 'center', gap: '6px' }
+                },
+                  ltp > 0 && /*#__PURE__*/React.createElement("span", {
+                    className: "top-news-price"
+                  }, `₹${ltp.toFixed(2)}`),
+                  ltp > 0 && /*#__PURE__*/React.createElement("span", {
+                    style: {
+                      fontSize: '10px',
+                      color: isPos ? '#16a34a' : '#dc2626',
+                      background: isPos ? 'rgba(22, 163, 74, 0.1)' : 'rgba(220, 38, 38, 0.1)',
+                      padding: '1.5px 5px',
+                      borderRadius: '3px',
+                      fontWeight: 700
+                    }
+                  }, `${sign}${movePct.toFixed(1)}%`),
+                  /* Event Pill */
+                  /*#__PURE__*/React.createElement("span", {
+                    style: {
+                      fontSize: '10.5px',
+                      fontWeight: 800,
+                      color: item.badgeColor,
+                      background: item.badgeBg,
+                      border: `1px solid ${item.badgeBorder}`,
+                      padding: '2.5px 7px',
+                      borderRadius: '4px',
+                      whiteSpace: 'nowrap'
+                    }
+                  }, item.badge)
+                )
+              ),
+
+              /* Bottom Headline / Purpose */
+              /*#__PURE__*/React.createElement("div", {
+                className: "top-news-headline",
+                title: c.title || c.description
+              }, c.title || c.description || `${item.sym} Corporate Announcement`)
+            );
+          })
+    )
+  );
+}
+
+function TopMoversSquareBox(props) {
+  return /*#__PURE__*/React.createElement(UpcomingEventsSquareBox, props);
 }
 
 function StrangleSection({ strangleData, trackerData, onCopy, copiedSymbol }) {
@@ -5691,6 +5916,12 @@ function ScalpingApp() {
       }
 
     }
+
+  }), /*#__PURE__*/React.createElement(UpcomingEventsSquareBox, {
+
+    catalysts: allFilings.length > 0 ? allFilings : (boardData.allFilings && boardData.allFilings.length ? boardData.allFilings : catalysts),
+
+    onCopy: triggerCopy
 
   })), /*#__PURE__*/React.createElement("div", {
 
