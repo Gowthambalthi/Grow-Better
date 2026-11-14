@@ -4404,55 +4404,61 @@ function TopNewsSquareBox({
       },
       title: `Full Day session move from 09:15 open: ${signPct}${movePct.toFixed(2)}%`
     }, `${signPct}${movePct.toFixed(1)}%`))),
-    /* Right side: Single horizontal row with badges and Pre-Market at the END */
+    /* Right side: Two percentages at UP, and time at DOWN / END (NO background boxes) */
     /*#__PURE__*/React.createElement("div", {
       className: "top-news-item-right",
-      style: { display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }
     },
-    /* BOX 1: Exactly ONE percentage move pill */
+    /* Row 1 (UP): Two percentages / actions side by side, NO boxes as background */
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: 'flex', alignItems: 'center', gap: '6px' }
+    },
+    /* Value 1: Percentage move pill (Clean text, NO box) */
     /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '11px',
-        fontWeight: 800,
+        fontWeight: 700,
         color: timingAI.badgeColor || '#64748b',
-        background: timingAI.badgeBg || 'rgba(100, 116, 139, 0.08)',
-        border: `1px solid ${timingAI.badgeBorder || 'rgba(100, 116, 139, 0.2)'}`,
-        padding: '2.5px 7px',
-        borderRadius: '4px',
+        background: 'none',
+        border: 'none',
+        padding: 0,
         fontVariantNumeric: 'tabular-nums',
         whiteSpace: 'nowrap'
       },
       title: timingAI.detail || ''
     }, timingAI.badgeLabel),
 
-    /* BOX 2: Exactly ONE trade action / probability pill */
+    /* Value 2: Trade action / probability / move % (Clean text, NO box) */
     (() => {
       const isRoutineBtn = /routine|watch|stale|already|untradeable/i.test(btnLabel);
       const isSellAction = !isRoutineBtn && (isBear || c.tradeStatus === 'TAKE_TRADE_SHORT' || (/sell|short/i.test(btnLabel) && !isBull)) && !isBull;
       const isBuyAction = !isRoutineBtn && !isSellAction && (isBull || c.tradeStatus === 'TAKE_TRADE_BUY' || /buy|long/i.test(btnLabel));
       const safeBtnLabel = (isBull && /fade|short|sell/i.test(btnLabel)) ? `Buy ${conf}%` : btnLabel;
       const pClass = isSellAction ? 'sell' : (isBuyAction ? 'buy' : 'watch');
-      const bgStyle = isSellAction ? { background: '#dc2626', color: '#ffffff', borderColor: '#b91c1c' } : (isBuyAction ? { background: '#16a34a', color: '#ffffff', borderColor: '#15803d' } : {});
+      const txtColor = isSellAction ? '#dc2626' : (isBuyAction ? '#16a34a' : 'var(--text-muted, #64748b)');
 
       return /*#__PURE__*/React.createElement("span", {
         className: `top-news-trade-pill ${pClass}`,
-        style: Object.assign({
-          fontSize: '10.5px',
-          fontWeight: 800,
-          padding: '2.5px 8px',
-          borderRadius: '4px',
-          letterSpacing: '0.02em',
+        style: {
+          fontSize: '11px',
+          fontWeight: 700,
+          color: txtColor,
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          letterSpacing: '0.01em',
           whiteSpace: 'nowrap'
-        }, bgStyle)
+        }
       }, safeBtnLabel);
-    })(),
+    })()),
 
-    /* AT THE END: Pre-Market (if outside market hours) or filing time (if live market), with NO background colors */
+    /* Row 2 (DOWN / BOTTOM AT THE END): Pre-Market or filing time */
     /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: '10.5px',
+        fontSize: '10px',
         fontWeight: 600,
         color: 'var(--text-muted, #64748b)',
+        lineHeight: 1.1,
         whiteSpace: 'nowrap',
         background: 'none',
         border: 'none',
