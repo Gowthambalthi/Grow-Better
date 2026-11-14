@@ -3655,18 +3655,18 @@ const NIFTY_SMALLCAP_250_SYMBOLS = new Set([
 function getCompanyTier(symbol) {
   const sym = String(symbol || '').toUpperCase().trim();
   if (NIFTY_50_SYMBOLS.has(sym)) {
-    return { name: 'NIFTY 50', score: 1000, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
+    return { name: 'NIFTY 50', score: 1000, color: 'var(--text-muted, #64748b)' };
   }
   if (NIFTY_NEXT_50_SYMBOLS.has(sym)) {
-    return { name: 'NEXT 50', score: 800, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
+    return { name: 'NEXT 50', score: 800, color: 'var(--text-muted, #64748b)' };
   }
   if (NIFTY_MIDCAP_150_SYMBOLS.has(sym)) {
-    return { name: 'MIDCAP', score: 600, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
+    return { name: 'MIDCAP', score: 600, color: 'var(--text-muted, #64748b)' };
   }
   if (NIFTY_SMALLCAP_250_SYMBOLS.has(sym)) {
-    return { name: 'SMALLCAP', score: 400, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
+    return { name: 'SMALLCAP', score: 400, color: 'var(--text-muted, #64748b)' };
   }
-  return { name: 'MICROCAP', score: 200, color: 'var(--text-muted, #475569)', bg: 'rgba(100, 116, 139, 0.08)', border: 'rgba(100, 116, 139, 0.22)' };
+  return { name: 'MICROCAP', score: 200, color: 'var(--text-muted, #64748b)' };
 }
 
 function getNewsScopeScore(c) {
@@ -4324,7 +4324,7 @@ function TopNewsSquareBox({
       className: "top-news-item-left",
       style: { display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }
     },
-    /* Row 1: Symbol + Company Tier (Normal neutral background) */
+    /* Row 1: Symbol + Company Tier (Plain text, NO background box) */
     /*#__PURE__*/React.createElement("div", {
       style: { display: 'flex', alignItems: 'center', gap: '6px' }
     },
@@ -4336,21 +4336,17 @@ function TopNewsSquareBox({
       if (!tier) return null;
       return /*#__PURE__*/React.createElement("span", {
         style: {
-          fontSize: '9px',
-          fontWeight: 700,
-          background: tier.bg,
-          color: tier.color,
-          border: `1px solid ${tier.border}`,
-          padding: '1px 5px',
-          borderRadius: '3px',
+          fontSize: '10.5px',
+          fontWeight: 600,
+          color: 'var(--text-muted, #64748b)',
           whiteSpace: 'nowrap'
         },
         title: `${tier.name} Company`
       }, tier.name);
     })()),
-    /* Row 2: LTP Price and Day Move % (In Next Line) */
+    /* Row 2: LTP Price and Day Move % (In Next Line, Plain text, NO background box) */
     ltp > 0 && /*#__PURE__*/React.createElement("div", {
-      style: { display: 'flex', alignItems: 'center', gap: '5px' }
+      style: { display: 'flex', alignItems: 'center', gap: '6px' }
     },
     /*#__PURE__*/React.createElement("span", {
       className: "top-news-price",
@@ -4359,12 +4355,9 @@ function TopNewsSquareBox({
     /* Day Percentage */
     /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: '10px',
-        fontWeight: 700,
+        fontSize: '11px',
+        fontWeight: 600,
         color: movePct > 0 ? '#16a34a' : movePct < 0 ? '#dc2626' : '#64748b',
-        background: movePct > 0 ? 'rgba(22, 163, 74, 0.12)' : movePct < 0 ? 'rgba(220, 38, 38, 0.12)' : 'rgba(100, 116, 139, 0.12)',
-        padding: '1px 5px',
-        borderRadius: '4px',
         fontVariantNumeric: 'tabular-nums',
         whiteSpace: 'nowrap'
       },
