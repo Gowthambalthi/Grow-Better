@@ -565,7 +565,7 @@ a.nav-item:visited,
   line-height: 1.15 !important;
 }
 
-/* Titles: NIFTY, BANKNIFTY */
+/* Titles: NIFTY, BANKNIFTY (Not bold - Angel One clean medium weight) */
 .topbar-index-title,
 .topbar-index-col .index-name,
 .index-name,
@@ -573,11 +573,11 @@ a.nav-item:visited,
 #bankHeaderIndexName {
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
-  color: #0F172A !important;
-  letter-spacing: 0.03em !important;
+  font-weight: 500 !important;
+  color: #1E293B !important;
+  letter-spacing: 0.02em !important;
   text-transform: uppercase !important;
-  line-height: 1.1 !important;
+  line-height: 1.15 !important;
 }
 
 [data-theme="dark"] .topbar-index-title,
@@ -585,7 +585,7 @@ a.nav-item:visited,
 [data-theme="dark"] .index-name,
 [data-theme="dark"] #mainHeaderIndexName,
 [data-theme="dark"] #bankHeaderIndexName {
-  color: #FFFFFF !important;
+  color: #CBD5E1 !important;
 }
 
 /* Value row: Price + Triangle + Change/Percent */
