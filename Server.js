@@ -187,7 +187,7 @@ app.get(['/board', '/board.html'], (req, res) => {
 
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-  res.sendFile(path.join(__dirname, 'public', 'final.html'));
+  res.sendFile(path.join(__dirname, 'public', 'scalping.html'));
 
 });
 
@@ -245,15 +245,23 @@ app.get('/', (req, res) => {
 
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-  res.sendFile(path.join(__dirname, 'public', 'final.html'));
+  res.sendFile(path.join(__dirname, 'public', 'scalping.html'));
 
 });
 
 
 
-// Final 3 Core Strategies Page route
+// Final 3 Core Strategies Page route (serves React Dashboard; legacy file at /final-classic)
 
-app.get('/final', (req, res) => {
+app.get(['/final', '/final.html'], (req, res) => {
+
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+  res.sendFile(path.join(__dirname, 'public', 'scalping.html'));
+
+});
+
+app.get('/final-classic', (req, res) => {
 
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 

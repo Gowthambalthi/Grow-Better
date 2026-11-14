@@ -676,7 +676,7 @@ function Sidebar({
 
   }, /*#__PURE__*/React.createElement("a", {
 
-    href: "/final.html",
+    href: "/",
 
     className: "brand-logo-icon",
 
@@ -726,7 +726,7 @@ function Sidebar({
 
     className: "nav-item active",
 
-    href: "/scalping.html",
+    href: "/",
 
     title: "\uD83C\uDFDB\uFE0F Institutional Swing"
 
@@ -1025,7 +1025,7 @@ function Topbar({
       className: "topbar-left"
     },
       /*#__PURE__*/React.createElement("a", {
-        href: "/final.html",
+        href: "/",
         className: "topbar-brand-simple",
         title: "Grow Better — Algo Terminal",
         style: {
