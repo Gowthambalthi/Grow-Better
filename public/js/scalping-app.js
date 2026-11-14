@@ -1031,7 +1031,7 @@ function Topbar({
         style: {
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '12px',
           textDecoration: 'none'
         }
       },
@@ -1040,25 +1040,29 @@ function Topbar({
           alt: "Grow Better",
           className: "topbar-logo-simple",
           style: {
-            width: '34px',
-            height: '34px',
+            width: '32px',
+            height: '32px',
             objectFit: 'contain'
           }
         }),
         /*#__PURE__*/React.createElement("span", {
           className: "topbar-brand-title",
           style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
             fontWeight: 800,
             fontSize: '16px',
-            letterSpacing: '-0.02em'
+            letterSpacing: '0.05em'
           }
         },
           /*#__PURE__*/React.createElement("span", {
-            style: { color: '#00B386' }
+            className: "brand-grow",
+            style: { color: '#00B386', letterSpacing: '0.05em' }
           }, "GROW"),
-          " ",
           /*#__PURE__*/React.createElement("span", {
-            style: { color: '#0F2447' }
+            className: "brand-better",
+            style: { letterSpacing: '0.05em' }
           }, "BETTER")
         )
       )
@@ -1074,64 +1078,144 @@ function Topbar({
         flexWrap: 'wrap'
       }
     },
-      /* NIFTY Index Ticker Pill */
+      /* Unified NIFTY + BANKNIFTY Indices Display matching institutional terminal */
       /*#__PURE__*/React.createElement("div", {
-        className: "topbar-index-pill",
-        title: "NIFTY 50 Live Index Quote"
+        className: "topbar-indices-display",
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          userSelect: 'none'
+        }
       },
+        /* NIFTY Item */
         /*#__PURE__*/React.createElement("div", {
-          className: "index-ticker-item"
+          className: "topbar-index-col",
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1px',
+            lineHeight: 1.15
+          },
+          title: "NIFTY 50 Live Index Quote"
         },
+          /* Top row: NIFTY */
+          /*#__PURE__*/React.createElement("span", {
+            style: {
+              fontSize: '12px',
+              fontWeight: 800,
+              color: 'var(--text-color, #f8fafc)',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase'
+            }
+          }, "NIFTY"),
+          /* Bottom row: 25,144.30 ▼ -155.05 (-0.61%) */
           /*#__PURE__*/React.createElement("div", {
-            className: "index-head-row"
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: isNiftyPos ? '#16a34a' : '#ef4444',
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap'
+            }
           },
+            /*#__PURE__*/React.createElement("span", null, niftyPrice),
             /*#__PURE__*/React.createElement("span", {
-              className: "index-name"
-            }, "NIFTY"),
-            /*#__PURE__*/React.createElement("span", {
-              className: "index-live-dot"
-            }, "•")
-          ),
-          /*#__PURE__*/React.createElement("div", {
-            className: `index-val-row ${isNiftyPos ? 'positive' : 'negative'}`
-          },
-            /*#__PURE__*/React.createElement("span", {
-              className: "index-price"
-            }, niftyPrice),
-            /*#__PURE__*/React.createElement("span", {
-              className: "index-change"
-            }, niftySub)
+              style: { fontSize: '8.5px' }
+            }, isNiftyPos ? '▲' : '▼'),
+            /*#__PURE__*/React.createElement("span", null, niftySub)
           )
-        )
-      ),
+        ),
 
-      /* BANKNIFTY Index Ticker Pill (Side by Side with NIFTY) */
-      /*#__PURE__*/React.createElement("div", {
-        className: "topbar-index-pill",
-        title: "BANKNIFTY Live Index Quote"
-      },
+        /* Vertical Divider | */
         /*#__PURE__*/React.createElement("div", {
-          className: "index-ticker-item"
+          style: {
+            width: '1px',
+            height: '24px',
+            background: 'var(--border-color, rgba(255, 255, 255, 0.15))',
+            margin: '0 2px'
+          }
+        }),
+
+        /* BANKNIFTY Item */
+        /*#__PURE__*/React.createElement("div", {
+          className: "topbar-index-col",
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1px',
+            lineHeight: 1.15
+          },
+          title: "BANKNIFTY Live Index Quote"
         },
+          /* Top row: BANKNIFTY */
+          /*#__PURE__*/React.createElement("span", {
+            style: {
+              fontSize: '12px',
+              fontWeight: 800,
+              color: 'var(--text-color, #f8fafc)',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase'
+            }
+          }, "BANKNIFTY"),
+          /* Bottom row: 61,034.10 ▼ -484.40 (-0.79%) */
           /*#__PURE__*/React.createElement("div", {
-            className: "index-head-row"
+            style: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: isBankPos ? '#16a34a' : '#ef4444',
+              fontVariantNumeric: 'tabular-nums',
+              whiteSpace: 'nowrap'
+            }
           },
+            /*#__PURE__*/React.createElement("span", null, bankPrice),
             /*#__PURE__*/React.createElement("span", {
-              className: "index-name"
-            }, "BANKNIFTY"),
-            /*#__PURE__*/React.createElement("span", {
-              className: "index-live-dot"
-            }, "•")
-          ),
-          /*#__PURE__*/React.createElement("div", {
-            className: `index-val-row ${isBankPos ? 'positive' : 'negative'}`
+              style: { fontSize: '8.5px' }
+            }, isBankPos ? '▲' : '▼'),
+            /*#__PURE__*/React.createElement("span", null, bankSub)
+          )
+        ),
+
+        /* Down Arrow Button [ ⌵ ] */
+        /*#__PURE__*/React.createElement("button", {
+          type: "button",
+          className: "topbar-indices-arrow-btn",
+          style: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '24px',
+            height: '24px',
+            borderRadius: '4px',
+            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.18))',
+            background: 'transparent',
+            color: 'var(--text-muted, #94a3b8)',
+            cursor: 'pointer',
+            marginLeft: '2px',
+            padding: 0,
+            transition: 'all 0.15s ease'
           },
-            /*#__PURE__*/React.createElement("span", {
-              className: "index-price"
-            }, bankPrice),
-            /*#__PURE__*/React.createElement("span", {
-              className: "index-change"
-            }, bankSub)
+          title: "Market Indices"
+        },
+          /*#__PURE__*/React.createElement("svg", {
+            viewBox: "0 0 24 24",
+            width: "13",
+            height: "13",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: "2.5",
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          },
+            /*#__PURE__*/React.createElement("polyline", {
+              points: "6 9 12 15 18 9"
+            })
           )
         )
       ),
@@ -1147,19 +1231,6 @@ function Topbar({
         /*#__PURE__*/React.createElement("div", {
           className: "pill-main-val"
         }, "₹0.00")
-      ),
-
-      /* Signals On Pill */
-      /*#__PURE__*/React.createElement("div", {
-        className: "signal-toggle-pill",
-        title: "Live trading signals status"
-      },
-        /*#__PURE__*/React.createElement("span", {
-          className: "signal-dot-status on"
-        }),
-        /*#__PURE__*/React.createElement("span", {
-          className: "signal-text-lbl"
-        }, "Signals On")
       ),
 
       /* Theme Toggle Button (Sun / Moon SVG icon) */

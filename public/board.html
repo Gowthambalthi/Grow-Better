@@ -864,7 +864,7 @@
       <div class="topbar-left">
         <div class="topbar-brand-simple" data-nav="strategies" onclick="window.__switchView && window.__switchView('strategies');" title="Grow Better — Algo Terminal">
           <img src="/logo.png" alt="Grow Better" class="topbar-logo-simple">
-          <span class="topbar-brand-title"><span style="color:#00B386;">GROW</span> <span style="color:#0F2447;">BETTER</span></span>
+          <span class="topbar-brand-title"><span class="brand-grow">GROW</span><span class="brand-better">BETTER</span></span>
         </div>
       </div>
 
@@ -876,19 +876,37 @@
            board's own status chips moved to the row below it. -->
       <div class="topbar-right">
 
-        <!-- Interactive Primary Index Ticker Pill -->
-        <div class="popover-wrapper" id="indexPopoverWrapper">
-          <div class="topbar-index-pill" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices">
-            <div class="index-ticker-item" id="mainHeaderTickerItem">
-              <div class="index-head-row">
-                <span class="index-name" id="mainHeaderIndexName">NIFTY</span>
-                <span class="index-live-dot">•</span>
+        <!-- Unified Indices Display: NIFTY | BANKNIFTY [ ⌵ ] -->
+        <div class="popover-wrapper" id="indexPopoverWrapper" style="position:relative;">
+          <div class="topbar-indices-display" id="topbarIndexPill" tabindex="0" title="Click to view Watchlist &amp; Global Indices" style="display:flex; align-items:center; gap:12px; cursor:pointer; user-select:none;">
+            <!-- NIFTY -->
+            <div class="topbar-index-col" id="mainHeaderTickerItem" style="display:flex; flex-direction:column; gap:1px; line-height:1.15;">
+              <span class="index-name" id="mainHeaderIndexName" style="font-size:12px; font-weight:800; color:var(--text-color, #f8fafc); letter-spacing:0.04em; text-transform:uppercase;">NIFTY</span>
+              <div class="index-val-row negative" id="mainHeaderValRow" style="display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;">
+                <span class="index-price" id="niftyCardValue">25,144.30</span>
+                <span class="index-arrow-triangle" style="font-size:8.5px;">▼</span>
+                <span class="index-change" id="niftyCardSub">-155.05 (-0.61%)</span>
               </div>
-              <div class="index-val-row negative" id="mainHeaderValRow">
-                <span class="index-price" id="niftyCardValue">22,888.95</span>
-                <span class="index-arrow" id="mainHeaderArrow" style="display:none;"></span>
-                <span class="index-change" id="niftyCardSub">257.20 (-1.11%)</span>
+            </div>
+
+            <!-- Divider | -->
+            <div style="width:1px; height:24px; background:var(--border-color, rgba(255, 255, 255, 0.15)); margin:0 2px;"></div>
+
+            <!-- BANKNIFTY -->
+            <div class="topbar-index-col" id="bankHeaderTickerItem" style="display:flex; flex-direction:column; gap:1px; line-height:1.15;">
+              <span class="index-name" id="bankHeaderIndexName" style="font-size:12px; font-weight:800; color:var(--text-color, #f8fafc); letter-spacing:0.04em; text-transform:uppercase;">BANKNIFTY</span>
+              <div class="index-val-row negative" id="bankHeaderValRow" style="display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;">
+                <span class="index-price" id="bankCardValue">61,034.10</span>
+                <span class="index-arrow-triangle" style="font-size:8.5px;">▼</span>
+                <span class="index-change" id="bankCardSub">-484.40 (-0.79%)</span>
               </div>
+            </div>
+
+            <!-- Down Arrow Button [ ⌵ ] -->
+            <div class="topbar-indices-arrow-btn" style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:4px; border:1px solid var(--border-color, rgba(255, 255, 255, 0.18)); background:transparent; color:var(--text-muted, #94a3b8); margin-left:2px;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </div>
           </div>
 
@@ -1022,20 +1040,6 @@
           </div>
         </div>
 
-        <!-- Side-by-Side Index Ticker Pill: BANKNIFTY -->
-        <div class="topbar-index-pill" id="topbarBankPill" tabindex="0" title="BANKNIFTY Live Index Quote">
-          <div class="index-ticker-item" id="bankHeaderTickerItem">
-            <div class="index-head-row">
-              <span class="index-name" id="bankHeaderIndexName">BANKNIFTY</span>
-              <span class="index-live-dot">•</span>
-            </div>
-            <div class="index-val-row negative" id="bankHeaderValRow">
-              <span class="index-price" id="bankCardValue">61,034.10</span>
-              <span class="index-change" id="bankCardSub">-484.40 (-0.79%)</span>
-            </div>
-          </div>
-        </div>
-
         <!-- CASH BALANCE Interactive Popover Pill -->
         <div class="popover-wrapper">
           <div class="topbar-stacked-pill" id="cashCardPill" tabindex="0" title="Click to view broker cash breakdown">
@@ -1066,15 +1070,6 @@
                 <span class="fund-val-total" id="totalCashFundVal">missing</span>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Live Mobile Signals: the board READS the same switch the app writes,
-             and sends you to the app's Alerts settings to change it. -->
-        <div class="popover-wrapper" style="position:relative;">
-          <div class="signal-toggle-pill" id="signalToggleBtn" title="Live mobile signals — click to open Alerts settings">
-            <span class="signal-dot-status on" id="signalDotStatus"></span>
-            <span class="signal-text-lbl" id="signalTextLbl">Signals On</span>
           </div>
         </div>
 

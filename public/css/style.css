@@ -376,27 +376,50 @@ a.nav-item:visited,
 .topbar-brand-simple {
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
+  gap: 12px !important;
   cursor: pointer !important;
+  text-decoration: none !important;
+  user-select: none !important;
+  flex: none !important;
+  margin-right: 12px !important;
 }
 
 .topbar-logo-simple {
   width: 32px !important;
   height: 32px !important;
   object-fit: contain !important;
+  display: block !important;
 }
 
 .topbar-brand-title {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important; /* Generous clean space between GROW and BETTER */
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 16px !important;
   font-weight: 800 !important;
-  color: #0F2447 !important; /* dark on the white bar */
-  letter-spacing: -0.01em !important;
+  letter-spacing: 0.05em !important; /* Clean tracking so letters are not squished together */
+  text-transform: uppercase !important;
   white-space: nowrap !important;
+  line-height: 1 !important;
 }
-.topbar-brand-simple {
-  flex: none !important;
-  margin-right: 10px;
+
+.topbar-brand-title span:first-child,
+.topbar-brand-title .brand-grow {
+  color: #00B386 !important;
+  letter-spacing: 0.05em !important;
+}
+
+.topbar-brand-title span:last-child,
+.topbar-brand-title .brand-better {
+  color: #0F2447 !important;
+  letter-spacing: 0.05em !important;
+  transition: color 0.15s ease;
+}
+
+[data-theme="dark"] .topbar-brand-title span:last-child,
+[data-theme="dark"] .topbar-brand-title .brand-better {
+  color: #F8FAFC !important;
 }
 
 /* Cash Breakdown Popover (Compact & Sleek Dark Match) */
@@ -555,16 +578,28 @@ a.nav-item:visited,
 
 .index-val-row.negative .index-price,
 .index-val-row.negative .index-arrow,
+.index-val-row.negative .index-arrow-triangle,
 .index-val-row.negative .index-change,
-.index-val-row.negative #niftyCardSub {
-  color: #EF4444 !important; /* Soft light-mode red */
+.index-val-row.negative #niftyCardSub,
+.index-val-row.negative #bankCardValue,
+.index-val-row.negative #bankCardSub {
+  color: #EF4444 !important; /* Soft red */
 }
 
 .index-val-row.positive .index-price,
 .index-val-row.positive .index-arrow,
+.index-val-row.positive .index-arrow-triangle,
 .index-val-row.positive .index-change,
-.index-val-row.positive #niftyCardSub {
-  color: #10B981 !important; /* Soft light-mode green */
+.index-val-row.positive #niftyCardSub,
+.index-val-row.positive #bankCardValue,
+.index-val-row.positive #bankCardSub {
+  color: #10B981 !important; /* Soft green */
+}
+
+.topbar-indices-arrow-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #38BDF8 !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
 }
 
 .index-arrow {
