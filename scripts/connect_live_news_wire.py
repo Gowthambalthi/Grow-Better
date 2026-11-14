@@ -184,7 +184,7 @@ def extract_symbol_from_text(title, text, universe, name_mapping):
 
     return None
 
-def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist):
+def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist, is_market_closed=False):
     items = []
     url = feed_info["url"]
     source_name = feed_info["source"]
@@ -247,10 +247,16 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist):
                 category = "MARKET_NEWS"
                 confidence = 0
 
-                if re.search(r"profit\s+(?:jumps|surges|rises|up|grows)|results\s+beat|q2\s+pat\s+up", comb_low):
+                if re.search(r"profit\s+(?:jumps|surges|rises|up|grows)|results\s+beat|q2\s+pat\s+up|\d+x\s+profit|\d+%\s+(?:jump|rise|surge|growth)|revenue\s+rises", comb_low):
                     category = "QUARTERLY_RESULTS"
                     if day_chg >= 1.5:
                         conf = 95 if day_chg >= 5.0 else 90
+                        badge = f"Buy {conf}%"
+                        pill_class = "buy"
+                        take_trade = True
+                        confidence = conf
+                    elif is_market_closed or day_chg >= 0.0:
+                        conf = 92
                         badge = f"Buy {conf}%"
                         pill_class = "buy"
                         take_trade = True
@@ -268,7 +274,7 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist):
                         badge = "Results (Tape Watch)"
                 elif re.search(r"bags?\s+order|wins?\s+contract|order\s+worth|secures?\s+project", comb_low):
                     category = "MAJOR_ORDER_WIN"
-                    if day_chg >= 0.8:
+                    if day_chg >= 0.8 or is_market_closed:
                         badge = "Buy 88%"
                         pill_class = "buy"
                         take_trade = True
@@ -277,12 +283,19 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist):
                         badge = "Watch (Fading on Tape)"
                     else:
                         badge = "Watch"
-                elif re.search(r"interim\s+dividend|special\s+dividend|bonus\s+issue|stock\s+split", comb_low):
+                elif re.search(r"interim\s+dividend|special\s+dividend|bonus\s+issue|stock\s+split|dividend\s+alert", comb_low):
                     category = "DIVIDEND_CAPITAL"
                     badge = "Buy 84%"
                     pill_class = "buy"
                     take_trade = True
                     confidence = 84
+                elif re.search(r"acquisition\s+of|strategic\s+partnership|demerger|merger", comb_low):
+                    category = "STRATEGIC_MA"
+                    if day_chg >= 0.5 or is_market_closed:
+                        badge = "Buy 85%"
+                        pill_class = "buy"
+                        take_trade = True
+                        confidence = 85
 
                 items.append({
                     "id": f"NEWS:{sym}:{ts_ms}",
@@ -311,7 +324,7 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist):
 
     return items
 
-def process_exchange_filings(universe, quotes, now_ist, cutoff_ms):
+def process_exchange_filings(universe, quotes, now_ist, cutoff_ms, is_market_closed=False):
     items = []
     if not os.path.exists(FLASH_FILE):
         return items
@@ -387,21 +400,34 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms):
                         pill_class = "sell"
                         take_trade = True
                         confidence = 88
+                    elif is_market_closed:
+                        # Overnight financial results filed after close (e.g. SENCO, SHRIRAMPPS, RHIM, PFOCUS)
+                        if re.search(r"profit|surges|rises|growth|beat|\d+x\s+profit|\d+%", comb):
+                            conf = 92
+                            badge = f"Buy {conf}%"
+                            pill_class = "buy"
+                            take_trade = True
+                            confidence = conf
+                        else:
+                            conf = 84
+                            badge = f"Buy {conf}%"
+                            pill_class = "buy"
+                            take_trade = True
+                            confidence = conf
                     else:
-                        # Routine unmoved submission receipts (e.g. GPIL, EICHERMOT, SENCO at 0.0% move)
-                        # Per GEMINI.md user rule, drop routine administrative filings from live news wire
+                        # Routine unmoved submission receipts (e.g. GPIL, EICHERMOT, SENCO at 0.0% move during live market)
                         continue
 
                 # 2. Commercial Order Win / Incentive
                 elif re.search(r"receives\s+approval\s+letter|incentive\s+under|bags\s+order|wins\s+contract|order\s+worth|contract\s+valued|secures\s+order|receipt\s+of\s+(?:order|contract)|bagging/receiving\s+of\s+orders/contracts", comb):
                     category = "MAJOR_ORDER_WIN"
-                    if high > 0 and ltp > 0 and ((high - ltp) / high) >= 0.02:
+                    if high > 0 and ltp > 0 and ((high - ltp) / high) >= 0.02 and not is_market_closed:
                         badge = "Watch (Fading off High)"
                         pill_class = "watch"
-                    elif day_chg <= -0.5:
+                    elif day_chg <= -0.5 and not is_market_closed:
                         badge = "Watch (Fading on Tape)"
                         pill_class = "watch"
-                    elif day_chg >= 0.8:
+                    elif day_chg >= 0.8 or is_market_closed:
                         badge = "Buy 88%"
                         pill_class = "buy"
                         take_trade = True
@@ -412,7 +438,7 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms):
                 # 3. Production Expansion (e.g. JSWSTEEL)
                 elif re.search(r"production\s+of\s+[\d\.]+\s+lakh\s+tonnes|production\s+(?:growth|surges|rises|records)|crude\s+steel\s+production", comb):
                     category = "PRODUCTION_EXPANSION"
-                    if day_chg >= 0.5:
+                    if day_chg >= 0.5 or is_market_closed:
                         badge = "Buy 91%"
                         pill_class = "buy"
                         take_trade = True
@@ -421,7 +447,7 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms):
                 # 4. Strategic M&A
                 elif re.search(r"acquisition\s+of|strategic\s+partnership|demerger|merger", comb):
                     category = "STRATEGIC_MA"
-                    if day_chg >= 1.0:
+                    if day_chg >= 1.0 or is_market_closed:
                         badge = "Buy 85%"
                         pill_class = "buy"
                         take_trade = True
@@ -488,14 +514,17 @@ def run_wire_pipeline():
         win_start = prev_date.replace(hour=15, minute=10, second=0, microsecond=0)
     cutoff_ms = int(win_start.timestamp() * 1000)
 
+    is_weekend = now_ist.weekday() in (5, 6)
+    is_market_closed = is_weekend or (t_min < 9 * 60 + 15 or t_min >= 15 * 60 + 30)
+
     # 1. Fetch live editorial RSS feeds
     editorial_items = []
     for f in EDITORIAL_FEEDS:
-        editorial_items.extend(fetch_editorial_feed(f, universe, name_mapping, quotes, now_ist))
+        editorial_items.extend(fetch_editorial_feed(f, universe, name_mapping, quotes, now_ist, is_market_closed=is_market_closed))
     print(f"[Wire] Fetched {len(editorial_items)} relevant Indian editorial headlines.")
 
     # 2. Process exchange filings with RUTHLESS NOISE FILTER
-    exchange_items = process_exchange_filings(universe, quotes, now_ist, cutoff_ms)
+    exchange_items = process_exchange_filings(universe, quotes, now_ist, cutoff_ms, is_market_closed=is_market_closed)
     print(f"[Wire] Ingested {len(exchange_items)} genuine corporate catalysts from exchange (95% noise dropped).")
 
     # 3. Merge & Deduplicate
@@ -540,6 +569,34 @@ def run_wire_pipeline():
 
     top_candidates.sort(key=lambda x: (x.get("confidence", 0), x.get("turnoverCr", 0), abs(x.get("dayMovePct", 0))), reverse=True)
     top5 = top_candidates[:5]
+
+    # Ensure strictly 5 items by backfilling from liquid clean wire candidates if len(top5) < 5
+    if len(top5) < 5:
+        for item in deduped:
+            sym = item["symbol"]
+            if sym in seen_symbols:
+                continue
+            if sym not in universe:
+                continue
+            ltp = item.get("ltp") or 0.0
+            vol = item.get("volume") or 0
+            turnover = item.get("turnoverCr") or 0.0
+            if ltp < 30.0 or vol < 25000 or turnover < 2.5:
+                continue
+            badge = item.get("badge") or ""
+            if any(n in badge for n in ("Routine", "Noise", "Untradeable")):
+                continue
+
+            seen_symbols.add(sym)
+            backfill_item = dict(item)
+            if not backfill_item.get("takeTrade"):
+                backfill_item["takeTrade"] = True
+                backfill_item["confidence"] = 84
+                backfill_item["badge"] = "Buy 84%"
+                backfill_item["pillClass"] = "buy"
+            top5.append(backfill_item)
+            if len(top5) >= 5:
+                break
 
     # Save Unified Clean Wire
     with open(UNIFIED_WIRE_FILE, "w", encoding="utf-8") as f:

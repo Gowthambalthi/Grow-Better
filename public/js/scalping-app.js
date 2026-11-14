@@ -5965,14 +5965,51 @@ function ScalpingApp() {
   // 7B. Top 5 High-Probability Movers ("Only keep five and five will be set in one row")
 
   const top5DisplayList = useMemo(() => {
-    if (boardData.top5Catalysts && boardData.top5Catalysts.length > 0) {
-      return boardData.top5Catalysts.slice(0, 5);
+    const list = [];
+    const seen = new Set();
+
+    // 1. Primary: Verified Top 5 Catalysts from backend
+    if (Array.isArray(boardData.top5Catalysts)) {
+      for (const item of boardData.top5Catalysts) {
+        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
     }
-    if (catalysts && catalysts.length > 0) {
-      return catalysts.slice(0, 5);
+
+    // 2. Secondary: Live catalysts from boardData.catalysts
+    if (list.length < 5 && Array.isArray(boardData.catalysts)) {
+      for (const item of boardData.catalysts) {
+        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
     }
-    return filteredCatalysts.slice(0, 5);
-  }, [boardData.top5Catalysts, catalysts, filteredCatalysts]);
+
+    // 3. Tertiary: Local catalysts list
+    if (list.length < 5 && Array.isArray(catalysts)) {
+      for (const item of catalysts) {
+        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
+    }
+
+    // 4. Quaternary: Filtered catalysts list
+    if (list.length < 5 && Array.isArray(filteredCatalysts)) {
+      for (const item of filteredCatalysts) {
+        if (!item || !item.symbol || seen.has(item.symbol)) continue;
+        seen.add(item.symbol);
+        list.push(item);
+        if (list.length >= 5) return list;
+      }
+    }
+
+    return list.slice(0, 5);
+  }, [boardData.top5Catalysts, boardData.catalysts, catalysts, filteredCatalysts]);
 
 
 

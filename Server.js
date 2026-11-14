@@ -4328,6 +4328,19 @@ app.get('/api/scalping/board', (req, res) => {
         const top5Data = JSON.parse(fs.readFileSync(top5Path, 'utf8'));
         board.top5Catalysts = top5Data.catalysts || [];
       }
+      if (!Array.isArray(board.top5Catalysts) || board.top5Catalysts.length < 5) {
+        const seenSymbols = new Set((board.top5Catalysts || []).map(c => c && c.symbol).filter(Boolean));
+        board.top5Catalysts = Array.isArray(board.top5Catalysts) ? [...board.top5Catalysts] : [];
+        const pmcBatch = pmc && typeof pmc.getOvernightCatalystBatch === 'function' ? pmc.getOvernightCatalystBatch() : null;
+        const candidates = (pmcBatch && pmcBatch.allCatalysts) || (Array.isArray(cleanCatalysts) ? cleanCatalysts : []);
+        for (const item of candidates) {
+          if (board.top5Catalysts.length >= 5) break;
+          if (!item || !item.symbol || seenSymbols.has(item.symbol)) continue;
+          if (item.isUntradeable || item.isPennyStock) continue;
+          seenSymbols.add(item.symbol);
+          board.top5Catalysts.push(item);
+        }
+      }
     } catch (_) {}
 
     // Attach Live 09:20 AM Strangle Calls (Theta Harvester)
@@ -5833,7 +5846,7 @@ app.get('/api/scalping/catalysts', (req, res) => {
       const pyPath = path.join(__dirname, 'data', 'news', 'top5_catalysts_verified.json');
       if (fs.existsSync(pyPath)) {
         const pyData = JSON.parse(fs.readFileSync(pyPath, 'utf8'));
-        if (pyData && Array.isArray(pyData.catalysts) && pyData.catalysts.length === 5) {
+        if (pyData && Array.isArray(pyData.catalysts) && pyData.catalysts.length > 0) {
           const verifiedTop5 = [];
           for (const pc of pyData.catalysts) {
             const sym = pc.symbol;
@@ -5860,8 +5873,17 @@ app.get('/api/scalping/catalysts', (req, res) => {
             item.auctionAssessment = assessment;
             verifiedTop5.push(item);
           }
-          if (verifiedTop5.length === 5) {
-            top5Catalysts = verifiedTop5;
+          if (verifiedTop5.length < 5) {
+            const seen = new Set(verifiedTop5.map(x => x.symbol));
+            for (const prev of top5Catalysts) {
+              if (verifiedTop5.length >= 5) break;
+              if (!prev || !prev.symbol || seen.has(prev.symbol)) continue;
+              seen.add(prev.symbol);
+              verifiedTop5.push(prev);
+            }
+          }
+          if (verifiedTop5.length > 0) {
+            top5Catalysts = verifiedTop5.slice(0, 5);
           }
         }
       }
