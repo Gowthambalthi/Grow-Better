@@ -3625,30 +3625,37 @@ function getClientMoveTiming(c, ltp, movePct, postNewsMove) {
 }
 
 const NIFTY_50_SYMBOLS = new Set([
-  'ADANIENT', 'ADANIPORTS', 'APOLLOHOSP', 'ASIANPAINT', 'AXISBANK',
-  'BAJAJ-AUTO', 'BAJFINANCE', 'BAJAJFINSV', 'BEL', 'BPCL',
-  'BHARTIARTL', 'BRITANNIA', 'CIPLA', 'COALINDIA', 'DRREDDY',
-  'EICHERMOT', 'GRASIM', 'HCLTECH', 'HDFCBANK', 'HDFCLIFE',
-  'HEROMOTOCO', 'HINDALCO', 'HINDUNILVR', 'ICICIBANK', 'ITC',
-  'INDUSINDBK', 'INFY', 'JSWSTEEL', 'KOTAKBANK', 'LT',
-  'LTIM', 'M&M', 'MARUTI', 'NESTLEIND', 'NTPC',
-  'ONGC', 'POWERGRID', 'RELIANCE', 'SBILIFE', 'SHRIRAMFIN',
-  'SBIN', 'SUNPHARMA', 'TCS', 'TATACONSUM', 'TATAMOTORS',
-  'TATASTEEL', 'TECHM', 'TITAN', 'TRENT', 'ULTRACEMCO', 'WIPRO'
+  "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BSE", "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BEL", "BHARTIARTL", "CIPLA", "COALINDIA", "DRREDDY", "EICHERMOT", "ETERNAL", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE", "HINDALCO", "HINDUNILVR", "ICICIBANK", "ITC", "INFY", "INDIGO", "JSWSTEEL", "JIOFIN", "KOTAKBANK", "LT", "M&M", "MARUTI", "MAXHEALTH", "NTPC", "NESTLEIND", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SHRIRAMFIN", "SBIN", "SUNPHARMA", "TCS", "TATACONSUM", "TMPV", "TATASTEEL", "TECHM", "TITAN", "TRENT", "ULTRACEMCO"
 ]);
 
 const NIFTY_NEXT_50_SYMBOLS = new Set([
-  'ABB', 'ADANIENSOL', 'ADANIGREEN', 'ADANIPOWER', 'ATGL',
-  'AMBUJACEM', 'BANKBARODA', 'BERGEPAINT', 'BOSCHLTD', 'CANBK',
-  'CHOLAFIN', 'COLPAL', 'CONCOR', 'CUMMINSIND', 'DLF',
-  'DMART', 'GAIL', 'GODREJCP', 'HAL', 'HAVELLS',
-  'ICICIGI', 'ICICIPRULI', 'IOC', 'IRCTC', 'IRFC',
-  'JINDALSTEL', 'JIOFIN', 'JSWENERGY', 'LICI', 'MARICO',
-  'MOTHERSON', 'NAUKRI', 'NHPC', 'PAGEIND', 'PFC',
-  'PIDILITIND', 'PNB', 'RECLTD', 'SBICARD', 'SIEMENS',
-  'SRF', 'SUNTV', 'TATAPOWER', 'TORNTPOWER', 'TVSMOTOR',
-  'UNITDSPR', 'VBL', 'VEDL', 'ZOMATO', 'ZYDUSLIFE'
+  "ABB", "ADANIENSOL", "ADANIGREEN", "ADANIPOWER", "AMBUJACEM", "DMART", "BAJAJHLDNG", "BANKBARODA", "BPCL", "BOSCHLTD", "BRITANNIA", "CGPOWER", "CANBK", "CHOLAFIN", "CUMMINSIND", "DLF", "DIVISLAB", "GAIL", "GODREJCP", "HDFCAMC", "HAL", "HINDZINC", "POWERINDIA", "HYUNDAI", "IOC", "IRFC", "JINDALSTEL", "LTM", "MAZDOCK", "MUTHOOTFIN", "PIDILITIND", "POLYCAB", "PFC", "PNB", "MOTHERSON", "ENRIN", "SIEMENS", "SOLARINDS", "TVSMOTOR", "TATACAP", "TMCV", "TATAPOWER", "TORNTPHARM", "UNIONBANK", "VBL", "VAML", "VEDL", "IDEA", "WIPRO", "ZYDUSLIFE"
 ]);
+
+const NIFTY_MIDCAP_150_SYMBOLS = new Set([
+  "360ONE", "AIAENG", "APLAPOLLO", "AUBANK", "ABBOTINDIA", "ATGL", "ABCAPITAL", "AJANTPHARM", "ALKEM", "ANTHEM", "APARINDS", "ASHOKLEY", "ASTERDM", "ASTRAL", "AUROPHARMA", "AIIL", "BAJAJHFL", "BALKRISIND", "BANKINDIA", "MAHABANK", "BERGEPAINT", "BDL", "BHARATFORG", "BHEL", "BHARTIHEXA", "GROWW", "BIOCON", "BLUESTARCO", "CRISIL", "COCHINSHIP", "COFORGE", "COLPAL", "CONCOR", "COROMANDEL", "DABUR", "DALBHARAT", "DIXON", "EMBASSY", "ENDURANCE", "ESCORTS", "EXIDEIND", "NYKAA", "FEDERALBNK", "FACT", "FORTIS", "GVT&D", "GMRAIRPORT", "GICRE", "GLAXO", "GLENMARK", "MEDANTA", "GODFRYPHLP", "GODREJIND", "GODREJPROP", "FLUOROCHEM", "HDBFS", "HAVELLS", "HEROMOTOCO", "HEXT", "HINDCOPPER", "HINDPETRO", "HUDCO", "ICICILIFE", "ICICIGI", "ICICIAMC", "IDFCFIRSTB", "ITCHOTELS", "INDIANB", "INDHOTEL", "IOB", "IRCTC", "IREDA", "INDUSTOWER", "INDUSINDBK", "NAUKRI", "IPCALAB", "JKCEMENT", "JSWENERGY", "JSWINFRA", "JSL", "JUBLFOOD", "KPRMILL", "KEI", "KALYANKJIL", "LTF", "LTTS", "LGEINDIA", "LICHSGFIN", "LAURUSLABS", "LENSKART", "LICI", "LINDEINDIA", "LLOYDSME", "LODHA", "LUPIN", "MRF", "M&MFIN", "MANKIND", "MARICO", "MFSL", "MEESHO", "MOTILALOFS", "MPHASIS", "MCX", "NHPC", "NLCINDIA", "NMDC", "NTPCGREEN", "NH", "NATIONALUM", "NAM-INDIA", "OBEROIRLTY", "OIL", "PAYTM", "OFSS", "POLICYBZR", "PIIND", "PAGEIND", "PATANJALI", "PERSISTENT", "PETRONET", "PHOENIXLTD", "PIRAMALFIN", "PREMIERENE", "PRESTIGE", "RECLTD", "RADICO", "RVNL", "SBICARD", "SRF", "SCHAEFFLER", "SHREECEM", "SAIL", "SUNDARMFIN", "SUPREMEIND", "SUZLON", "SWIGGY", "TATACOMM", "TATAINVEST", "THERMAX", "TORNTPOWER", "TIINDIA", "UNOMINDA", "UPL", "UBL", "UNITDSPR", "VMM", "VOLTAS", "WAAREEENER", "YESBANK"
+]);
+
+const NIFTY_SMALLCAP_250_SYMBOLS = new Set([
+  "ACC", "ACMESOLAR", "AWL", "AADHARHFC", "AARTIIND", "AAVAS", "ACE", "ACUTAAS", "ABREL", "ABSLAMC", "CPPLUS", "AEGISLOG", "AEGISVOPAK", "AETHER", "AFCONS", "AFFLE", "ABDL", "ARE&M", "AMBER", "ANANDRATHI", "ANANTRAJ", "ANGELONE", "ANURAS", "APOLLOTYRE", "APTUS", "ASAHIINDIA", "ATHERENERG", "ATUL", "AVANTIFEED", "AZAD", "BEML", "BLS", "BAGMANE", "BALRAMCHIN", "BANDHANBNK", "BATAINDIA", "BELRISE", "BHARATCOAL", "BSOFT", "BBOX", "FIRSTCRY", "BRIGADE", "BIRET", "CCL", "CESC", "CIEINDIA", "CANFINHOME", "CANHLIFE", "CAPLIPOINT", "CGCL", "CARBORUNIV", "CARTRADE", "CASTROLIND", "CEATLTD", "CEMPRO", "CENTRALBK", "CDSL", "CMPDI", "CHAMBLFERT", "CHENNPETRO", "CHOICEIN", "CHOLAHLDNG", "CUB", "CLEANMAX", "CLEAN", "COHANCE", "CAMS", "CONCORDBIO", "CRAFTSMAN", "CREDITACC", "CROMPTON", "CUPID", "CYIENT", "DOMS", "DATAPATTNS", "DEEPAKFERT", "DEEPAKNTR", "DELHIVERY", "DEVYANI", "LALPATHLAB", "DUMMYHEG", "EIDPARRY", "EIHOTEL", "ELECON", "ELGIEQUIP", "EMAMILTD", "EMCURE", "EMMVEE", "ENGINERSIN", "FINCABLES", "FSL", "FIVESTAR", "FORCEMOT", "FRACTAL", "GABRIEL", "GALLANTT", "GRSE", "GILLETTE", "GLAND", "GPIL", "GRANULES", "GRAPHITE", "GRAVITA", "GESHIP", "GMDCLTD", "HBLENGINE", "HEGAM", "HFCL", "HSCL", "HOMEFIRST", "HONASA", "HONAUT", "IDBI", "IFCI", "IIFL", "INOXINDIA", "IRB", "IRCON", "ITI", "INDIACEM", "INDIAMART", "IEX", "IGL", "INOXWIND", "INTELLECT", "IGIL", "IKS", "JBMA", "JKTYRE", "JMFINANCIL", "JSWCEMENT", "JAINREC", "JPPOWER", "J&KBANK", "JINDALSAW", "JUBLINGREA", "JWL", "JYOTICNC", "KPITTECH", "KSB", "KAJARIACER", "KPIL", "KARURVYSYA", "KAYNES", "KEC", "KFINTECH", "KIRLOSBROS", "KIRLOSENG", "KIMS", "LTFOODS", "LEMONTREE", "MMTC", "MTARTECH", "MGL", "MANAPPURAM", "MRPL", "MINDACORP", "MSUMI", "NATCOPHARM", "NBCC", "NCC", "NSLNISP", "NAVA", "NAVINFLUOR", "NETWEB", "NEULANDLAB", "NUVAMA", "NUVOCO", "OLAELEC", "OLECTRA", "ONESOURCE", "PCBL", "PGEL", "PNBHOUSING", "PTCIL", "PVRINOX", "PARADEEP", "PWL", "PINELABS", "PPLPHARMA", "POLYMED", "POONAWALLA", "PFOCUS", "PRIVISCL", "RRKABEL", "RBLBANK", "RHIM", "RITES", "RAILTEL", "RAINBOW", "RKFORGE", "REDINGTON", "RPOWER", "RUBICON", "SJVN", "SHRIPISTON", "SAGILITY", "SAILIFE", "SAMMAANCAP", "SANSERA", "SARDAEN", "SCHNEIDER", "SCI", "SHYAMMETL", "SIGNATURE", "SOBHA", "SONACOMS", "STARHEALTH", "STLTECH", "SUMICHEM", "SUNTV", "SWANCORP", "SYNGENE", "SYRMA", "TBOTEK", "TDPOWERSYS", "TATACHEM", "TATAELXSI", "TATATECH", "TTML", "TECHNOE", "TEGA", "TEJASNET", "TENNIND", "THANGAMAYL", "NIACL", "RAMCOCEM", "TIMKEN", "TITAGARH", "TARIL", "TRIDENT", "TRITURBINE", "UCOBANK", "UTIAMC", "URBANCO", "USHAMART", "VTL", "VISL", "VOGL", "VEDPOWER", "VIJAYA", "WELCORP", "WELSPUNLIV", "WHIRLPOOL", "WOCKPHARMA", "ZFCVINDIA", "ZEEL", "ZENTEC", "ZENSARTECH", "ZYDUSWELL", "ECLERX"
+]);
+
+function getCompanyTier(symbol) {
+  const sym = String(symbol || '').toUpperCase().trim();
+  if (NIFTY_50_SYMBOLS.has(sym)) {
+    return { name: 'NIFTY 50', score: 1000, color: '#2563eb', bg: 'rgba(37, 99, 235, 0.12)', border: 'rgba(37, 99, 235, 0.28)' };
+  }
+  if (NIFTY_NEXT_50_SYMBOLS.has(sym)) {
+    return { name: 'NEXT 50', score: 800, color: '#9333ea', bg: 'rgba(147, 51, 234, 0.12)', border: 'rgba(147, 51, 234, 0.28)' };
+  }
+  if (NIFTY_MIDCAP_150_SYMBOLS.has(sym)) {
+    return { name: 'MIDCAP', score: 600, color: '#0891b2', bg: 'rgba(8, 145, 178, 0.12)', border: 'rgba(8, 145, 178, 0.28)' };
+  }
+  if (NIFTY_SMALLCAP_250_SYMBOLS.has(sym)) {
+    return { name: 'SMALLCAP', score: 400, color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)', border: 'rgba(234, 88, 12, 0.28)' };
+  }
+  return { name: 'MICROCAP', score: 200, color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)', border: 'rgba(100, 116, 139, 0.28)' };
+}
 
 function getNewsScopeScore(c) {
   const text = ((c.kind || '') + ' ' + (c.title || '') + ' ' + (c.description || '')).toLowerCase();
@@ -3822,13 +3829,11 @@ function TopNewsSquareBox({
       const tsB = Number(b.ts || 0);
 
       if (sortMode === 'company') {
-        const symA = String(a.symbol || '').toUpperCase().trim();
-        const symB = String(b.symbol || '').toUpperCase().trim();
-        const tierA = NIFTY_50_SYMBOLS.has(symA) ? 1000 : (NIFTY_NEXT_50_SYMBOLS.has(symA) ? 500 : 100);
-        const tierB = NIFTY_50_SYMBOLS.has(symB) ? 1000 : (NIFTY_NEXT_50_SYMBOLS.has(symB) ? 500 : 100);
+        const tierA = getCompanyTier(a.symbol);
+        const tierB = getCompanyTier(b.symbol);
 
-        if (tierB !== tierA) {
-          return tierB - tierA; // NIFTY 50 first, then NEXT 50, then Others
+        if (tierB.score !== tierA.score) {
+          return tierB.score - tierA.score; // NIFTY 50 (1000) > NEXT 50 (800) > MIDCAP (600) > SMALLCAP (400) > MICROCAP (200)
         }
 
         // Secondary within same company tier: news scope score
@@ -4290,38 +4295,21 @@ function TopNewsSquareBox({
       className: "top-news-sym"
     }, c.symbol),
     (() => {
-      const symUpper = String(c.symbol || '').toUpperCase().trim();
-      if (NIFTY_50_SYMBOLS.has(symUpper)) {
-        return /*#__PURE__*/React.createElement("span", {
-          style: {
-            fontSize: '9px',
-            fontWeight: 800,
-            background: 'rgba(37, 99, 235, 0.12)',
-            color: '#2563eb',
-            border: '1px solid rgba(37, 99, 235, 0.28)',
-            padding: '1px 5px',
-            borderRadius: '3px',
-            whiteSpace: 'nowrap'
-          },
-          title: "NIFTY 50 Blue Chip Company"
-        }, "NIFTY 50");
-      }
-      if (NIFTY_NEXT_50_SYMBOLS.has(symUpper)) {
-        return /*#__PURE__*/React.createElement("span", {
-          style: {
-            fontSize: '9px',
-            fontWeight: 800,
-            background: 'rgba(147, 51, 234, 0.12)',
-            color: '#9333ea',
-            border: '1px solid rgba(147, 51, 234, 0.28)',
-            padding: '1px 5px',
-            borderRadius: '3px',
-            whiteSpace: 'nowrap'
-          },
-          title: "NIFTY NEXT 50 Largecap Company"
-        }, "NEXT 50");
-      }
-      return null;
+      const tier = getCompanyTier(c.symbol);
+      if (!tier) return null;
+      return /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: '9px',
+          fontWeight: 800,
+          background: tier.bg,
+          color: tier.color,
+          border: `1px solid ${tier.border}`,
+          padding: '1px 5px',
+          borderRadius: '3px',
+          whiteSpace: 'nowrap'
+        },
+        title: `${tier.name} Company`
+      }, tier.name);
     })(),
     isNonMarketHour ? /*#__PURE__*/React.createElement("span", {
       style: {
