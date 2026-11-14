@@ -4137,23 +4137,23 @@ function TopNewsSquareBox({
       style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }
     }, /*#__PURE__*/React.createElement("span", {
       className: "top-news-sym"
-    }, c.symbol), /*#__PURE__*/React.createElement("span", {
-      className: `top-news-timeago ${isFresh ? 'fresh' : ''}`
-    }, c.filingTime || c.timeAgo || 'Just in'),
-    isNonMarketHour && /*#__PURE__*/React.createElement("span", {
+    }, c.symbol),
+    isNonMarketHour ? /*#__PURE__*/React.createElement("span", {
       style: {
-        fontSize: '9.5px',
+        fontSize: '10px',
         fontWeight: 700,
         background: 'rgba(217, 119, 6, 0.12)',
         color: '#d97706',
         border: '1px solid rgba(217, 119, 6, 0.3)',
-        padding: '1px 5px',
-        borderRadius: '3px',
+        padding: '1.5px 6px',
+        borderRadius: '4px',
         whiteSpace: 'nowrap',
         lineHeight: 1.2
       },
-      title: "News arrived outside market hours (Pre-market / Overnight)"
-    }, "Pre-Market News")),
+      title: c.filingTime ? `Pre-market filing (${c.filingTime})` : "News arrived outside market hours (Pre-market / Overnight)"
+    }, "Pre-Market News") : /*#__PURE__*/React.createElement("span", {
+      className: `top-news-timeago ${isFresh ? 'fresh' : ''}`
+    }, c.filingTime || c.timeAgo || 'Just in')),
     /* Company below: LTP and Today Percentage */
     /*#__PURE__*/React.createElement("div", {
       style: { display: 'flex', alignItems: 'center', gap: '6px' }
