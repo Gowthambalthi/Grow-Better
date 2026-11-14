@@ -3926,9 +3926,9 @@ function TopNewsSquareBox({
       padding: '3px 8px',
       borderRadius: '5px',
       cursor: 'pointer',
-      border: sortMode === 'news' ? '1px solid #16a34a' : '1px solid var(--border-color, #cbd5e1)',
-      background: sortMode === 'news' ? 'rgba(22, 163, 74, 0.14)' : 'transparent',
-      color: sortMode === 'news' ? '#16a34a' : 'var(--text-muted, #64748b)',
+      border: sortMode === 'news' ? '1px solid #00B386' : '1px solid var(--border-color, #cbd5e1)',
+      background: sortMode === 'news' ? 'rgba(0, 179, 134, 0.12)' : 'transparent',
+      color: sortMode === 'news' ? '#00B386' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
     title: sortMode === 'news' ? "Active. Click again to return to Normal Live News" : "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
@@ -3942,9 +3942,9 @@ function TopNewsSquareBox({
       padding: '3px 8px',
       borderRadius: '5px',
       cursor: 'pointer',
-      border: sortMode === 'company' ? '1px solid #2563eb' : '1px solid var(--border-color, #cbd5e1)',
-      background: sortMode === 'company' ? 'rgba(37, 99, 235, 0.14)' : 'transparent',
-      color: sortMode === 'company' ? '#2563eb' : 'var(--text-muted, #64748b)',
+      border: sortMode === 'company' ? '1px solid #00B386' : '1px solid var(--border-color, #cbd5e1)',
+      background: sortMode === 'company' ? 'rgba(0, 179, 134, 0.12)' : 'transparent',
+      color: sortMode === 'company' ? '#00B386' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
     title: sortMode === 'company' ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"

@@ -36,6 +36,10 @@ process.on('unhandledRejection', (err) => {
 
 });
 
+if (process.env.RENDER) {
+  process.env.GB_SKIP_INSTANCE_LOCK = '1';
+}
+
 
 
 const express = require('express');
@@ -1706,6 +1710,10 @@ process.on('unhandledRejection', (err) => {
   console.error('[server] unhandledRejection (server kept alive):', err && (err.message || err));
 
 });
+
+if (process.env.RENDER) {
+  process.env.GB_SKIP_INSTANCE_LOCK = '1';
+}
 
 
 
