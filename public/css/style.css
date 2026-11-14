@@ -3088,3 +3088,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   text-align: right !important;
   flex-shrink: 0 !important;
 }
+
+
+/* Probability Catalysts Header: Normal size and light/medium weight */
+.cat-section-header h2 {
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: var(--text, #0f172a) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}

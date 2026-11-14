@@ -6358,9 +6358,9 @@ function ScalpingApp() {
 
       margin: 0,
 
-      fontSize: '16px',
+      fontSize: '13.5px',
 
-      fontWeight: 800,
+      fontWeight: 500,
 
       color: 'var(--text, #0f172a)',
 
@@ -6372,21 +6372,21 @@ function ScalpingApp() {
 
     }
 
-  }, /*#__PURE__*/React.createElement("span", null, isMarketOpen ? "⚡ Top 5 High-Probability Catalysts (Live Session Announcements)" : isPostClose ? "⚡ Top 5 High-Probability Catalysts (Post-15:30 IST for Tomorrow's Open)" : "⚡ Top 5 High-Probability Catalysts (Overnight 15:30 IST to Now)")), /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("span", null, "⚡ Probability Catalysts")), /*#__PURE__*/React.createElement("span", {
 
     style: {
 
-      fontSize: '12px',
+      fontSize: '11px',
 
-      background: 'rgba(37,99,235,0.15)',
+      background: 'rgba(37,99,235,0.12)',
 
       color: '#2563eb',
 
-      padding: '3px 9px',
+      padding: '2px 8px',
 
       borderRadius: '12px',
 
-      fontWeight: 700
+      fontWeight: 500
 
     }
 
@@ -6396,17 +6396,17 @@ function ScalpingApp() {
 
       fontSize: '11px',
 
-      background: 'rgba(16,185,129,0.15)',
+      background: 'rgba(16,185,129,0.12)',
 
       color: '#059669',
 
-      padding: '3px 8px',
+      padding: '2px 8px',
 
       borderRadius: '12px',
 
-      fontWeight: 700,
+      fontWeight: 500,
 
-      border: '1px solid rgba(16,185,129,0.3)'
+      border: '1px solid rgba(16,185,129,0.25)'
 
     }
 
@@ -6416,17 +6416,17 @@ function ScalpingApp() {
 
       fontSize: '11px',
 
-      background: 'rgba(245,158,11,0.15)',
+      background: 'rgba(245,158,11,0.12)',
 
       color: '#d97706',
 
-      padding: '3px 8px',
+      padding: '2px 8px',
 
       borderRadius: '12px',
 
-      fontWeight: 700,
+      fontWeight: 500,
 
-      border: '1px solid rgba(245,158,11,0.3)'
+      border: '1px solid rgba(245,158,11,0.25)'
 
     }
 
@@ -6436,17 +6436,17 @@ function ScalpingApp() {
 
       fontSize: '11px',
 
-      background: 'rgba(99,102,241,0.15)',
+      background: 'rgba(99,102,241,0.12)',
 
       color: '#6366f1',
 
-      padding: '3px 8px',
+      padding: '2px 8px',
 
       borderRadius: '12px',
 
-      fontWeight: 700,
+      fontWeight: 500,
 
-      border: '1px solid rgba(99,102,241,0.3)'
+      border: '1px solid rgba(99,102,241,0.25)'
 
     }
 
