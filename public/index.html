@@ -1278,12 +1278,14 @@
     .top-news-item-top {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
+      gap: 8px;
     }
     .top-news-item-left {
       display: flex;
       flex-direction: column;
       gap: 3px;
+      flex: 1;
     }
     .top-news-sym {
       font-weight: 800;
@@ -1307,9 +1309,13 @@
       font-weight: 700;
     }
     .top-news-item-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-end !important;
+      justify-content: flex-start !important;
+      gap: 2px !important;
+      text-align: right !important;
+      flex-shrink: 0 !important;
     }
     .top-news-price {
       font-size: 12px;
@@ -1627,6 +1633,6 @@
   </script>
 
   <!-- Precompiled React 18 Application (Native JS, 0ms compile overhead, cache-busting timestamp) -->
-  <script src="/js/scalping-app.js?v=20261114_cash_weight_v26"></script>
+  <script src="/js/scalping-app.js?v=20261114_timing_at_end_of_right_table_v28"></script>
 </body>
 </html>

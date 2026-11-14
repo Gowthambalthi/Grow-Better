@@ -3077,3 +3077,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Top News Item Right Side: Row 1 Two Percentages, Row 2 Time at End */
+.top-news-item-right {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  justify-content: flex-start !important;
+  gap: 2px !important;
+  text-align: right !important;
+  flex-shrink: 0 !important;
+}
