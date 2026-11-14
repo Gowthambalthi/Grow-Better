@@ -3624,6 +3624,78 @@ function getClientMoveTiming(c, ltp, movePct, postNewsMove) {
   };
 }
 
+const NIFTY_50_SYMBOLS = new Set([
+  'ADANIENT', 'ADANIPORTS', 'APOLLOHOSP', 'ASIANPAINT', 'AXISBANK',
+  'BAJAJ-AUTO', 'BAJFINANCE', 'BAJAJFINSV', 'BEL', 'BPCL',
+  'BHARTIARTL', 'BRITANNIA', 'CIPLA', 'COALINDIA', 'DRREDDY',
+  'EICHERMOT', 'GRASIM', 'HCLTECH', 'HDFCBANK', 'HDFCLIFE',
+  'HEROMOTOCO', 'HINDALCO', 'HINDUNILVR', 'ICICIBANK', 'ITC',
+  'INDUSINDBK', 'INFY', 'JSWSTEEL', 'KOTAKBANK', 'LT',
+  'LTIM', 'M&M', 'MARUTI', 'NESTLEIND', 'NTPC',
+  'ONGC', 'POWERGRID', 'RELIANCE', 'SBILIFE', 'SHRIRAMFIN',
+  'SBIN', 'SUNPHARMA', 'TCS', 'TATACONSUM', 'TATAMOTORS',
+  'TATASTEEL', 'TECHM', 'TITAN', 'TRENT', 'ULTRACEMCO', 'WIPRO'
+]);
+
+const NIFTY_NEXT_50_SYMBOLS = new Set([
+  'ABB', 'ADANIENSOL', 'ADANIGREEN', 'ADANIPOWER', 'ATGL',
+  'AMBUJACEM', 'BANKBARODA', 'BERGEPAINT', 'BOSCHLTD', 'CANBK',
+  'CHOLAFIN', 'COLPAL', 'CONCOR', 'CUMMINSIND', 'DLF',
+  'DMART', 'GAIL', 'GODREJCP', 'HAL', 'HAVELLS',
+  'ICICIGI', 'ICICIPRULI', 'IOC', 'IRCTC', 'IRFC',
+  'JINDALSTEL', 'JIOFIN', 'JSWENERGY', 'LICI', 'MARICO',
+  'MOTHERSON', 'NAUKRI', 'NHPC', 'PAGEIND', 'PFC',
+  'PIDILITIND', 'PNB', 'RECLTD', 'SBICARD', 'SIEMENS',
+  'SRF', 'SUNTV', 'TATAPOWER', 'TORNTPOWER', 'TVSMOTOR',
+  'UNITDSPR', 'VBL', 'VEDL', 'ZOMATO', 'ZYDUSLIFE'
+]);
+
+function getNewsScopeScore(c) {
+  const text = ((c.kind || '') + ' ' + (c.title || '') + ' ' + (c.description || '')).toLowerCase();
+  let score = 50;
+
+  // Genuine high-scope market-moving corporate events
+  const isEarningsBeat = /profit\s+rises|profit\s+up|net\s+profit\s+jumps?|pat\s+climbs|blowout|revenue\s+rises|ebitda\s+up|earnings\s+beat|q[1-4]\s+net\s+profit/i.test(text) || Boolean(c.isBlowoutBeat);
+  const isSevereMiss = /loss\s+widens|net\s+loss|profit\s+falls|profit\s+drops|pat\s+slumps|margin\s+contracts|earnings\s+miss/i.test(text) || Boolean(c.isSevereMiss);
+  const isOrderWin = /order\s+win|bagged\s+order|secures?\s+(?:new\s+)?order|contract\s+awarded|wins?\s+bid|supply\s+order|crore\s+order|letter\s+of\s+award|loa\b/i.test(text) || c.category === 'ORDER_WIN';
+  const isAcquisition = /acquisition|amalgamation|merger|takeover|strategic\s+stake|joint\s+venture|slump\s+sale/i.test(text) || c.category === 'ACQUISITION';
+  const isDividendBuyback = /dividend|bonus\s+issue|stock\s+split|share\s+buyback|record\s+date\s+for\s+dividend/i.test(text) || c.category === 'DIVIDEND';
+  const isRegulatoryApproval = /usfda|fda\s+approval|patent\s+grant|dcgi|eir\b|establishment\s+inspection/i.test(text);
+  const isResults = /financial\s+results|unaudited\s+financial|quarterly\s+results|q[1-4]\s+results|audited\s+results/i.test(text) || c.category === 'FINANCIAL_RESULTS';
+
+  // Compliance / routine administrative paperwork
+  const isNewspaper = /newspaper|paper\s*cutting|advertisement\s+in\s+newspaper|newspaper\s+advertisement|clipping/i.test(text);
+  const isConcall = /transcript.*?(?:conference|earnings|analyst|concall)|audio\s+recording.*?(?:conference|earnings|concall)|concall\s+transcript|earnings\s+call\s+transcript/i.test(text);
+  const isSast = /disclosure\s+under\s+reg(?:ulation)?\s*(?:29|10|7)|substantial\s+acquisition\s+of\s+shares|sebi\s*\(\s*sast\s*\)|sebi\s*\(\s*pit\s*\)|regulation\s*29\s*\(\s*[12]\s*\)/i.test(text);
+  const isDebentures = /allotment\s+of\s+(?:non-convertible\s+)?debentures|issue\s+of\s+debentures|ncd\s+allotment|\b(?:ncd|ncds)\b|commercial\s+paper|bonds\s+allotment|redemption\s+of\s+debentures/i.test(text);
+  const isInvestorMeet = /analyst\s*(?:\/|\s+and\s+)?(?:institutional\s+)?investor\s+meet|interaction\s+with\s+(?:investors|analysts)|schedule\s+of\s+(?:investor|analyst)|investor\s+conference|annual\s+investor|spark\s+indx|analyst\s+conference|investor\s+presentation|presentation\s+with\s+respect\s+to\s+(?:the\s+)?(?:un-?audited|financial)|earning\s+call\s+presentation/i.test(text);
+  const isBoardMeetingNotice = (/meeting\s+of\s+(?:the\s+)?board|board\s+meeting/i.test(text)) && !/outcome\s+of\s+(?:the\s+)?board\s+meeting|board\s+meeting\s+outcome|financial\s+results/i.test(text);
+  const isGeneralUpdate = text.includes('general updates') || /press\s+release\s+dated/i.test(text);
+
+  if (isEarningsBeat) score += 100;
+  else if (isSevereMiss) score += 90;
+  else if (isOrderWin) score += 85;
+  else if (isAcquisition) score += 80;
+  else if (isDividendBuyback) score += 75;
+  else if (isRegulatoryApproval) score += 70;
+  else if (isResults) score += 60;
+
+  // Active price momentum / Reaction magnitude
+  const move = Math.abs(Number(c.postNewsMovePct || c.movePct || 0));
+  score += Math.min(move * 4, 30);
+
+  // Administrative paperwork penalties
+  if (isNewspaper) score -= 80;
+  if (isConcall) score -= 70;
+  if (isSast) score -= 65;
+  if (isDebentures) score -= 60;
+  if (isInvestorMeet) score -= 55;
+  if (isBoardMeetingNotice) score -= 45;
+  if (isGeneralUpdate) score -= 40;
+
+  return score;
+}
+
 function TopNewsSquareBox({
 
   catalysts,
@@ -3633,6 +3705,21 @@ function TopNewsSquareBox({
   onSelectSymbol
 
 }) {
+
+  const [sortMode, setSortMode] = React.useState(() => {
+    try {
+      return localStorage.getItem('growbetter_news_sort_mode') || 'news';
+    } catch (e) {
+      return 'news';
+    }
+  });
+
+  const handleSortChange = (mode) => {
+    setSortMode(mode);
+    try {
+      localStorage.setItem('growbetter_news_sort_mode', mode);
+    } catch (e) {}
+  };
 
   const nowMs = Date.now();
 
@@ -3730,17 +3817,42 @@ function TopNewsSquareBox({
 
     }).sort((a, b) => {
 
-      // Strict descending by timestamp so latest live exchange filings are always on top!
-
       const tsA = Number(a.ts || 0);
 
       const tsB = Number(b.ts || 0);
+
+      if (sortMode === 'company') {
+        const symA = String(a.symbol || '').toUpperCase().trim();
+        const symB = String(b.symbol || '').toUpperCase().trim();
+        const tierA = NIFTY_50_SYMBOLS.has(symA) ? 1000 : (NIFTY_NEXT_50_SYMBOLS.has(symA) ? 500 : 100);
+        const tierB = NIFTY_50_SYMBOLS.has(symB) ? 1000 : (NIFTY_NEXT_50_SYMBOLS.has(symB) ? 500 : 100);
+
+        if (tierB !== tierA) {
+          return tierB - tierA; // NIFTY 50 first, then NEXT 50, then Others
+        }
+
+        // Secondary within same company tier: news scope score
+        const scopeA = getNewsScopeScore(a);
+        const scopeB = getNewsScopeScore(b);
+        if (Math.abs(scopeB - scopeA) >= 15) {
+          return scopeB - scopeA;
+        }
+
+        return tsB - tsA;
+      }
+
+      // Default 'news': Priority by News Scope
+      const scopeA = getNewsScopeScore(a);
+      const scopeB = getNewsScopeScore(b);
+      if (Math.abs(scopeB - scopeA) >= 10) {
+        return scopeB - scopeA;
+      }
 
       return tsB - tsA;
 
     }).slice(0, 30);
 
-  }, [catalysts, nowMs, isLiveMarket, todayMidnightMs, cutoffStartMs]);
+  }, [catalysts, nowMs, isLiveMarket, todayMidnightMs, cutoffStartMs, sortMode]);
 
   return /*#__PURE__*/React.createElement("div", {
 
@@ -3748,7 +3860,8 @@ function TopNewsSquareBox({
 
   }, /*#__PURE__*/React.createElement("div", {
 
-    className: "top-news-box-head"
+    className: "top-news-box-head",
+    style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }
 
   }, /*#__PURE__*/React.createElement("div", {
 
@@ -3758,7 +3871,45 @@ function TopNewsSquareBox({
 
     className: "live-pulse-dot"
 
-  }), /*#__PURE__*/React.createElement("span", null, "\u26A1 LIVE NEWS"))), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u26A1 LIVE NEWS")),
+  /* Sort Buttons */
+  /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: '5px' }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: { fontSize: '11px', color: 'var(--text-muted, #94a3b8)', fontWeight: 600, marginRight: '2px' }
+  }, "Sort:"),
+  /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => handleSortChange('news'),
+    style: {
+      fontSize: '11px',
+      fontWeight: 700,
+      padding: '3px 8px',
+      borderRadius: '5px',
+      cursor: 'pointer',
+      border: sortMode === 'news' ? '1px solid #16a34a' : '1px solid var(--border-color, #cbd5e1)',
+      background: sortMode === 'news' ? 'rgba(22, 163, 74, 0.14)' : 'transparent',
+      color: sortMode === 'news' ? '#16a34a' : 'var(--text-muted, #64748b)',
+      transition: 'all 0.15s ease'
+    },
+    title: "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
+  }, "\uD83D\uDD25 Priority by News"),
+  /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => handleSortChange('company'),
+    style: {
+      fontSize: '11px',
+      fontWeight: 700,
+      padding: '3px 8px',
+      borderRadius: '5px',
+      cursor: 'pointer',
+      border: sortMode === 'company' ? '1px solid #2563eb' : '1px solid var(--border-color, #cbd5e1)',
+      background: sortMode === 'company' ? 'rgba(37, 99, 235, 0.14)' : 'transparent',
+      color: sortMode === 'company' ? '#2563eb' : 'var(--text-muted, #64748b)',
+      transition: 'all 0.15s ease'
+    },
+    title: "Priority by Company: NIFTY 50 blue chips first, then Next 50 and Midcaps"
+  }, "\uD83C\uDFE2 Priority by Company"))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
@@ -4138,6 +4289,40 @@ function TopNewsSquareBox({
     }, /*#__PURE__*/React.createElement("span", {
       className: "top-news-sym"
     }, c.symbol),
+    (() => {
+      const symUpper = String(c.symbol || '').toUpperCase().trim();
+      if (NIFTY_50_SYMBOLS.has(symUpper)) {
+        return /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: '9px',
+            fontWeight: 800,
+            background: 'rgba(37, 99, 235, 0.12)',
+            color: '#2563eb',
+            border: '1px solid rgba(37, 99, 235, 0.28)',
+            padding: '1px 5px',
+            borderRadius: '3px',
+            whiteSpace: 'nowrap'
+          },
+          title: "NIFTY 50 Blue Chip Company"
+        }, "NIFTY 50");
+      }
+      if (NIFTY_NEXT_50_SYMBOLS.has(symUpper)) {
+        return /*#__PURE__*/React.createElement("span", {
+          style: {
+            fontSize: '9px',
+            fontWeight: 800,
+            background: 'rgba(147, 51, 234, 0.12)',
+            color: '#9333ea',
+            border: '1px solid rgba(147, 51, 234, 0.28)',
+            padding: '1px 5px',
+            borderRadius: '3px',
+            whiteSpace: 'nowrap'
+          },
+          title: "NIFTY NEXT 50 Largecap Company"
+        }, "NEXT 50");
+      }
+      return null;
+    })(),
     isNonMarketHour ? /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: '10px',
