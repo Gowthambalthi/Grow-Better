@@ -593,85 +593,107 @@ a.nav-item:visited,
 .index-val-row {
   display: flex !important;
   align-items: center !important;
-  gap: 5px !important;
+  gap: 4px !important;
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif) !important;
-  font-size: 12.5px !important;
-  font-weight: 700 !important;
-  font-variant-numeric: tabular-nums !important;
   white-space: nowrap !important;
   line-height: 1.2 !important;
 }
 
-/* Guarantee identical font, size, and weight for all children in the row */
-.topbar-index-data *,
-.topbar-index-data span,
-.index-val-row *,
-.index-val-row span,
+/* Price Value: Angel One 12.5px Bold Sans */
 .index-price,
-.index-change,
 #niftyCardValue,
-#niftyCardSub,
 #bankCardValue,
-#bankCardSub {
+.topbar-index-data .index-price,
+.index-val-row .index-price {
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif) !important;
   font-size: 12.5px !important;
   font-weight: 700 !important;
-  line-height: 1.2 !important;
   font-variant-numeric: tabular-nums !important;
+  line-height: 1.2 !important;
 }
 
 /* Triangle icon */
 .topbar-index-triangle,
 .index-arrow-triangle,
 .index-arrow {
-  font-size: 8.5px !important;
+  font-size: 8px !important;
   line-height: 1 !important;
   display: inline-block !important;
   margin: 0 1px !important;
 }
 
-/* 100% UNIFIED SOLID RED FOR EVERYTHING ON NEGATIVE */
-.topbar-index-data.negative,
-.topbar-index-data.negative *,
-.topbar-index-data.negative span,
-.index-val-row.negative,
-.index-val-row.negative *,
-.index-val-row.negative span,
+/* Price & Triangle Color: Angel One Soft Lighter Red on Negative */
+.negative .index-price,
+.negative .topbar-index-triangle,
+.negative .index-arrow-triangle,
+.negative .index-arrow,
+.topbar-index-data.negative .index-price,
+.topbar-index-data.negative .topbar-index-triangle,
 .index-val-row.negative .index-price,
-.index-val-row.negative .index-change,
 .index-val-row.negative .index-arrow,
-.index-val-row.negative .index-arrow-triangle,
-.negative #niftyCardValue,
-.negative #niftyCardSub,
-.negative #bankCardValue,
-.negative #bankCardSub,
-#mainHeaderValRow.negative,
-#mainHeaderValRow.negative *,
-#bankHeaderValRow.negative,
-#bankHeaderValRow.negative * {
-  color: #EF4444 !important;
+#mainHeaderValRow.negative #niftyCardValue,
+#mainHeaderValRow.negative #mainHeaderTriangle,
+#bankHeaderValRow.negative #bankCardValue,
+#bankHeaderValRow.negative #bankHeaderTriangle {
+  color: #D64D4D !important;
 }
 
-/* 100% UNIFIED SOLID GREEN FOR EVERYTHING ON POSITIVE */
-.topbar-index-data.positive,
-.topbar-index-data.positive *,
-.topbar-index-data.positive span,
-.index-val-row.positive,
-.index-val-row.positive *,
-.index-val-row.positive span,
+/* Price & Triangle Color: Angel One Soft Green on Positive */
+.positive .index-price,
+.positive .topbar-index-triangle,
+.positive .index-arrow-triangle,
+.positive .index-arrow,
+.topbar-index-data.positive .index-price,
+.topbar-index-data.positive .topbar-index-triangle,
 .index-val-row.positive .index-price,
-.index-val-row.positive .index-change,
 .index-val-row.positive .index-arrow,
-.index-val-row.positive .index-arrow-triangle,
-.positive #niftyCardValue,
-.positive #niftyCardSub,
-.positive #bankCardValue,
-.positive #bankCardSub,
-#mainHeaderValRow.positive,
-#mainHeaderValRow.positive *,
-#bankHeaderValRow.positive,
-#bankHeaderValRow.positive * {
+#mainHeaderValRow.positive #niftyCardValue,
+#mainHeaderValRow.positive #mainHeaderTriangle,
+#bankHeaderValRow.positive #bankCardValue,
+#bankHeaderValRow.positive #bankHeaderTriangle {
   color: #10B981 !important;
+}
+
+/* Change & Percentage: Angel One Light Black / Charcoal Grey (#475569) */
+.index-change,
+#niftyCardSub,
+#bankCardSub,
+.topbar-index-data .index-change,
+.index-val-row .index-change,
+#mainHeaderValRow #niftyCardSub,
+#bankHeaderValRow #bankCardSub,
+.negative .index-change,
+.positive .index-change,
+.topbar-index-data.negative .index-change,
+.topbar-index-data.positive .index-change,
+.index-val-row.negative .index-change,
+.index-val-row.positive .index-change,
+#mainHeaderValRow.negative #niftyCardSub,
+#mainHeaderValRow.positive #niftyCardSub,
+#bankHeaderValRow.negative #bankCardSub,
+#bankHeaderValRow.positive #bankCardSub {
+  font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif) !important;
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  color: #475569 !important; /* Angel One light black / charcoal */
+  font-variant-numeric: tabular-nums !important;
+  line-height: 1.2 !important;
+}
+
+[data-theme="dark"] .index-change,
+[data-theme="dark"] #niftyCardSub,
+[data-theme="dark"] #bankCardSub,
+[data-theme="dark"] .topbar-index-data .index-change,
+[data-theme="dark"] .index-val-row .index-change,
+[data-theme="dark"] #mainHeaderValRow #niftyCardSub,
+[data-theme="dark"] #bankHeaderValRow #bankCardSub,
+[data-theme="dark"] .topbar-index-data.negative .index-change,
+[data-theme="dark"] .topbar-index-data.positive .index-change,
+[data-theme="dark"] #mainHeaderValRow.negative #niftyCardSub,
+[data-theme="dark"] #mainHeaderValRow.positive #niftyCardSub,
+[data-theme="dark"] #bankHeaderValRow.negative #bankCardSub,
+[data-theme="dark"] #bankHeaderValRow.positive #bankCardSub {
+  color: #94A3B8 !important;
 }
 
 .topbar-index-divider {
