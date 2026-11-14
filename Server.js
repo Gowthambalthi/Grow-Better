@@ -4312,6 +4312,10 @@ app.get('/api/scalping/board', (req, res) => {
       if (fs.existsSync(trackerPath)) {
         board.strangleTracker = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
       }
+      const unifiedPath = path.join(__dirname, 'data', 'news', 'unified_clean_wire.json');
+      if (fs.existsSync(unifiedPath)) {
+        board.allFilings = JSON.parse(fs.readFileSync(unifiedPath, 'utf8'));
+      }
     } catch (_) {}
 
     return res.json(board);
@@ -5861,7 +5865,9 @@ app.get('/api/scalping/catalysts', (req, res) => {
               confidence: item.confidence || 0,
               filingTime: item.filingTime,
               source: item.source || 'Wire',
-              title: item.title
+              title: item.title,
+              isUntradeable: false,
+              isPennyStock: false
             });
           });
         }

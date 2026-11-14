@@ -3817,7 +3817,8 @@ function TopNewsSquareBox({
 
   const cutoffStartMs = React.useMemo(() => {
 
-    // Cutoff: strictly filings after previous session 15:30 IST (with 20-min buffer = 15:10 IST)
+    // Golden Window: strictly filings after previous session 15:30 IST (with 20-min buffer = 15:10 IST)
+    // Weekend & holiday immunity: never reset cutoff on Saturday or Sunday!
 
     const curHour = ist.getUTCHours();
 
@@ -3831,7 +3832,8 @@ function TopNewsSquareBox({
 
     const dt = ist.getUTCDate();
 
-    if (totalMin >= 15 * 60 + 30) {
+    // Only on trading weekdays (Mon-Fri) after 15:30 IST is today the previous close session
+    if (day >= 1 && day <= 5 && totalMin >= 15 * 60 + 30) {
 
       return Date.UTC(y, m, dt, 10, 0, 0) - 20 * 60000;
 
@@ -3844,12 +3846,13 @@ function TopNewsSquareBox({
     if (day === 1) daysBack = 3; // Monday -> Friday
 
     else if (day === 0) daysBack = 2; // Sunday -> Friday
+    else if (day === 6) daysBack = 1; // Saturday -> Friday
 
     prevDate.setUTCDate(prevDate.getUTCDate() - daysBack);
 
     return Date.UTC(prevDate.getUTCFullYear(), prevDate.getUTCMonth(), prevDate.getUTCDate(), 10, 0, 0) - 20 * 60000;
 
-  }, [ist, day]);
+  }, [day, ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate(), Math.floor((ist.getUTCHours() * 60 + ist.getUTCMinutes()) / 30)]);
 
 
 
@@ -3902,17 +3905,19 @@ function TopNewsSquareBox({
       const tsB = Number(b.ts || 0);
 
       if (sortMode === 'company') {
-        const tierA = getCompanyTier(a.symbol);
-        const tierB = getCompanyTier(b.symbol);
+        const symA = String(a.symbol || '').toUpperCase().trim();
+        const symB = String(b.symbol || '').toUpperCase().trim();
+        const tierA = getCompanyTier(symA);
+        const tierB = getCompanyTier(symB);
 
         if (tierB.score !== tierA.score) {
-          return tierB.score - tierA.score; // NIFTY 50 (1000) > NEXT 50 (800) > MIDCAP (600) > SMALLCAP (400) > MICROCAP (200)
+          return tierB.score - tierA.score; // Higher tier first: NIFTY 50 (1000) > NEXT 50 (800) > MIDCAP (600) > SMALLCAP (400) > MICROCAP (200)
         }
 
-        // Secondary within same company tier: news scope score
+        // Secondary within same company tier: higher news scope first
         const scopeA = getNewsScopeScore(a);
         const scopeB = getNewsScopeScore(b);
-        if (Math.abs(scopeB - scopeA) >= 15) {
+        if (scopeB !== scopeA) {
           return scopeB - scopeA;
         }
 
@@ -3922,7 +3927,7 @@ function TopNewsSquareBox({
       if (sortMode === 'news') {
         const scopeA = getNewsScopeScore(a);
         const scopeB = getNewsScopeScore(b);
-        if (Math.abs(scopeB - scopeA) >= 10) {
+        if (scopeB !== scopeA) {
           return scopeB - scopeA;
         }
         return tsB - tsA;
@@ -3931,7 +3936,7 @@ function TopNewsSquareBox({
       // Default 'normal': Normal live news (strict descending chronological timestamp)
       return tsB - tsA;
 
-    }).slice(0, 30);
+    }).slice(0, 50);
 
   }, [catalysts, nowMs, isLiveMarket, todayMidnightMs, cutoffStartMs, sortMode]);
 
@@ -4006,7 +4011,7 @@ function TopNewsSquareBox({
 
     }
 
-  }, "Awaiting new filings from NSE feed...") : latestList.map(c => {
+  }, "Awaiting new filings from NSE feed...") : latestList.map((c, index) => {
 
     const {
 
@@ -4350,7 +4355,7 @@ function TopNewsSquareBox({
     const showAucBadge = Boolean(displayAucBadge) && !isNewspaper && !isBoardMeeting && !isConcall && !isSast;
 
     return /*#__PURE__*/React.createElement("div", {
-      key: c.symbol,
+      key: `${c.symbol}-${c.ts || index}`,
       className: "top-news-item",
       onClick: () => {
         onCopy(c.symbol);
