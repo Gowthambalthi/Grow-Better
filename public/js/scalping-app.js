@@ -3749,7 +3749,9 @@ function TopNewsSquareBox({
 
   const [sortMode, setSortMode] = React.useState(() => {
     try {
-      return localStorage.getItem('growbetter_news_sort_mode') || 'normal';
+      const saved = localStorage.getItem('growbetter_news_sort_mode');
+      if (saved === 'news' || saved === 'company' || saved === 'index') return saved;
+      return 'normal';
     } catch (e) {
       return 'normal';
     }
@@ -3757,7 +3759,9 @@ function TopNewsSquareBox({
 
   const handleSortChange = (mode) => {
     // Touching an active button a second time toggles it off back to normal live news
-    const nextMode = (sortMode === mode) ? 'normal' : mode;
+    const isCurrentlyActive = (mode === 'news' && sortMode === 'news') ||
+                              ((mode === 'company' || mode === 'index') && (sortMode === 'company' || sortMode === 'index'));
+    const nextMode = isCurrentlyActive ? 'normal' : mode;
     setSortMode(nextMode);
     try {
       localStorage.setItem('growbetter_news_sort_mode', nextMode);
@@ -3881,7 +3885,7 @@ function TopNewsSquareBox({
 
       const tsB = Number(b.ts || 0);
 
-      if (sortMode === 'company') {
+      if (sortMode === 'company' || sortMode === 'index') {
         const symA = String(a.symbol || '').toUpperCase().trim();
         const symB = String(b.symbol || '').toUpperCase().trim();
         const tierA = getCompanyTier(symA);
@@ -3935,7 +3939,7 @@ function TopNewsSquareBox({
     className: "live-pulse-dot"
 
   }), /*#__PURE__*/React.createElement("span", null, "LIVE NEWS")),
-  /* Sort Controls: "Priority by" in middle on top, then "News" and "Company" both below */
+  /* Sort Controls: "Priority by :" in middle on top, then "News" and "Index" both below */
   /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }
   },
@@ -3948,7 +3952,7 @@ function TopNewsSquareBox({
       textAlign: 'center',
       lineHeight: 1
     }
-  }, "Priority by"),
+  }, "Priority by :"),
   /*#__PURE__*/React.createElement("div", {
     style: { display: 'flex', alignItems: 'center', gap: '5px' }
   },
@@ -3958,9 +3962,17 @@ function TopNewsSquareBox({
     style: {
       fontSize: '11px',
       fontWeight: 700,
-      padding: '2.5px 8px',
+      width: '58px',
+      height: '24px',
+      padding: 0,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      lineHeight: 1,
       borderRadius: '5px',
       cursor: 'pointer',
+      boxSizing: 'border-box',
       border: sortMode === 'news' ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
       background: sortMode === 'news' ? 'rgba(34, 197, 94, 0.10)' : 'transparent',
       color: sortMode === 'news' ? '#16a34a' : 'var(--text-muted, #64748b)',
@@ -3970,20 +3982,28 @@ function TopNewsSquareBox({
   }, "News"),
   /*#__PURE__*/React.createElement("button", {
     type: "button",
-    onClick: () => handleSortChange('company'),
+    onClick: () => handleSortChange('index'),
     style: {
       fontSize: '11px',
       fontWeight: 700,
-      padding: '2.5px 8px',
+      width: '58px',
+      height: '24px',
+      padding: 0,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      lineHeight: 1,
       borderRadius: '5px',
       cursor: 'pointer',
-      border: sortMode === 'company' ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
-      background: sortMode === 'company' ? 'rgba(34, 197, 94, 0.10)' : 'transparent',
-      color: sortMode === 'company' ? '#16a34a' : 'var(--text-muted, #64748b)',
+      boxSizing: 'border-box',
+      border: (sortMode === 'company' || sortMode === 'index') ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
+      background: (sortMode === 'company' || sortMode === 'index') ? 'rgba(34, 197, 94, 0.10)' : 'transparent',
+      color: (sortMode === 'company' || sortMode === 'index') ? '#16a34a' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
-    title: sortMode === 'company' ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
-  }, "Company")))), /*#__PURE__*/React.createElement("div", {
+    title: (sortMode === 'company' || sortMode === 'index') ? "Active. Click again to return to Normal Live News" : "Priority by Index: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
+  }, "Index")))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
