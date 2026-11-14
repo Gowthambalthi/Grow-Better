@@ -202,6 +202,27 @@ function renderTickerUI() {
     }
   }
 
+  // Update Side-by-Side BANKNIFTY Ticker Pill if present
+  const bankData = tickerPrices.BANKNIFTY;
+  if (bankData && bankData.price != null) {
+    const bValEl = document.getElementById('bankCardValue');
+    const bSubEl = document.getElementById('bankCardSub');
+    const bValRow = document.getElementById('bankHeaderValRow');
+    if (bValEl) bValEl.textContent = rawMoney(bankData.price);
+    const bChange = bankData.change != null ? bankData.change : (bankData.prevPrice != null ? bankData.price - bankData.prevPrice : 0);
+    const bChangePct = bankData.changePct != null ? bankData.changePct : (bankData.prevPrice != null ? (bChange / bankData.prevPrice) * 100 : 0);
+    const bChgVal = Number(bChange || 0);
+    const bIsPos = bChgVal >= 0;
+    if (bSubEl) {
+      const chgStr = Math.abs(bChgVal).toFixed(2);
+      const pctStr = Math.abs(bChangePct).toFixed(2);
+      bSubEl.textContent = bIsPos ? `+${chgStr} (+${pctStr}%)` : `${chgStr} (-${pctStr}%)`;
+    }
+    if (bValRow) {
+      bValRow.className = `index-val-row ${bIsPos ? 'positive' : 'negative'}`;
+    }
+  }
+
   // Update Watchlist Popover Rows (India + MCX + world indices)
   for (const sym of ALL_SYMBOLS) {
     const row = document.querySelector(`.watch-row[data-symbol="${sym}"]`);

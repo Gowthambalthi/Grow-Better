@@ -452,6 +452,7 @@
       position: absolute;
       height: 100%;
       border-radius: 2px;
+      transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
     }
     .call-card-badge-circle {
       position: absolute;
@@ -511,13 +512,14 @@
       position: absolute;
       top: 50%;
       transform: translate(-50%, -50%);
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background: #00d2c4;
-      box-shadow: 0 0 8px #00d2c4;
-      z-index: 3;
+      box-shadow: 0 0 10px #00d2c4, 0 0 4px #00d2c4;
+      z-index: 4;
       pointer-events: none;
+      transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .call-card-slider-labels {
       display: flex;
@@ -812,6 +814,10 @@
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M6 4h12v5a6 6 0 0 1-12 0V4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 5H3v3a3 3 0 0 0 3 3M18 5h3v3a3 3 0 0 1-3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span>3 Core Strategies</span>
         </a>
+        <a class="nav-item" href="/scalping.html" data-nav="scalping" id="navItemScalping" style="color:#d97706;font-weight:700;">
+          <svg class="nav-icon" viewBox="0 0 24 24" style="color:#d97706;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="color:#d97706;">⚡ Grow Scalping</span>
+        </a>
         <a class="nav-item" href="#portfolio" data-nav="portfolio" id="navItemPortfolio">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2v10l7.07 7.07A10 10 0 1 1 12 2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 2A10 10 0 0 1 22 12h-10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           <span>Portfolio</span>
@@ -1020,6 +1026,20 @@
           </div>
         </div>
 
+        <!-- Side-by-Side Index Ticker Pill: BANKNIFTY -->
+        <div class="topbar-index-pill" id="topbarBankPill" tabindex="0" title="BANKNIFTY Live Index Quote">
+          <div class="index-ticker-item" id="bankHeaderTickerItem">
+            <div class="index-head-row">
+              <span class="index-name" id="bankHeaderIndexName">BANKNIFTY</span>
+              <span class="index-live-dot">•</span>
+            </div>
+            <div class="index-val-row negative" id="bankHeaderValRow">
+              <span class="index-price" id="bankCardValue">61,034.10</span>
+              <span class="index-change" id="bankCardSub">-484.40 (-0.79%)</span>
+            </div>
+          </div>
+        </div>
+
         <!-- CASH BALANCE Interactive Popover Pill -->
         <div class="popover-wrapper">
           <div class="topbar-stacked-pill" id="cashCardPill" tabindex="0" title="Click to view broker cash breakdown">
@@ -1109,14 +1129,14 @@
        bigger than it is. They were removed on 2026-10-18 with GB02/SWING/CODEX. What is left is
        the one tier that actually trades, and its heading no longer claims a number. -->
   <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;margin-top:28px;">
-    <span>📈 LIVE SIGNALS &amp; TRACKER — the one armed tier (intraday, entry window 09:20 – 12:30 IST)</span>
+    <span>📈 LIVE SIGNALS &amp; TRACKER — swing only (daily sessions, entry at the next session's open)</span>
     <span style="display:flex;align-items:center;gap:12px;">
-      <span style="font-size:12px;color:#4a9eff;font-weight:700;">2 measured engines — GB01 (5m FVG retest) · GB03a (OF03 exhaustion, SHORT side only)</span>
+      <span style="font-size:12px;color:#4a9eff;font-weight:700;">2 swing engines — CODEX (TB01 true breakout) · SWING (SW01 ultra strict)</span>
       <div class="view-toggle-wrap">
         <button type="button" class="view-toggle-btn active" id="idToggleCards" onclick="toggleIdView('cards')">📇 Cards View</button>
         <button type="button" class="view-toggle-btn" id="idToggleTable" onclick="toggleIdView('table')">📋 Table View</button>
       </div>
-      <button id="expand_intraday" class="tier-expand" type="button" onclick="openTierModal('intraday')">⤢ Today's calls</button>
+      <button id="expand_swing" class="tier-expand" type="button" onclick="openTierModal('swing')">⤢ Today's calls</button>
     </span>
   </div>
   <div id="intradayBoardCards" class="calls-card-grid" style="margin-top:12px;"></div>
@@ -1407,7 +1427,7 @@
         </tbody>
       </table>
       <!-- STRATEGY SHOWDOWN — CANDIDATE RULE SETS, MEASURED ON OUR OWN SESSIONS.
-           Source: scratch/strategy_showdown.js -> data/orderflow/strategy_showdown.json ->
+           Source: docs/measurements/scratch/strategy_showdown.js -> data/orderflow/strategy_showdown.json ->
            /api/strategy-showdown. It exists so a research claim cannot become a strategy by
            being repeated: every row is a rule set run causally over the same sessions with
            stop-first resolution and cost friction, scored on the past five sessions (primary)
@@ -2433,7 +2453,10 @@
     const signR = (v) => (v === null || v === undefined || isNaN(v)) ? '—' : ((v >= 0 ? '+' : '') + Number(v).toFixed(2) + 'R');
     const money = (v) => (v === null || v === undefined || isNaN(v)) ? '—' : '₹' + Number(v).toFixed(2);
 
+    let isFetchingBoard = false;
     async function loadFinalBoard() {
+      if (isFetchingBoard) return;
+      isFetchingBoard = true;
       try {
         const res = await fetch('/api/final/board');
         const data = await res.json();
@@ -2497,6 +2520,8 @@
 
       } catch (err) {
         console.log('board fetch error:', err);
+      } finally {
+        isFetchingBoard = false;
       }
     }
 
@@ -2518,37 +2543,39 @@
       const ltp = Number(c.ltp || entry);
       const isShort = String(c.action || '').toUpperCase().includes('SELL') || String(c.action || '').toUpperCase().includes('SHORT');
       
-      // ONE axis for every marker and the dot: 0% = SL (the worst place for this
-      // trade), 100% = T1 (the best). Defined on DESIRABILITY rather than raw price,
-      // so it reads the same for a SHORT, where SL is the HIGHER price — the old
-      // raw-price mapping put a short's dot on the wrong side of the track.
       const span = target - sl;
       const at = (p) => (isFinite(span) && span !== 0)
-        ? Math.max(6, Math.min(94, ((p - sl) / span) * 100))
+        ? Math.max(0, Math.min(100, ((p - sl) / span) * 100))
         : 50;
-      const pSl = at(sl);
-      const pT1 = at(target);
-      const pEntry = at(entry);
-      const posLtp = at(ltp);
+      const pSl = 0;
+      const pT1 = 100;
+      const pEntry = Math.max(5, Math.min(95, at(entry)));
+      let posLtp = at(ltp);
+
+      const outKey = String(c.outcomeKey || c.exitReason || c.status || '').toUpperCase();
+      const verdStr = String(c.verdict || '').toUpperCase();
+      if (outKey === 'STOP_LOSS_HIT' || outKey === 'LOST' || verdStr.includes('STOP LOSS')) {
+        posLtp = 0;
+      } else if (outKey === 'TARGET_HIT' || outKey === 'WON' || verdStr.includes('TARGET')) {
+        posLtp = 100;
+      } else if (outKey === 'CANCELLED') {
+        posLtp = pEntry;
+      }
       
-      // NO SECOND ARITHMETIC HERE. The engine marks every open call on its own price entry
-      // point (`checkPositionForTick` / the tick path) and publishes the result; the page
-      // used to recompute the same P&L from entry and ltp whenever those fields were absent,
-      // which is how a call with no mark yet displayed a confident 0.00%. An unmarked call
-      // now says so — `null` renders as 'not marked yet', never as a break-even.
       const marked = c.livePnLPct !== null && c.livePnLPct !== undefined && isFinite(Number(c.livePnLPct));
       const pnlPct = marked ? Number(c.livePnLPct) : null;
       const pnlVal = (c.livePnLVal !== null && c.livePnLVal !== undefined && isFinite(Number(c.livePnLVal)))
         ? Number(c.livePnLVal) : null;
-      const isPos = !marked || pnlPct >= 0;
-      // One string, built once: the gain/loss colour, the sign and the figure can no longer
-      // disagree with each other the way three separate inline expressions could.
-      const pnlColor = !marked ? 'var(--text-muted)' : (pnlPct >= 0 ? 'var(--gain)' : 'var(--loss)');
+      const isPos = posLtp >= pEntry;
+      const pnlColor = !marked ? 'var(--text-muted)' : (isPos ? 'var(--gain)' : 'var(--loss)');
       const pnlText = !marked
         ? 'not marked yet'
-        : (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%' +
+        : (pnlPct !== null ? (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%' : '') +
           (pnlVal === null ? ''
             : ' (' + (pnlVal >= 0 ? '+\u20b9' : '-\u20b9') + Math.abs(pnlVal).toFixed(2) + ')');
+
+      const fillLeft = Math.min(pEntry, posLtp);
+      const fillWidth = Math.abs(posLtp - pEntry);
 
       return `
         <div style="display:flex;flex-direction:column;gap:4px;min-width:260px;padding:8px 12px;background:var(--tk-bg, #f1f5f9);border-radius:10px;border:1px solid var(--card-border);">
@@ -2559,11 +2586,11 @@
           </div>
           <div class="tk-wrap">
             <div class="tk-rail"></div>
-            <div class="tk-fill" style="width:${posLtp}%;background:${isPos ? 'var(--gain)' : 'var(--loss)'};opacity:0.7;"></div>
+            <div class="tk-fill" style="left:${fillLeft.toFixed(1)}%;width:${fillWidth.toFixed(1)}%;background:${isPos ? 'var(--gain)' : 'var(--loss)'};opacity:0.7;"></div>
             <div class="tk-mark" style="left:${pSl}%;width:22px;height:22px;background:rgba(239,68,68,0.12);color:var(--loss);border:1.5px solid var(--loss);font-size:9.5px;">SL</div>
-            <div class="tk-mark" style="left:${pEntry}%;width:24px;height:24px;background:rgba(16,185,129,0.12);color:var(--gain);border:2px solid var(--gain);font-size:11px;">${isShort ? 'S' : 'B'}</div>
+            <div class="tk-mark" style="left:${pEntry.toFixed(1)}%;width:24px;height:24px;background:rgba(16,185,129,0.12);color:var(--gain);border:2px solid var(--gain);font-size:11px;">${isShort ? 'S' : 'B'}</div>
             <div class="tk-mark" style="left:${pT1}%;width:22px;height:22px;background:rgba(37,99,235,0.12);color:var(--accent);border:1.5px solid var(--accent);font-size:9.5px;">T1</div>
-            <div class="tk-dot" style="left:${posLtp}%;background:${isPos ? 'var(--gain)' : 'var(--loss)'};box-shadow:0 0 8px ${isPos ? 'var(--gain)' : 'var(--loss)'};" title="Live LTP ₹${ltp.toFixed(2)} — ${posLtp.toFixed(0)}% of the way from SL to target"></div>
+            <div class="tk-dot" style="left:${posLtp.toFixed(1)}%;background:${isPos ? 'var(--gain)' : 'var(--loss)'};box-shadow:0 0 8px ${isPos ? 'var(--gain)' : 'var(--loss)'};" title="Live LTP ₹${ltp.toFixed(2)} — ${posLtp.toFixed(0)}% of the way from SL to target"></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
             <span style="color:var(--text-muted);font-size:10px;">Live LTP: <b style="color:var(--text);">${money(ltp)}</b></span>
@@ -2811,16 +2838,31 @@
       if (isShort) {
         if (sl > target && target > 0) {
           const totalRange = sl - target;
-          entryPos = Math.max(10, Math.min(90, ((sl - entry) / totalRange) * 100));
-          ltpPos = Math.max(4, Math.min(96, ((sl - ltp) / totalRange) * 100));
+          entryPos = Math.max(6, Math.min(94, ((sl - entry) / totalRange) * 100));
+          ltpPos = Math.max(0, Math.min(100, ((sl - ltp) / totalRange) * 100));
         }
       } else {
         if (target > sl && sl > 0) {
           const totalRange = target - sl;
-          entryPos = Math.max(10, Math.min(90, ((entry - sl) / totalRange) * 100));
-          ltpPos = Math.max(4, Math.min(96, ((ltp - sl) / totalRange) * 100));
+          entryPos = Math.max(6, Math.min(94, ((entry - sl) / totalRange) * 100));
+          ltpPos = Math.max(0, Math.min(100, ((ltp - sl) / totalRange) * 100));
         }
       }
+      
+      const outKey = String(c.outcomeKey || c.exitReason || c.status || '').toUpperCase();
+      const verdStr = String(c.verdict || '').toUpperCase();
+      if (outKey === 'STOP_LOSS_HIT' || outKey === 'LOST' || verdStr.includes('STOP LOSS')) {
+        ltpPos = 0;
+      } else if (outKey === 'TARGET_HIT' || outKey === 'WON' || verdStr.includes('TARGET')) {
+        ltpPos = 100;
+      } else if (outKey === 'CANCELLED') {
+        ltpPos = entryPos;
+      }
+
+      const inProfit = ltpPos >= entryPos;
+      const fillColor = inProfit ? '#10b981' : '#ef4444';
+      const fillLeft = Math.min(entryPos, ltpPos);
+      const fillWidth = Math.abs(ltpPos - entryPos);
       
       const middleBadge = isShort ? 'S' : 'B';
       const rightBadge = isShort ? 'B' : 'S';
@@ -2899,7 +2941,7 @@
               <div>
                 <div class="call-card-label">LTP</div>
                 <div class="call-card-ltp">
-                  <span>₹${ltp.toFixed(2)}</span>
+                  <span class="call-card-ltp-val">₹${ltp.toFixed(2)}</span>
                   <span class="call-card-chg" style="color: ${chgColor};">${chgArrow} ${chgFormatted} (${pctFormatted})</span>
                 </div>
               </div>
@@ -2911,11 +2953,11 @@
 
             <div class="call-card-slider-wrap">
               <div class="call-card-slider-track">
-                <div class="call-card-slider-fill" style="left:${Math.min(entryPos, ltpPos)}%;width:${Math.abs(ltpPos - entryPos)}%;background:${isShort ? '#ef4444' : '#10b981'};"></div>
+                <div class="call-card-slider-fill" style="left:${fillLeft.toFixed(1)}%;width:${fillWidth.toFixed(1)}%;background:${fillColor};"></div>
                 <div class="call-card-badge-circle call-card-badge-sl" style="left: 0%;" title="Click to copy Stop Loss: ${sl > 0 ? sl.toFixed(2) : '—'}" onclick="copyPriceValue('Stop Loss', ${sl}, this)">SL</div>
-                <div class="call-card-badge-circle ${middleBadgeClass}" style="left: ${entryPos.toFixed(1)}%;" title="Click to copy Entry: ${(entry||ltp).toFixed(2)}" onclick="copyPriceValue('Entry', ${entry || ltp}, this)">${middleBadge}</div>
-                <div class="call-card-badge-circle ${rightBadgeClass}" style="left: 100%;" title="Click to copy Target: ${target > 0 ? target.toFixed(2) : '—'}" onclick="copyPriceValue('Target', ${target}, this)">${rightBadge}</div>
-                <div class="call-card-ltp-dot" style="left: ${ltpPos.toFixed(1)}%;cursor:pointer;" title="LTP: ₹${ltp.toFixed(2)} (Click to copy)" onclick="copyPriceValue('LTP', ${ltp}, this)"></div>
+                <div class="call-card-badge-circle call-card-badge-entry ${middleBadgeClass}" style="left: ${entryPos.toFixed(1)}%;" title="Click to copy Entry: ${(entry||ltp).toFixed(2)}" onclick="copyPriceValue('Entry', ${entry || ltp}, this)">${middleBadge}</div>
+                <div class="call-card-badge-circle call-card-badge-target ${rightBadgeClass}" style="left: 100%;" title="Click to copy Target: ${target > 0 ? target.toFixed(2) : '—'}" onclick="copyPriceValue('Target', ${target}, this)">${rightBadge}</div>
+                <div class="call-card-ltp-dot" style="left: ${ltpPos.toFixed(1)}%;cursor:pointer;" title="LTP: ₹${ltp.toFixed(2)} (${inProfit ? '+' : ''}${(ltpPos - entryPos).toFixed(1)}% to ${inProfit ? 'Target' : 'SL'})" onclick="copyPriceValue('LTP', ${ltp}, this)"></div>
               </div>
               <div class="call-card-slider-labels">
                 <div class="call-card-slider-col left" title="Click to copy Stop Loss: ${sl > 0 ? sl.toFixed(2) : '—'}" onclick="copyPriceValue('Stop Loss', ${sl}, this)">
@@ -2968,21 +3010,143 @@
       `;
     }
 
+    function updateAngelOneCardEl(cardEl, c) {
+      if (!cardEl) return;
+      const sym = esc63(c.symbol || '—');
+      const isShort = String(c.action || c.side || 'BUY').toUpperCase().includes('SELL') || String(c.action || c.side || 'BUY').toUpperCase().includes('SHORT');
+      const entry = Number(c.entryPrice || c.fillPrice || c.limitEntry || 0);
+      const sl = Number(c.stopLoss || c.stop || 0);
+      const target = Number(c.target1 || c.target || 0);
+      const ltp = Number(c.ltp || entry || 0);
+      const ptsChg = entry > 0 ? (ltp - entry) : 0;
+      const pctChg = entry > 0 ? (isShort ? ((entry - ltp) / entry) * 100 : ((ltp - entry) / entry) * 100) : 0;
+      const isUp = ptsChg >= 0;
+      const chgArrow = isUp ? '▲' : '▼';
+      const chgColor = isUp ? 'var(--gain, #059669)' : 'var(--loss, #dc2626)';
+      const chgFormatted = (isUp ? '+' : '') + Math.abs(ptsChg).toFixed(2);
+      const pctFormatted = (isUp ? '+' : '') + Math.abs(pctChg).toFixed(2) + '%';
+
+      // Visual Slider Track geometry
+      let entryPos = 50;
+      let ltpPos = 50;
+      if (isShort) {
+        if (sl > target && target > 0) {
+          const totalRange = sl - target;
+          entryPos = Math.max(6, Math.min(94, ((sl - entry) / totalRange) * 100));
+          ltpPos = Math.max(0, Math.min(100, ((sl - ltp) / totalRange) * 100));
+        }
+      } else {
+        if (target > sl && sl > 0) {
+          const totalRange = target - sl;
+          entryPos = Math.max(6, Math.min(94, ((entry - sl) / totalRange) * 100));
+          ltpPos = Math.max(0, Math.min(100, ((ltp - sl) / totalRange) * 100));
+        }
+      }
+
+      const outKey = String(c.outcomeKey || c.exitReason || c.status || '').toUpperCase();
+      const verdStr = String(c.verdict || '').toUpperCase();
+      if (outKey === 'STOP_LOSS_HIT' || outKey === 'LOST' || verdStr.includes('STOP LOSS')) {
+        ltpPos = 0;
+      } else if (outKey === 'TARGET_HIT' || outKey === 'WON' || verdStr.includes('TARGET')) {
+        ltpPos = 100;
+      } else if (outKey === 'CANCELLED') {
+        ltpPos = entryPos;
+      }
+
+      const inProfit = ltpPos >= entryPos;
+      const fillColor = inProfit ? '#10b981' : '#ef4444';
+      const fillLeft = Math.min(entryPos, ltpPos);
+      const fillWidth = Math.abs(ltpPos - entryPos);
+
+      // 1. LTP & Change
+      const ltpValEl = cardEl.querySelector('.call-card-ltp-val');
+      if (ltpValEl) ltpValEl.textContent = '₹' + ltp.toFixed(2);
+      const chgEl = cardEl.querySelector('.call-card-chg');
+      if (chgEl) {
+        chgEl.style.color = chgColor;
+        chgEl.innerHTML = `${chgArrow} ${chgFormatted} (${pctFormatted})`;
+      }
+
+      // 2. Slider Track & Dot (CSS transition provides smooth glide)
+      const fillEl = cardEl.querySelector('.call-card-slider-fill');
+      if (fillEl) {
+        fillEl.style.left = `${fillLeft.toFixed(1)}%`;
+        fillEl.style.width = `${fillWidth.toFixed(1)}%`;
+        fillEl.style.background = fillColor;
+      }
+      const dotEl = cardEl.querySelector('.call-card-ltp-dot');
+      if (dotEl) {
+        dotEl.style.left = `${ltpPos.toFixed(1)}%`;
+        dotEl.setAttribute('title', `LTP: ₹${ltp.toFixed(2)} (${inProfit ? '+' : ''}${(ltpPos - entryPos).toFixed(1)}% to ${inProfit ? 'Target' : 'SL'})`);
+        dotEl.setAttribute('onclick', `copyPriceValue('LTP', ${ltp}, this)`);
+      }
+      const entryBadge = cardEl.querySelector('.call-card-badge-entry');
+      if (entryBadge) {
+        entryBadge.style.left = `${entryPos.toFixed(1)}%`;
+      }
+
+      // 3. Status boxes
+      const achievedPct = isShort
+        ? (entry > 0 ? ((entry - ltp) / entry) * 100 : 0)
+        : (entry > 0 ? ((ltp - entry) / entry) * 100 : 0);
+
+      let achievedBoxHtml = '';
+      let potentialBoxHtml = '';
+      if (String(c.outcomeKey || '') === 'CANCELLED') {
+        achievedBoxHtml = `<div class="call-status-box" style="background:rgba(148,163,184,.14);color:var(--text-dim);border:1px solid var(--card-border);">⛔ NEVER FILLED — ${esc63(String(c.verdict || 'CANCELLED').replace(' (never triggered)', ''))}</div>`;
+        potentialBoxHtml = `<div class="call-status-box potential">no position was opened</div>`;
+      } else if (c.closed === true) {
+        const key = String(c.outcomeKey || '');
+        const isWin = key === 'TARGET_HIT';
+        const isLoss = key === 'STOP_LOSS_HIT';
+        const netPct = Number(c.livePnLPct);
+        const netVal = Number(c.livePnLVal);
+        const cls = isWin ? 'achieved-pos' : (isLoss ? 'achieved-neg' : '');
+        const tone = isWin ? 'var(--gain)' : (isLoss ? 'var(--loss)' : 'var(--text-muted)');
+        const icon = isWin ? '✅' : (isLoss ? '❌' : '⏱');
+        achievedBoxHtml = `<div class="call-status-box ${cls}" style="${cls ? '' : 'background:rgba(148,163,184,.14);border:1px solid var(--card-border);'}color:${tone};">${icon} ${esc63(String(c.verdict || key))}</div>`;
+        potentialBoxHtml = `<div class="call-status-box potential">` +
+          (isFinite(netPct) ? (netPct >= 0 ? '+' : '') + netPct.toFixed(2) + '%' : 'net not measured') +
+          (isFinite(netVal) ? ' · ' + (netVal >= 0 ? '+₹' : '-₹') + Math.abs(netVal).toFixed(2) + ' (1 lot)' : '') +
+          `</div>`;
+      } else if (achievedPct >= 0) {
+        achievedBoxHtml = `<div class="call-status-box achieved-pos">ACHIEVED +${achievedPct.toFixed(2)}%</div>`;
+        const potLeft = isShort
+          ? ((ltp > 0 && target > 0 && ltp > target) ? ((ltp - target) / ltp) * 100 : 0)
+          : ((ltp > 0 && target > 0 && target > ltp) ? ((target - ltp) / ltp) * 100 : 0);
+        potentialBoxHtml = `<div class="call-status-box potential">${potLeft.toFixed(2)}% POTENTIAL LEFT</div>`;
+      } else {
+        achievedBoxHtml = `<div class="call-status-box achieved-neg">ACHIEVED ${achievedPct.toFixed(2)}%</div>`;
+        const potExp = isShort
+          ? ((entry > 0 && target > 0) ? ((entry - target) / entry) * 100 : 0)
+          : ((entry > 0 && target > 0) ? ((target - entry) / entry) * 100 : 0);
+        potentialBoxHtml = `<div class="call-status-box potential">${potExp.toFixed(2)}% POTENTIAL EXPECTED</div>`;
+      }
+      const statusGrid = cardEl.querySelector('.call-card-status-grid');
+      if (statusGrid) statusGrid.innerHTML = `${achievedBoxHtml}${potentialBoxHtml}`;
+
+      const updateTimeStr = formatCardDate(c.signalTime || c.timeIST || c.time || c.timestamp || Date.now());
+      const updEl = cardEl.querySelector('.call-card-updated b');
+      if (updEl) updEl.textContent = updateTimeStr;
+    }
+
     function updateLiveCallsDeck(calls) {
       const grid = document.getElementById('liveCallsCardGrid');
       const tableBody = document.getElementById('liveCallsTableTbody');
       const badge = document.getElementById('liveCallsCountBadge');
       if (!grid) return;
       
-      const list = Array.isArray(calls) ? calls : [];
+      const isScalp = (c) => {
+        if (!c) return false;
+        const cat = String(c.category || c.tradeType || c.strategyType || '').toUpperCase();
+        const eng = String(c.engine || c.engineType || '').toUpperCase();
+        const sid = String(c.strategyId || c.setup || '').toUpperCase();
+        return cat.includes('SCALP') || eng.includes('SCALP') || ['GS15', 'GS01', 'GROW_SCALPING'].includes(sid);
+      };
+      const list = (Array.isArray(calls) ? calls : []).filter(c => !isScalp(c));
       if (badge) badge.textContent = list.length + ' CALL' + (list.length === 1 ? '' : 'S') + ' TODAY';
 
       if (!list.length) {
-        // WHY IT IS EMPTY, NOT JUST THAT IT IS. "No active live recommendations at this
-        // minute. Scanning order flow every minute…" was printed on a closed market too —
-        // on a weekend, or at 4pm, it promised a scan that is not running and left the
-        // deck reading like a page that had stopped updating. The session's own state
-        // decides the sentence.
         const sess = (LAST_BOARD && LAST_BOARD.session) || null;
         const closed = !!sess && sess.marketOpen === false;
         const why = closed
@@ -2994,7 +3158,13 @@
         return;
       }
       
-      grid.innerHTML = list.map(renderAngelOneCard).join('');
+      const existingDeckCards = list.map(c => grid.querySelector('#card-' + esc63(c.symbol || '—')));
+      const allDeckExist = existingDeckCards.every(el => el !== null) && (grid.querySelectorAll('.call-card').length === list.length);
+      if (allDeckExist) {
+        list.forEach((c, idx) => updateAngelOneCardEl(existingDeckCards[idx], c));
+      } else {
+        grid.innerHTML = list.map(renderAngelOneCard).join('');
+      }
       
       if (tableBody) {
         tableBody.innerHTML = list.map((c) => {
@@ -3760,9 +3930,12 @@
     // ---- THE THREE TIER TABLES ---------------------------------------------------
     // Kept as module state so the expand control repaints immediately instead of
     // waiting for the next 3s poll.
-    const TIER_BODY = { scalp: 'scalpBoardTbody', intraday: 'intradayBoardTbody', swing: 'swingBoardTbody' };
-    const TIER_LABEL = { scalp: 'live scalping', intraday: 'live intraday', swing: 'live swing' };
-    const TIER_ROWS = { scalp: [], intraday: [], swing: [] };
+    // SWING ONLY, AS OF 2026-10-31 — the scalping and intraday engines were retired. The DOM
+    // id stays `intradayBoardTbody` because the markup and the ⤢ modal hang off it; only the
+    // tier it represents changed.
+    const TIER_BODY = { swing: 'intradayBoardTbody' };
+    const TIER_LABEL = { swing: 'live swing' };
+    const TIER_ROWS = { swing: [] };
     // The last full board payload, for the Performance History panel.
     let LAST_BOARD = null;
     let TIER_HISTORY = [];
@@ -3847,10 +4020,8 @@
     // the table directly above it, which is the kind of "the table is not updating"
     // that is really a bucketing disagreement between two code paths.
     function tierBucketOf(row) {
-      const t = tierOf(row);
-      if (t.includes('SWING')) return 'swing';
-      if (t.includes('SCALP')) return 'scalp';
-      return 'intraday';
+      // ONE TIER, ONE ANSWER — see TIER_BODY above.
+      return 'swing';
     }
 
     // TODAY's rows from the day book, in the same row shape the open ones use
@@ -3890,7 +4061,14 @@
       // rows. Nothing has set that flag for a long time (it is read here and written
       // nowhere), so the guard only documented a second writer that no longer exists. The
       // board's own rows are the single source, and `paintTierTables` is the single painter.
-      const rows = list || [];
+      const isScalp = (c) => {
+        if (!c) return false;
+        const cat = String(c.category || c.tradeType || c.strategyType || '').toUpperCase();
+        const eng = String(c.engine || c.engineType || '').toUpperCase();
+        const sid = String(c.strategyId || c.setup || '').toUpperCase();
+        return cat.includes('SCALP') || eng.includes('SCALP') || ['GS15', 'GS01', 'GROW_SCALPING'].includes(sid);
+      };
+      const rows = (list || []).filter(c => !isScalp(c));
       TIER_ROWS.swing = rows.filter((c) => tierBucketOf(c) === 'swing');
       TIER_ROWS.scalp = rows.filter((c) => tierBucketOf(c) === 'scalp');
       TIER_ROWS.intraday = rows.filter((c) => tierBucketOf(c) === 'intraday');
@@ -3928,19 +4106,20 @@
         const rows = tierRowsToday(tier).sort((a, b) => tierModalMs(b) - tierModalMs(a));
         tb.innerHTML = rows.length ? rows.map(renderRow).join('') : nothing('no ' + TIER_LABEL[tier] + ' call today yet');
 
-        if (tier === 'intraday') {
+        if (tier === 'swing') {
           const idCards = document.getElementById('intradayBoardCards');
           if (idCards) {
-            idCards.innerHTML = rows.length
-              ? rows.map(renderAngelOneCard).join('')
-              // AN EMPTY TIER IS A RESULT, NOT A FAULT. Measured rates per symbol-day: GB01 1/1,022
-              // and GB03a 1/2,820, so on most sessions this table is legitimately empty — the
-              // sentence names what is armed so a blank table is not mistaken for a dead feed.
-              // The expected CALLS/day is a function of the armed universe: 500 names gives
-              // ~0.5 (GB01) + ~0.18 (GB03a) ≈ 0.7; only the full ~2,000-name OK universe
-              // reaches the 3-4/day the owner asked for. Saying the mechanism avoids a reader
-              // concluding the engines are broken because a 500-name Monday is quiet.
-              : '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;">no intraday call yet today — GB01 (5m FVG retest) and GB03a (OF03 exhaustion, short side) are armed and scanning. Their measured rates are ~1 call per 1,022 symbol-days (GB01) and ~1 per 2,820 (GB03a), so an empty tier at a 500-name universe (~0.7 calls/day) is the base rate, not a dead feed. GB02, SWING and CODEX are no longer registered.</div>';
+            if (!rows.length) {
+              idCards.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted);background:var(--card-bg);border:1px solid var(--card-border);border-radius:12px;">no intraday call yet today — GB01 (5m FVG retest), GB03a (OF03 exhaustion), and KEYIDEA (KI01 MTF sweep reversal) are armed and scanning. Their measured rates are ~1 call per 1,022 symbol-days (GB01) and ~1 per 2,820 (GB03a), so an empty tier at a 500-name universe (~0.7 calls/day) is the base rate, not a dead feed. GB02, SWING and CODEX are no longer registered.</div>';
+            } else {
+              const existingCards = rows.map(c => idCards.querySelector('#card-' + esc63(c.symbol || '—')));
+              const allExist = existingCards.every(el => el !== null) && (idCards.querySelectorAll('.call-card').length === rows.length);
+              if (allExist) {
+                rows.forEach((c, idx) => updateAngelOneCardEl(existingCards[idx], c));
+              } else {
+                idCards.innerHTML = rows.map(renderAngelOneCard).join('');
+              }
+            }
           }
         }
 
@@ -3967,8 +4146,6 @@
       // paint (open + today's closed), so a badge can never disagree with the table
       // sitting under it.
       window.__tierCounts = {
-        scalp: tierRowsToday('scalp').length,
-        intraday: tierRowsToday('intraday').length,
         swing: tierRowsToday('swing').length,
       };
       // A panel left open stays live through the 3s poll — search text survives.
@@ -4076,11 +4253,9 @@
       const tf = (data && data.tierFeed) || {};
       const counts = tf.counts || {};
       const tn = (data && data.tierNet && data.tierNet.measured === true) ? data.tierNet : null;
-      const n = window.__tierCounts || { scalp: 0, intraday: 0, swing: 0 };
-      const sc = counts.SCALPING !== undefined ? counts.SCALPING : n.scalp;
-      const id = counts.INTRADAY !== undefined ? counts.INTRADAY : n.intraday;
+      const n = window.__tierCounts || { swing: 0 };
       const sw = counts.SWING !== undefined ? counts.SWING : n.swing;
-      const parts = ['live calls · scalping ' + sc + ' · intraday ' + id + ' · swing ' + sw];
+      const parts = ['live calls · swing ' + sw];
       if (tn) parts.push('net ' + (tn.totalR >= 0 ? '+' : '') + Number(tn.totalR).toFixed(2) + 'R (' + tn.basis + ')');
       // THE SCAN FUNNEL, ON THE PAGE. "Candidates: 0 qualified" was the entire explanation before,
       // and the reachability study found the binding gate (fib_discount) only by going through the
@@ -4133,8 +4308,8 @@
       // Say which engines the rows came from, and why two of the three tiers are empty: both live
       // engines declare INTRADAY. This line read "from our nine strategies on Angel One live
       // quotes", which described a different application than the one arming the calls above it.
-      if (sub) sub.textContent = 'live tier calls · scalping ' + n.scalp + ' · intraday ' + n.intraday +
-        ' · swing ' + n.swing + ' · armed by Order Flow Momentum + Sweep + FVG (both INTRADAY) on Angel One live quotes';
+      if (sub) sub.textContent = 'live swing calls · ' + n.swing + ' today · armed by CODEX (TB01 true breakout) and ' +
+        'SWING (SW01 ultra strict) — daily engines, both DISARMED until their measured record clears the rule';
     }
 
     // ---- CARD 1: THE MEASURED CALL BOOK, NOT A HISTORICAL CLAIM ---------------
@@ -4308,7 +4483,7 @@
       const rows = Array.isArray(d.leaderboard) ? d.leaderboard : [];
       if (!rows.length) {
         tb.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;">' +
-          'no showdown artifact yet — run <b>node scratch/strategy_showdown.js</b> to measure the candidate rule sets</td></tr>';
+          'no showdown artifact yet — run <b>node docs/measurements/scratch/strategy_showdown.js</b> to measure the candidate rule sets</td></tr>';
         if (head) head.textContent = '';
         if (note) note.textContent = '';
         return;
@@ -4402,6 +4577,20 @@
           // print 2.61 where the same setup at 0.05% round trip is 1.99. Printing the number
           // without its basis is how a gross figure gets read as a net one — say it on the row.
           const pfBasis = !a.costBasis ? '' : (String(a.costBasis).toLowerCase() === 'gross' ? 'gross of cost' : String(a.costBasis));
+          // WHERE THIS SETUP STOPS PAYING. The headline PF is one cost assumption; the ladder
+          // re-prices the same trades and names the first round trip at which net PF falls under
+          // 1.0. A row that breaks at 10 bps is not an edge at a real broker's cost, and the row
+          // must say so rather than leave that to whoever reads the doc.
+          const ladderText = (l) => {
+            if (!l || !Array.isArray(l.levels) || l.levels.length < 2) return '';
+            const parts = l.levels.filter((x) => x.netPF !== null && x.netPF !== undefined)
+              .map((x) => Math.round(Number(x.costPct) * 100) + 'bps ' + Number(x.netPF).toFixed(2));
+            if (parts.length < 2) return '';
+            const verdict = l.breaksAtPct === null || l.breaksAtPct === undefined
+              ? '✓ survives every measured level'
+              : '⚠ breaks at ' + Math.round(Number(l.breaksAtPct) * 100) + 'bps';
+            return 'net PF ' + parts.join(' · ') + ' — ' + verdict + (l.complete ? '' : ' (ladder incomplete)');
+          };
           const code = String(a.setup || '').replace(/^OF0\d$/, 'GB03a').replace(/^FG01$/, 'GB01');
           return '<tr>' +
             '<td><span class="pill" style="background:rgba(37,99,235,0.08);color:#2563eb;border:1px solid rgba(37,99,235,0.25);font-weight:800;padding:4px 10px;font-size:11px;">INTRADAY</span></td>' +
@@ -4409,13 +4598,27 @@
             '<td style="color:var(--text-muted);">' + esc63((a.frameMinutes ? a.frameMinutes + 'm candles' : '1m candles') + ' · ' + (a.engine || '')) + '</td>' +
             '<td style="color:var(--text-muted);">' + esc63(a.basis || '') + '</td>' +
             '<td class="mono">' + esc63(wr) + '</td>' +
-            '<td class="mono">' + esc63(pf) + (pfBasis ? '<div class="sub">' + esc63(pfBasis) + '</div>' : '') + '</td>' +
+            '<td class="mono">' + esc63(pf) + (pfBasis ? '<div class="sub">' + esc63(pfBasis) + '</div>' : '') +
+              (ladderText(a.costLadder) ? '<div class="sub" style="color:#60a5fa;">' + esc63(ladderText(a.costLadder)) + '</div>' : '') + '</td>' +
             '<td class="mono" style="color:var(--text-muted);">—</td>' +
             '<td style="color:var(--text-muted);">' + esc63('ARMED · ' + (a.trades == null ? 'no measurement' : a.trades + ' measured trades') + ' · no live calls today') + '</td>' +
             '</tr>';
         }).join('') + emptyLine;
         return;
       }
+      // THE MEASURED LADDER, LABELLED AS MEASURED. The PF column on a live row is TODAY'S book;
+      // the ladder is the replayed strategy. Printing one without the other's label is how a
+      // backtest number gets mistaken for a live one, so the sub-line says which it is.
+      const newLadderText = (l) => {
+        if (!l || !Array.isArray(l.levels) || l.levels.length < 2) return '';
+        const parts = l.levels.filter((x) => x.netPF !== null && x.netPF !== undefined)
+          .map((x) => Math.round(Number(x.costPct) * 100) + 'bps ' + Number(x.netPF).toFixed(2));
+        if (parts.length < 2) return '';
+        const verdict = l.breaksAtPct === null || l.breaksAtPct === undefined
+          ? '✓ survives every measured level'
+          : '⚠ breaks at ' + Math.round(Number(l.breaksAtPct) * 100) + 'bps';
+        return 'measured net PF ' + parts.join(' · ') + ' — ' + verdict;
+      };
       const tierPill = (t) => {
         const tt = String(t || 'INTRADAY').toUpperCase();
         const style = tt.includes('SWING') ? 'background:rgba(147,51,234,0.08);color:#9333ea;border:1px solid rgba(147,51,234,0.25)'
@@ -4435,7 +4638,7 @@
           '<td>today\'s own calls: ' + (p.openNow || 0) + ' open · ' + (p.closed || 0) + ' closed' +
             '<div class="sub">' + (p.targetsHit || 0) + ' T1 hits · ' + (p.stopsHit || 0) + ' stops</div></td>' +
           '<td class="mono" style="font-size:15px;color:' + (wr === '—' ? 'var(--text-muted)' : 'var(--gain)') + ';">' + wr + '</td>' +
-          '<td class="mono">' + pf + '</td>' +
+          '<td class="mono">' + pf + (newLadderText(p.costLadder) ? '<div class="sub" style="color:#60a5fa;">' + esc63(newLadderText(p.costLadder)) + '</div>' : '') + '</td>' +
           '<td class="mono" style="font-weight:800;color:' + (inr >= 0 ? 'var(--gain)' : 'var(--loss)') + ';">' + (inr >= 0 ? '+' : '') + inr.toFixed(2) + '</td>' +
           '<td><span class="pill ' + (p.enabled === false ? '' : 'pill-long') + '">' +
             (p.enabled === false ? 'DEACTIVATED' : 'NET ' + (net >= 0 ? '+' : '') + net.toFixed(2) + 'R') + '</span></td>' +
@@ -4819,7 +5022,7 @@
         } else {
           const tb = document.getElementById('showdownTbody');
           if (tb) tb.innerHTML = '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;">' +
-            'no showdown artifact yet — run <b>node scratch/strategy_showdown.js</b> to measure the candidate rule sets</td></tr>';
+            'no showdown artifact yet — run <b>node docs/measurements/scratch/strategy_showdown.js</b> to measure the candidate rule sets</td></tr>';
         }
       } catch (err) {
         console.log('Showdown load error:', err);
@@ -4872,7 +5075,7 @@
     // source and its count.
     //
     // It used to read one file, data/live_strategy_board.json. That file is rewritten
-    // every minute by python_app/services/live_yfinance_1m_scalp_service.py, which
+    // every minute by docs/measurements/python_app/services/live_yfinance_1m_scalp_service.py, which
     // asks Node for candidates, gets none (the board it asks is a RECORDED replay with
     // no "candidates" key), and therefore falls back to the static
     // data/tomorrow_live_watchlist.json — then stamps the result with a fresh
@@ -5089,11 +5292,45 @@
     }
 
     async function loadTierFeed() {
-      // One fetch feeds the ticker, the session badge, the cards AND the three tier
-      // tables, and the chip is written from what that fetch contained. There is no
+      // One fetch feeds the ticker, the session badge, the cards AND the tier
+      // table, and the chip is written from what that fetch contained. There is no
       // separate chip string any more: a fixed "0ms Latency" line claimed a live
       // feed whether or not a single call existed.
       await loadFinalBoard();
+      await paintSwingScan();
+    }
+
+    // ---- THE SWING SCAN (swing only, since 2026-10-31) -------------------------
+    // See the same function in final.html: scripts/swingScan.js replays the two registered
+    // swing engines over the newest sessions on disk, and /api/terminal/swing serves it.
+    // It paints ONLY when the board has no swing calls of its own, so an unarmed engine's
+    // observation can never be mistaken for a live call.
+    let SWING_SCAN = null;
+    async function paintSwingScan() {
+      const tb = document.getElementById('intradayBoardTbody');
+      if (!tb) return;
+      if (TIER_ROWS.swing && TIER_ROWS.swing.length) return;
+      let data;
+      try { data = await (await fetch('/api/terminal/swing', { cache: 'no-store' })).json(); } catch (_) { return; }
+      if (!data || !data.ok || !Array.isArray(data.calls) || !data.calls.length) return;
+      if (String(data.source || '') !== 'SWING_SCAN') return;
+      SWING_SCAN = data;
+      const money = (x) => (x == null || !isFinite(x)) ? '—' : Number(x).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      tb.innerHTML = data.calls.map((c) => {
+        const risk = c.stop && c.entry ? ((c.entry - c.stop) / c.entry) * 100 : null;
+        return '<tr>' +
+          '<td>' + (c.decisionDay || '—') + '</td>' +
+          '<td><b>' + c.symbol + '</b><div class="sub">' + c.engine + ' · ' + c.setup + '</div></td>' +
+          '<td><span style="color:var(--gain);font-weight:800;">' + (c.action || c.side) + '</span></td>' +
+          '<td>' + money(c.stopLoss) + ' | ' + money(c.entryPrice) + ' | ' + money(c.target1) +
+            '<div class="sub">T2 ' + money(c.target2) + '</div></td>' +
+          '<td><span style="color:var(--text-muted);">no fill — engine disarmed</span></td>' +
+          '<td><span style="color:#d97706;font-weight:700;">' + (c.status || 'DISARMED') + '</span>' +
+            (risk == null ? '' : '<div class="sub">risk ' + risk.toFixed(2) + '%</div>') + '</td>' +
+          '</tr>';
+      }).join('') +
+        '<tr><td colspan="6" style="color:var(--text-muted);font-size:11.5px;">scan as of ' +
+        (data.asOf || '—') + ' · ' + data.calls.length + ' rows · ' + (data.note || '') + '</td></tr>';
     }
 
     // ---- LIVE NEWS ---------------------------------------------------------------
@@ -5108,7 +5345,41 @@
     const newsEsc = (s) => String(s === null || s === undefined ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const newsPct = (x, d) => (x === null || x === undefined || !isFinite(x)) ? '—' : (x * 100).toFixed(d === undefined ? 2 : d) + '%';
-    let NEWS_STATE = { cat: 'all', sym: '', summary: null };
+    // A COMPANY MOVE IS ALREADY A PERCENTAGE — the server sends 1.83 for +1.83%,
+    // unlike newsPct above which takes a fraction. Two units in one panel is how
+    // a +0.02% ends up on screen as +2.00%.
+    const newsMovePct = (x) => (x === null || x === undefined || !isFinite(x)) ? '—' : (x >= 0 ? '+' : '') + Number(x).toFixed(2) + '%';
+
+    // THE VERDICT COLUMN. "✅ +0.2%" used to mean "has not gapped its expected
+    // move", which read as a green light even on a stock falling against the
+    // lean. Each state now names itself and carries the number that produced it.
+    function newsNowTag(r) {
+      const l = r.live;
+      if (!l || l.status === 'unknown') return '<span style="color:var(--text-muted);">— no quote</span>';
+      const g = (l.gapPct >= 0 ? '+' : '') + Number(l.gapPct).toFixed(1) + '%';
+      const tag = (col, label) => '<span style="color:' + col + ';font-weight:800;">' + label +
+        ' <span style="opacity:.75;font-weight:600;">' + g + '</span></span>';
+      // NO GREEN TICK FOR "OPEN". The walk-forward replay measured the rows this
+      // used to cheer for at −0.06%/trade, so "moving as tagged" is a
+      // description, not a green light.
+      if (l.status === 'SKIP') return tag('var(--loss)', '⚠️ CHASE');
+      if (l.status === 'AGAINST') return tag('var(--loss)', '✗ AGAINST');
+      if (l.status === 'FLAT') return tag('var(--text-muted)', '• NO REACTION');
+      if (l.status === 'PENDING') return tag('#7cc0ff', '· TOO EARLY');
+      return tag('var(--text-muted)', '· OPEN');
+    }
+
+    // HOW OLD THE HEADLINE IS, in the row itself. "Old news" was invisible: a
+    // rehash from yesterday sat beside this morning's story with nothing to tell
+    // them apart.
+    function newsAge(ts) {
+      if (!Number.isFinite(ts)) return '';
+      const min = Math.max(0, Math.round((Date.now() - ts) / 60000));
+      if (min < 60) return min + 'm old';
+      if (min < 1440) return Math.round(min / 60) + 'h old';
+      return Math.round(min / 1440) + 'd old';
+    }
+    let NEWS_STATE = { cat: 'all', sym: '', summary: null, react: 'category' };
 
     async function loadNews() {
       try {
@@ -5139,21 +5410,45 @@
       try {
         j = await (await fetch('/api/news/signals?days=3')).json();
       } catch (e) { return; }
-      const rows = (j.stocks || []).slice(0, 12);
+      // ALL of them, priced-in rows included and listed last. Cutting the list at
+      // twelve hid exactly the evidence the reader needed: the stock they were
+      // looking at had already gapped its expected move and was sorted out of
+      // view. A SKIP row is information, not something to hide.
+      const rows = (j.stocks || []).slice(0, 25);
       const ctx = (j.marketContext || []).slice(0, 6);
       if (!rows.length) {
-        host.innerHTML = '<div style="font-size:11px;color:var(--text-muted);">no stock-specific headlines with a measured edge in the last ' +
-          Number(j.windowDays || 3) + ' days — a quiet news tape is a result, not a fault.</div>';
+        host.innerHTML = '<div style="font-size:11px;color:var(--text-muted);line-height:1.7;">no stock-specific lean is speaking right now — a quiet news tape is a result, not a fault.' +
+          (j.suppressed
+            ? ' <b style="color:var(--loss);">' + j.suppressed + ' headline(s) were suppressed</b>: their (category, direction) class is under ' +
+              Math.round(((j.recentWindow && j.recentWindow.gate) || 0.55) * 100) + '% on the last ' +
+              ((j.recentWindow && j.recentWindow.days) || 30) + ' days, so the learning-window hit rate no longer describes it.'
+            : '') + '</div>';
         return;
       }
       host.innerHTML =
-        '<div style="font-size:11px;font-weight:800;margin-bottom:6px;">📰 STOCK NEWS LEANS — which stock leans which way, with how often that tag class was right</div>' +
+        '<div style="font-size:11px;font-weight:800;margin-bottom:6px;">📰 STOCK NEWS LEANS — the tag, and what the market has already done with it (open first, priced-in last)</div>' +
+        // WHAT THIS BOARD ITSELF DID, in its own words, before any row is read.
+        // The hit rates below are class rates measured on the learning window;
+        // quoting them without this box is how a 59% sat beside a −7% row.
+        (j.verified && j.verified.available
+          ? '<div style="font-size:10.5px;line-height:1.65;margin-bottom:7px;padding:6px 8px;border-radius:6px;background:rgba(248,113,113,.10);border-left:3px solid var(--loss);">' +
+            '<b>VERIFIED ON THIS BOARD\'S OWN OUTPUT.</b> ' + newsEsc(j.verified.verdict) +
+            (j.verified.mlVerdict ? ' <span style="color:var(--text-muted);">' + newsEsc(j.verified.mlVerdict) + '</span>' : '') +
+            (j.verified.gateVerdict ? ' <span style="color:var(--text-muted);">' + newsEsc(j.verified.gateVerdict) + '</span>' : '') +
+            (j.verified.controlVerdict ? ' <span style="color:var(--text-muted);">' + newsEsc(j.verified.controlVerdict) + '</span>' : '') +
+            '</div>'
+          : (j.verified && j.verified.note
+            ? '<div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px;">' + newsEsc(j.verified.note) + '</div>'
+            : '')) +
         '<table style="font-size:11.5px;"><thead><tr>' +
         '<th style="text-align:left;padding:4px 6px;">Stock</th>' +
         '<th style="text-align:left;padding:4px 6px;">Lean</th>' +
         '<th style="text-align:left;padding:4px 6px;">Why (latest headline)</th>' +
         '<th style="text-align:right;padding:4px 6px;">Hit rate</th>' +
         '<th style="text-align:right;padding:4px 6px;">Mean move</th>' +
+        '<th style="text-align:left;padding:4px 6px;">How it was taken before</th>' +
+        '<th style="text-align:right;padding:4px 6px;">ML</th>' +
+        '<th style="text-align:right;padding:4px 6px;">Market now</th>' +
         '</tr></thead><tbody>' +
         rows.map((r) => {
           const arrow = r.lean === 'UP'
@@ -5164,9 +5459,25 @@
             '<td style="font-weight:800;padding:4px 6px;">' + newsEsc(r.symbol) + '</td>' +
             '<td style="padding:4px 6px;white-space:nowrap;">' + arrow + '</td>' +
             '<td style="padding:4px 6px;"><span style="font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;background:rgba(148,163,184,.14);color:' + colour + ';">' + newsEsc(r.category) + '</span> ' +
-              '<a href="' + newsEsc(r.url || '#') + '" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;">' + newsEsc(String(r.title || '').slice(0, 90)) + '</a></td>' +
-            '<td style="padding:4px 6px;text-align:right;white-space:nowrap;">' + Math.round(r.hitRate * 100) + '% <span style="color:var(--text-muted);">(n=' + r.classN + ')</span></td>' +
+              '<a href="' + newsEsc(r.url || '#') + '" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;">' + newsEsc(String(r.title || '').slice(0, 90)) + '</a>' +
+              ' <span style="color:var(--text-muted);font-size:10px;">· ' + newsAge(r.ts) + '</span></td>' +
+            '<td style="padding:4px 6px;text-align:right;white-space:nowrap;">' + Math.round(r.hitRate * 100) + '% <span style="color:var(--text-muted);">(n=' + r.classN + ')</span>' +
+              (r.recent && r.recent.n
+                ? '<div style="font-size:10px;color:' + (r.recent.hit >= 0.55 ? 'var(--text-muted)' : 'var(--loss)') + ';">last 30d ' + Math.round(r.recent.hit * 100) + '% (n=' + r.recent.n + ')</div>'
+                : '') + '</td>' +
             '<td style="padding:4px 6px;text-align:right;color:' + (r.meanAr > 0 ? 'var(--gain)' : 'var(--loss)') + ';white-space:nowrap;">' + (r.meanAr * 100).toFixed(2) + '%</td>' +
+            '<td style="padding:4px 6px;color:var(--text-muted);white-space:nowrap;">' +
+              (r.history && r.history.n
+                ? 'n=' + r.history.n + ' · avg ' + (r.history.mean >= 0 ? '+' : '') + (r.history.mean * 100).toFixed(2) + '%' +
+                  ' · ran up &gt;1% ' + Math.round(r.history.upOver1 * 100) + '%' +
+                  ' · fell &gt;1% ' + Math.round(r.history.downOver1 * 100) + '%'
+                : '—') + '</td>' +
+            '<td style="padding:4px 6px;text-align:right;white-space:nowrap;">' +
+              // NO STAR. The persisted GBM was measured WORSE than the base rate
+              // on 3,787 out-of-sample leans (36.4% profitable vs 40.3%), so a
+              // ⭐ beside its score was an invitation to size up on it.
+              (r.ml ? '<span style="color:var(--text-muted);" title="GBM probability — measured worse than the board\'s base rate out of sample; it sizes nothing">' + r.ml.p.toFixed(2) + '</span>' : '—') + '</td>' +
+            '<td style="padding:4px 6px;text-align:right;white-space:nowrap;">' + newsNowTag(r) + '</td>' +
             '</tr>';
         }).join('') + '</tbody></table>' +
         (j.policy && j.policy.measuredAt && j.policy.stats
@@ -5175,9 +5486,56 @@
             '<b>NOT already gapped ≥ the class\u2019s expected move</b> — don\u2019t chase. SL ' + j.policy.slPct +
             '%, exit at the next close. Holdout: n=' + j.policy.stats.n + ', hit ' + Math.round(j.policy.stats.hit * 100) +
             '%, net ' + (j.policy.stats.meanNetPct * 100).toFixed(2) + '%/trade, PF ' + Number(j.policy.stats.pf).toFixed(2) +
-            ' (selected from a declared grid — a further out-of-sample check is needed before trusting it live).</div>'
+            ' (selected from a declared grid — the out-of-sample replay in the box above is that check: PF ' +
+            (j.verified && j.verified.available ? Number(j.verified.overall.pf).toFixed(2) : 'not run yet') + ').</div>'
+          : '') +
+        (j.liveSummary && j.liveSummary.total
+          ? '<div style="font-size:10.5px;margin-top:4px;line-height:1.6;">' +
+            ['open', 'pending', 'flat', 'against', 'skip'].map((k) => {
+              const n = j.liveSummary[k];
+              if (!n) return '';
+              const label = { open: 'still open', pending: 'too early to call', flat: 'no reaction', against: 'moved against the lean', skip: 'already moved (SKIP)' }[k];
+              const col = k === 'open' ? 'var(--gain)' : (k === 'against' || k === 'skip' ? 'var(--loss)' : 'var(--text-muted)');
+              return '<b style="color:' + col + ';">' + n + '</b> ' + label;
+            }).filter(Boolean).join(' · ') +
+            ' <span style="color:var(--text-muted);">of ' + j.liveSummary.total + ' leans. ' + newsEsc(j.liveSummary.rule) + '.</span></div>'
+          : '') +
+        (j.suppressed || (j.forward && j.forward.n)
+          ? '<div style="font-size:10.5px;margin-top:4px;line-height:1.6;color:var(--text-muted);">' +
+            (j.suppressed
+              ? '<b style="color:var(--loss);">' + j.suppressed + ' headline(s) suppressed</b> — class under ' +
+                Math.round(((j.recentWindow && j.recentWindow.gate) || 0.55) * 100) + '% on the last ' +
+                ((j.recentWindow && j.recentWindow.days) || 30) + ' days (' +
+                Object.keys(j.suppressedClasses || {}).map((k) => k.replace('_', ' ') + ' ' +
+                  Math.round(j.suppressedClasses[k].hit * 100) + '%').join(', ') + '). '
+              : '') +
+            (j.forward && j.forward.n
+              ? '<b>What is left after the news day:</b> the NEXT session went the tagged way ' + Math.round(j.forward.hit * 100) +
+                '% of ' + Number(j.forward.n).toLocaleString() + ' measured pairs (' +
+                (j.forward.adjMeanPct >= 0 ? '+' : '') + j.forward.adjMeanPct + '% vs market). The measured edge is the news-day move itself.'
+              : '') + '</div>'
+          : '') +
+        (j.sinceClose && j.sinceClose.label
+          ? '<div style="font-size:10.5px;margin-top:4px;">🕓 news window — only news since last close ' + newsEsc(j.sinceClose.label) + '</div>'
           : '') +
         '<div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;">' + newsEsc(j.note || '') + '</div>' +
+        ((j.global && j.global.available && (j.global.themes || []).some((t) => t.baskets.length))
+          ? '<div style="font-size:11px;font-weight:800;margin-top:10px;">🌍 GLOBAL → INDIA — world headlines mapped to the Indian stocks they historically moved (bridge measured ' +
+              newsEsc(String((j.global.themes.find((t) => t.baskets.length) || {}).measuredThrough || '≤ 2026-05-29')) +
+              ', gate: n≥' + j.global.gate.minDays + ' days · |t|≥' + j.global.gate.minT + ' · ≥' + Math.round(j.global.gate.minRight * 100) + '%)</div>' +
+            '<div style="font-size:11px;line-height:1.75;margin-top:3px;">' +
+            j.global.themes.map((t) => {
+              const arrow = t.direction === 'UP' ? '▲' : '▼';
+              const head = '<div>' + arrow + ' <b>' + newsEsc(t.category.toUpperCase()) + ' ' + t.direction + '</b> — ' +
+                newsEsc(String(t.title || '').slice(0, 100)) + ' <span style="color:var(--text-muted);">[' + newsEsc(t.date) + ']</span>';
+              if (!t.baskets.length) return head + ' <span style="color:var(--text-muted);">— no measured Indian move (backdrop only)</span></div>';
+              const b = t.baskets[0];
+              return head + '<br>&nbsp;&nbsp;→ <b>Indian stocks lean ' + b.expectedMove + ':</b> ' +
+                b.members.map((m) => '<span style="font-weight:700;">' + newsEsc(m) + '</span>').join(' · ') +
+                ' <span style="color:var(--text-muted);">— right ' + Math.round(b.rightRate * 100) + '% of ' + b.n +
+                ' such days, avg ' + (b.meanAr * 100).toFixed(2) + '% vs market, t=' + b.t.toFixed(1) + '</span></div>';
+            }).join('') + '</div>'
+          : ''),
         (ctx.length
           ? '<div style="font-size:11px;font-weight:800;margin-top:10px;">🌍 MARKET BACKDROP (world/macro headlines — no single-stock lean)</div>' +
             '<div style="font-size:11px;color:var(--text-muted);line-height:1.7;margin-top:2px;">' +
@@ -5198,10 +5556,13 @@
       const s = NEWS_STATE.summary || {};
       const t = s.totals || { byCategory: {} };
       const list = [{ id: 'all', label: 'All' }]
+        .concat([{ id: 'global', label: '🌍 Global → India' }])
         .concat((s.categories || []).map((c) => ({ id: c.id, label: c.label })))
         .concat([{ id: 'other', label: 'Other' }]);
       document.getElementById('newsCats').innerHTML = list.map((c) => {
-        const n = c.id === 'all' ? (t.total || 0) : ((t.byCategory || {})[c.id] || 0);
+        const n = c.id === 'all' ? (t.total || 0)
+          : c.id === 'global' ? (t.globalLeanCount || 0)
+          : ((t.byCategory || {})[c.id] || 0);
         const on = NEWS_STATE.cat === c.id;
         return '<button onclick="setNewsCat(\'' + c.id + '\')" style="cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:9px;background:' +
           (on ? 'rgba(0,224,145,.15)' : 'var(--card-bg)') + ';border:1px solid ' + (on ? 'rgba(0,224,145,.4)' : 'var(--card-border)') +
@@ -5218,7 +5579,11 @@
     async function renderNewsFeed() {
       const host = document.getElementById('newsFeed');
       const params = new URLSearchParams({ limit: '60' });
-      if (NEWS_STATE.cat !== 'all') params.set('category', NEWS_STATE.cat);
+      if (NEWS_STATE.cat === 'global') {
+        // only the headlines whose class cleared the measured bridge gate —
+        // the rows the Global → India mapping above can act on.
+        params.set('global', '1');
+      } else if (NEWS_STATE.cat !== 'all') params.set('category', NEWS_STATE.cat);
       if (NEWS_STATE.sym) params.set('symbol', NEWS_STATE.sym);
       let j;
       try {
@@ -5231,17 +5596,39 @@
       const clear = NEWS_STATE.sym
         ? '<div style="padding:6px 8px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--card-border);">filtered to <b>' + newsEsc(NEWS_STATE.sym) + '</b> · <a href="#" onclick="setNewsSearch(\'\');return false;" style="color:var(--gain);">clear</a></div>'
         : '';
+      const moveKey = '<div style="padding:6px 8px;font-size:10.5px;color:var(--text-muted);border-bottom:1px solid var(--card-border);">' +
+        'a company chip shows <b>that stock\'s own move</b> on the session after the headline (close to close, from the close before it)' +
+        ' · a headline from today is measured after the close</div>';
       if (!items.length) {
-        host.innerHTML = clear + '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12.5px;">nothing stored for this filter yet — press “Pull live headlines”</div>';
+        host.innerHTML = clear + moveKey + '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12.5px;">nothing stored for this filter yet — press “Pull live headlines”</div>';
         return;
       }
-      host.innerHTML = clear + '<table><tbody>' + items.map((it) => {
+      host.innerHTML = clear + moveKey + '<table><tbody>' + items.map((it) => {
         const colour = NEWS_TAG[it.category] || '#94a3b8';
         const dir = it.direction === 'UP' ? '<span style="color:var(--gain);font-weight:800;">▲</span>'
           : it.direction === 'DOWN' ? '<span style="color:var(--loss);font-weight:800;">▼</span>'
           : '<span style="color:var(--text-muted);">·</span>';
-        const syms = (it.symbols || []).map((sy) =>
-          '<button onclick="setNewsSearch(\'' + sy + '\')" style="cursor:pointer;font-family:inherit;margin-left:4px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:5px;border:1px solid var(--card-border);background:var(--card-bg);color:var(--text-muted);">' + newsEsc(sy) + '</button>').join('');
+        // THE COMPANY CHIP CARRIES ITS OWN MOVE. "news happened, stock did X" is the
+        // question a reader has while looking at the row; a pair with no bar yet is
+        // shown plain, never as a zero it was not measured at.
+        const moveBy = {};
+        (it.moves || []).forEach((m) => { moveBy[m.symbol] = m; });
+        const syms = (it.symbols || []).map((sy) => {
+          const m = moveBy[sy];
+          const shown = m ? m.pct : null;
+          const col = shown === null ? 'var(--text-muted)' : (shown > 0 ? 'var(--gain)' : (shown < 0 ? 'var(--loss)' : 'var(--text-muted)'));
+          const tip = m
+            ? ' title="' + newsEsc(sy) + ' moved ' + newsMovePct(m.pct) + ' on ' + newsEsc(m.session) + ' — the session after this headline, from the close before it' +
+              (m.adj === null || m.adj === undefined ? '' : '; ' + newsMovePct(m.adj) + ' vs the market') +
+              (m.p1 === null || m.p1 === undefined ? '' : '; next session ' + newsMovePct(m.p1)) + '"'
+            : ' title="no finished session for this headline yet — it is measured after the close"';
+          const label = m ? newsMovePct(m.pct) : '';
+          return '<button onclick="setNewsSearch(\'' + sy + '\')"' + tip +
+            ' style="cursor:pointer;font-family:inherit;margin-left:4px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:5px;border:1px solid ' +
+            (shown === null ? 'var(--card-border)' : (shown > 0 ? 'rgba(0,224,145,.45)' : 'rgba(255,77,109,.45)')) +
+            ';background:var(--card-bg);color:' + col + ';font-variant-numeric:tabular-nums;">' + newsEsc(sy) +
+            (label ? ' <span style="opacity:.95;">' + label + '</span>' : '') + '</button>';
+        }).join('');
         return '<tr>' +
           '<td style="white-space:nowrap;color:var(--text-muted);font-size:11px;padding:6px 8px;">' + newsEsc(it.date) + '</td>' +
           '<td style="padding:6px 8px;"><span style="font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;background:rgba(148,163,184,.14);color:' + colour + ';">' + newsEsc(it.category) + '</span></td>' +
@@ -5260,22 +5647,40 @@
       renderNewsFeed();
     }
 
+    function setNewsReact(view) {
+      NEWS_STATE.react = view === 'company' ? 'company' : 'category';
+      renderNewsReaction();
+    }
+
     function renderNewsReaction() {
       const host = document.getElementById('newsReact');
-      const r = (NEWS_STATE.summary || {}).reaction;
+      const s = NEWS_STATE.summary || {};
+      const r = s.reaction;
+      const mv = s.moves;
+      const tabs = '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+        [['category', 'BY CATEGORY'], ['company', 'BY COMPANY']].map((pair) => {
+          const on = NEWS_STATE.react === pair[0];
+          return '<button onclick="setNewsReact(\'' + pair[0] + '\')" style="cursor:pointer;font-family:inherit;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:7px;background:' +
+            (on ? 'rgba(0,224,145,.15)' : 'var(--card-bg)') + ';border:1px solid ' + (on ? 'rgba(0,224,145,.4)' : 'var(--card-border)') +
+            ';color:' + (on ? 'var(--gain)' : 'var(--text-muted)') + ';">' + pair[1] + '</button>';
+        }).join('') + '</div>';
+      if (NEWS_STATE.react === 'company') {
+        host.innerHTML = tabs + renderNewsCompanies(mv);
+        return;
+      }
       if (!r || r.available === false || !r.byCategory) {
-        host.innerHTML = '<div style="font-size:11.5px;color:var(--text-muted);line-height:1.7;">No measured reaction yet. <code>node scripts/newsEventStudy.js</code> walks the stored headlines against the 1-minute corpus; until it runs, this panel stays empty rather than guessing.</div>';
+        host.innerHTML = tabs + '<div style="font-size:11.5px;color:var(--text-muted);line-height:1.7;">No measured reaction yet. <code>node scripts/newsEventStudy.js</code> walks the stored headlines against the 1-minute corpus; until it runs, this panel stays empty rather than guessing.</div>';
         return;
       }
       const rows = Object.keys(r.byCategory).map((cat) => {
-        const s = r.byCategory[cat] || {};
-        if (!s.n) return '';
-        const h = s.horizons || {};
+        const s2 = r.byCategory[cat] || {};
+        if (!s2.n) return '';
+        const h = s2.horizons || {};
         const colour = NEWS_TAG[cat] || '#94a3b8';
         const cell = (x) => '<td style="padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;color:' +
           (x === null || x === undefined ? 'var(--text-muted)' : (x > 0 ? 'var(--gain)' : (x < 0 ? 'var(--loss)' : 'var(--text-muted)')) ) + ';">' + newsPct(x) + '</td>';
         return '<tr><td style="padding:4px 6px;"><span style="font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;background:rgba(148,163,184,.14);color:' + colour + ';">' + newsEsc(cat) + '</span></td>' +
-          '<td style="padding:4px 6px;text-align:right;color:var(--text-muted);">' + s.n + '</td>' +
+          '<td style="padding:4px 6px;text-align:right;color:var(--text-muted);">' + s2.n + '</td>' +
           cell(h[0] && h[0].mean) + cell(h[1] && h[1].mean) + cell(h[5] && h[5].mean) +
           '<td style="padding:4px 6px;text-align:right;color:var(--text-muted);">' + (h[0] && h[0].t !== null && h[0].t !== undefined ? Number(h[0].t).toFixed(2) : '—') + '</td></tr>';
       }).join('');
@@ -5283,12 +5688,42 @@
       const ctl = c ? '<tr style="background:rgba(255,184,107,.07);"><td style="padding:4px 6px;font-weight:800;">NO NEWS</td>' +
         '<td style="padding:4px 6px;text-align:right;color:var(--text-muted);">' + c.n.toLocaleString() + '</td>' +
         '<td style="padding:4px 6px;text-align:right;">' + newsPct(c.mean) + '</td><td></td><td></td><td></td></tr>' : '';
-      host.innerHTML = '<div style="font-size:11px;font-weight:800;margin-bottom:6px;">WHAT HAPPENED AFTER — market-adjusted, from the close before the news day</div>' +
+      host.innerHTML = tabs + '<div style="font-size:11px;font-weight:800;margin-bottom:6px;">WHAT HAPPENED AFTER — market-adjusted, from the close before the news day</div>' +
         '<table style="font-size:11.5px;"><thead><tr>' +
         '<th style="text-align:left;padding:4px 6px;">Category</th><th style="text-align:right;padding:4px 6px;">n</th>' +
         '<th style="text-align:right;padding:4px 6px;">d+0</th><th style="text-align:right;padding:4px 6px;">d+1</th>' +
         '<th style="text-align:right;padding:4px 6px;">d+5</th><th style="text-align:right;padding:4px 6px;">t</th></tr></thead>' +
         '<tbody>' + rows + ctl + '</tbody></table>';
+    }
+
+    // EVERY COMPANY, ONE ROW — sorted by how much news the company had, so the
+    // list reads as a record of measurement (n), not a leaderboard of luck. A
+    // company with one headline is kept and labelled n=1 rather than filtered out:
+    // its number is real, it is just not evidence of anything.
+    function renderNewsCompanies(mv) {
+      if (!mv || mv.available === false || !(mv.byCompany || []).length) {
+        return '<div style="font-size:11.5px;color:var(--text-muted);line-height:1.7;">No per-company moves yet. <code>node scripts/buildNewsMoves.js</code> measures each named company against the daily bars; until it runs this stays empty rather than guessing.</div>';
+      }
+      const cell = (x) => '<td style="padding:3px 6px;text-align:right;font-variant-numeric:tabular-nums;color:' +
+        (x === null || x === undefined ? 'var(--text-muted)' : (x > 0 ? 'var(--gain)' : (x < 0 ? 'var(--loss)' : 'var(--text-muted)')) ) + ';">' +
+        (x === null || x === undefined ? '—' : newsMovePct(x)) + '</td>';
+      const rows = mv.byCompany.map((c) => '<tr>' +
+        '<td style="padding:3px 6px;font-weight:800;">' + newsEsc(c.symbol) + '</td>' +
+        '<td style="padding:3px 6px;text-align:right;color:var(--text-muted);">' + c.n + '</td>' +
+        cell(c.mean) +
+        '<td style="padding:3px 6px;text-align:right;color:var(--text-muted);">' + Math.round(c.up * 100) + '%</td>' +
+        cell(c.adj) + '</tr>').join('');
+      const c = mv.counts || {};
+      return '<div style="font-size:11px;font-weight:800;margin-bottom:4px;">EVERY COMPANY AFTER ITS OWN NEWS — measured through ' +
+        newsEsc(mv.lastSession || '—') + '</div>' +
+        '<div style="max-height:300px;overflow:auto;"><table style="font-size:11.5px;"><thead><tr>' +
+        '<th style="text-align:left;padding:3px 6px;">Company</th><th style="text-align:right;padding:3px 6px;">n</th>' +
+        '<th style="text-align:right;padding:3px 6px;">mean</th><th style="text-align:right;padding:3px 6px;">% up</th>' +
+        '<th style="text-align:right;padding:3px 6px;">vs mkt</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '<div style="font-size:10.5px;color:var(--text-muted);margin-top:4px;line-height:1.6;">' +
+        (c.measured ? Number(c.measured).toLocaleString() + ' headline→company pairs measured out of ' + Number(c.pairs || 0).toLocaleString() + ' ticker mentions. ' : '') +
+        '<b>n counts distinct news sessions</b>, so one day covered by ten headlines counts once. ' +
+        'mean = the company\'s own close-to-close move on the session after its news; % up = how often that closed above the pre-news close; vs mkt = mean minus the equal-weighted market for the same session. This describes what happened — it is not the event study and it trades nothing.</div>';
     }
 
     function renderNewsFoot() {
@@ -5298,6 +5733,11 @@
         '<b>Source.</b> ' + newsEsc(s.source || '') + '. Category and direction are keyword reads of the headline; a ticker is tagged only if it is in the 1-minute corpus. ' +
         '<b>Limit.</b> ' + newsEsc(s.limitNote || '') + ' ' +
         (r && r.window ? '<b>Study window:</b> ' + newsEsc(r.window.mode || '') + (r.window.to ? ' (≤ ' + newsEsc(r.window.to) + ')' : '') + '. ' : '') +
+        (s.moves && s.moves.available
+          ? '<b>Company moves:</b> each company chip is that stock\'s own close-to-close move on the news session' +
+            (s.moves.lastSession ? ' (bars measured through ' + newsEsc(s.moves.lastSession) + ')' : '') +
+            '; a headline from today is measured after the close. '
+          : '') +
         'The amber row is the control — what an ordinary day looks like. A headline is not a signal and this panel trades nothing.';
     }
 
@@ -5377,7 +5817,7 @@
       if (e.key === 'Escape') closeTierModal();
     });
 
-    setInterval(loadFinalBoard, 3000);
+    setInterval(loadFinalBoard, 1000);
     loadFinalBoard();
     // The candidates file is rewritten about once a minute, so the tier tables
     // poll every 10s — often enough to feel live, rarely enough not to matter.

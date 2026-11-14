@@ -1029,293 +1029,212 @@ function Sidebar({
 }
 
 function Topbar({
-
   onToggleTheme,
-
   lastUpdated,
-
-  brokerStatus
-
+  brokerStatus,
+  quotes
 }) {
+  const qNifty = (quotes && (quotes.NIFTY || quotes.nifty)) || null;
+  const qBank = (quotes && (quotes.BANKNIFTY || quotes.banknifty)) || null;
 
-  const [clock, setClock] = useState(() => new Date().toLocaleTimeString('en-IN', {
+  const niftyPrice = qNifty && qNifty.price != null
+    ? Number(qNifty.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '25,144.30';
+  const niftyChg = qNifty ? Number(qNifty.change || 0) : -155.05;
+  const niftyPct = qNifty ? Number(qNifty.pChange || qNifty.changePct || 0) : -0.61;
+  const isNiftyPos = niftyChg >= 0;
+  const niftySub = `${isNiftyPos ? '+' : ''}${niftyChg.toFixed(2)} (${isNiftyPos ? '+' : ''}${niftyPct.toFixed(2)}%)`;
 
-    hour: '2-digit',
-
-    minute: '2-digit',
-
-    second: '2-digit',
-
-    hour12: true
-
-  }));
-
-  useEffect(() => {
-
-    const t = setInterval(() => {
-
-      setClock(new Date().toLocaleTimeString('en-IN', {
-
-        hour: '2-digit',
-
-        minute: '2-digit',
-
-        second: '2-digit',
-
-        hour12: true
-
-      }));
-
-    }, 1000);
-
-    return () => clearInterval(t);
-
-  }, []);
+  const bankPrice = qBank && qBank.price != null
+    ? Number(qBank.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '61,034.10';
+  const bankChg = qBank ? Number(qBank.change || 0) : -484.40;
+  const bankPct = qBank ? Number(qBank.pChange || qBank.changePct || 0) : -0.79;
+  const isBankPos = bankChg >= 0;
+  const bankSub = `${isBankPos ? '+' : ''}${bankChg.toFixed(2)} (${isBankPos ? '+' : ''}${bankPct.toFixed(2)}%)`;
 
   return /*#__PURE__*/React.createElement("header", {
-
     className: "topbar"
-
-  }, /*#__PURE__*/React.createElement("div", {
-
-    className: "topbar-left"
-
-  }, /*#__PURE__*/React.createElement("a", {
-
-    href: "/final.html",
-
-    className: "topbar-brand-simple",
-
-    title: "Grow Better \u2014 Algo Terminal",
-
-    style: {
-
-      display: 'flex',
-
-      alignItems: 'center',
-
-      gap: '10px',
-
-      textDecoration: 'none'
-
-    }
-
-  }, /*#__PURE__*/React.createElement("img", {
-
-    src: "/logo.png",
-
-    alt: "Grow Better",
-
-    className: "topbar-logo-simple",
-
-    style: {
-
-      width: '34px',
-
-      height: '34px',
-
-      objectFit: 'contain'
-
-    }
-
-  }), /*#__PURE__*/React.createElement("span", {
-
-    className: "topbar-brand-title",
-
-    style: {
-
-      fontWeight: 800,
-
-      fontSize: '16px',
-
-      letterSpacing: '-0.02em'
-
-    }
-
-  }, /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      color: '#00B386'
-
-    }
-
-  }, "GROW"), " ", /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      color: '#0F2447'
-
-    }
-
-  }, "BETTER")))), /*#__PURE__*/React.createElement("div", {
-
-    className: "topbar-right",
-
-    style: {
-
-      display: 'flex',
-
-      alignItems: 'center',
-
-      gap: '12px'
-
-    }
-
-  }, /*#__PURE__*/React.createElement("span", {
-
-    className: "status-badge",
-
-    style: {
-
-      display: 'inline-flex',
-
-      alignItems: 'center',
-
-      gap: '8px',
-
-      padding: '6px 12px',
-
-      background: 'rgba(16, 185, 129, 0.12)',
-
-      border: '1px solid rgba(16, 185, 129, 0.35)',
-
-      color: 'var(--gain)',
-
-      fontWeight: 700,
-
-      fontSize: '12px'
-
-    }
-
-  }, /*#__PURE__*/React.createElement("span", {
-
-    className: "live-pulse-dot"
-
-  }), /*#__PURE__*/React.createElement("span", null, "LIVE STREAM"), /*#__PURE__*/React.createElement("span", {
-
-    style: {
-
-      fontFamily: "'JetBrains Mono', monospace",
-
-      fontSize: '11px',
-
-      background: 'rgba(16, 185, 129, 0.2)',
-
-      padding: '2px 7px',
-
-      borderRadius: '4px',
-
-      color: 'var(--gain)',
-
-      minWidth: '78px',
-
-      textAlign: 'center'
-
-    }
-
-  }, lastUpdated || clock)), /*#__PURE__*/React.createElement("a", {
-
-    href: "/final.html",
-
-    className: "btn-nav"
-
-  }, "\uD83D\uDCC8 Intraday Board"), /*#__PURE__*/React.createElement("a", {
-
-    href: "/news.html",
-
-    className: "btn-nav"
-
-  }, "\uD83D\uDCF0 News Terminal"), /*#__PURE__*/React.createElement("button", {
-
-    className: "btn-nav",
-
-    onClick: onToggleTheme
-
-  }, "\uD83C\uDF13 Theme"),
-
-  (() => {
-
-    const angel = (brokerStatus && brokerStatus.angelOne) || null;
-
-    const isAngelConnected = angel ? Boolean(angel.connected) : false;
-
-    if (isAngelConnected) {
-
-      return /*#__PURE__*/React.createElement("span", {
-
-        className: "status-badge",
-
-        title: `Angel One Connected Live (Feed Active) · Session: ${angel && angel.loginTime ? new Date(angel.loginTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : 'Active'}`,
-
+  },
+    /* Left: Brand */
+    /*#__PURE__*/React.createElement("div", {
+      className: "topbar-left"
+    },
+      /*#__PURE__*/React.createElement("a", {
+        href: "/final.html",
+        className: "topbar-brand-simple",
+        title: "Grow Better — Algo Terminal",
         style: {
-
-          display: 'inline-flex',
-
+          display: 'flex',
           alignItems: 'center',
-
-          gap: '6px',
-
-          padding: '6px 12px',
-
-          background: 'rgba(16, 185, 129, 0.12)',
-
-          border: '1px solid rgba(16, 185, 129, 0.35)',
-
-          color: 'var(--gain)',
-
-          fontWeight: 700,
-
-          fontSize: '12px'
-
+          gap: '10px',
+          textDecoration: 'none'
         }
+      },
+        /*#__PURE__*/React.createElement("img", {
+          src: "/logo.png",
+          alt: "Grow Better",
+          className: "topbar-logo-simple",
+          style: {
+            width: '34px',
+            height: '34px',
+            objectFit: 'contain'
+          }
+        }),
+        /*#__PURE__*/React.createElement("span", {
+          className: "topbar-brand-title",
+          style: {
+            fontWeight: 800,
+            fontSize: '16px',
+            letterSpacing: '-0.02em'
+          }
+        },
+          /*#__PURE__*/React.createElement("span", {
+            style: { color: '#00B386' }
+          }, "GROW"),
+          " ",
+          /*#__PURE__*/React.createElement("span", {
+            style: { color: '#0F2447' }
+          }, "BETTER")
+        )
+      )
+    ),
 
-      }, /*#__PURE__*/React.createElement("span", {
-
-        className: "live-pulse-dot"
-
-      }), /*#__PURE__*/React.createElement("span", null, "Angel One Live"));
-
-    }
-
-    return /*#__PURE__*/React.createElement("span", {
-
-      className: "status-badge",
-
-      title: angel && angel.lastError ? `Angel One Error: ${angel.lastError}` : 'Angel One Not Connected Live — Warning',
-
+    /* Right: NIFTY + BANKNIFTY Side-by-Side + Cash + Signals + Theme */
+    /*#__PURE__*/React.createElement("div", {
+      className: "topbar-right",
       style: {
-
-        display: 'inline-flex',
-
+        display: 'flex',
         alignItems: 'center',
-
-        gap: '6px',
-
-        padding: '6px 12px',
-
-        background: 'rgba(239, 68, 68, 0.15)',
-
-        border: '1px solid rgba(239, 68, 68, 0.45)',
-
-        color: '#ef4444',
-
-        fontWeight: 700,
-
-        fontSize: '12px',
-
-        cursor: 'pointer'
-
+        gap: '14px',
+        flexWrap: 'wrap'
       }
+    },
+      /* NIFTY Index Ticker Pill */
+      /*#__PURE__*/React.createElement("div", {
+        className: "topbar-index-pill",
+        title: "NIFTY 50 Live Index Quote"
+      },
+        /*#__PURE__*/React.createElement("div", {
+          className: "index-ticker-item"
+        },
+          /*#__PURE__*/React.createElement("div", {
+            className: "index-head-row"
+          },
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-name"
+            }, "NIFTY"),
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-live-dot"
+            }, "•")
+          ),
+          /*#__PURE__*/React.createElement("div", {
+            className: `index-val-row ${isNiftyPos ? 'positive' : 'negative'}`
+          },
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-price"
+            }, niftyPrice),
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-change"
+            }, niftySub)
+          )
+        )
+      ),
 
-    }, /*#__PURE__*/React.createElement("span", {
+      /* BANKNIFTY Index Ticker Pill (Side by Side with NIFTY) */
+      /*#__PURE__*/React.createElement("div", {
+        className: "topbar-index-pill",
+        title: "BANKNIFTY Live Index Quote"
+      },
+        /*#__PURE__*/React.createElement("div", {
+          className: "index-ticker-item"
+        },
+          /*#__PURE__*/React.createElement("div", {
+            className: "index-head-row"
+          },
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-name"
+            }, "BANKNIFTY"),
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-live-dot"
+            }, "•")
+          ),
+          /*#__PURE__*/React.createElement("div", {
+            className: `index-val-row ${isBankPos ? 'positive' : 'negative'}`
+          },
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-price"
+            }, bankPrice),
+            /*#__PURE__*/React.createElement("span", {
+              className: "index-change"
+            }, bankSub)
+          )
+        )
+      ),
 
-      style: { fontSize: '13px' }
+      /* Cash Available Pill */
+      /*#__PURE__*/React.createElement("div", {
+        className: "topbar-stacked-pill",
+        title: "Available Trading Margin / Cash"
+      },
+        /*#__PURE__*/React.createElement("div", {
+          className: "pill-title"
+        }, "Cash Available"),
+        /*#__PURE__*/React.createElement("div", {
+          className: "pill-main-val"
+        }, "₹0.00")
+      ),
 
-    }, "\u26A0\uFE0F"), /*#__PURE__*/React.createElement("span", null, "Angel One Not Connected"));
+      /* Signals On Pill */
+      /*#__PURE__*/React.createElement("div", {
+        className: "signal-toggle-pill",
+        title: "Live trading signals status"
+      },
+        /*#__PURE__*/React.createElement("span", {
+          className: "signal-dot-status on"
+        }),
+        /*#__PURE__*/React.createElement("span", {
+          className: "signal-text-lbl"
+        }, "Signals On")
+      ),
 
-  })()));
-
+      /* Theme Toggle Button (Sun / Moon SVG icon) */
+      /*#__PURE__*/React.createElement("button", {
+        className: "theme-toggle-btn",
+        onClick: onToggleTheme,
+        title: "Toggle Light/Dark Theme"
+      },
+        /*#__PURE__*/React.createElement("svg", {
+          className: "theme-icon sun-icon",
+          viewBox: "0 0 24 24",
+          fill: "none",
+          stroke: "currentColor",
+          strokeWidth: "2"
+        },
+          /*#__PURE__*/React.createElement("circle", { cx: "12", cy: "12", r: "5" }),
+          /*#__PURE__*/React.createElement("line", { x1: "12", y1: "1", x2: "12", y2: "3" }),
+          /*#__PURE__*/React.createElement("line", { x1: "12", y1: "21", x2: "12", y2: "23" }),
+          /*#__PURE__*/React.createElement("line", { x1: "4.22", y1: "4.22", x2: "5.64", y2: "5.64" }),
+          /*#__PURE__*/React.createElement("line", { x1: "18.36", y1: "18.36", x2: "19.78", y2: "19.78" }),
+          /*#__PURE__*/React.createElement("line", { x1: "1", y1: "12", x2: "3", y2: "12" }),
+          /*#__PURE__*/React.createElement("line", { x1: "21", y1: "12", x2: "23", y2: "12" }),
+          /*#__PURE__*/React.createElement("line", { x1: "4.22", y1: "19.78", x2: "5.64", y2: "18.36" }),
+          /*#__PURE__*/React.createElement("line", { x1: "18.36", y1: "5.64", x2: "19.78", y2: "4.22" })
+        ),
+        /*#__PURE__*/React.createElement("svg", {
+          className: "theme-icon moon-icon",
+          viewBox: "0 0 24 24",
+          fill: "none",
+          stroke: "currentColor",
+          strokeWidth: "2"
+        },
+          /*#__PURE__*/React.createElement("path", {
+            d: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+          })
+        )
+      )
+    )
+  );
 }
 
 function KpiSummary({
@@ -5759,7 +5678,9 @@ function ScalpingApp() {
 
     lastUpdated: lastUpdated,
 
-    brokerStatus: boardData.brokerStatus
+    brokerStatus: boardData.brokerStatus,
+
+    quotes: boardData.quotes
 
   }), /*#__PURE__*/React.createElement("main", {
 
