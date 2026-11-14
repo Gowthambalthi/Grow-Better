@@ -3935,9 +3935,9 @@ function TopNewsSquareBox({
     className: "live-pulse-dot"
 
   }), /*#__PURE__*/React.createElement("span", null, "LIVE NEWS")),
-  /* Sort Controls: "Priority by" on top, then "News" and "Company" both below */
+  /* Sort Controls: "Priority by" in middle on top, then "News" and "Company" both below */
   /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }
+    style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }
   },
   /*#__PURE__*/React.createElement("span", {
     style: {
@@ -3945,6 +3945,7 @@ function TopNewsSquareBox({
       fontWeight: 700,
       color: 'var(--text-muted, #64748b)',
       letterSpacing: '0.02em',
+      textAlign: 'center',
       lineHeight: 1
     }
   }, "Priority by"),
@@ -3960,9 +3961,9 @@ function TopNewsSquareBox({
       padding: '2.5px 8px',
       borderRadius: '5px',
       cursor: 'pointer',
-      border: sortMode === 'news' ? '1px solid #00B386' : '1px solid var(--border-color, #cbd5e1)',
-      background: sortMode === 'news' ? 'rgba(0, 179, 134, 0.12)' : 'transparent',
-      color: sortMode === 'news' ? '#00B386' : 'var(--text-muted, #64748b)',
+      border: sortMode === 'news' ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
+      background: sortMode === 'news' ? 'rgba(34, 197, 94, 0.10)' : 'transparent',
+      color: sortMode === 'news' ? '#16a34a' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
     title: sortMode === 'news' ? "Active. Click again to return to Normal Live News" : "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
@@ -3976,9 +3977,9 @@ function TopNewsSquareBox({
       padding: '2.5px 8px',
       borderRadius: '5px',
       cursor: 'pointer',
-      border: sortMode === 'company' ? '1px solid #00B386' : '1px solid var(--border-color, #cbd5e1)',
-      background: sortMode === 'company' ? 'rgba(0, 179, 134, 0.12)' : 'transparent',
-      color: sortMode === 'company' ? '#00B386' : 'var(--text-muted, #64748b)',
+      border: sortMode === 'company' ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
+      background: sortMode === 'company' ? 'rgba(34, 197, 94, 0.10)' : 'transparent',
+      color: sortMode === 'company' ? '#16a34a' : 'var(--text-muted, #64748b)',
       transition: 'all 0.15s ease'
     },
     title: sortMode === 'company' ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
