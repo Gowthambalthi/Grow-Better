@@ -1188,11 +1188,11 @@ function Topbar({
       },
         /*#__PURE__*/React.createElement("div", {
           className: "pill-title",
-          style: { textAlign: 'center' }
+          style: { textAlign: 'center', fontWeight: 500, fontSize: '11px' }
         }, "Cash Available"),
         /*#__PURE__*/React.createElement("div", {
           className: "pill-main-val",
-          style: { textAlign: 'center' }
+          style: { textAlign: 'center', fontWeight: 500, fontSize: '13.5px' }
         }, "₹0.00")
       ),
 

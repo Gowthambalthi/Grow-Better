@@ -1063,7 +1063,7 @@ a.nav-item:visited,
 
 .pill-title {
   font-size: 11px !important;
-  font-weight: 600 !important;
+  font-weight: 500 !important;
   color: #64748B !important; /* slate on the white bar */
   letter-spacing: 0;
   text-transform: none !important;
@@ -1076,8 +1076,8 @@ a.nav-item:visited,
 
 .pill-main-val, #topbarCashValue {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
-  font-size: 14.5px !important;
-  font-weight: 700 !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
   color: #0F2447 !important;
   text-align: center !important;
 }
