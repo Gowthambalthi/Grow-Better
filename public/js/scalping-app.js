@@ -3913,9 +3913,21 @@ function TopNewsSquareBox({
     className: "live-pulse-dot"
 
   }), /*#__PURE__*/React.createElement("span", null, "LIVE NEWS")),
-  /* Sort Buttons */
+  /* Sort Controls: "Priority by" on top, then "News" and "Company" both below */
   /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', alignItems: 'center', gap: '6px' }
+    style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }
+  },
+  /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: '10px',
+      fontWeight: 700,
+      color: 'var(--text-muted, #64748b)',
+      letterSpacing: '0.02em',
+      lineHeight: 1
+    }
+  }, "Priority by"),
+  /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', alignItems: 'center', gap: '5px' }
   },
   /*#__PURE__*/React.createElement("button", {
     type: "button",
@@ -3923,7 +3935,7 @@ function TopNewsSquareBox({
     style: {
       fontSize: '11px',
       fontWeight: 700,
-      padding: '3px 8px',
+      padding: '2.5px 8px',
       borderRadius: '5px',
       cursor: 'pointer',
       border: sortMode === 'news' ? '1px solid #00B386' : '1px solid var(--border-color, #cbd5e1)',
@@ -3932,14 +3944,14 @@ function TopNewsSquareBox({
       transition: 'all 0.15s ease'
     },
     title: sortMode === 'news' ? "Active. Click again to return to Normal Live News" : "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
-  }, "Priority by News"),
+  }, "News"),
   /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => handleSortChange('company'),
     style: {
       fontSize: '11px',
       fontWeight: 700,
-      padding: '3px 8px',
+      padding: '2.5px 8px',
       borderRadius: '5px',
       cursor: 'pointer',
       border: sortMode === 'company' ? '1px solid #00B386' : '1px solid var(--border-color, #cbd5e1)',
@@ -3948,7 +3960,7 @@ function TopNewsSquareBox({
       transition: 'all 0.15s ease'
     },
     title: sortMode === 'company' ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
-  }, "Priority by Company"))), /*#__PURE__*/React.createElement("div", {
+  }, "Company")))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
