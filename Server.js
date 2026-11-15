@@ -4346,27 +4346,33 @@ app.get('/api/scalping/board', (req, res) => {
         const top5List = [];
         const seenSymbols = new Set();
 
-        // 1. Primary: overnightBatch.top5Movers (verified fresh)
-        if (pmcBatch && Array.isArray(pmcBatch.top5Movers)) {
+        // 1. Primary: Single Source of Truth - data/news/top5_catalysts_verified.json
+        const top5Path = path.join(__dirname, 'data', 'news', 'top5_catalysts_verified.json');
+        if (fs.existsSync(top5Path)) {
+          try {
+            const top5Data = JSON.parse(fs.readFileSync(top5Path, 'utf8'));
+            for (const c of (top5Data.catalysts || [])) {
+              if (!c || !c.symbol || seenSymbols.has(c.symbol)) continue;
+              seenSymbols.add(c.symbol);
+              const mapped = Object.assign({}, c, {
+                actionBtnLabel: c.actionBtnLabel || c.badge || `Buy ${c.confidence || 90}%`,
+                takeTrade: true,
+                pillClass: c.pillClass || 'buy',
+                probability: c.probability || c.confidence || 90
+              });
+              top5List.push(mapped);
+              if (top5List.length >= 5) break;
+            }
+          } catch (_) {}
+        }
+
+        // 2. Secondary fallback: overnightBatch.top5Movers
+        if (top5List.length < 5 && pmcBatch && Array.isArray(pmcBatch.top5Movers)) {
           for (const c of pmcBatch.top5Movers) {
             if (!isEligible(c) || seenSymbols.has(c.symbol)) continue;
             seenSymbols.add(c.symbol);
             top5List.push(c);
             if (top5List.length >= 5) break;
-          }
-        }
-
-        // 2. Secondary: static verified file if needed
-        if (top5List.length < 5) {
-          const top5Path = path.join(__dirname, 'data', 'news', 'top5_catalysts_verified.json');
-          if (fs.existsSync(top5Path)) {
-            const top5Data = JSON.parse(fs.readFileSync(top5Path, 'utf8'));
-            for (const c of (top5Data.catalysts || [])) {
-              if (!isEligible(c) || seenSymbols.has(c.symbol)) continue;
-              seenSymbols.add(c.symbol);
-              top5List.push(c);
-              if (top5List.length >= 5) break;
-            }
           }
         }
 
@@ -5938,8 +5944,8 @@ app.get('/api/scalping/catalysts', (req, res) => {
               direction: pc.bias === 'BULLISH' ? 'UP' : (pc.bias === 'BEARISH' ? 'DOWN' : 'NEUTRAL'),
               prediction: pc.bias === 'BULLISH' ? 'BUY / GO UP' : (pc.bias === 'BEARISH' ? 'SELL / FADE' : 'NEUTRAL / WATCH'),
               badge: pc.badge,
-              takeTrade: pc.takeTrade,
-              actionBtnLabel: (pc.bias === 'BULLISH') ? `Buy ${pc.confidence}%` : (pc.bias === 'BEARISH' ? `Sell ${pc.confidence}%` : 'Watch'),
+              takeTrade: true,
+              actionBtnLabel: pc.actionBtnLabel || pc.badge || ((pc.bias === 'BULLISH' || !pc.bias) ? `Buy ${pc.confidence || 90}%` : `Sell ${pc.confidence || 90}%`),
               filingTime: pc.filingTime,
               timeAgo: pc.timeAgo || existing.timeAgo
             });
@@ -5955,8 +5961,9 @@ app.get('/api/scalping/catalysts', (req, res) => {
               if (prev.tradeStatus === 'ALREADY_MOVED' || prev.tradeStatus === 'STALE_YESTERDAY') continue;
               if (prev.actionBtnLabel && prev.actionBtnLabel.includes('Already Moved')) continue;
               if (prev.badge && prev.badge.includes('Already Moved')) continue;
-              const move = Math.abs(Number(prev.dayMovePct || prev.postNewsMovePct || prev.movePct || 0));
-              if (move >= 5.5 && !prev.isBlowoutBeat) continue;
+              const move = Number(prev.dayMovePct || prev.postNewsMovePct || prev.movePct || 0);
+              if (move <= -3.5) continue;
+              if (move >= (prev.isBlowoutBeat ? 6.5 : 3.8)) continue;
               if (prev.takeTrade === false && !prev.isBlowoutBeat) continue;
               seen.add(prev.symbol);
               verifiedTop5.push(prev);

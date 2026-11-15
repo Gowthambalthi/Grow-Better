@@ -4462,7 +4462,24 @@ function getOvernightCatalystBatch(now = new Date(), quotes = {}) {
   const top5Set = new Set();
   const top5Movers = [];
 
+  // 0. Primary: Single Source of Truth - data/news/top5_catalysts_verified.json
+  try {
+    const verifiedPath = path.join(DIR, 'top5_catalysts_verified.json');
+    if (fs.existsSync(verifiedPath)) {
+      const vData = JSON.parse(fs.readFileSync(verifiedPath, 'utf8'));
+      if (vData && Array.isArray(vData.catalysts) && vData.catalysts.length > 0) {
+        for (const item of vData.catalysts) {
+          if (!isCandidateEligible(item) || top5Set.has(item.symbol)) continue;
+          top5Set.add(item.symbol);
+          top5Movers.push(item);
+          if (top5Movers.length >= 5) break;
+        }
+      }
+    }
+  } catch (_) {}
+
   for (const s of actionableMovers) {
+    if (top5Movers.length >= 5) break;
     if (!isCandidateEligible(s) || top5Set.has(s.symbol)) continue;
     top5Set.add(s.symbol);
     top5Movers.push(s);

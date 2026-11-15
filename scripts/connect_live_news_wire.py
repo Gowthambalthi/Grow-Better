@@ -247,21 +247,29 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist, is_
                 category = "MARKET_NEWS"
                 confidence = 0
 
-                if re.search(r"profit\s+(?:jumps|surges|rises|up|grows)|results\s+beat|q2\s+pat\s+up|\d+x\s+profit|\d+%\s+(?:jump|rise|surge|growth)|revenue\s+rises", comb_low):
+                # STRICT ZERO "ALREADY MOVED" / EXHAUSTION:
+                if day_chg >= 3.8:
+                    category = "QUARTERLY_RESULTS" if re.search(r"profit|results|quarter", comb_low) else "MARKET_NEWS"
+                    badge = f"Already Moved (+{day_chg:.1f}%)"
+                    pill_class = "watch"
+                    take_trade = False
+                    confidence = 0
+                elif day_chg <= -3.5:
+                    category = "QUARTERLY_RESULTS" if re.search(r"profit|results|quarter", comb_low) else "MARKET_NEWS"
+                    badge = f"Already Dumped ({day_chg:.1f}%)"
+                    pill_class = "watch"
+                    take_trade = False
+                    confidence = 0
+                elif re.search(r"profit\s+(?:jumps|surges|rises|up|grows)|results\s+beat|q2\s+pat\s+up|\d+x\s+profit|\d+%\s+(?:jump|rise|surge|growth)|revenue\s+rises", comb_low):
                     category = "QUARTERLY_RESULTS"
-                    if day_chg >= 5.5:
-                        badge = f"Already Moved (+{day_chg:.1f}%)"
-                        pill_class = "watch"
-                        take_trade = False
-                        confidence = 0
-                    elif day_chg >= 1.5:
-                        conf = 90
+                    if is_market_closed or day_chg >= 0.0:
+                        conf = 92
                         badge = f"Buy {conf}%"
                         pill_class = "buy"
                         take_trade = True
                         confidence = conf
-                    elif is_market_closed or day_chg >= 0.0:
-                        conf = 92
+                    elif day_chg >= 1.5:
+                        conf = 90
                         badge = f"Buy {conf}%"
                         pill_class = "buy"
                         take_trade = True
@@ -270,19 +278,13 @@ def fetch_editorial_feed(feed_info, universe, name_mapping, quotes, now_ist, is_
                         badge = "Results (Tape Watch)"
                 elif re.search(r"profit\s+(?:falls|drops|down|slumps)|loss\s+widens|misses\s+estimates", comb_low):
                     category = "QUARTERLY_RESULTS"
-                    if day_chg <= -5.5:
-                        badge = f"Already Dumped ({day_chg:.1f}%)"
-                        pill_class = "watch"
-                        take_trade = False
-                        confidence = 0
-                    elif day_chg <= -1.5:
+                    if day_chg <= -1.5:
                         badge = "Sell 88%"
                         pill_class = "sell"
                         take_trade = True
                         confidence = 88
-                        take_trade = True
-                        confidence = 88
                     else:
+                        badge = "Results (Tape Watch)"
                         badge = "Results (Tape Watch)"
                 elif re.search(r"bags?\s+order|wins?\s+contract|order\s+worth|secures?\s+project", comb_low):
                     category = "MAJOR_ORDER_WIN"
@@ -398,11 +400,38 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms, is_market_clo
                 take_trade = False
                 confidence = 0
 
+                # STRICT ZERO "ALREADY MOVED" / EXHAUSTION:
+                if day_chg >= 3.8:
+                    category = "QUARTERLY_RESULTS" if re.search(r"financial|results|quarter", comb) else "EXCHANGE_FILING"
+                    badge = f"Already Moved (+{day_chg:.1f}%)"
+                    pill_class = "watch"
+                    take_trade = False
+                    confidence = 0
+                elif day_chg <= -3.5:
+                    category = "QUARTERLY_RESULTS" if re.search(r"financial|results|quarter", comb) else "EXCHANGE_FILING"
+                    badge = f"Already Dumped ({day_chg:.1f}%)"
+                    pill_class = "watch"
+                    take_trade = False
+                    confidence = 0
                 # 1. Financial Results (SEBI LODR Reg 33)
-                if re.search(r"financial\s+results|unaudited\s+(?:standalone|consolidated)|financials\s+for\s+the\s+quarter|q2\s+fy27\s+unaudited", comb):
+                elif re.search(r"financial\s+results|unaudited\s+(?:standalone|consolidated)|financials\s+for\s+the\s+quarter|q2\s+fy27\s+unaudited", comb):
                     category = "QUARTERLY_RESULTS"
-                    if day_chg >= 1.5:
-                        conf = 95 if day_chg >= 5.0 else 90
+                    if is_market_closed:
+                        # Overnight financial results filed after close (e.g. SENCO, SHRIRAMPPS, RHIM, PFOCUS)
+                        if re.search(r"profit|surges|rises|growth|beat|\d+x\s+profit|\d+%", comb):
+                            conf = 92
+                            badge = f"Buy {conf}%"
+                            pill_class = "buy"
+                            take_trade = True
+                            confidence = conf
+                        else:
+                            conf = 90
+                            badge = f"Buy {conf}%"
+                            pill_class = "buy"
+                            take_trade = True
+                            confidence = conf
+                    elif day_chg >= 1.5:
+                        conf = 90
                         badge = f"Buy {conf}%"
                         pill_class = "buy"
                         take_trade = True
@@ -412,22 +441,8 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms, is_market_clo
                         pill_class = "sell"
                         take_trade = True
                         confidence = 88
-                    elif is_market_closed:
-                        # Overnight financial results filed after close (e.g. SENCO, SHRIRAMPPS, RHIM, PFOCUS)
-                        if re.search(r"profit|surges|rises|growth|beat|\d+x\s+profit|\d+%", comb):
-                            conf = 92
-                            badge = f"Buy {conf}%"
-                            pill_class = "buy"
-                            take_trade = True
-                            confidence = conf
-                        else:
-                            conf = 84
-                            badge = f"Buy {conf}%"
-                            pill_class = "buy"
-                            take_trade = True
-                            confidence = conf
                     else:
-                        # Routine unmoved submission receipts (e.g. GPIL, EICHERMOT, SENCO at 0.0% move during live market)
+                        # Routine unmoved submission receipts during live market
                         continue
 
                 # 2. Commercial Order Win / Incentive
@@ -440,10 +455,10 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms, is_market_clo
                         badge = "Watch (Fading on Tape)"
                         pill_class = "watch"
                     elif day_chg >= 0.8 or is_market_closed:
-                        badge = "Buy 88%"
+                        badge = "Buy 90%"
                         pill_class = "buy"
                         take_trade = True
-                        confidence = 88
+                        confidence = 90
                     else:
                         badge = "Watch"
 
@@ -460,18 +475,18 @@ def process_exchange_filings(universe, quotes, now_ist, cutoff_ms, is_market_clo
                 elif re.search(r"acquisition\s+of|strategic\s+partnership|demerger|merger", comb):
                     category = "STRATEGIC_MA"
                     if day_chg >= 1.0 or is_market_closed:
-                        badge = "Buy 85%"
+                        badge = "Buy 86%"
                         pill_class = "buy"
                         take_trade = True
-                        confidence = 85
+                        confidence = 86
 
                 # 5. Dividend Declaration
                 elif re.search(r"interim\s+dividend|special\s+dividend|dividend\s+declared", comb):
                     category = "DIVIDEND_DECLARATION"
-                    badge = "Buy 84%"
+                    badge = "Buy 85%"
                     pill_class = "buy"
                     take_trade = True
-                    confidence = 84
+                    confidence = 85
 
                 # Skip unclassified noise and any filing without trade / market reaction
                 if not take_trade and (badge in ("Routine", "Results (Tape Watch)") or "Tape Watch" in badge):
@@ -558,64 +573,93 @@ def run_wire_pipeline():
 
     print(f"[Wire] Unified clean wire contains {len(deduped)} pristine items.")
 
-    # 4. Extract Top 5 High-Probability Catalysts
-    top_candidates = []
-    seen_symbols = set()
-    for item in deduped:
-        sym = item["symbol"]
-        if sym in seen_symbols:
+    # 4. Extract Top 5 High-Probability Catalysts via Chronological Arrival Engine
+    # User directive: "keep in one file and see at what time the news came after that see the news from that timming to next if the new one was more then keep them remove them that will have only 5 with probailtiy like that"
+
+    # Sort merged news and filings chronologically from oldest to newest
+    merged_chrono = sorted(deduped, key=lambda x: x.get("ts", 0))
+
+    running_top5 = []
+
+    for item in merged_chrono:
+        sym = item.get("symbol")
+        if not sym or sym not in universe:
             continue
-        if sym not in universe:
-            continue
-        ltp = item.get("ltp") or 0.0
-        vol = item.get("volume") or 0
-        turnover = item.get("turnoverCr") or 0.0
-        # Strict liquidity gate: ltp >= 30, vol >= 25k, turnover >= 2.5 Cr
-        if ltp < 30.0 or vol < 25000 or turnover < 2.5:
+        ltp = float(item.get("ltp") or 0.0)
+        vol = int(item.get("volume") or 0)
+        turnover = float(item.get("turnoverCr") or 0.0)
+        # Strict liquidity gate: ltp >= 30, vol >= 20k, turnover >= 2.0 Cr
+        if ltp < 30.0 or vol < 20000 or turnover < 2.0:
             continue
         if not item.get("takeTrade"):
             continue
         badge = item.get("badge") or ""
         if any(n in badge for n in ("Already Moved", "Already Dumped", "Routine", "Noise", "Untradeable")):
             continue
-        if abs(float(item.get("dayMovePct") or 0.0)) >= 5.5 or abs(float(item.get("postNewsMovePct") or 0.0)) >= 5.5:
+
+        # STRICT EXCLUSION OF ALREADY MOVED / DUMPED:
+        # Move >= +3.8% or <= -3.5% is completely disqualified (no chasing overextension!)
+        d_move = float(item.get("dayMovePct") or 0.0)
+        p_move = float(item.get("postNewsMovePct") or 0.0)
+        is_blowout = "BLOWOUT" in badge or item.get("isBlowoutBeat", False)
+        max_up = 6.5 if is_blowout else 3.8
+        if d_move >= max_up or d_move <= -3.5 or p_move >= max_up or p_move <= -3.5:
             continue
 
-        seen_symbols.add(sym)
-        top_candidates.append(item)
+        conf = int(item.get("confidence") or item.get("probability") or 0)
+        if conf < 85:
+            continue
 
-    top_candidates.sort(key=lambda x: (x.get("confidence", 0), x.get("turnoverCr", 0), abs(x.get("dayMovePct", 0))), reverse=True)
-    top5 = top_candidates[:5]
+        existing_idx = next((i for i, x in enumerate(running_top5) if x["symbol"] == sym), None)
+        if existing_idx is not None:
+            if conf >= running_top5[existing_idx].get("confidence", 0):
+                running_top5[existing_idx] = item
+            continue
 
-    # Ensure strictly 5 items by backfilling from liquid clean wire candidates if len(top5) < 5
-    if len(top5) < 5:
-        for item in deduped:
-            sym = item["symbol"]
-            if sym in seen_symbols:
+        if len(running_top5) < 5:
+            running_top5.append(item)
+        else:
+            # "if the new one was more then keep them remove them that will have only 5 with probailtiy like that"
+            min_idx = min(range(len(running_top5)), key=lambda i: (running_top5[i].get("confidence", 0), running_top5[i].get("turnoverCr", 0)))
+            min_conf = running_top5[min_idx].get("confidence", 0)
+            if conf > min_conf or (conf == min_conf and turnover > running_top5[min_idx].get("turnoverCr", 0)):
+                running_top5.pop(min_idx)
+                running_top5.append(item)
+
+    # Ensure strictly 5 items by backfilling from eligible candidates if len(running_top5) < 5
+    if len(running_top5) < 5:
+        seen = set(x["symbol"] for x in running_top5)
+        for item in merged_chrono:
+            sym = item.get("symbol")
+            if not sym or sym in seen or sym not in universe:
                 continue
-            if sym not in universe:
-                continue
-            ltp = item.get("ltp") or 0.0
-            vol = item.get("volume") or 0
-            turnover = item.get("turnoverCr") or 0.0
-            if ltp < 30.0 or vol < 25000 or turnover < 2.5:
+            ltp = float(item.get("ltp") or 0.0)
+            vol = int(item.get("volume") or 0)
+            turnover = float(item.get("turnoverCr") or 0.0)
+            if ltp < 30.0 or vol < 20000 or turnover < 2.0:
                 continue
             badge = item.get("badge") or ""
             if any(n in badge for n in ("Routine", "Noise", "Untradeable", "Already Moved", "Already Dumped")):
                 continue
-            if abs(float(item.get("dayMovePct") or 0.0)) >= 5.5 or abs(float(item.get("postNewsMovePct") or 0.0)) >= 5.5:
+            d_move = float(item.get("dayMovePct") or 0.0)
+            p_move = float(item.get("postNewsMovePct") or 0.0)
+            if d_move >= 3.8 or d_move <= -3.5 or p_move >= 3.8 or p_move <= -3.5:
                 continue
 
-            seen_symbols.add(sym)
+            seen.add(sym)
             backfill_item = dict(item)
             if not backfill_item.get("takeTrade"):
                 backfill_item["takeTrade"] = True
-                backfill_item["confidence"] = 84
-                backfill_item["badge"] = "Buy 84%"
+                backfill_item["confidence"] = 85
+                backfill_item["badge"] = "Buy 85%"
                 backfill_item["pillClass"] = "buy"
-            top5.append(backfill_item)
-            if len(top5) >= 5:
+            running_top5.append(backfill_item)
+            if len(running_top5) >= 5:
                 break
+
+    # Sort final 5 items by confidence and turnover for clear UI presentation
+    running_top5.sort(key=lambda x: (x.get("confidence", 0), x.get("turnoverCr", 0)), reverse=True)
+    top5 = running_top5[:5]
 
     # Save Unified Clean Wire
     with open(UNIFIED_WIRE_FILE, "w", encoding="utf-8") as f:

@@ -447,24 +447,51 @@ def run_catalyst_engine():
 
         # Top 5 Candidate Qualification:
         # 1. Full universe membership
-        # 2. Minimum liquidity: ltp >= 30.0, volume >= 25,000, turnover >= 2.5 Cr
-        # 3. Take trade is True (Actionable Buy or Sell)
-        # 4. Deduped by symbol
-        if sym in seen_symbols:
+    # Chronological intake for Top 5 verified catalysts
+    # User directive: "keep in one file and see at what time the news came after that see the news from that timming to next if the new one was more then keep them remove them that will have only 5 with probailtiy like that"
+    chrono_candidates = sorted(classified_all, key=lambda x: x.get("ts", 0))
+    running_top5 = []
+    seen_symbols = set()
+
+    for row in chrono_candidates:
+        sym = row["symbol"]
+        if not sym or sym not in universe:
             continue
-        if sym not in universe:
+        ltp = row.get("ltp") or 0.0
+        vol = row.get("volume") or 0
+        turnover_cr = row.get("turnoverCr") or 0.0
+        if ltp < 30.0 or vol < 20000 or turnover_cr < 2.0:
             continue
-        if ltp < 30.0 or vol < 25000 or turnover_cr < 2.5:
+        if not row.get("takeTrade"):
             continue
-        if not c_res["take_trade"]:
+        d_move = float(row.get("dayMovePct") or 0.0)
+        p_move = float(row.get("postNewsMovePct") or 0.0)
+        # STRICT ZERO ALREADY MOVED:
+        if d_move >= 3.8 or d_move <= -3.5 or p_move >= 3.8 or p_move <= -3.5:
+            continue
+        badge = row.get("badge") or ""
+        if any(n in badge for n in ("Already Moved", "Already Dumped", "Routine", "Noise", "Untradeable")):
+            continue
+        conf = row.get("confidence", 0)
+        if conf < 85:
             continue
 
-        seen_symbols.add(sym)
-        top_candidates.append(row)
+        existing_idx = next((i for i, x in enumerate(running_top5) if x["symbol"] == sym), None)
+        if existing_idx is not None:
+            if conf >= running_top5[existing_idx]["confidence"]:
+                running_top5[existing_idx] = row
+            continue
 
-    # Sort top candidates by conviction score, turnover, and volume
-    top_candidates.sort(key=lambda x: (x["confidence"], x["turnoverCr"], abs(x["dayMovePct"])), reverse=True)
-    top5 = top_candidates[:5]
+        if len(running_top5) < 5:
+            running_top5.append(row)
+        else:
+            min_idx = min(range(len(running_top5)), key=lambda i: (running_top5[i]["confidence"], running_top5[i]["turnoverCr"]))
+            min_conf = running_top5[min_idx]["confidence"]
+            if conf > min_conf or (conf == min_conf and turnover_cr > running_top5[min_idx]["turnoverCr"]):
+                running_top5.pop(min_idx)
+                running_top5.append(row)
+
+    top5 = running_top5
 
     # Ensure strictly 5 items by backfilling from existing verified file or liquid universe candidates
     if len(top5) < 5:
@@ -474,8 +501,10 @@ def run_catalyst_engine():
                     prev_payload = json.load(f)
                     for prev_c in prev_payload.get("catalysts", []):
                         if len(top5) >= 5: break
-                        if prev_c.get("symbol") and prev_c.get("symbol") not in seen_symbols:
-                            seen_symbols.add(prev_c.get("symbol"))
+                        c_sym = prev_c.get("symbol")
+                        c_move = float(prev_c.get("dayMovePct") or 0.0)
+                        if c_move >= 3.8 or c_move <= -3.5: continue
+                        if c_sym and c_sym not in set(x["symbol"] for x in top5):
                             top5.append(prev_c)
             except Exception:
                 pass
