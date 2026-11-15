@@ -3088,11 +3088,11 @@ function TopNewsSquareBox({
     }, /* @__PURE__ */ React.createElement("span", {
       className: "live-pulse-dot"
     }), /* @__PURE__ */ React.createElement("span", null, "LIVE NEWS")),
-    /* Sort Controls: "Priority by" in middle on top, then "News" and "Company" both below */
+    /* Sort Controls: "Priority by:" on left side of the two boxes */
     /* @__PURE__ */ React.createElement(
       "div",
       {
-        style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "3px" }
+        style: { display: "flex", alignItems: "center", gap: "6px" }
       },
       /* @__PURE__ */ React.createElement("span", {
         style: {
@@ -3100,64 +3100,59 @@ function TopNewsSquareBox({
           fontWeight: 600,
           color: "var(--text-muted, #64748b)",
           letterSpacing: "0.02em",
-          textAlign: "center",
-          lineHeight: 1
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+          marginRight: "2px"
         }
-      }, "Priority by"),
-      /* @__PURE__ */ React.createElement(
-        "div",
-        {
-          style: { display: "flex", alignItems: "center", gap: "6px" }
+      }, "Priority by:"),
+      /* @__PURE__ */ React.createElement("button", {
+        type: "button",
+        onClick: () => handleSortChange("news"),
+        style: {
+          fontSize: "11px",
+          fontWeight: 700,
+          minWidth: "66px",
+          height: "24px",
+          padding: "3px 12px",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          lineHeight: 1,
+          borderRadius: "6px",
+          cursor: "pointer",
+          boxSizing: "border-box",
+          border: sortMode === "news" ? "1px solid #86efac" : "1px solid var(--border-color, #cbd5e1)",
+          background: sortMode === "news" ? "rgba(34, 197, 94, 0.10)" : "transparent",
+          color: sortMode === "news" ? "#16a34a" : "var(--text-muted, #64748b)",
+          transition: "all 0.15s ease"
         },
-        /* @__PURE__ */ React.createElement("button", {
-          type: "button",
-          onClick: () => handleSortChange("news"),
-          style: {
-            fontSize: "11px",
-            fontWeight: 700,
-            minWidth: "66px",
-            height: "24px",
-            padding: "3px 12px",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            lineHeight: 1,
-            borderRadius: "6px",
-            cursor: "pointer",
-            boxSizing: "border-box",
-            border: sortMode === "news" ? "1px solid #86efac" : "1px solid var(--border-color, #cbd5e1)",
-            background: sortMode === "news" ? "rgba(34, 197, 94, 0.10)" : "transparent",
-            color: sortMode === "news" ? "#16a34a" : "var(--text-muted, #64748b)",
-            transition: "all 0.15s ease"
-          },
-          title: sortMode === "news" ? "Active. Click again to return to Normal Live News" : "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
-        }, "News"),
-        /* @__PURE__ */ React.createElement("button", {
-          type: "button",
-          onClick: () => handleSortChange("company"),
-          style: {
-            fontSize: "11px",
-            fontWeight: 700,
-            minWidth: "66px",
-            height: "24px",
-            padding: "3px 12px",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            textAlign: "center",
-            lineHeight: 1,
-            borderRadius: "6px",
-            cursor: "pointer",
-            boxSizing: "border-box",
-            border: sortMode === "company" || sortMode === "index" ? "1px solid #86efac" : "1px solid var(--border-color, #cbd5e1)",
-            background: sortMode === "company" || sortMode === "index" ? "rgba(34, 197, 94, 0.10)" : "transparent",
-            color: sortMode === "company" || sortMode === "index" ? "#16a34a" : "var(--text-muted, #64748b)",
-            transition: "all 0.15s ease"
-          },
-          title: sortMode === "company" || sortMode === "index" ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
-        }, "Company")
-      )
+        title: sortMode === "news" ? "Active. Click again to return to Normal Live News" : "Priority by News: High-impact corporate catalysts first (Blowout Results, Order Wins, Acquisitions, Dividends)"
+      }, "News"),
+      /* @__PURE__ */ React.createElement("button", {
+        type: "button",
+        onClick: () => handleSortChange("company"),
+        style: {
+          fontSize: "11px",
+          fontWeight: 700,
+          minWidth: "66px",
+          height: "24px",
+          padding: "3px 12px",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          textAlign: "center",
+          lineHeight: 1,
+          borderRadius: "6px",
+          cursor: "pointer",
+          boxSizing: "border-box",
+          border: sortMode === "company" || sortMode === "index" ? "1px solid #86efac" : "1px solid var(--border-color, #cbd5e1)",
+          background: sortMode === "company" || sortMode === "index" ? "rgba(34, 197, 94, 0.10)" : "transparent",
+          color: sortMode === "company" || sortMode === "index" ? "#16a34a" : "var(--text-muted, #64748b)",
+          transition: "all 0.15s ease"
+        },
+        title: sortMode === "company" || sortMode === "index" ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
+      }, "Company")
     )
   ), /* @__PURE__ */ React.createElement("div", {
     className: "top-news-list"

@@ -3939,9 +3939,9 @@ function TopNewsSquareBox({
     className: "live-pulse-dot"
 
   }), /*#__PURE__*/React.createElement("span", null, "LIVE NEWS")),
-  /* Sort Controls: "Priority by" in middle on top, then "News" and "Company" both below */
+  /* Sort Controls: "Priority by:" on left side of the two boxes */
   /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }
+    style: { display: 'flex', alignItems: 'center', gap: '6px' }
   },
   /*#__PURE__*/React.createElement("span", {
     style: {
@@ -3949,13 +3949,11 @@ function TopNewsSquareBox({
       fontWeight: 600,
       color: 'var(--text-muted, #64748b)',
       letterSpacing: '0.02em',
-      textAlign: 'center',
-      lineHeight: 1
+      whiteSpace: 'nowrap',
+      lineHeight: 1,
+      marginRight: '2px'
     }
-  }, "Priority by"),
-  /*#__PURE__*/React.createElement("div", {
-    style: { display: 'flex', alignItems: 'center', gap: '6px' }
-  },
+  }, "Priority by:"),
   /*#__PURE__*/React.createElement("button", {
     type: "button",
     onClick: () => handleSortChange('news'),
@@ -4003,7 +4001,7 @@ function TopNewsSquareBox({
       transition: 'all 0.15s ease'
     },
     title: (sortMode === 'company' || sortMode === 'index') ? "Active. Click again to return to Normal Live News" : "Priority by Company: NIFTY 50 blue chips first, then Next 50, Midcaps, and Smallcaps"
-  }, "Company")))), /*#__PURE__*/React.createElement("div", {
+  }, "Company"))), /*#__PURE__*/React.createElement("div", {
 
     className: "top-news-list"
 
