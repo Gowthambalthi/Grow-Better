@@ -3609,6 +3609,17 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
     { key: "AGM", label: "AGM / EGM" },
     { key: "CATALYST", label: "Key Catalyst" }
   ], []);
+  const todayBounds = React.useMemo(() => {
+    const now = /* @__PURE__ */ new Date();
+    const nowTime = now.getFullYear() >= 2026 ? now.getTime() : (/* @__PURE__ */ new Date("2026-11-15T00:00:00+05:30")).getTime();
+    const istOffset = 330 * 60 * 1e3;
+    const istNow = new Date(nowTime + istOffset);
+    const todayStr = istNow.toISOString().slice(0, 10);
+    const startOfToday = (/* @__PURE__ */ new Date(todayStr + "T00:00:00Z")).getTime();
+    const endOf30Days = startOfToday + 30 * 24 * 60 * 60 * 1e3;
+    const max30DateStr = new Date(endOf30Days).toISOString().slice(0, 10);
+    return { todayStr, startOfToday, endOf30Days, max30DateStr };
+  }, []);
   const [selectedTypes, setSelectedTypes] = React.useState(["ALL"]);
   const [calendarMode, setCalendarMode] = React.useState("ALL");
   const [calendarDate, setCalendarDate] = React.useState("");
@@ -3638,24 +3649,104 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
       }
     });
   };
+  const parseScheduledDate = React.useCallback((rawText, startOfToday, endOf30Days) => {
+    const monthMap = {
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
+      january: 0,
+      february: 1,
+      march: 2,
+      april: 3,
+      june: 5,
+      july: 6,
+      august: 7,
+      september: 8,
+      october: 9,
+      november: 10,
+      december: 11
+    };
+    const cleaned = rawText.replace(/(?:quarter|half[\s-]*year|year|period)\s*(?:and\s*half[\s-]*year)?\s*ended\s*(?:on)?\s*\d{1,2}(?:st|nd|rd|th)?\s*[a-z]+(?:\s*\d{4})?/gi, " ").replace(/(?:quarter|half[\s-]*year|year|period)\s*(?:and\s*half[\s-]*year)?\s*ended\s*(?:on)?\s*[a-z]+\s*\d{1,2}(?:st|nd|rd|th)?(?:\s*\d{4})?/gi, " ").replace(/(?:quarter|half[\s-]*year|year|period)\s*(?:and\s*half[\s-]*year)?\s*ended\s*(?:on)?\s*\d{1,2}[-/]\d{1,2}[-/]\d{2,4}/gi, " ");
+    const numMatch = cleaned.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/);
+    if (numMatch) {
+      const day = parseInt(numMatch[1], 10);
+      const m = parseInt(numMatch[2], 10) - 1;
+      const y = parseInt(numMatch[3], 10);
+      if (m >= 0 && m <= 11 && day >= 1 && day <= 31) {
+        const dt = new Date(Date.UTC(y, m, day, 12, 0, 0));
+        const t = dt.getTime();
+        if (t >= startOfToday && t <= endOf30Days) {
+          return {
+            isoDate: dt.toISOString().slice(0, 10),
+            eventDateStr: `${day} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m]}`
+          };
+        }
+        return { isPastOrFar: true };
+      }
+    }
+    const d1 = cleaned.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?\b/i);
+    if (d1) {
+      const day = parseInt(d1[1], 10);
+      const m = monthMap[d1[2].toLowerCase()];
+      const y = d1[3] ? parseInt(d1[3], 10) : 2026;
+      if (m !== void 0 && day >= 1 && day <= 31) {
+        const dt = new Date(Date.UTC(y, m, day, 12, 0, 0));
+        const t = dt.getTime();
+        if (t >= startOfToday && t <= endOf30Days) {
+          return {
+            isoDate: dt.toISOString().slice(0, 10),
+            eventDateStr: `${day} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m]}`
+          };
+        }
+        return { isPastOrFar: true };
+      }
+    }
+    const d2 = cleaned.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?\b/i);
+    if (d2) {
+      const m = monthMap[d2[1].toLowerCase()];
+      const day = parseInt(d2[2], 10);
+      const y = d2[3] ? parseInt(d2[3], 10) : 2026;
+      if (m !== void 0 && day >= 1 && day <= 31) {
+        const dt = new Date(Date.UTC(y, m, day, 12, 0, 0));
+        const t = dt.getTime();
+        if (t >= startOfToday && t <= endOf30Days) {
+          return {
+            isoDate: dt.toISOString().slice(0, 10),
+            eventDateStr: `${day} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m]}`
+          };
+        }
+        return { isPastOrFar: true };
+      }
+    }
+    return null;
+  }, []);
   const eventsList = React.useMemo(() => {
     if (!catalysts || catalysts.length === 0) return [];
+    const { todayStr, startOfToday, endOf30Days } = todayBounds;
     const classified = [];
     const seen = /* @__PURE__ */ new Set();
     for (const c of catalysts) {
       const sym = c.symbol;
       if (!sym) continue;
-      const fullText = ((c.kind || "") + " " + (c.title || "") + " " + (c.description || "")).toLowerCase();
+      const rawText = (c.kind || "") + " " + (c.title || "") + " " + (c.description || "");
+      const fullText = rawText.toLowerCase();
       let evType = null;
       let badge = null;
       let badgeColor = "#2563eb";
       let badgeBg = "rgba(37, 99, 235, 0.12)";
       let badgeBorder = "rgba(37, 99, 235, 0.3)";
       let priority = 10;
-      const dateMatch = (c.title || c.description || "").match(/\b(?:(?:on\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)|(?:(?:on\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}))/i);
-      const eventDateStr = dateMatch ? dateMatch[1] || dateMatch[2] || dateMatch[0] : "Upcoming";
       if (/dividend|record\s*date|ex-date|interim\s*dividend|final\s*dividend|payout/i.test(fullText)) {
-        const amt = (c.title || c.description || "").match(/(?:₹|rs\.?)\s*(\d+(?:\.\d+)?)/i);
+        const amt = rawText.match(/(?:₹|rs\.?)\s*(\d+(?:\.\d+)?)/i);
         badge = amt ? `\u20B9${amt[1]} Div` : "Dividend";
         badgeColor = "#059669";
         badgeBg = "rgba(16, 185, 129, 0.12)";
@@ -3706,29 +3797,50 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
         evType = "CATALYST";
         priority = 7;
       }
-      if (badge) {
-        const key = `${sym}-${evType}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          const tsVal = Number(c.ts || c.timeMs || 0);
-          const isoDate = tsVal > 0 ? new Date(tsVal + 330 * 6e4).toISOString().slice(0, 10) : "";
-          classified.push({
-            c,
-            sym,
-            evType,
-            badge,
-            badgeColor,
-            badgeBg,
-            badgeBorder,
-            priority,
-            eventDateStr,
-            isoDate,
-            ts: tsVal
-          });
+      if (!badge) continue;
+      const dateRes = parseScheduledDate(rawText, startOfToday, endOf30Days);
+      let eventDateStr = "Upcoming";
+      let isoDate = todayStr;
+      let isFutureScheduled = false;
+      if (dateRes) {
+        if (dateRes.isPastOrFar) {
+          continue;
         }
+        eventDateStr = dateRes.eventDateStr;
+        isoDate = dateRes.isoDate;
+        isFutureScheduled = true;
+      } else {
+        const filingTs = Number(c.ts || c.timeMs || 0);
+        if (filingTs > 0 && filingTs >= startOfToday - 48 * 3600 * 1e3) {
+          eventDateStr = "Upcoming";
+          isoDate = todayStr;
+        } else {
+          continue;
+        }
+      }
+      const key = `${sym}-${evType}-${eventDateStr}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        const tsVal = Number(c.ts || c.timeMs || 0);
+        classified.push({
+          c,
+          sym,
+          evType,
+          badge,
+          badgeColor,
+          badgeBg,
+          badgeBorder,
+          priority,
+          eventDateStr,
+          isoDate,
+          isFutureScheduled,
+          ts: tsVal
+        });
       }
     }
     return classified.sort((a, b) => {
+      if (a.isFutureScheduled && !b.isFutureScheduled) return -1;
+      if (!a.isFutureScheduled && b.isFutureScheduled) return 1;
       const tierA = getCompanyTier(a.sym);
       const tierB = getCompanyTier(b.sym);
       const scoreA = tierA ? tierA.score : 100;
@@ -3739,22 +3851,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
       if (a.priority !== b.priority) return a.priority - b.priority;
       return b.ts - a.ts;
     });
-  }, [catalysts]);
-  const availableDates = React.useMemo(() => {
-    const map = /* @__PURE__ */ new Map();
-    for (const item of eventsList) {
-      const dStr = item.eventDateStr || "Upcoming";
-      if (dStr !== "Upcoming") {
-        map.set(dStr, (map.get(dStr) || 0) + 1);
-      }
-    }
-    const dates = [];
-    map.forEach((count, key) => {
-      dates.push({ key, label: key, count });
-    });
-    dates.sort((a, b) => b.count - a.count);
-    return dates;
-  }, [eventsList]);
+  }, [catalysts, todayBounds, parseScheduledDate]);
   const upcomingCount = React.useMemo(() => {
     return eventsList.filter((item) => (item.eventDateStr || "Upcoming") === "Upcoming").length;
   }, [eventsList]);
@@ -3788,11 +3885,9 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
         if (parts.length === 3) {
           const day = parseInt(parts[2], 10);
           const mIdx = parseInt(parts[1], 10) - 1;
-          const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-          const mShort = monthNames[mIdx] || "";
-          const text = `${item.eventDateStr || ""} ${item.c?.title || ""} ${item.c?.description || ""} ${item.c?.filingTime || ""}`.toLowerCase();
-          const reg = new RegExp(`\\b(?:${day}(?:st|nd|rd|th)?\\s+${mShort}|${mShort}\\s+${day}(?:st|nd|rd|th)?)\\b`, "i");
-          if (reg.test(text)) return true;
+          const monthShorts = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const targetStr = `${day} ${monthShorts[mIdx]}`;
+          if (item.eventDateStr && item.eventDateStr.toLowerCase() === targetStr.toLowerCase()) return true;
         }
         return false;
       }
@@ -3839,7 +3934,19 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
           style: { background: "#2563eb", boxShadow: "0 0 8px #2563eb" }
         }),
         /* Clean text title */
-        /* @__PURE__ */ React.createElement("span", null, "UPCOMING EVENTS & CORPORATE CALENDAR")
+        /* @__PURE__ */ React.createElement("span", null, "UPCOMING EVENTS & CORPORATE CALENDAR"),
+        /* Scheduled Count Badge */
+        /* @__PURE__ */ React.createElement("span", {
+          style: {
+            fontSize: "10px",
+            fontWeight: 700,
+            padding: "2px 7px",
+            borderRadius: "9999px",
+            background: "rgba(37, 99, 235, 0.10)",
+            color: "#2563eb",
+            marginLeft: "4px"
+          }
+        }, `${eventsList.length} NEXT 30D`)
       ),
       /* Right Controls: Type filter on left, Calendar on right (Both have All + select as your wish) */
       /* @__PURE__ */ React.createElement(
@@ -4020,7 +4127,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             })
           )
         ),
-        /* 2. Calendar Selector: [All] button + [Upcoming] button + Calendar Date Picker */
+        /* 2. Calendar Selector: [All] button + [Upcoming] button + Calendar Date Picker (strictly Next 30 Days) */
         /* @__PURE__ */ React.createElement(
           "div",
           {
@@ -4035,7 +4142,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               whiteSpace: "nowrap"
             }
           }, "Calendar:"),
-          /* "All" button for Calendar */
+          /* "All" button for Calendar (All Next 30 Days) */
           /* @__PURE__ */ React.createElement("button", {
             type: "button",
             onClick: () => {
@@ -4058,7 +4165,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               outline: "none",
               transition: "all 0.15s ease"
             },
-            title: "Show events from all dates"
+            title: `Show all events from ${todayBounds.todayStr} to ${todayBounds.max30DateStr}`
           }, "All"),
           /* "Upcoming" button */
           /* @__PURE__ */ React.createElement("button", {
@@ -4083,11 +4190,13 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               outline: "none",
               transition: "all 0.15s ease"
             },
-            title: `Show upcoming events (${upcomingCount})`
+            title: `Show upcoming events in next 30 days (${upcomingCount})`
           }, `Upcoming${upcomingCount > 0 ? ` (${upcomingCount})` : ""}`),
-          /* Calendar Date Picker Input: "Select as your wish" */
+          /* Calendar Date Picker Input (Restricted strictly from today to next 30 days) */
           /* @__PURE__ */ React.createElement("input", {
             type: "date",
+            min: todayBounds.todayStr,
+            max: todayBounds.max30DateStr,
             value: calendarDate,
             onChange: (e) => {
               const val = e.target.value;
@@ -4112,7 +4221,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               outline: "none",
               transition: "all 0.15s ease"
             },
-            title: "Select any date from calendar (select as your wish)"
+            title: `Pick a date in the next 30 days (${todayBounds.todayStr} to ${todayBounds.max30DateStr})`
           })
         )
       )
@@ -4137,7 +4246,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             gap: "8px"
           }
         },
-        /* @__PURE__ */ React.createElement("span", null, calendarMode === "DATE" && calendarDate ? `No scheduled corporate events on ${calendarDate}` : "No scheduled corporate events matching selected filters."),
+        /* @__PURE__ */ React.createElement("span", null, calendarMode === "DATE" && calendarDate ? `No scheduled corporate events on ${calendarDate} in the next 30 days.` : "No scheduled corporate events in the next 30 days matching selected filters."),
         /* @__PURE__ */ React.createElement("button", {
           type: "button",
           onClick: () => {
@@ -4156,7 +4265,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             cursor: "pointer",
             transition: "all 0.15s ease"
           }
-        }, "Show All Events")
+        }, "Show All Next 30 Days Events")
       ) : displayList.slice(0, 50).map((item) => {
         const c = item.c;
         const ltp = Number(c.ltp || c.price || 0);
