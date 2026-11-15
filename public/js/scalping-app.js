@@ -3481,34 +3481,40 @@ function TopNewsSquareBox({
           })()
         )
       ),
-      /* Headline in middle */
-      /* @__PURE__ */ React.createElement("div", {
-        className: "top-news-headline",
-        title: `${c.title || c.description || "Corporate Announcement"}${timingAI && timingAI.detail ? `
-
-AI Timing: ${timingAI.detail}` : ""}`
-      }, c.title || c.description || "Corporate Announcement"),
-      /* At end of that box at bottom of right: Pre-Market or filing time */
+      /* Row 2: Headline matter parallel with timing at the end of the right side */
       /* @__PURE__ */ React.createElement(
         "div",
         {
-          className: "top-news-item-bottom",
+          className: "top-news-matter-row",
           style: {
             display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: "8px",
             width: "100%",
-            marginTop: "3px",
-            textAlign: "right"
+            minWidth: 0
           }
         },
+        /* Matter (Headline text) */
+        /* @__PURE__ */ React.createElement("div", {
+          className: "top-news-headline",
+          style: {
+            flex: 1,
+            minWidth: 0
+          },
+          title: `${c.title || c.description || "Corporate Announcement"}${timingAI && timingAI.detail ? `
+
+AI Timing: ${timingAI.detail}` : ""}`
+        }, c.title || c.description || "Corporate Announcement"),
+        /* Timing parallel to the matter at the end of right side */
         /* @__PURE__ */ React.createElement("span", {
+          className: "top-news-time",
           style: {
             fontSize: "10px",
             fontWeight: 500,
             color: "var(--text-muted, #64748b)",
-            lineHeight: 1.1,
             whiteSpace: "nowrap",
+            flexShrink: 0,
             textAlign: "right"
           },
           title: isNonMarketHour ? c.filingTime ? `Pre-Market filing (${c.filingTime})` : "Pre-Market News" : c.filingTime ? `Filing timestamp: ${c.filingTime}` : ""
