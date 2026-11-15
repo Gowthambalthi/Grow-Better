@@ -3725,7 +3725,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
           position: "relative"
         }
       },
-      /* Left Title: Clean text, NO pulse dot, NO calendar emoji */
+      /* Left Title: with blue bulbing light */
       /* @__PURE__ */ React.createElement(
         "div",
         {
@@ -3740,7 +3740,12 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             color: "var(--text, #0f172a)"
           }
         },
-        /* Pure clean text - symbol removed as requested */
+        /* Blue bulbing light */
+        /* @__PURE__ */ React.createElement("span", {
+          className: "live-pulse-dot",
+          style: { background: "#2563eb", boxShadow: "0 0 8px #2563eb" }
+        }),
+        /* Clean text title */
         /* @__PURE__ */ React.createElement("span", null, "UPCOMING EVENTS & CORPORATE CALENDAR")
       ),
       /* Right Controls: Type filter on left, Calendar on right (NO duplicate All buttons) */
