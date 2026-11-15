@@ -810,9 +810,9 @@
         </div>
       </div>
       <nav class="sidebar-nav">
-        <a class="nav-item active" href="/scalping.html" data-nav="scalping" id="navItemScalping" style="color:#00B386;font-weight:700;">
-          <svg class="nav-icon" viewBox="0 0 24 24" style="color:#00B386;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span style="color:#00B386;">🏛️ Institutional Swing</span>
+        <a class="nav-item" href="/" data-nav="dashboard" id="navItemDashboard" style="color:#00B386;font-weight:700;">
+          <svg class="nav-icon" viewBox="0 0 24 24" style="color:#00B386;"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <span style="color:#00B386;">Dashboard</span>
         </a>
         <a class="nav-item" href="#portfolio" data-nav="portfolio" id="navItemPortfolio">
           <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 2v10l7.07 7.07A10 10 0 1 1 12 2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 2A10 10 0 0 1 22 12h-10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -1092,42 +1092,7 @@
 
 
 
-  <!-- LIVE NEWS PANEL — headlines pulled FROM the feed now, beside what the stock
-       did after similar headlines (measured, with the no-news control). -->
-  <div class="section-title" style="justify-content:space-between;flex-wrap:wrap;margin-top:28px;">
-    <span>📰 LIVE NEWS — WORLD &amp; MARKET HEADLINES, AND WHAT THE STOCK DID NEXT</span>
-    <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-      <span id="newsStatus" style="font-size:12px;color:var(--text-muted);">loading news…</span>
-      <button class="btn-history" id="newsPullBtn" onclick="pullNewsNow()">🔄 Pull live headlines</button>
-    </span>
-  </div>
-  <!-- THE SECONDS-LEVEL WIRE.
-       The table below is rebuilt from the stored archive, so the newest row in it is only ever as
-       fresh as the last pull. This strip is a different question: what ARRIVED since this page
-       loaded. It polls a cursor endpoint every three seconds, inserts only the new rows, and
-       prints each row's arrival age in seconds beside the publisher's own lag — so "in seconds"
-       is a number on the screen, not an adjective. -->
-  <div class="card" style="margin-bottom:8px;padding:9px 12px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-      <span style="font-size:11.5px;font-weight:800;">⚡ LIVE WIRE — newest arrival first, age in seconds</span>
-      <span id="newsLiveMeta" style="font-size:10.5px;color:var(--text-muted);">starting…</span>
-    </div>
-    <div id="newsLive" style="max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:3px;">
-      <div style="font-size:11.5px;color:var(--text-muted);padding:2px 0;">waiting for the first poll…</div>
-    </div>
-  </div>
 
-  <div class="card" style="margin-bottom:8px;">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="newsCats"></div>
-    <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start;">
-      <div style="max-height:340px;overflow:auto;border:1px solid var(--card-border);border-radius:10px;" id="newsFeed">
-        <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12.5px;">loading headlines…</div>
-      </div>
-      <div id="newsReact"></div>
-    </div>
-    <div id="newsLeans" style="margin-top:10px;"></div>
-    <div id="newsFoot" style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.7;"></div>
-  </div>
 
   <!-- ONE TABLE, BECAUSE THERE IS ONE TIER.
        This page carried three numbered tiers — TIER 1 SWING, TIER 2 INTRADAY, TIER 3 SCALPING —
@@ -6281,10 +6246,14 @@
 
   function handleHash() {
     var h = (location.hash || '').replace(/^#\/?/, '').toLowerCase();
+    if (h === 'dashboard' || h === 'strategies' || !h) {
+      window.location.replace('/');
+      return;
+    }
     if (VIEWS.indexOf(h) !== -1) {
       switchView(h);
     } else {
-      switchView('strategies');
+      window.location.replace('/');
     }
   }
   window.addEventListener('hashchange', handleHash);

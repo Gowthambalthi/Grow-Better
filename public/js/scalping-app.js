@@ -330,18 +330,47 @@ function Sidebar({
   }, /* @__PURE__ */ React.createElement("a", {
     className: "nav-item active",
     href: "/",
-    title: "\u{1F3DB}\uFE0F Institutional Swing"
+    title: "Dashboard"
   }, /* @__PURE__ */ React.createElement("svg", {
     className: "nav-icon",
     viewBox: "0 0 24 24"
-  }, /* @__PURE__ */ React.createElement("path", {
-    d: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+  }, /* @__PURE__ */ React.createElement("rect", {
+    x: "3",
+    y: "3",
+    width: "7",
+    height: "7",
+    rx: "1.5",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  })), /* @__PURE__ */ React.createElement("span", null, "\u{1F3DB}\uFE0F Institutional Swing")), /* @__PURE__ */ React.createElement("a", {
+    strokeWidth: "2"
+  }), /* @__PURE__ */ React.createElement("rect", {
+    x: "14",
+    y: "3",
+    width: "7",
+    height: "7",
+    rx: "1.5",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2"
+  }), /* @__PURE__ */ React.createElement("rect", {
+    x: "14",
+    y: "14",
+    width: "7",
+    height: "7",
+    rx: "1.5",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2"
+  }), /* @__PURE__ */ React.createElement("rect", {
+    x: "3",
+    y: "14",
+    width: "7",
+    height: "7",
+    rx: "1.5",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2"
+  })), /* @__PURE__ */ React.createElement("span", null, "Dashboard")), /* @__PURE__ */ React.createElement("a", {
     className: "nav-item",
     href: "/final.html#portfolio"
   }, /* @__PURE__ */ React.createElement("svg", {
@@ -5658,7 +5687,7 @@ function mountScalpingApp() {
     root.render(React.createElement(ScalpErrorBoundary, null, React.createElement(ScalpingApp)));
   } catch (err) {
     console.error("[ScalpingApp Mount Error]", err);
-    rootElement.innerHTML = '<div style="padding: 60px 24px; text-align: center; font-family: system-ui, -apple-system, sans-serif; color: #0f172a;"><div style="font-size: 36px; margin-bottom: 12px;">\u{1F3DB}\uFE0F</div><div style="font-size: 18px; font-weight: 800;">Connecting Institutional Swing Feed\u2026</div><div style="font-size: 13px; color: #64748b; margin: 8px 0 20px;">' + (err.message || "Auto-recovering live feed connection") + '</div><button onclick="window.location.reload(true)" style="padding: 10px 24px; background: #d97706; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Reload Dashboard</button></div>';
+    rootElement.innerHTML = '<div style="padding: 60px 24px; text-align: center; font-family: system-ui, -apple-system, sans-serif; color: #0f172a;"><div style="font-size: 36px; margin-bottom: 12px;">\u{1F3DB}\uFE0F</div><div style="font-size: 18px; font-weight: 800;">Connecting Dashboard Feed\u2026</div><div style="font-size: 13px; color: #64748b; margin: 8px 0 20px;">' + (err.message || "Auto-recovering live feed connection") + '</div><button onclick="window.location.reload(true)" style="padding: 10px 24px; background: #d97706; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Reload Dashboard</button></div>';
   }
 }
 if (document.readyState === "loading") {

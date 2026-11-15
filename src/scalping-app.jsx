@@ -728,7 +728,7 @@ function Sidebar({
 
     href: "/",
 
-    title: "\uD83C\uDFDB\uFE0F Institutional Swing"
+    title: "Dashboard"
 
   }, /*#__PURE__*/React.createElement("svg", {
 
@@ -736,21 +736,79 @@ function Sidebar({
 
     viewBox: "0 0 24 24"
 
-  }, /*#__PURE__*/React.createElement("path", {
+  }, /*#__PURE__*/React.createElement("rect", {
 
-    d: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+    x: "3",
+
+    y: "3",
+
+    width: "7",
+
+    height: "7",
+
+    rx: "1.5",
 
     fill: "none",
 
     stroke: "currentColor",
 
-    strokeWidth: "2",
+    strokeWidth: "2"
 
-    strokeLinecap: "round",
+  }), /*#__PURE__*/React.createElement("rect", {
 
-    strokeLinejoin: "round"
+    x: "14",
 
-  })), /*#__PURE__*/React.createElement("span", null, "\uD83C\uDFDB\uFE0F Institutional Swing")), /*#__PURE__*/React.createElement("a", {
+    y: "3",
+
+    width: "7",
+
+    height: "7",
+
+    rx: "1.5",
+
+    fill: "none",
+
+    stroke: "currentColor",
+
+    strokeWidth: "2"
+
+  }), /*#__PURE__*/React.createElement("rect", {
+
+    x: "14",
+
+    y: "14",
+
+    width: "7",
+
+    height: "7",
+
+    rx: "1.5",
+
+    fill: "none",
+
+    stroke: "currentColor",
+
+    strokeWidth: "2"
+
+  }), /*#__PURE__*/React.createElement("rect", {
+
+    x: "3",
+
+    y: "14",
+
+    width: "7",
+
+    height: "7",
+
+    rx: "1.5",
+
+    fill: "none",
+
+    stroke: "currentColor",
+
+    strokeWidth: "2"
+
+  })), /*#__PURE__*/React.createElement("span", null, "Dashboard")), /*#__PURE__*/React.createElement("a", {
 
     className: "nav-item",
 
@@ -7197,7 +7255,7 @@ function mountScalpingApp() {
 
       '<div style="font-size: 36px; margin-bottom: 12px;">🏛️</div>' +
 
-      '<div style="font-size: 18px; font-weight: 800;">Connecting Institutional Swing Feed…</div>' +
+      '<div style="font-size: 18px; font-weight: 800;">Connecting Dashboard Feed…</div>' +
 
       '<div style="font-size: 13px; color: #64748b; margin: 8px 0 20px;">' + (err.message || 'Auto-recovering live feed connection') + '</div>' +
 

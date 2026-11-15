@@ -183,7 +183,7 @@ app.get('/index.html', (req, res) => res.redirect('/'));
 
 // every legacy entry point lands on the measured page.
 
-app.get(['/board', '/board.html'], (req, res) => {
+app.get(['/dashboard', '/dashboard.html', '/board', '/board.html'], (req, res) => {
 
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
@@ -7286,11 +7286,10 @@ app.post('/api/news/refresh', (req, res) => res.json(pullNewsLive(req.query.forc
 
 const NEWS_PULL_INTERVAL_MS = 5 * 60 * 1000;
 
-setTimeout(() => { try { pullNewsLive(false); } catch (e) { console.error('[News] boot pull failed:', e.message); } }, 45 * 1000);
-
-setInterval(() => { try { pullNewsLive(false); } catch (e) { console.error('[News] scheduled pull failed:', e.message); } }, NEWS_PULL_INTERVAL_MS);
-
-console.log('[News] live headline pull scheduled: once at boot (45s) and every ' + (NEWS_PULL_INTERVAL_MS / 60000) + ' min');
+// Legacy archive headline pull disabled as requested:
+// setTimeout(() => { try { pullNewsLive(false); } catch (e) { console.error('[News] boot pull failed:', e.message); } }, 45 * 1000);
+// setInterval(() => { try { pullNewsLive(false); } catch (e) { console.error('[News] scheduled pull failed:', e.message); } }, NEWS_PULL_INTERVAL_MS);
+console.log('[News] legacy archive headline pull disabled — modern exchange filings active on /api/scalping/catalysts');
 
 
 
@@ -8254,17 +8253,9 @@ console.log('[News] flash lane armed: NSE + BSE dual exchange corporate announce
 // page, its filters and its measurement joins need no change.
 
 try {
-
-  fastWire.start();
-
-  const fastN = fastWire.SOURCES.filter((s) => s.tier === 'fast').length;
-
-  console.log('[News] fast wire armed: ' + fastWire.SOURCES.length + ' sources — ' + fastN +
-
-    ' on the ' + (fastWire.CONFIG.fastMs / 1000) + 's clock, ' + (fastWire.SOURCES.length - fastN) +
-
-    ' on ' + (fastWire.CONFIG.pollMs / 1000) + 's → /api/news · /api/news/stream');
-
+  // fastWire disabled as requested to remove legacy background wire polling
+  // fastWire.start();
+  console.log('[News] legacy fast wire polling disabled');
 } catch (e) {
 
   console.warn('[News] fast wire could not start:', e.message);
@@ -8454,65 +8445,8 @@ try {
 // backdrop, never as a lean on one stock.
 
 app.get('/api/news/signals', async (req, res) => {
-
-  try {
-
-    // THE ONE IMPLEMENTATION. common/news/newsSignals.js owns the reliability
-
-    // rule and the lean aggregation; the morning Telegram digest reads the same
-
-    // function, so the page and the phone can never disagree about a lean.
-
-    // The payload also carries `policy` — the backtested trade rule (skip if the
-
-    // entry open already gapped the class's expected move, SL %, exit horizon).
-
-    const sig = newsSignalsMod.computeSignals(
-
-      newsItems(), newsStore.readReaction(), Number(req.query.days) || 3,
-
-    );
-
-    // THE LIVE "ALREADY MOVED?" CHECK. The top leans get a live quote so the
-
-    // board can say SKIP or OK against the class's expected move — the exact
-
-    // rule the holdout measured. A dead quote leaves 'unknown', never a guess,
-
-    // and a quote failure must never fail the endpoint.
-
-    // Quote the whole lean list, not the first twelve. The already-moved check
-
-    // re-sorts the rows (priced-in ones go last), so a row that ends up on the
-
-    // page must not be 'unknown' merely because it was 13th before the sort.
-
-    const top = (sig.stocks || []).slice(0, 50).map((s) => s.symbol);
-
-    if (top.length) {
-
-      try {
-
-        const quotes = await liveQuoteEngine.fetchStockQuotes(top);
-
-        newsSignalsMod.attachLiveState(sig, quotes);
-
-      } catch (e) {
-
-        for (const r of sig.stocks) r.live = { status: 'unknown', note: 'quote fetch failed: ' + e.message };
-
-      }
-
-    }
-
-    res.json(sig);
-
-  } catch (e) {
-
-    res.status(500).json({ error: e.message });
-
-  }
-
+  // Legacy stock news leans removed as requested
+  res.json({ ok: true, stocks: [], marketContext: [], verified: { available: false } });
 });
 
 
