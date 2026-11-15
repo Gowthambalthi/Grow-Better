@@ -4542,6 +4542,7 @@ function TopNewsSquareBox({
         display: 'flex',
         alignItems: 'baseline',
         justifyContent: 'space-between',
+        flexWrap: 'nowrap',
         gap: '8px',
         width: '100%',
         minWidth: 0
@@ -4552,7 +4553,10 @@ function TopNewsSquareBox({
         className: "top-news-headline",
         style: {
           flex: 1,
-          minWidth: 0
+          minWidth: 0,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         },
         title: `${c.title || c.description || 'Corporate Announcement'}${timingAI && timingAI.detail ? `\n\nAI Timing: ${timingAI.detail}` : ''}`
       }, c.title || c.description || 'Corporate Announcement'),
@@ -4586,7 +4590,8 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
   ], []);
 
   const [selectedTypes, setSelectedTypes] = React.useState(['ALL']);
-  const [selectedDate, setSelectedDate] = React.useState('ALL');
+  const [calendarMode, setCalendarMode] = React.useState('ALL'); // 'ALL' | 'UPCOMING' | 'DATE'
+  const [calendarDate, setCalendarDate] = React.useState('');
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = React.useState(false);
   const typeDropdownRef = React.useRef(null);
 
@@ -4710,6 +4715,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
         if (!seen.has(key)) {
           seen.add(key);
           const tsVal = Number(c.ts || c.timeMs || 0);
+          const isoDate = tsVal > 0 ? new Date(tsVal + 330 * 60000).toISOString().slice(0, 10) : '';
           classified.push({
             c,
             sym,
@@ -4720,6 +4726,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             badgeBorder,
             priority,
             eventDateStr,
+            isoDate,
             ts: tsVal
           });
         }
@@ -4770,30 +4777,41 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
 
   const typeButtonLabel = React.useMemo(() => {
     if (selectedTypes.includes('ALL') || selectedTypes.length === 0) {
-      return 'All Types';
+      return 'Types ▾';
     }
     if (selectedTypes.length === 1) {
       const found = EVENT_TYPES.find(t => t.key === selectedTypes[0]);
-      return found ? found.label : selectedTypes[0];
+      return `${found ? found.label : selectedTypes[0]} ▾`;
     }
-    return `${selectedTypes.length} Types`;
+    return `${selectedTypes.length} Types ▾`;
   }, [selectedTypes, EVENT_TYPES]);
 
   const displayList = React.useMemo(() => {
     return eventsList.filter(item => {
+      // 1. Filter by event type: All vs select as your wish
       if (!selectedTypes.includes('ALL') && selectedTypes.length > 0) {
         if (!selectedTypes.includes(item.evType)) return false;
       }
-      if (selectedDate && selectedDate !== 'ALL') {
-        if (selectedDate === 'UPCOMING') {
-          if ((item.eventDateStr || 'Upcoming') !== 'Upcoming') return false;
-        } else {
-          if (item.eventDateStr !== selectedDate) return false;
+      // 2. Filter by calendar: All vs Upcoming vs Picked Date
+      if (calendarMode === 'UPCOMING') {
+        if ((item.eventDateStr || 'Upcoming') !== 'Upcoming') return false;
+      } else if (calendarMode === 'DATE' && calendarDate) {
+        if (item.isoDate && item.isoDate === calendarDate) return true;
+        const parts = calendarDate.split('-');
+        if (parts.length === 3) {
+          const day = parseInt(parts[2], 10);
+          const mIdx = parseInt(parts[1], 10) - 1;
+          const monthNames = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+          const mShort = monthNames[mIdx] || '';
+          const text = `${item.eventDateStr || ''} ${item.c?.title || ''} ${item.c?.description || ''} ${item.c?.filingTime || ''}`.toLowerCase();
+          const reg = new RegExp(`\\b(?:${day}(?:st|nd|rd|th)?\\s+${mShort}|${mShort}\\s+${day}(?:st|nd|rd|th)?)\\b`, 'i');
+          if (reg.test(text)) return true;
         }
+        return false;
       }
       return true;
     });
-  }, [eventsList, selectedTypes, selectedDate]);
+  }, [eventsList, selectedTypes, calendarMode, calendarDate]);
 
   return /*#__PURE__*/React.createElement("div", {
     className: "top-news-square-box"
@@ -4832,7 +4850,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
         /*#__PURE__*/React.createElement("span", null, "UPCOMING EVENTS & CORPORATE CALENDAR")
       ),
 
-      /* Right Controls: Type filter on left, Calendar on right (NO duplicate All buttons) */
+      /* Right Controls: Type filter on left, Calendar on right (Both have All + select as your wish) */
       /*#__PURE__*/React.createElement("div", {
         style: {
           display: 'flex',
@@ -4842,7 +4860,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
           justifyContent: 'flex-end'
         }
       },
-        /* 1. Type Filter (Multi-select or single select) */
+        /* 1. Type Filter: [All] button + [Types ▾] multi-select dropdown */
         /*#__PURE__*/React.createElement("div", {
           ref: typeDropdownRef,
           style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '4px' }
@@ -4857,7 +4875,30 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             }
           }, "Type:"),
 
-          /* Multi-Select Dropdown Button (NO duplicate All button outside!) */
+          /* "All" button for Type */
+          /*#__PURE__*/React.createElement("button", {
+            type: "button",
+            onClick: () => setSelectedTypes(['ALL']),
+            style: {
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '2px 8px',
+              height: '24px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+              border: (selectedTypes.includes('ALL') || selectedTypes.length === 0) ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
+              background: (selectedTypes.includes('ALL') || selectedTypes.length === 0) ? 'rgba(34, 197, 94, 0.12)' : 'var(--card-bg, #ffffff)',
+              color: (selectedTypes.includes('ALL') || selectedTypes.length === 0) ? '#16a34a' : 'var(--text-muted, #64748b)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              outline: 'none',
+              transition: 'all 0.15s ease'
+            },
+            title: "Show all event types"
+          }, "All"),
+
+          /* Multi-Select Dropdown Button for Type ("select as your wish") */
           /*#__PURE__*/React.createElement("button", {
             type: "button",
             onClick: () => setIsTypeDropdownOpen(v => !v),
@@ -4878,7 +4919,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               outline: 'none',
               transition: 'all 0.15s ease'
             },
-            title: "Select multiple or single event types"
+            title: "Select individual event types as your wish"
           },
             typeButtonLabel,
             /*#__PURE__*/React.createElement("span", { style: { fontSize: '9px', opacity: 0.7 } }, isTypeDropdownOpen ? '▲' : '▼')
@@ -4978,7 +5019,7 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
           )
         ),
 
-        /* 2. Calendar Selector (at right corner at top, self-contained, NO duplicate All button!) */
+        /* 2. Calendar Selector: [All] button + [Upcoming] button + Calendar Date Picker */
         /*#__PURE__*/React.createElement("div", {
           style: { display: 'flex', alignItems: 'center', gap: '4px' }
         },
@@ -4992,10 +5033,13 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             }
           }, "Calendar:"),
 
-          /* Clean Selector with All Dates default option */
-          /*#__PURE__*/React.createElement("select", {
-            value: selectedDate,
-            onChange: (e) => setSelectedDate(e.target.value),
+          /* "All" button for Calendar */
+          /*#__PURE__*/React.createElement("button", {
+            type: "button",
+            onClick: () => {
+              setCalendarMode('ALL');
+              setCalendarDate('');
+            },
             style: {
               fontSize: '11px',
               fontWeight: 700,
@@ -5004,21 +5048,72 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               borderRadius: '5px',
               cursor: 'pointer',
               boxSizing: 'border-box',
-              border: selectedDate !== 'ALL' ? '1px solid #3b82f6' : '1px solid var(--border-color, #cbd5e1)',
-              background: selectedDate !== 'ALL' ? 'rgba(59, 130, 246, 0.08)' : 'var(--card-bg, #ffffff)',
-              color: selectedDate !== 'ALL' ? '#2563eb' : 'var(--text, #0f172a)',
+              border: calendarMode === 'ALL' ? '1px solid #86efac' : '1px solid var(--border-color, #cbd5e1)',
+              background: calendarMode === 'ALL' ? 'rgba(34, 197, 94, 0.12)' : 'var(--card-bg, #ffffff)',
+              color: calendarMode === 'ALL' ? '#16a34a' : 'var(--text-muted, #64748b)',
+              display: 'inline-flex',
+              alignItems: 'center',
               outline: 'none',
               transition: 'all 0.15s ease'
             },
-            title: "Filter by corporate event scheduled date"
-          },
-            /*#__PURE__*/React.createElement("option", { value: "ALL" }, `All Dates (${eventsList.length})`),
-            upcomingCount > 0 && /*#__PURE__*/React.createElement("option", { value: "UPCOMING" }, `Upcoming (${upcomingCount})`),
-            availableDates.map(d => /*#__PURE__*/React.createElement("option", {
-              key: d.key,
-              value: d.key
-            }, `${d.label} (${d.count})`))
-          )
+            title: "Show events from all dates"
+          }, "All"),
+
+          /* "Upcoming" button */
+          /*#__PURE__*/React.createElement("button", {
+            type: "button",
+            onClick: () => {
+              setCalendarMode('UPCOMING');
+              setCalendarDate('');
+            },
+            style: {
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '2px 8px',
+              height: '24px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+              border: calendarMode === 'UPCOMING' ? '1px solid #3b82f6' : '1px solid var(--border-color, #cbd5e1)',
+              background: calendarMode === 'UPCOMING' ? 'rgba(59, 130, 246, 0.12)' : 'var(--card-bg, #ffffff)',
+              color: calendarMode === 'UPCOMING' ? '#2563eb' : 'var(--text-muted, #64748b)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              outline: 'none',
+              transition: 'all 0.15s ease'
+            },
+            title: `Show upcoming events (${upcomingCount})`
+          }, `Upcoming${upcomingCount > 0 ? ` (${upcomingCount})` : ''}`),
+
+          /* Calendar Date Picker Input: "Select as your wish" */
+          /*#__PURE__*/React.createElement("input", {
+            type: "date",
+            value: calendarDate,
+            onChange: (e) => {
+              const val = e.target.value;
+              setCalendarDate(val);
+              if (val) {
+                setCalendarMode('DATE');
+              } else {
+                setCalendarMode('ALL');
+              }
+            },
+            style: {
+              fontSize: '11px',
+              fontWeight: (calendarMode === 'DATE' && calendarDate) ? 700 : 500,
+              padding: '1px 6px',
+              height: '24px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              boxSizing: 'border-box',
+              border: (calendarMode === 'DATE' && calendarDate) ? '1px solid #3b82f6' : '1px solid var(--border-color, #cbd5e1)',
+              background: (calendarMode === 'DATE' && calendarDate) ? 'rgba(59, 130, 246, 0.10)' : 'var(--card-bg, #ffffff)',
+              color: (calendarMode === 'DATE' && calendarDate) ? '#2563eb' : 'var(--text, #0f172a)',
+              outline: 'none',
+              transition: 'all 0.15s ease'
+            },
+            title: "Select any date from calendar (select as your wish)"
+          })
         )
       )
     ),
@@ -5040,22 +5135,24 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               gap: '8px'
             }
           },
-            /*#__PURE__*/React.createElement("span", null, "No scheduled corporate events matching selected filters."),
+            /*#__PURE__*/React.createElement("span", null, (calendarMode === 'DATE' && calendarDate) ? `No scheduled corporate events on ${calendarDate}` : "No scheduled corporate events matching selected filters."),
             /*#__PURE__*/React.createElement("button", {
               type: "button",
               onClick: () => {
                 setSelectedTypes(['ALL']);
-                setSelectedDate('ALL');
+                setCalendarMode('ALL');
+                setCalendarDate('');
               },
               style: {
                 fontSize: '11px',
-                fontWeight: 600,
-                color: '#2563eb',
-                background: 'none',
-                border: '1px solid #93c5fd',
-                borderRadius: '4px',
-                padding: '3px 8px',
-                cursor: 'pointer'
+                fontWeight: 700,
+                color: '#16a34a',
+                background: 'rgba(34, 197, 94, 0.10)',
+                border: '1px solid #86efac',
+                borderRadius: '5px',
+                padding: '4px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }
             }, "Show All Events")
           )
@@ -5170,7 +5267,12 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
               /* Bottom Headline / Purpose */
               /*#__PURE__*/React.createElement("div", {
                 className: "top-news-headline",
-                style: { marginTop: '4px' },
+                style: {
+                  marginTop: '4px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                },
                 title: c.title || c.description
               }, c.title || c.description || `${item.sym} Corporate Announcement`)
             );
