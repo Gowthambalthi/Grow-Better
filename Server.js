@@ -184,11 +184,8 @@ app.get('/index.html', (req, res) => res.redirect('/'));
 // every legacy entry point lands on the measured page.
 
 app.get(['/dashboard', '/dashboard.html', '/board', '/board.html'], (req, res) => {
-
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'scalping.html'));
-
 });
 
 
@@ -204,23 +201,16 @@ app.get(['/dashboard', '/dashboard.html', '/board', '/board.html'], (req, res) =
 // nine-strategy page on the default URL. The root is decided by the explicit route instead.
 
 app.use(express.static(path.join(__dirname, 'public'), {
-
   index: false,
-
   setHeaders: (res, filePath) => {
-
-    if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
-
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
-      res.setHeader('Pragma', 'no-cache');
-
-      res.setHeader('Expires', '0');
-
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    } else if (filePath.includes('vendor')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.png') || filePath.endsWith('.svg') || filePath.endsWith('.ico')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=3600');
     }
-
   }
-
 }));
 
 
@@ -242,11 +232,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // now serve the same measured board, so which link is typed cannot change what is reported.
 
 app.get('/', (req, res) => {
-
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   res.sendFile(path.join(__dirname, 'public', 'scalping.html'));
-
 });
 
 
@@ -254,11 +241,8 @@ app.get('/', (req, res) => {
 // Final 3 Core Strategies Page route (serves React Dashboard; legacy file at /final-classic)
 
 app.get(['/final', '/final.html'], (req, res) => {
-
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
-  res.sendFile(path.join(__dirname, 'public', 'scalping.html'));
-
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.sendFile(path.join(__dirname, 'public', 'final.html'));
 });
 
 app.get('/final-classic', (req, res) => {

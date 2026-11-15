@@ -11,6 +11,9 @@
       localStorage.setItem('openalgo_theme_chosen', '1');
     } catch(e) {}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="prefetch" href="/" as="document">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="icon" href="/logo.png">
   <link rel="stylesheet" href="/css/style.css?v=20261114_card_final_v18">
@@ -6153,21 +6156,20 @@
       if (e.key === 'Escape') closeTierModal();
     });
 
-    setInterval(loadFinalBoard, 1000);
+    setInterval(loadFinalBoard, 3000);
     loadFinalBoard();
     // The candidates file is rewritten about once a minute, so the tier tables
     // poll every 10s — often enough to feel live, rarely enough not to matter.
     setInterval(loadTierFeed, 10000);
     loadTierFeed();
-    setInterval(loadNews, 5000);
-    loadNews();
+    
     // The seconds-level strip: 3 s cadence, independent of the 60 s table refresh above.
-    wireTick();
+    
     // OPENING THE PAGE ASKS FOR TODAY'S HEADLINES. The store is only as fresh as the last
     // harvest, so a silent pull is fired on load — the server starts one only if no pull ran
     // in the last 3 minutes (its cooldown), and the 60-second loadNews loop above shows the
     // new items once they land. Fire-and-forget: the button below remains the manual path.
-    fetch('/api/news/refresh', { method: 'POST' }).catch(() => {});
+    
     // The call books are written once per session, so a slow cadence is the honest one: the card
     // reports sessions, not ticks, and re-reading a file that changes at 15:30 every minute only
     // makes the number look live when it is not.

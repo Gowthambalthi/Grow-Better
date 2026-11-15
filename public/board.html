@@ -11,6 +11,9 @@
       localStorage.setItem('openalgo_theme_chosen', '1');
     } catch(e) {}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="prefetch" href="/" as="document">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="icon" href="/logo.png">
   <link rel="stylesheet" href="/css/style.css?v=20261114_card_final_v18">
@@ -5789,7 +5792,7 @@
       if (e.key === 'Escape') closeTierModal();
     });
 
-    setInterval(loadFinalBoard, 1000);
+    setInterval(loadFinalBoard, 3000);
     loadFinalBoard();
     // The candidates file is rewritten about once a minute, so the tier tables
     // poll every 10s — often enough to feel live, rarely enough not to matter.

@@ -456,6 +456,54 @@ function Sidebar({
     strokeLinecap: "round"
   })), /* @__PURE__ */ React.createElement("span", null, "Smart Money")), /* @__PURE__ */ React.createElement("a", {
     className: "nav-item",
+    href: "/final.html#individual-family"
+  }, /* @__PURE__ */ React.createElement("svg", {
+    className: "nav-icon",
+    viewBox: "0 0 24 24"
+  }, /* @__PURE__ */ React.createElement("circle", {
+    cx: "9",
+    cy: "7",
+    r: "3",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }), /* @__PURE__ */ React.createElement("circle", {
+    cx: "17",
+    cy: "7",
+    r: "3",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }), /* @__PURE__ */ React.createElement("path", {
+    d: "M2 21v-2a5 5 0 0110 0v2",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }), /* @__PURE__ */ React.createElement("path", {
+    d: "M14 21v-1a4 4 0 014-4",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  })), /* @__PURE__ */ React.createElement("span", null, "Individual / Family")), /* @__PURE__ */ React.createElement("a", {
+    className: "nav-item",
+    href: "/final.html#foreign-funds"
+  }, /* @__PURE__ */ React.createElement("svg", {
+    className: "nav-icon",
+    viewBox: "0 0 24 24"
+  }, /* @__PURE__ */ React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "10",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  }), /* @__PURE__ */ React.createElement("path", {
+    d: "M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "1.8"
+  })), /* @__PURE__ */ React.createElement("span", null, "Foreign Funds")), /* @__PURE__ */ React.createElement("a", {
+    className: "nav-item",
     href: "/final.html#alerts"
   }, /* @__PURE__ */ React.createElement("svg", {
     className: "nav-icon",
