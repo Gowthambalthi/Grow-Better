@@ -6795,13 +6795,14 @@ function ScalpingApp() {
     className: "cat-section-header",
     style: {
       marginTop: '24px',
-      marginBottom: '14px'
+      marginBottom: '14px',
+      paddingLeft: '4px'
     }
   }, /*#__PURE__*/React.createElement("h2", {
     style: {
       margin: 0,
-      fontSize: '15px',
-      fontWeight: 600,
+      fontSize: '16px',
+      fontWeight: 700,
       color: 'var(--text, #0f172a)',
       letterSpacing: '-0.01em',
       lineHeight: 1.3
