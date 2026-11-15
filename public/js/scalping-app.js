@@ -5401,18 +5401,19 @@ function ScalpingApp() {
     style: {
       marginTop: "24px",
       marginBottom: "14px",
-      paddingLeft: "4px"
+      paddingLeft: "12px"
     }
   }, /* @__PURE__ */ React.createElement("h2", {
     style: {
       margin: 0,
-      fontSize: "16px",
+      fontSize: "15px",
       fontWeight: 700,
       color: "var(--text, #0f172a)",
-      letterSpacing: "-0.01em",
+      letterSpacing: "0.02em",
+      textTransform: "uppercase",
       lineHeight: 1.3
     }
-  }, "Probability Catalysts")), /* @__PURE__ */ React.createElement("div", {
+  }, "PROBABILITY CATALYSTS")), /* @__PURE__ */ React.createElement("div", {
     className: "top5-catalyst-row",
     style: {
       display: "grid",
