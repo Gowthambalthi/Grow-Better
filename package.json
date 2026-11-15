@@ -4,7 +4,8 @@
   "description": "Unified Angel One + Groww trading module — auth, holdings, live market data, order placement",
   "main": "broker.js",
   "scripts": {
-    "build": "echo 'Build complete'",
+    "build": "npm run build:ui",
+    "build:ui": "esbuild src/scalping-app.jsx --outfile=public/js/scalping-app.js --loader:.jsx=jsx",
     "demo": "node demo.js",
     "start": "node Server.js",
     "test": "node --test --test-concurrency=1 test/*.test.js",
@@ -29,5 +30,8 @@
   },
   "optionalDependencies": {
     "better-sqlite3": "^11.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
