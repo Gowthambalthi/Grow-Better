@@ -3117,6 +3117,24 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   line-height: 1.3 !important;
 }
 
+/* Event Date Picker input styling */
+.event-date-picker {
+  font-family: inherit !important;
+  cursor: pointer !important;
+}
+.event-date-picker::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  filter: invert(0.35);
+}
+[data-theme="dark"] .event-date-picker {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+[data-theme="dark"] .event-date-picker::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
+
 
 /* Probability Catalysts Header: Normal simple heading */
 .cat-section-header {

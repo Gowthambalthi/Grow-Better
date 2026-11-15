@@ -3519,6 +3519,43 @@ AI Timing: ${timingAI.detail}` : ""}`
   })));
 }
 function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
+  const EVENT_TYPES = React.useMemo(() => [
+    { key: "RESULTS", label: "Results" },
+    { key: "DIVIDEND", label: "Dividend" },
+    { key: "BOARD_MEET", label: "Board Meet" },
+    { key: "CORP_ACTION", label: "Corp Action" },
+    { key: "CONCALL", label: "Concall" },
+    { key: "AGM", label: "AGM / EGM" },
+    { key: "CATALYST", label: "Key Catalyst" }
+  ], []);
+  const [selectedTypes, setSelectedTypes] = React.useState(["ALL"]);
+  const [selectedDate, setSelectedDate] = React.useState("");
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = React.useState(false);
+  const typeDropdownRef = React.useRef(null);
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(e.target)) {
+        setIsTypeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  const toggleType = (typeKey) => {
+    if (typeKey === "ALL") {
+      setSelectedTypes(["ALL"]);
+      return;
+    }
+    setSelectedTypes((prev) => {
+      const withoutAll = prev.filter((t) => t !== "ALL");
+      if (withoutAll.includes(typeKey)) {
+        const remaining = withoutAll.filter((t) => t !== typeKey);
+        return remaining.length === 0 ? ["ALL"] : remaining;
+      } else {
+        return [...withoutAll, typeKey];
+      }
+    });
+  };
   const eventsList = React.useMemo(() => {
     if (!catalysts || catalysts.length === 0) return [];
     const classified = [];
@@ -3534,10 +3571,10 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
       let badgeBorder = "rgba(37, 99, 235, 0.3)";
       let priority = 10;
       const dateMatch = (c.title || c.description || "").match(/\b(?:(?:on\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)|(?:(?:on\s+)?(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}))/i);
-      const eventDateStr = dateMatch ? dateMatch[1] || dateMatch[2] || dateMatch[0] : c.timeFormatted || "Upcoming";
+      const eventDateStr = dateMatch ? dateMatch[1] || dateMatch[2] || dateMatch[0] : c.timeFormatted || (c.filingTime ? c.filingTime.split(" ").slice(0, 2).join(" ") : "Upcoming");
       if (/dividend|record\s*date|ex-date|interim\s*dividend|final\s*dividend|payout/i.test(fullText)) {
         const amt = (c.title || c.description || "").match(/(?:₹|rs\.?)\s*(\d+(?:\.\d+)?)/i);
-        badge = amt ? `\u{1F4B0} \u20B9${amt[1]} Div` : "\u{1F4B0} Dividend";
+        badge = amt ? `\u20B9${amt[1]} Div` : "Dividend";
         badgeColor = "#059669";
         badgeBg = "rgba(16, 185, 129, 0.12)";
         badgeBorder = "rgba(16, 185, 129, 0.3)";
@@ -3545,42 +3582,42 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
         priority = 1;
       } else if (/financial\s*result|quarterly\s*result|q[1-4]\s*result|earnings|unaudited\s*result|audited\s*result|pat\s*(?:rises|climbs|jumps|drops|falls)/i.test(fullText)) {
         const q = fullText.match(/\b(q[1-4])\b/i);
-        badge = q ? `\u{1F4CA} ${q[1].toUpperCase()} Results` : "\u{1F4CA} Results";
+        badge = q ? `${q[1].toUpperCase()} Results` : "Results";
         badgeColor = "#2563eb";
         badgeBg = "rgba(37, 99, 235, 0.12)";
         badgeBorder = "rgba(37, 99, 235, 0.3)";
         evType = "RESULTS";
         priority = 2;
       } else if (/board\s*meeting|meeting\s*of\s*(?:the\s*)?board|scheduled.*meeting/i.test(fullText)) {
-        badge = "\u{1F3DB}\uFE0F Board Meet";
+        badge = "Board Meet";
         badgeColor = "#d97706";
         badgeBg = "rgba(217, 119, 6, 0.12)";
         badgeBorder = "rgba(217, 119, 6, 0.3)";
         evType = "BOARD_MEET";
         priority = 3;
       } else if (/bonus|split|sub-division|buyback|amalgamation|merger|demerger|rights\s*issue/i.test(fullText)) {
-        badge = "\u{1F4DC} Corp Action";
+        badge = "Corp Action";
         badgeColor = "#0891b2";
         badgeBg = "rgba(8, 145, 178, 0.12)";
         badgeBorder = "rgba(8, 145, 178, 0.3)";
         evType = "CORP_ACTION";
         priority = 4;
       } else if (/concall|earnings\s*call|analyst\s*meet|investor\s*meet|interaction\s*with/i.test(fullText)) {
-        badge = "\u{1F465} Concall / Meet";
+        badge = "Concall";
         badgeColor = "#7c3aed";
         badgeBg = "rgba(124, 58, 237, 0.12)";
         badgeBorder = "rgba(124, 58, 237, 0.3)";
         evType = "CONCALL";
         priority = 5;
       } else if (/\bagm\b|\begm\b|annual\s*general\s*meeting/i.test(fullText)) {
-        badge = "\u{1F5F3}\uFE0F AGM / EGM";
+        badge = "AGM / EGM";
         badgeColor = "#4f46e5";
         badgeBg = "rgba(79, 70, 229, 0.12)";
         badgeBorder = "rgba(79, 70, 229, 0.3)";
         evType = "AGM";
         priority = 6;
       } else if (/order\s*win|awarded|contract|expansion|acquisition|partnership/i.test(fullText)) {
-        badge = "\u{1F680} Key Catalyst";
+        badge = "Key Catalyst";
         badgeColor = "#ea580c";
         badgeBg = "rgba(234, 88, 12, 0.12)";
         badgeBorder = "rgba(234, 88, 12, 0.3)";
@@ -3591,6 +3628,8 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
         const key = `${sym}-${evType}`;
         if (!seen.has(key)) {
           seen.add(key);
+          const tsVal = Number(c.ts || c.timeMs || 0);
+          const isoDate = tsVal > 0 ? new Date(tsVal + 330 * 6e4).toISOString().slice(0, 10) : "";
           classified.push({
             c,
             sym,
@@ -3601,16 +3640,70 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             badgeBorder,
             priority,
             eventDateStr,
-            ts: Number(c.ts || c.timeMs || 0)
+            isoDate,
+            ts: tsVal
           });
         }
       }
     }
     return classified.sort((a, b) => {
+      const tierA = getCompanyTier(a.sym);
+      const tierB = getCompanyTier(b.sym);
+      const scoreA = tierA ? tierA.score : 100;
+      const scoreB = tierB ? tierB.score : 100;
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
       if (a.priority !== b.priority) return a.priority - b.priority;
       return b.ts - a.ts;
     });
   }, [catalysts]);
+  const typeCounts = React.useMemo(() => {
+    const counts = {};
+    for (const item of eventsList) {
+      counts[item.evType] = (counts[item.evType] || 0) + 1;
+    }
+    return counts;
+  }, [eventsList]);
+  const typeButtonLabel = React.useMemo(() => {
+    if (selectedTypes.includes("ALL") || selectedTypes.length === 0) {
+      return "All Types";
+    }
+    if (selectedTypes.length === 1) {
+      const found = EVENT_TYPES.find((t) => t.key === selectedTypes[0]);
+      return found ? found.label : selectedTypes[0];
+    }
+    return `${selectedTypes.length} Types`;
+  }, [selectedTypes, EVENT_TYPES]);
+  const matchesDate = (item, selDate) => {
+    if (!selDate || selDate === "ALL") return true;
+    if (item.isoDate === selDate) return true;
+    const parts = selDate.split("-");
+    if (parts.length === 3) {
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const monthFullNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const mShort = monthNames[monthIndex] ? monthNames[monthIndex].toLowerCase() : "";
+      const mFull = monthFullNames[monthIndex] ? monthFullNames[monthIndex].toLowerCase() : "";
+      const text = `${item.eventDateStr || ""} ${item.c.title || ""} ${item.c.description || ""} ${item.c.filingTime || ""}`.toLowerCase();
+      if (text.includes(`${day} ${mShort}`) || text.includes(`${mShort} ${day}`) || text.includes(`${day}th ${mShort}`) || text.includes(`${day}st ${mShort}`) || text.includes(`${day}nd ${mShort}`) || text.includes(`${day}rd ${mShort}`) || text.includes(`${day} ${mFull}`) || text.includes(`${mFull} ${day}`)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const displayList = React.useMemo(() => {
+    return eventsList.filter((item) => {
+      if (!selectedTypes.includes("ALL") && selectedTypes.length > 0) {
+        if (!selectedTypes.includes(item.evType)) return false;
+      }
+      if (selectedDate) {
+        if (!matchesDate(item, selectedDate)) return false;
+      }
+      return true;
+    });
+  }, [eventsList, selectedTypes, selectedDate]);
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -3620,23 +3713,283 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
     /* @__PURE__ */ React.createElement(
       "div",
       {
-        className: "top-news-box-head"
+        className: "top-news-box-head",
+        style: {
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "8px",
+          position: "relative"
+        }
       },
+      /* Left Title: Clean text, NO pulse dot, NO calendar emoji */
       /* @__PURE__ */ React.createElement(
         "div",
         {
-          className: "top-news-box-title"
+          className: "top-news-box-title",
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            fontWeight: 700,
+            fontSize: "12.5px",
+            letterSpacing: "0.02em",
+            color: "var(--text, #0f172a)"
+          }
         },
-        /* @__PURE__ */ React.createElement("span", {
-          className: "live-pulse-dot",
-          style: { background: "#2563eb" }
-        }),
-        /* @__PURE__ */ React.createElement("span", null, "\u{1F4C5} UPCOMING EVENTS & CORPORATE CALENDAR")
+        /* Pure clean text - symbol removed as requested */
+        /* @__PURE__ */ React.createElement("span", null, "UPCOMING EVENTS & CORPORATE CALENDAR")
       ),
-      /* @__PURE__ */ React.createElement("span", {
-        className: "top-news-box-count",
-        style: { color: "#2563eb", background: "rgba(37, 99, 235, 0.1)" }
-      }, `${eventsList.length} Scheduled`)
+      /* Right Controls: Type filter on left, Calendar on right */
+      /* @__PURE__ */ React.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px",
+            justifyContent: "flex-end"
+          }
+        },
+        /* 1. Type Filter (Multi-select or single select) */
+        /* @__PURE__ */ React.createElement(
+          "div",
+          {
+            ref: typeDropdownRef,
+            style: { position: "relative", display: "flex", alignItems: "center", gap: "4px" }
+          },
+          /* "Type:" label */
+          /* @__PURE__ */ React.createElement("span", {
+            style: {
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "var(--text-muted, #64748b)",
+              whiteSpace: "nowrap"
+            }
+          }, "Type:"),
+          /* Quick Pill: All */
+          /* @__PURE__ */ React.createElement("button", {
+            type: "button",
+            onClick: () => setSelectedTypes(["ALL"]),
+            style: {
+              fontSize: "11px",
+              fontWeight: 700,
+              padding: "2px 8px",
+              height: "24px",
+              borderRadius: "5px",
+              cursor: "pointer",
+              boxSizing: "border-box",
+              border: selectedTypes.includes("ALL") || selectedTypes.length === 0 ? "1px solid #86efac" : "1px solid var(--border-color, #cbd5e1)",
+              background: selectedTypes.includes("ALL") || selectedTypes.length === 0 ? "rgba(34, 197, 94, 0.12)" : "transparent",
+              color: selectedTypes.includes("ALL") || selectedTypes.length === 0 ? "#16a34a" : "var(--text-muted, #64748b)",
+              transition: "all 0.15s ease"
+            },
+            title: "Show all event types"
+          }, "All"),
+          /* Multi-Select Dropdown Button */
+          /* @__PURE__ */ React.createElement(
+            "button",
+            {
+              type: "button",
+              onClick: () => setIsTypeDropdownOpen((v) => !v),
+              style: {
+                fontSize: "11px",
+                fontWeight: 700,
+                padding: "2px 8px",
+                height: "24px",
+                borderRadius: "5px",
+                cursor: "pointer",
+                boxSizing: "border-box",
+                border: !selectedTypes.includes("ALL") && selectedTypes.length > 0 ? "1px solid #93c5fd" : "1px solid var(--border-color, #cbd5e1)",
+                background: !selectedTypes.includes("ALL") && selectedTypes.length > 0 ? "rgba(59, 130, 246, 0.10)" : "transparent",
+                color: !selectedTypes.includes("ALL") && selectedTypes.length > 0 ? "#2563eb" : "var(--text-muted, #64748b)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                transition: "all 0.15s ease"
+              },
+              title: "Select multiple or single event types"
+            },
+            typeButtonLabel,
+            /* @__PURE__ */ React.createElement("span", { style: { fontSize: "9px", opacity: 0.7 } }, isTypeDropdownOpen ? "\u25B2" : "\u25BC")
+          ),
+          /* Floating Multi-Select Dropdown Menu */
+          isTypeDropdownOpen && /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              style: {
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                marginTop: "4px",
+                zIndex: 9999,
+                background: "var(--card-bg, #ffffff)",
+                border: "1px solid var(--border-color, #cbd5e1)",
+                borderRadius: "8px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                padding: "6px 0",
+                minWidth: "170px",
+                display: "flex",
+                flexDirection: "column"
+              }
+            },
+            /* Option: All Types */
+            /* @__PURE__ */ React.createElement(
+              "label",
+              {
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "6px 12px",
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  color: "var(--text, #0f172a)",
+                  background: selectedTypes.includes("ALL") ? "rgba(34, 197, 94, 0.08)" : "transparent"
+                },
+                onClick: (e) => {
+                  e.stopPropagation();
+                  setSelectedTypes(["ALL"]);
+                }
+              },
+              /* @__PURE__ */ React.createElement("input", {
+                type: "checkbox",
+                checked: selectedTypes.includes("ALL"),
+                onChange: () => setSelectedTypes(["ALL"]),
+                style: { cursor: "pointer", accentColor: "#16a34a" }
+              }),
+              "All Types"
+            ),
+            /* Divider */
+            /* @__PURE__ */ React.createElement("div", {
+              style: { height: "1px", background: "var(--border-color, #e2e8f0)", margin: "4px 0" }
+            }),
+            /* Individual Event Types */
+            EVENT_TYPES.map((t) => {
+              const isChecked = !selectedTypes.includes("ALL") && selectedTypes.includes(t.key);
+              const count = typeCounts[t.key] || 0;
+              return /* @__PURE__ */ React.createElement(
+                "label",
+                {
+                  key: t.key,
+                  style: {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "5px 12px",
+                    fontSize: "11px",
+                    fontWeight: isChecked ? 700 : 500,
+                    cursor: "pointer",
+                    color: isChecked ? "#2563eb" : "var(--text, #0f172a)",
+                    background: isChecked ? "rgba(59, 130, 246, 0.06)" : "transparent"
+                  },
+                  onClick: (e) => {
+                    e.stopPropagation();
+                    toggleType(t.key);
+                  }
+                },
+                /* @__PURE__ */ React.createElement(
+                  "div",
+                  {
+                    style: { display: "flex", alignItems: "center", gap: "8px" }
+                  },
+                  /* @__PURE__ */ React.createElement("input", {
+                    type: "checkbox",
+                    checked: isChecked,
+                    onChange: () => toggleType(t.key),
+                    style: { cursor: "pointer", accentColor: "#2563eb" }
+                  }),
+                  t.label
+                ),
+                count > 0 && /* @__PURE__ */ React.createElement("span", {
+                  style: {
+                    fontSize: "9.5px",
+                    fontWeight: 700,
+                    color: "var(--text-muted, #94a3b8)",
+                    fontVariantNumeric: "tabular-nums"
+                  }
+                }, count)
+              );
+            })
+          )
+        ),
+        /* 2. Calendar Date Filter (at right corner at top) */
+        /* @__PURE__ */ React.createElement(
+          "div",
+          {
+            style: { display: "flex", alignItems: "center", gap: "4px" }
+          },
+          /* "Calendar:" label */
+          /* @__PURE__ */ React.createElement("span", {
+            style: {
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "var(--text-muted, #64748b)",
+              whiteSpace: "nowrap"
+            }
+          }, "Calendar:"),
+          /* All Date button */
+          /* @__PURE__ */ React.createElement("button", {
+            type: "button",
+            onClick: () => setSelectedDate(""),
+            style: {
+              fontSize: "11px",
+              fontWeight: 700,
+              padding: "2px 8px",
+              height: "24px",
+              borderRadius: "5px",
+              cursor: "pointer",
+              boxSizing: "border-box",
+              border: !selectedDate ? "1px solid #86efac" : "1px solid var(--border-color, #cbd5e1)",
+              background: !selectedDate ? "rgba(34, 197, 94, 0.12)" : "transparent",
+              color: !selectedDate ? "#16a34a" : "var(--text-muted, #64748b)",
+              transition: "all 0.15s ease"
+            },
+            title: "Show all scheduled dates"
+          }, "All"),
+          /* Date Input Calendar */
+          /* @__PURE__ */ React.createElement("input", {
+            type: "date",
+            value: selectedDate,
+            onChange: (e) => setSelectedDate(e.target.value),
+            className: "event-date-picker",
+            style: {
+              fontSize: "11px",
+              fontWeight: 600,
+              fontFamily: "inherit",
+              padding: "2px 6px",
+              height: "24px",
+              borderRadius: "5px",
+              border: selectedDate ? "1px solid #3b82f6" : "1px solid var(--border-color, #cbd5e1)",
+              background: selectedDate ? "rgba(59, 130, 246, 0.08)" : "var(--card-bg, #ffffff)",
+              color: selectedDate ? "#2563eb" : "var(--text, #0f172a)",
+              cursor: "pointer",
+              boxSizing: "border-box",
+              outline: "none"
+            },
+            title: "Select specific date from calendar to filter"
+          }),
+          /* Clear button if date selected */
+          selectedDate && /* @__PURE__ */ React.createElement("button", {
+            type: "button",
+            onClick: () => setSelectedDate(""),
+            style: {
+              fontSize: "11px",
+              fontWeight: 700,
+              background: "none",
+              border: "none",
+              color: "var(--text-muted, #64748b)",
+              cursor: "pointer",
+              padding: "0 4px",
+              lineHeight: 1
+            },
+            title: "Clear date filter (show all)"
+          }, "\u2715")
+        )
+      )
     ),
     /* List of Events */
     /* @__PURE__ */ React.createElement(
@@ -3644,14 +3997,14 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
       {
         className: "top-news-list"
       },
-      eventsList.length === 0 ? /* @__PURE__ */ React.createElement("div", {
+      displayList.length === 0 ? /* @__PURE__ */ React.createElement("div", {
         style: {
           padding: "36px 16px",
           textAlign: "center",
           color: "var(--text-muted, #94a3b8)",
           fontSize: "12px"
         }
-      }, "Scanning exchange disclosures for upcoming corporate events & calendar...") : eventsList.slice(0, 30).map((item) => {
+      }, "No scheduled corporate events matching selected filters.") : displayList.slice(0, 50).map((item) => {
         const c = item.c;
         const ltp = Number(c.ltp || c.price || 0);
         const movePct = Number(c.movePct || 0);
@@ -3671,59 +4024,121 @@ function UpcomingEventsSquareBox({ catalysts = [], onCopy }) {
             {
               className: "top-news-item-top"
             },
-            /* Left Symbol & Timing */
+            /* Left Symbol & Company Tier */
             /* @__PURE__ */ React.createElement(
               "div",
               {
-                className: "top-news-item-left"
+                className: "top-news-item-left",
+                style: { display: "flex", flexDirection: "column", gap: "3px", flex: 1 }
               },
-              /* @__PURE__ */ React.createElement("span", {
-                className: "top-news-sym"
-              }, item.sym),
-              /* @__PURE__ */ React.createElement("span", {
-                style: { fontSize: "11px", color: "var(--text-muted)" }
-              }, item.eventDateStr)
+              /* Row 1: Symbol + Company Tier */
+              /* @__PURE__ */ React.createElement(
+                "div",
+                {
+                  style: { display: "flex", alignItems: "center", gap: "6px" }
+                },
+                /* @__PURE__ */ React.createElement("span", {
+                  className: "top-news-sym"
+                }, item.sym),
+                (() => {
+                  const tier = getCompanyTier(item.sym);
+                  if (!tier) return null;
+                  return /* @__PURE__ */ React.createElement("span", {
+                    style: {
+                      fontSize: "10.5px",
+                      fontWeight: 600,
+                      color: "var(--text-muted, #64748b)",
+                      whiteSpace: "nowrap",
+                      background: "none",
+                      border: "none",
+                      padding: 0
+                    },
+                    title: `${tier.name} Company`
+                  }, tier.name);
+                })()
+              ),
+              /* Row 2: Price and Move % */
+              ltp > 0 && /* @__PURE__ */ React.createElement(
+                "div",
+                {
+                  style: { display: "flex", alignItems: "center", gap: "6px" }
+                },
+                /* @__PURE__ */ React.createElement("span", {
+                  className: "top-news-price",
+                  style: { fontWeight: 800, fontSize: "12px" }
+                }, `\u20B9${ltp.toFixed(2)}`),
+                /* @__PURE__ */ React.createElement("span", {
+                  style: {
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: movePct > 0 ? "#16a34a" : movePct < 0 ? "#dc2626" : "#64748b",
+                    fontVariantNumeric: "tabular-nums",
+                    whiteSpace: "nowrap",
+                    background: "none",
+                    border: "none",
+                    padding: 0
+                  }
+                }, `${sign}${movePct.toFixed(1)}%`)
+              )
             ),
-            /* Right Price & Event Badge */
+            /* Right Event Badge (Clean text, NO emoji) */
             /* @__PURE__ */ React.createElement(
               "div",
               {
                 className: "top-news-item-right",
-                style: { display: "flex", alignItems: "center", gap: "6px" }
+                style: { display: "flex", alignItems: "flex-end", justifyContent: "flex-start", flexShrink: 0 }
               },
-              ltp > 0 && /* @__PURE__ */ React.createElement("span", {
-                className: "top-news-price"
-              }, `\u20B9${ltp.toFixed(2)}`),
-              ltp > 0 && /* @__PURE__ */ React.createElement("span", {
-                style: {
-                  fontSize: "10px",
-                  color: isPos ? "#16a34a" : "#dc2626",
-                  background: isPos ? "rgba(22, 163, 74, 0.1)" : "rgba(220, 38, 38, 0.1)",
-                  padding: "1.5px 5px",
-                  borderRadius: "3px",
-                  fontWeight: 700
-                }
-              }, `${sign}${movePct.toFixed(1)}%`),
               /* Event Pill */
               /* @__PURE__ */ React.createElement("span", {
                 style: {
                   fontSize: "10.5px",
-                  fontWeight: 800,
+                  fontWeight: 700,
                   color: item.badgeColor,
                   background: item.badgeBg,
                   border: `1px solid ${item.badgeBorder}`,
                   padding: "2.5px 7px",
                   borderRadius: "4px",
-                  whiteSpace: "nowrap"
+                  whiteSpace: "nowrap",
+                  lineHeight: 1.2
                 }
               }, item.badge)
             )
           ),
-          /* Bottom Headline / Purpose */
-          /* @__PURE__ */ React.createElement("div", {
-            className: "top-news-headline",
-            title: c.title || c.description
-          }, c.title || c.description || `${item.sym} Corporate Announcement`)
+          /* Row 2: Headline matter parallel with timing at the end of the right side */
+          /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              className: "top-news-matter-row",
+              style: {
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: "8px",
+                width: "100%",
+                minWidth: 0,
+                marginTop: "2px"
+              }
+            },
+            /* Matter (Headline text) */
+            /* @__PURE__ */ React.createElement("div", {
+              className: "top-news-headline",
+              style: { flex: 1, minWidth: 0 },
+              title: c.title || c.description || `${item.sym} Corporate Announcement`
+            }, c.title || c.description || `${item.sym} Corporate Announcement`),
+            /* Timing parallel to the matter at the end of right side */
+            /* @__PURE__ */ React.createElement("span", {
+              className: "top-news-time",
+              style: {
+                fontSize: "10px",
+                fontWeight: 500,
+                color: "var(--text-muted, #64748b)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                textAlign: "right"
+              },
+              title: `Scheduled: ${item.eventDateStr}`
+            }, item.eventDateStr || "Upcoming")
+          )
         );
       })
     )
